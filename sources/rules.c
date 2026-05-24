@@ -176,10 +176,11 @@ od_group_t *od_rules_group_allocate(od_global_t *global)
 {
 	/* Allocate and force defaults */
 	od_group_t *group;
-	group = od_calloc(1, sizeof(*group));
+	group = od_malloc(sizeof(*group));
 	if (group == NULL) {
 		return NULL;
 	}
+	memset(group, 0, sizeof(*group));
 	group->global = global;
 	group->check_retry = 10;
 	group->online = 0;
@@ -188,7 +189,195 @@ od_group_t *od_rules_group_allocate(od_global_t *global)
 	return group;
 }
 
-void od_rules_group_checker_run(void *arg)
+enum {
+	GROUP_QUERY_FAIL,
+	GROUP_QUERY_RFQ,
+	GROUP_QUERY_CONTINUE,
+};
+
+static int handle_group_query_msg(od_client_t *client, od_server_t *server,
+				  machine_msg_t *msg, od_list_t *members)
+{
+	int rc;
+	char *group_member;
+	od_group_member_name_item_t *member = NULL;
+
+	kiwi_be_type_t type;
+	type = *(char *)machine_msg_data(msg);
+
+	od_gdebug("group_checker", client, server, "%s",
+		  kiwi_be_type_to_string(type));
+
+	switch (type) {
+	case KIWI_BE_ERROR_RESPONSE:
+		od_backend_error(server, "group_checker", machine_msg_data(msg),
+				 machine_msg_size(msg));
+		return GROUP_QUERY_FAIL;
+
+	case KIWI_BE_DATA_ROW:
+		rc = od_group_parse_val_datarow(msg, &group_member);
+		if (rc != OK_RESPONSE) {
+			od_gerror("group_checker", client, server,
+				  "can't read data row");
+			return GROUP_QUERY_FAIL;
+		}
+		member = od_group_member_name_item_add(members);
+		if (member == NULL) {
+			od_free(group_member);
+			return GROUP_QUERY_FAIL;
+		}
+		member->value = group_member;
+		return GROUP_QUERY_CONTINUE;
+
+	case KIWI_BE_READY_FOR_QUERY:
+		od_backend_ready(server, machine_msg_data(msg),
+				 machine_msg_size(msg));
+		return GROUP_QUERY_RFQ;
+	default:
+		return GROUP_QUERY_CONTINUE;
+	}
+}
+
+static int read_group_list(od_client_t *client, od_server_t *server,
+			   od_list_t *members, uint32_t timeout_ms)
+{
+	while (1) {
+		machine_msg_t *msg = od_read(&server->io, timeout_ms);
+		if (msg == NULL) {
+			int err = mm_errno_get();
+			od_gerror("group_checker", client, server,
+				  "can't read response: %d (%s)", err,
+				  strerror(err));
+			return NOT_OK_RESPONSE;
+		}
+
+		int rc = handle_group_query_msg(client, server, msg, members);
+		machine_msg_free(msg);
+
+		if (rc == GROUP_QUERY_FAIL) {
+			return NOT_OK_RESPONSE;
+		} else if (rc == GROUP_QUERY_RFQ) {
+			break;
+		}
+	}
+
+	return OK_RESPONSE;
+}
+
+static void do_group_check_poll_connected(od_instance_t *instance,
+					  od_rule_t *rule, od_group_t *group,
+					  od_router_t *router,
+					  od_client_t *client)
+{
+	od_list_t *i, *s;
+	od_server_t *server = client->server;
+
+	assert(server != NULL);
+
+	int rc = od_backend_query_send(server, "group_checker",
+				       group->group_query, NULL,
+				       strlen(group->group_query) + 1);
+	if (rc != OK_RESPONSE) {
+		/* retry later */
+		od_gerror("group_checker", client, server,
+			  "group query failed");
+		return;
+	}
+
+	od_list_t members;
+	od_list_init(&members);
+	rc = read_group_list(client, server, &members, 1000);
+	if (rc != OK_RESPONSE) {
+		goto error;
+	}
+
+	size_t count = od_list_count(&members);
+	char **usernames = od_malloc(sizeof(char *) * count);
+	if (usernames == NULL) {
+		goto error;
+	}
+
+	int j = 0;
+	od_list_foreach (&members, i) {
+		od_group_member_name_item_t *member;
+		member = od_container_of(i, od_group_member_name_item_t, link);
+		usernames[j++] = member->value;
+		member->value = NULL;
+	}
+
+	if (instance->config.log_debug || rule->log_debug) {
+		char buff[1024] = { 0 };
+		char *out = buff;
+		char *end = buff + sizeof(buff);
+		size_t k = 0;
+		while (k < count && out < end) {
+			out += snprintf(out, end - out, "'%s', ",
+					usernames[k++]);
+		}
+		od_debug(&instance->logger, "group_checker", client, server,
+			 "%lu, [%s]", count, buff);
+	}
+
+	char **t_names;
+	int t_count;
+	od_router_lock(router);
+	t_names = rule->user_names;
+	t_count = rule->users_in_group;
+	rule->user_names = usernames;
+	rule->users_in_group = count;
+	od_router_unlock(router);
+
+	/* Free memory without router lock */
+	for (int i = 0; i < t_count; i++) {
+		od_free(t_names[i]);
+	}
+	od_free(t_names);
+
+	od_list_foreach_safe (&members, i, s) {
+		od_group_member_name_item_t *member;
+		member = od_container_of(i, od_group_member_name_item_t, link);
+		od_list_unlink(&member->link);
+		od_free(member->value);
+		od_free(member);
+	}
+
+	return;
+
+error:
+	od_list_foreach_safe (&members, i, s) {
+		od_group_member_name_item_t *m;
+		m = od_container_of(i, od_group_member_name_item_t, link);
+		od_list_unlink(&m->link);
+		od_free(m->value);
+		od_free(m);
+	}
+
+	return;
+}
+
+static void do_group_check_iteration(od_instance_t *instance, od_rule_t *rule,
+				     od_group_t *group, od_router_t *router,
+				     od_client_t *client)
+{
+	int rc;
+
+	rc = od_attach_extended(instance, "group_checker", router, client);
+	if (rc != OK_RESPONSE) {
+		/* do nothing with error, go to retry */
+		return;
+	}
+
+	do_group_check_poll_connected(instance, rule, group, router, client);
+
+	/*
+	 * yes, always close the connection
+	 * in fact, there is no need for that so
+	 * TODO: maybe just detach, not close the backend
+	 */
+	od_router_close(router, client);
+}
+
+static void do_group_check(void *arg)
 {
 	od_rule_t *group_rule = arg;
 	od_group_t *group = group_rule->group;
@@ -223,8 +412,6 @@ void od_rules_group_checker_run(void *arg)
 	kiwi_var_set(&group_checker_client->startup.database, KIWI_VAR_UNDEF,
 		     group->group_query_db, strlen(group->group_query_db) + 1);
 
-	machine_msg_t *msg;
-	char *group_member = NULL;
 	int rc;
 	rc = OK_RESPONSE;
 
@@ -261,194 +448,9 @@ void od_rules_group_checker_run(void *arg)
 			break;
 		}
 
-		/* attach client to some route */
-
-		rc = od_attach_extended(instance, "group_checker", router,
-					group_checker_client);
-		if (rc != OK_RESPONSE) {
-			continue;
-		}
-
-		od_server_t *server;
-		server = group_checker_client->server;
-
-		/* TODO: remove this loop (always works once)*/
-		for (int retry = 0; retry < group->check_retry; ++retry) {
-			if (od_backend_query_send(
-				    server, "group_checker", group->group_query,
-				    NULL, strlen(group->group_query) + 1) ==
-			    NOT_OK_RESPONSE) {
-				/* Retry later. TODO: Add logging. */
-				break;
-			}
-
-			int response_is_read = 0;
-			od_list_t members;
-			od_list_init(&members);
-			od_group_member_name_item_t *member;
-
-			for (;;) {
-				msg = od_read(&server->io, UINT32_MAX);
-				if (msg == NULL) {
-					if (!machine_timedout()) {
-						od_error(&instance->logger,
-							 "group_checker",
-							 server->client, server,
-							 "read error: %s",
-							 od_io_error(
-								 &server->io));
-						rc = -1;
-						break;
-					} else {
-						/* If timeout try read again */
-						continue;
-					}
-				}
-
-				kiwi_be_type_t type;
-				type = *(char *)machine_msg_data(msg);
-
-				od_debug(&instance->logger, "group_checker",
-					 server->client, server, "%s",
-					 kiwi_be_type_to_string(type));
-
-				switch (type) {
-				case KIWI_BE_ERROR_RESPONSE:
-					od_backend_error(server,
-							 "group_checker",
-							 machine_msg_data(msg),
-							 machine_msg_size(msg));
-
-					rc = NOT_OK_RESPONSE;
-					response_is_read = 1;
-					break;
-
-				case KIWI_BE_DATA_ROW:
-					rc = od_group_parse_val_datarow(
-						msg, &group_member);
-					member = od_group_member_name_item_add(
-						&members);
-					member->value = group_member;
-					break;
-
-				case KIWI_BE_READY_FOR_QUERY:
-					od_backend_ready(server,
-							 machine_msg_data(msg),
-							 machine_msg_size(msg));
-
-					response_is_read = 1;
-					break;
-				default:
-					break;
-				}
-
-				machine_msg_free(msg);
-
-				if (response_is_read) {
-					break;
-				}
-			}
-
-			if (rc == NOT_OK_RESPONSE) {
-				od_debug(&instance->logger, "group_checker",
-					 group_checker_client, server,
-					 "group check failed");
-
-				od_list_t *it, *n;
-				od_list_foreach_safe (&members, it, n) {
-					member = od_container_of(
-						it, od_group_member_name_item_t,
-						link);
-					if (member) {
-						od_free(member);
-					}
-				}
-
-				od_router_close(router, group_checker_client);
-				break;
-			}
-
-			od_list_t *i;
-			int count_group_users = 0;
-			od_list_foreach (&members, i) {
-				count_group_users++;
-			}
-			char **usernames =
-				od_malloc(sizeof(char *) * count_group_users);
-			if (usernames == NULL) {
-				od_error(&instance->logger, "group_checker",
-					 group_checker_client, server,
-					 "out of memory");
-				od_router_close(router, group_checker_client);
-				break;
-			}
-			int j = 0;
-			od_list_foreach (&members, i) {
-				od_group_member_name_item_t *member_name;
-				member_name = od_container_of(
-					i, od_group_member_name_item_t, link);
-
-				usernames[j] = member_name->value;
-				j++;
-			}
-			od_debug(&instance->logger, "group_checker",
-				 group_checker_client, server, "%d",
-				 count_group_users);
-			for (int k = 0; k < count_group_users; k++) {
-				od_debug(&instance->logger, "group_checker",
-					 group_checker_client, server,
-					 usernames[k]);
-			}
-			/* Swap usernames in router */
-			char **t_names;
-			int t_count;
-			od_router_lock(router);
-			t_names = group_rule->user_names;
-			t_count = group_rule->users_in_group;
-			group_rule->user_names = usernames;
-			group_rule->users_in_group = count_group_users;
-			od_router_unlock(router);
-			/* Free memory without router lock */
-			for (int i = 0; i < t_count; i++) {
-				od_free(t_names[i]);
-			}
-			od_free(t_names);
-
-			/* Free list */
-			od_list_t *it, *n;
-			od_list_foreach_safe (&members, it, n) {
-				member = od_container_of(
-					it, od_group_member_name_item_t, link);
-				if (member) {
-					od_free(member);
-				}
-			}
-			/* TODO: handle members with is_checked = 0. these rules should be inherited from the default one, if there is one */
-
-			if (rc == OK_RESPONSE) {
-				od_debug(&instance->logger, "group_checker",
-					 group_checker_client, server,
-					 "group check success");
-				od_router_close(router, group_checker_client);
-				break;
-			}
-
-			od_router_close(router, group_checker_client);
-
-			/* retry */
-		}
-
-		/* detach and unroute */
-		if (group_checker_client->server) {
-			od_router_detach(router, group_checker_client);
-		}
-
-		if (group->online == 0) {
-			od_debug(&instance->logger, "group_checker",
-				 group_checker_client, NULL,
-				 "deallocating obsolete group_checker");
-			break;
-		}
+		/* do not check return status, just return */
+		do_group_check_iteration(instance, group_rule, group, router,
+					 group_checker_client);
 	}
 
 	od_router_unroute(router, group_checker_client);
@@ -467,7 +469,6 @@ void od_rules_group_checker_run(void *arg)
 		od_free(t_names[i]);
 	}
 	od_free(t_names);
-	od_router_unlock(router);
 
 to_return:
 	od_log(&instance->logger, "group_checker", NULL, NULL,
@@ -491,8 +492,7 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 			od_rules_ref(rule);
 
 			rule->group_checker_machine_id =
-				machine_coroutine_create(
-					od_rules_group_checker_run, rule);
+				machine_coroutine_create(do_group_check, rule);
 			if (rule->group_checker_machine_id ==
 			    INVALID_COROUTINE_ID) {
 				od_rules_unref(rule);
