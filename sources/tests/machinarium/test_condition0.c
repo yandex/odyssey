@@ -57,7 +57,7 @@ static void awaiter_success(void *arg)
 
 typedef struct {
 	mm_cond_t *cond;
-	mm_wait_flag_t *end_flag;
+	mm_wait_flag_t end_flag;
 } timeout_arg_t;
 
 static void awaiter_timeout(void *arg)
@@ -70,7 +70,7 @@ static void awaiter_timeout(void *arg)
 
 	atomic_fetch_add(&timeout_counter, 1);
 
-	mm_wait_flag_set(a->end_flag);
+	mm_wait_flag_set(&a->end_flag);
 }
 
 static void several_awaiters(void *a)
@@ -132,7 +132,7 @@ static void several_awaiters_timeout(void *a)
 
 	timeout_arg_t targ;
 	targ.cond = &cond;
-	targ.end_flag = mm_wait_flag_create();
+	mm_wait_flag_init(&targ.end_flag);
 
 	int64_t a1;
 	a1 = machine_coroutine_create(awaiter_timeout, &targ);
@@ -149,7 +149,7 @@ static void several_awaiters_timeout(void *a)
 	test(a3 != -1);
 	machine_sleep(0);
 
-	mm_wait_flag_wait(targ.end_flag, UINT32_MAX);
+	mm_wait_flag_wait(&targ.end_flag, UINT32_MAX);
 
 	mm_cond_signal(&cond);
 
@@ -163,7 +163,7 @@ static void several_awaiters_timeout(void *a)
 	test(atomic_load(&success_counter) == 2);
 	test(atomic_load(&timeout_counter) == 1);
 
-	mm_wait_flag_destroy(targ.end_flag);
+	mm_wait_flag_destroy(&targ.end_flag);
 }
 
 static void test_several_awaiters_timeout(void)

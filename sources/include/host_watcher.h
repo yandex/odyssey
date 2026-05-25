@@ -3,6 +3,7 @@
 #include <pthread.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_flag.h>
 
 typedef struct {
 	uint64_t total;
@@ -24,7 +25,7 @@ typedef struct {
 	od_cpu_stat_t cpu_stat;
 	od_mem_stat_t mem_stat;
 
-	machine_wait_flag_t *stop_flag;
+	mm_wait_flag_t stop_flag;
 	int64_t worker_id;
 } od_host_watcher_t;
 

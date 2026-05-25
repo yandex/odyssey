@@ -1,19 +1,21 @@
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_flag.h>
 #include <tests/odyssey_test.h>
 
 static inline void test_wait_flag_timeout(void *arg)
 {
 	(void)arg;
 
-	machine_wait_flag_t *flag = machine_wait_flag_create();
+	mm_wait_flag_t flag;
+	mm_wait_flag_init(&flag);
 
 	/* nobody sets the flag */
 
-	int rc = machine_wait_flag_wait(flag, 10);
+	int rc = mm_wait_flag_wait(&flag, 10);
 	test(rc == -1);
 	test(machine_errno() == ETIMEDOUT);
 
-	machine_wait_flag_destroy(flag);
+	mm_wait_flag_destroy(&flag);
 }
 
 void machinarium_test_wait_flag_timeout(void)

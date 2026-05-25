@@ -380,8 +380,8 @@ static inline void od_soft_oom_checker(void *arg)
 	od_soft_oom_checker_t *checker = arg;
 
 	while (1) {
-		int rc = machine_wait_flag_wait(
-			checker->stop_flag, checker->config->check_interval_ms);
+		int rc = mm_wait_flag_wait(&checker->stop_flag,
+					   checker->config->check_interval_ms);
 		if (rc == 0) {
 			od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
 				"stop flag is set, exiting soft oom checker");
@@ -413,13 +413,8 @@ static inline void od_soft_oom_checker(void *arg)
 int od_soft_oom_start_checker(od_config_soft_oom_t *config,
 			      od_soft_oom_checker_t *checker)
 {
-	machine_wait_flag_t *stop_flag = machine_wait_flag_create();
-	if (stop_flag == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-
 	atomic_store(&checker->current_memory_usage, 0);
-	checker->stop_flag = stop_flag;
+	mm_wait_flag_init(&checker->stop_flag);
 	checker->config = config;
 
 	/*
@@ -431,7 +426,7 @@ int od_soft_oom_start_checker(od_config_soft_oom_t *config,
 	if (checker->machine_id == -1) {
 		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
 			  "can't create machine for soft oom checks");
-		machine_wait_flag_destroy(checker->stop_flag);
+		mm_wait_flag_destroy(&checker->stop_flag);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -444,15 +439,14 @@ void od_soft_oom_stop_checker(od_soft_oom_checker_t *checker)
 		return;
 	}
 
-	machine_wait_flag_set(checker->stop_flag);
+	mm_wait_flag_set(&checker->stop_flag);
 
 	machine_wait(checker->machine_id);
 
-	machine_wait_flag_destroy(checker->stop_flag);
+	mm_wait_flag_destroy(&checker->stop_flag);
 
 	checker->current_memory_usage = 0;
 	checker->machine_id = 0;
-	checker->stop_flag = NULL;
 }
 
 int od_soft_oom_is_in_soft_oom(od_soft_oom_checker_t *checker,

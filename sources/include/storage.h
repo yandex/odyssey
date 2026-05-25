@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/wait_flag.h>
+
 #include <pthread.h>
 
 #include <kiwi/kiwi.h>
@@ -40,8 +42,8 @@ struct od_storage_watchdog {
 
 	od_rule_storage_t *storage;
 
-	machine_wait_flag_t *online;
-	machine_wait_flag_t *is_finished;
+	mm_wait_flag_t online;
+	mm_wait_flag_t is_finished;
 };
 
 od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *);

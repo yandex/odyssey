@@ -431,9 +431,8 @@ static void do_group_check(void *arg)
 	}
 
 	while (group->online) {
-		rc = machine_wait_flag_wait(
-			group_rule->group_checker_online,
-			instance->config.group_checker_interval);
+		rc = mm_wait_flag_wait(&group_rule->group_checker_online,
+				       instance->config.group_checker_interval);
 		if (rc == 0) {
 			od_log(&instance->logger, "group_checker", NULL, NULL,
 			       "done flag is set, exiting from rule group checker for %s.%s",
@@ -475,7 +474,7 @@ to_return:
 	       "group checking for %s.%s finished", group_rule->db_name,
 	       group_rule->user_name);
 
-	machine_wait_flag_set(group_rule->group_checker_finished);
+	mm_wait_flag_set(&group_rule->group_checker_finished);
 
 	od_rules_unref(group_rule);
 }
@@ -509,22 +508,9 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 
 static od_rule_t *od_rules_add(od_rules_t *rules)
 {
-	machine_wait_flag_t *df = machine_wait_flag_create();
-	if (df == NULL) {
-		return NULL;
-	}
-
-	machine_wait_flag_t *gcf = machine_wait_flag_create();
-	if (gcf == NULL) {
-		machine_wait_flag_destroy(df);
-		return NULL;
-	}
-
 	od_rule_t *rule;
 	rule = (od_rule_t *)od_malloc(sizeof(od_rule_t));
 	if (rule == NULL) {
-		machine_wait_flag_destroy(df);
-		machine_wait_flag_destroy(gcf);
 		return NULL;
 	}
 	memset(rule, 0, sizeof(*rule));
@@ -532,14 +518,12 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 	/* pool */
 	rule->pool = od_rule_pool_alloc();
 	if (rule->pool == NULL) {
-		machine_wait_flag_destroy(df);
-		machine_wait_flag_destroy(gcf);
 		od_free(rule);
 		return NULL;
 	}
 
-	rule->group_checker_online = df;
-	rule->group_checker_finished = gcf;
+	mm_wait_flag_init(&rule->group_checker_online);
+	mm_wait_flag_init(&rule->group_checker_finished);
 
 	rule->user_role = OD_RULE_ROLE_UNDEF;
 	/* backward compatibility */
@@ -727,8 +711,8 @@ static void od_rules_rule_free_now(od_rule_t *rule)
 		od_free(rule->address_range.string_value);
 	}
 
-	machine_wait_flag_destroy(rule->group_checker_online);
-	machine_wait_flag_destroy(rule->group_checker_finished);
+	mm_wait_flag_destroy(&rule->group_checker_online);
+	mm_wait_flag_destroy(&rule->group_checker_finished);
 
 	od_list_unlink(&rule->link);
 	od_free(rule);
@@ -941,9 +925,9 @@ void od_rules_stop_checkers(od_rules_t *rules)
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->group_checker_machine_id != -1) {
-			machine_wait_flag_set(rule->group_checker_online);
-			machine_wait_flag_wait(rule->group_checker_finished,
-					       UINT32_MAX);
+			mm_wait_flag_set(&rule->group_checker_online);
+			mm_wait_flag_wait(&rule->group_checker_finished,
+					  UINT32_MAX);
 			rule->group_checker_machine_id = -1;
 		}
 	}

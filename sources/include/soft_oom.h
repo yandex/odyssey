@@ -7,13 +7,14 @@
  */
 
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_flag.h>
 
 #include <types.h>
 
 struct od_soft_oom_checker {
 	od_config_soft_oom_t *config;
 	int64_t machine_id;
-	machine_wait_flag_t *stop_flag;
+	mm_wait_flag_t stop_flag;
 
 	atomic_uint_fast64_t current_memory_usage;
 };

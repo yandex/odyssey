@@ -132,7 +132,7 @@ static inline void hw_watcher(void *arg)
 	hw_log("host watcher started");
 
 	while (1) {
-		int rc = machine_wait_flag_wait(hw->stop_flag, 1000);
+		int rc = mm_wait_flag_wait(&hw->stop_flag, 1000);
 		if (rc != -1 && machine_errno() != ETIMEDOUT) {
 			hw_log("stop flag is set, exiting host watcher");
 			break;
@@ -172,16 +172,12 @@ int od_host_watcher_init(od_host_watcher_t *hw)
 		return -1;
 	}
 
-	hw->stop_flag = machine_wait_flag_create();
-	if (hw->stop_flag == NULL) {
-		pthread_spin_destroy(&hw->lock);
-		return -1;
-	}
+	mm_wait_flag_init(&hw->stop_flag);
 
 	hw->worker_id = machine_create("host-watcher", hw_watcher, hw);
 	if (hw->worker_id == -1) {
 		hw_error("can't start host watcher machine");
-		machine_wait_flag_destroy(hw->stop_flag);
+		mm_wait_flag_destroy(&hw->stop_flag);
 		pthread_spin_destroy(&hw->lock);
 		return -1;
 	}
@@ -191,9 +187,9 @@ int od_host_watcher_init(od_host_watcher_t *hw)
 
 void od_host_watcher_destroy(od_host_watcher_t *hw)
 {
-	machine_wait_flag_set(hw->stop_flag);
+	mm_wait_flag_set(&hw->stop_flag);
 	machine_wait(hw->worker_id);
-	machine_wait_flag_destroy(hw->stop_flag);
+	mm_wait_flag_destroy(&hw->stop_flag);
 
 	pthread_spin_destroy(&hw->lock);
 }

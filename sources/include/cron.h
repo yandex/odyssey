@@ -7,6 +7,7 @@
  */
 
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_flag.h>
 
 #include <types.h>
 #include <global.h>
@@ -27,8 +28,8 @@ struct od_cron {
 	od_prom_metrics_t *metrics;
 #endif
 
-	machine_wait_flag_t *can_be_freed;
-	machine_wait_flag_t *online;
+	mm_wait_flag_t can_be_freed;
+	mm_wait_flag_t online;
 };
 
 od_retcode_t od_cron_init(od_cron_t *);

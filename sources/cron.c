@@ -8,6 +8,7 @@
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_flag.h>
 
 #include <status.h>
 #include <cron.h>
@@ -294,7 +295,7 @@ static void od_cron(void *arg)
 
 		od_cron_err_stat(cron);
 
-		int rc = machine_wait_flag_wait(cron->online, 1000);
+		int rc = mm_wait_flag_wait(&cron->online, 1000);
 		if (rc == 0) {
 			od_log(&instance->logger, "cron", NULL, NULL,
 			       "cron online is set, exiting");
@@ -313,7 +314,7 @@ static void od_cron(void *arg)
 	 * a wait flag is used to prevent usage of routes
 	 * that are deallocated during shutdown
 	 */
-	machine_wait_flag_set(cron->can_be_freed);
+	mm_wait_flag_set(&cron->can_be_freed);
 }
 
 od_retcode_t od_cron_init(od_cron_t *cron)
@@ -329,16 +330,9 @@ od_retcode_t od_cron_init(od_cron_t *cron)
 	cron->metrics->http_server = NULL;
 #endif
 
-	cron->online = machine_wait_flag_create();
-	if (cron->online == NULL) {
-		return -1;
-	}
+	mm_wait_flag_init(&cron->online);
+	mm_wait_flag_init(&cron->can_be_freed);
 
-	cron->can_be_freed = machine_wait_flag_create();
-	if (cron->can_be_freed == NULL) {
-		machine_wait_flag_destroy(cron->online);
-		return -1;
-	}
 	return 0;
 }
 
@@ -359,12 +353,12 @@ int od_cron_start(od_cron_t *cron, od_global_t *global)
 
 od_retcode_t od_cron_stop(od_cron_t *cron)
 {
-	machine_wait_flag_set(cron->online);
-	machine_wait_flag_wait(cron->can_be_freed, UINT32_MAX);
+	mm_wait_flag_set(&cron->online);
+	mm_wait_flag_wait(&cron->can_be_freed, UINT32_MAX);
 #ifdef PROM_FOUND
 	od_prom_metrics_destroy(cron->metrics);
 #endif
-	machine_wait_flag_destroy(cron->can_be_freed);
-	machine_wait_flag_destroy(cron->online);
+	mm_wait_flag_destroy(&cron->can_be_freed);
+	mm_wait_flag_destroy(&cron->online);
 	return OK_RESPONSE;
 }

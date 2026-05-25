@@ -89,18 +89,8 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	}
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
 	watchdog->global = global;
-	watchdog->is_finished = machine_wait_flag_create();
-	if (watchdog->is_finished == NULL) {
-		od_free(watchdog);
-		return NULL;
-	}
-
-	watchdog->online = machine_wait_flag_create();
-	if (watchdog->online == NULL) {
-		machine_wait_flag_destroy(watchdog->is_finished);
-		od_free(watchdog);
-		return NULL;
-	}
+	mm_wait_flag_init(&watchdog->is_finished);
+	mm_wait_flag_init(&watchdog->is_finished);
 
 	return watchdog;
 }
@@ -108,7 +98,7 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 static inline int
 od_storage_watchdog_set_offline(od_storage_watchdog_t *watchdog)
 {
-	machine_wait_flag_set(watchdog->online);
+	mm_wait_flag_set(&watchdog->online);
 	return OK_RESPONSE;
 }
 
@@ -119,7 +109,7 @@ void od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
 	 * can't wait the coroutine to finish,
 	 * it can be run on other thread
 	 */
-	machine_wait_flag_wait(watchdog->is_finished, UINT32_MAX);
+	mm_wait_flag_wait(&watchdog->is_finished, UINT32_MAX);
 	od_storage_watchdog_free(watchdog);
 }
 
@@ -133,8 +123,8 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 		od_free(watchdog->query);
 	}
 
-	machine_wait_flag_destroy(watchdog->is_finished);
-	machine_wait_flag_destroy(watchdog->online);
+	mm_wait_flag_destroy(&watchdog->is_finished);
+	mm_wait_flag_destroy(&watchdog->online);
 
 	od_free(watchdog);
 	return OK_RESPONSE;
@@ -515,7 +505,7 @@ od_storage_watchdog_do_polling_loop(od_storage_watchdog_t *watchdog)
 	od_instance_t *instance = od_global_get_instance();
 
 	while (1) {
-		int rc = machine_wait_flag_wait(watchdog->online, 1000);
+		int rc = mm_wait_flag_wait(&watchdog->online, 1000);
 		if (rc == 0) {
 			od_log(&instance->logger, "watchdog", NULL, NULL,
 			       "online flag is set, exiting from watchdog for %s",
@@ -547,7 +537,7 @@ void od_storage_watchdog_watch(void *arg)
 
 	od_log(&instance->logger, "watchdog", NULL, NULL,
 	       "finishing watchdog for storage '%s'", watchdog->storage->name);
-	machine_wait_flag_set(watchdog->is_finished);
+	mm_wait_flag_set(&watchdog->is_finished);
 }
 
 int od_storage_parse_endpoints(const char *host_str,

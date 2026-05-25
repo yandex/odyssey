@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/wait_flag.h>
+
 #include <stdatomic.h>
 
 #include <address.h>
@@ -45,11 +47,6 @@ typedef enum {
 } od_rule_conn_type_t;
 
 const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct);
-
-typedef struct {
-	od_rule_t *rule;
-	machine_wait_flag_t *done_flag;
-} od_group_checker_run_args;
 
 struct od_rule_auth {
 	char *common_name;
@@ -208,8 +205,8 @@ struct od_rule {
 
 	int64_t group_checker_machine_id;
 
-	machine_wait_flag_t *group_checker_online;
-	machine_wait_flag_t *group_checker_finished;
+	mm_wait_flag_t group_checker_online;
+	mm_wait_flag_t group_checker_finished;
 };
 
 struct od_rules {
