@@ -90,7 +90,7 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
 	watchdog->global = global;
 	mm_wait_flag_init(&watchdog->is_finished);
-	mm_wait_flag_init(&watchdog->is_finished);
+	mm_wait_flag_init(&watchdog->online);
 
 	return watchdog;
 }
