@@ -1064,7 +1064,8 @@ static inline int send_waiting_finished_notice(od_client_t *client,
 
 od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    bool wait_for_idle,
-				    const od_storage_endpoint_t *endpoint)
+				    const od_storage_endpoint_t *endpoint,
+				    int immediate)
 {
 	od_route_t *route;
 	od_router_status_t rc;
@@ -1097,6 +1098,11 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 			/* ok or some other error */
 			status = rc;
 			break;
+		}
+
+		if (rc == OD_ROUTER_NEED_WAIT && immediate) {
+			/* no need to stat waiting time or send notice */
+			return OD_ROUTER_ERROR_TIMEDOUT;
 		}
 
 		if (notice_sending && !notice_sent &&

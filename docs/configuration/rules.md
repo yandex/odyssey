@@ -614,6 +614,16 @@ Default: yes
 
 ---
 
+## pool\_acquire\_fail\_fast
+
+*yes/no*
+
+Do not wait for free connection on host if pools are busy,
+immediately try to get connection from next host
+Default: no
+
+`pool_acquire_fail_fast yes`
+
 ## **pool_reserve_prepared_statement**
 
 *yes|no*

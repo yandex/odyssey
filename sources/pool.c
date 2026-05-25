@@ -29,6 +29,7 @@ od_rule_pool_t *od_rule_pool_alloc(void)
 	pool->reset_timeout_ms = 1000; /* 1 sec */
 	pool->notice_after_waiting_ms = -1;
 	pool->attach_check = 1;
+	pool->acquire_fail_fast = 0;
 
 	return pool;
 }

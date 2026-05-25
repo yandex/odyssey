@@ -55,7 +55,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client);
 void od_router_unroute(od_router_t *, od_client_t *);
 
 od_router_status_t od_router_attach(od_router_t *, od_client_t *, bool,
-				    const od_storage_endpoint_t *);
+				    const od_storage_endpoint_t *,
+				    int immediate);
 /* returns 1 if someone was signalled, 0 otherwise */
 void od_router_detach(od_router_t *, od_client_t *);
 void od_router_close(od_router_t *, od_client_t *);
