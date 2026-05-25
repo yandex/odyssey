@@ -68,7 +68,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	od_list_init(&logger->free_slots);
 	pthread_spin_init(&logger->free_slots_lock, PTHREAD_PROCESS_PRIVATE);
 
-	mm_wait_list_init(&logger->notifier, NULL);
+	mm_wait_list_init(&logger->notifier, &logger->loaded);
 
 	/* set temporary format */
 	od_logger_set_format(logger, "%p %t %l (%c) %h %m\n");
@@ -557,42 +557,67 @@ void od_logger_stat(od_logger_t *logger)
 	log_machine_stats(logger);
 }
 
+static void process_log_queue(od_logger_t *logger, od_logger_slot_t **slot_buf,
+			      struct iovec *iovecs, size_t max)
+{
+	size_t nmsg = mm_queue_pop_batch(&logger->tasks, slot_buf, max);
+
+	if (nmsg == 0) {
+		return;
+	}
+
+	for (size_t i = 0; i < nmsg; ++i) {
+		iovecs[i].iov_base = slot_buf[i]->text;
+		iovecs[i].iov_len = slot_buf[i]->len;
+	}
+
+	_od_logger_write_batch(logger, slot_buf, iovecs, nmsg);
+
+	pthread_spin_lock(&logger->free_slots_lock);
+	for (size_t i = 0; i < nmsg; ++i) {
+		od_list_append(&logger->free_slots, &(slot_buf[i]->link));
+	}
+	logger->free_slots_count += nmsg;
+	pthread_spin_unlock(&logger->free_slots_lock);
+}
+
 static inline void od_logger(void *arg)
 {
 	od_logger_t *logger = arg;
+	static od_logger_slot_t *slot_buf[IOV_MAX];
+	static struct iovec iovecs[IOV_MAX];
 
 	atomic_store(&logger->loaded, 1);
 
 	while (atomic_load(&logger->loaded) == 1) {
-		static od_logger_slot_t *slot_buf[IOV_MAX];
-		static struct iovec iovecs[IOV_MAX];
-		size_t nmsg =
-			mm_queue_pop_batch(&logger->tasks, slot_buf, IOV_MAX);
-
-		for (size_t i = 0; i < nmsg; ++i) {
-			iovecs[i].iov_base = slot_buf[i]->text;
-			iovecs[i].iov_len = slot_buf[i]->len;
-		}
-
-		_od_logger_write_batch(logger, slot_buf, iovecs, nmsg);
-
-		pthread_spin_lock(&logger->free_slots_lock);
-		for (size_t i = 0; i < nmsg; ++i) {
-			od_list_append(&logger->free_slots,
-				       &(slot_buf[i]->link));
-		}
-		logger->free_slots_count += nmsg;
-		pthread_spin_unlock(&logger->free_slots_lock);
+		process_log_queue(logger, slot_buf, iovecs, IOV_MAX);
 
 		if (mm_queue_size(&logger->tasks) == 0) {
-			mm_wait_list_wait(&logger->notifier, NULL, 500);
+			mm_wait_list_compare_wait(&logger->notifier, NULL,
+						  1 /* still loaded? */, 500);
 		}
+	}
+
+	/*
+	 * process messages that stays in queue after shutdown
+	 * did not writen smth like plain while (queue size > 0)
+	 * because i want to be sure that this function will return in case
+	 * some bug with loaded flag
+	 *
+	 * divide by IOV_MAX because this is max chunk size
+	 * of process_log_queue
+	 */
+	size_t tail = mm_queue_size(&logger->tasks);
+	tail = 2 * ((tail + IOV_MAX - 1) / IOV_MAX);
+	for (size_t i = 0; i < tail && mm_queue_size(&logger->tasks) > 0; ++i) {
+		process_log_queue(logger, slot_buf, iovecs, IOV_MAX);
 	}
 }
 
 void od_logger_shutdown(od_logger_t *logger)
 {
 	atomic_store(&logger->loaded, 0);
+	mm_wait_list_notify(&logger->notifier);
 }
 
 void od_logger_wait_finish(od_logger_t *logger)
