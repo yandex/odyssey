@@ -16,7 +16,16 @@ enum {
 	OD_PARSER_NUM,
 	OD_PARSER_KEYWORD,
 	OD_PARSER_SYMBOL,
-	OD_PARSER_STRING
+	OD_PARSER_STRING,
+	/*
+	 * A compact token used for Go-style duration values such as:
+	 *   1h30m, 500ms, 10s, 0
+	 *
+	 * It is intentionally NOT produced by od_parser_next() to avoid changing
+	 * existing numeric parsing semantics across the config. Use
+	 * od_parser_next_duration() explicitly when a duration value is expected.
+	 */
+	OD_PARSER_DURATION
 };
 
 struct od_token {
@@ -270,6 +279,65 @@ static inline int od_parser_next(od_parser_t *parser, od_token_t *token)
 	/* error */
 	token->type = OD_PARSER_ERROR;
 	token->line = parser->line;
+	return token->type;
+}
+
+static inline int od_parser_next_duration(od_parser_t *parser,
+					  od_token_t *token)
+{
+	/* try to use backlog */
+	if (parser->backlog_count > 0) {
+		*token = parser->backlog[parser->backlog_count - 1];
+		parser->backlog_count--;
+		return token->type;
+	}
+	/* skip white spaces and comments */
+	for (;;) {
+		while (parser->pos < parser->end && isspace(*parser->pos)) {
+			if (*parser->pos == '\n') {
+				parser->line++;
+			}
+			parser->pos++;
+		}
+		if (od_unlikely(parser->pos == parser->end)) {
+			token->type = OD_PARSER_EOF;
+			return token->type;
+		}
+		if (*parser->pos != '#') {
+			break;
+		}
+		while (parser->pos < parser->end && *parser->pos != '\n') {
+			parser->pos++;
+		}
+		if (parser->pos == parser->end) {
+			token->type = OD_PARSER_EOF;
+			return token->type;
+		}
+		parser->line++;
+	}
+
+	const char *start = parser->pos;
+	int is_negative;
+	is_negative = *parser->pos == '-' && (parser->pos + 1 < parser->end) &&
+		      isdigit(parser->pos[1]);
+	if (!(is_negative || isdigit(*parser->pos))) {
+		token->type = OD_PARSER_ERROR;
+		token->line = parser->line;
+		return token->type;
+	}
+
+	if (is_negative) {
+		parser->pos++;
+	}
+	while (parser->pos < parser->end &&
+	       (isdigit(*parser->pos) || isalpha(*parser->pos))) {
+		parser->pos++;
+	}
+
+	token->type = OD_PARSER_DURATION;
+	token->line = parser->line;
+	token->value.string.pointer = start;
+	token->value.string.size = (int)(parser->pos - start);
 	return token->type;
 }
 

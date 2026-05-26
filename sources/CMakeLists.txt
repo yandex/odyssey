@@ -94,6 +94,7 @@ set(od_src
     frontend.c
     backend.c
     instance.c
+    duration.c
     misc.c
     io.c
     tdigest.c
@@ -333,7 +334,8 @@ set(od_test_src
     tests/odyssey/test_affinity.c
     tests/odyssey/test_hashmap.c
     tests/odyssey/test_pstmt.c
-    tests/odyssey/test_query_processing.c)
+    tests/odyssey/test_query_processing.c
+    tests/odyssey/test_duration_parse.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")
