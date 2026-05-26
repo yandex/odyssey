@@ -9,7 +9,7 @@ log_syslog_ident "odyssey"
 log_syslog_facility "daemon"
 
 log_debug no
-log_config yes
+log_config no
 log_session no
 log_query no
 log_stats no
@@ -43,20 +43,54 @@ listen {
 	tls "disable"
 }
 
-storage "postgres_server" {
+storage "rr-hosts" {
 	type "remote"
-	host "localhost:5432"
+	host "localhost:5432,localhost:5433,localhost:5434"
 	endpoints_status_poll_interval 5000
+	balancing {
+		method "roundrobin" {}
+		show_notice_messages yes
+	}
+}
+
+storage "leastconn-hosts" {
+	type "remote"
+	host "localhost:5432,localhost:5433,localhost:5434"
+	endpoints_status_poll_interval 5000
+	balancing {
+		method "leastconn" {}
+		show_notice_messages yes
+	}
 }
 
 database "postgres" {
-	user "tuser" {
+	user "rruser" {
 		authentication "none"
-		storage "postgres_server"
+		storage "rr-hosts"
 		storage_user "postgres"
 		pool "transaction"
-		pool_discard no
-		pool_smart_discard no
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+	}
+
+	user "leastconnuser" {
+		authentication "none"
+		storage "leastconn-hosts"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+	}
+
+	user "postgres" {
+		authentication "none"
+		storage "leastconn-hosts"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
 	}
 }
 

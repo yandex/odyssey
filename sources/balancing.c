@@ -203,10 +203,8 @@ static int conncount_cmp(void *arg, const void *a, const void *b)
 	}
 
 	od_multi_pool_t *mp = od_route_server_pools(route);
-	int f_cnt =
-		od_multi_pool_count_active_locked(mp, addr_filter, (void *)f);
-	int s_cnt =
-		od_multi_pool_count_active_locked(mp, addr_filter, (void *)s);
+	int f_cnt = od_multi_pool_total_locked(mp, addr_filter, (void *)f);
+	int s_cnt = od_multi_pool_total_locked(mp, addr_filter, (void *)s);
 
 	/* let less count be the first */
 	return f_cnt - s_cnt;

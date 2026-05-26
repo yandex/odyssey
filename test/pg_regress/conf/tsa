@@ -9,7 +9,7 @@ log_syslog_ident "odyssey"
 log_syslog_facility "daemon"
 
 log_debug no
-log_config yes
+log_config no
 log_session no
 log_query no
 log_stats no
@@ -43,20 +43,65 @@ listen {
 	tls "disable"
 }
 
+listen {
+	host "*"
+	port 7432
+	backlog 128
+	compression yes
+	tls "disable"
+	target_session_attrs "read-only"
+}
+
+listen {
+	host "*"
+	port 8432
+	backlog 128
+	compression yes
+	tls "disable"
+	target_session_attrs "read-write"
+}
+
 storage "postgres_server" {
 	type "remote"
-	host "localhost:5432"
+	host "localhost:5432,localhost:5433,localhost:5434"
 	endpoints_status_poll_interval 5000
+	balancing {
+		method "roundrobin" {}
+		show_notice_messages yes
+	}
 }
 
 database "postgres" {
-	user "tuser" {
+	user "postgres" {
 		authentication "none"
 		storage "postgres_server"
 		storage_user "postgres"
 		pool "transaction"
-		pool_discard no
-		pool_smart_discard no
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+	}
+
+	user "rouser" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+		target_session_attrs "read-only"
+	}
+
+	user "rwuser" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+		target_session_attrs "read-write"
 	}
 }
 

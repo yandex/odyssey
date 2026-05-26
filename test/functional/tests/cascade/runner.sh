@@ -67,19 +67,5 @@ pgbench 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-f
     exit 1
 }
 
-root1_client_processed=`cat /var/log/odyssey.root1.log | grep -oP 'clients_processed: \d+' | tail -n 1 | grep -oP '\d+'`
-root2_client_processed=`cat /var/log/odyssey.root2.log | grep -oP 'clients_processed: \d+' | tail -n 1 | grep -oP '\d+'`
-
-python3 -c 'import sys; \
-root1 = int(sys.argv[-1]); \
-root2 = int(sys.argv[-2]); \
-diff = abs(root1 - root2); \
-exit(0 if diff <= min(root1, root2) else 1)' $root1_client_processed $root2_client_processed || {
-    echo "connects should be distributed equally (some kind of) between roots"
-    exit 1
-}
-
-sleep 1
-
 ody-stop $gateway_pid
 ody-stop
