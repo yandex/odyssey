@@ -347,9 +347,11 @@ void od_frontend_attach_init_candidates(
 	      candidate_cmp_desc);
 }
 
-static inline od_frontend_status_t od_frontend_attach_to_endpoint(
-	od_client_t *client, char *context, kiwi_params_t *route_params,
-	od_storage_endpoint_t *endpoint, od_target_session_attrs_t tsa)
+static inline od_frontend_status_t
+od_frontend_attach_to_endpoint(od_client_t *client, char *context,
+			       kiwi_params_t *route_params,
+			       od_storage_endpoint_t *endpoint,
+			       od_target_session_attrs_t tsa, int immediate)
 {
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
@@ -362,8 +364,12 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 	for (;;) {
 		od_router_status_t status;
 		status = od_router_attach(router, client, wait_for_idle,
-					  endpoint);
+					  endpoint, immediate);
 		if (status != OD_ROUTER_OK) {
+			if (immediate && status == OD_ROUTER_ERROR_TIMEDOUT) {
+				return OD_EATTACH_TOO_MANY_CONNECTIONS;
+			}
+
 			if (status == OD_ROUTER_ERROR_TIMEDOUT) {
 				od_error(&instance->logger, "router", client,
 					 NULL,
@@ -515,25 +521,12 @@ static int host_filter(od_storage_endpoint_t *endpoint, void *a)
 	return 1;
 }
 
-od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
-					kiwi_params_t *route_params)
+static od_frontend_status_t
+attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
+		od_storage_endpoint_t **endpoints, size_t count,
+		od_target_session_attrs_t tsa, int fail_fast)
 {
 	od_instance_t *instance = client->global->instance;
-	od_route_t *route = client->route;
-	od_rule_storage_t *storage = route->rule->storage;
-
-	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
-
-	host_select_arg_t arg;
-	arg.storage = storage;
-	arg.tsa = tsa;
-
-	od_storage_endpoint_t *endpoints[OD_STORAGE_MAX_ENDPOINTS];
-	size_t count;
-	count = od_storage_balancing_select(
-		&storage->balancing, route, endpoints,
-		sizeof(endpoints) / sizeof(endpoints[0]), host_filter, &arg);
-
 	od_frontend_status_t status = OD_EATTACH;
 
 	for (size_t i = 0; i < count; ++i) {
@@ -559,8 +552,9 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 			od_router_close(client->global->router, client);
 		}
 
-		status = od_frontend_attach_to_endpoint(
-			client, context, route_params, endpoint, tsa);
+		status = od_frontend_attach_to_endpoint(client, context,
+							route_params, endpoint,
+							tsa, fail_fast);
 
 		if (status == OD_OK) {
 			return status;
@@ -569,6 +563,49 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 		od_debug(&instance->logger, context, client, NULL,
 			 "attach to %s failed with status: %s", addr,
 			 od_frontend_status_to_str(status));
+	}
+
+	return status;
+}
+
+od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
+					kiwi_params_t *route_params)
+{
+	od_route_t *route = client->route;
+	od_rule_storage_t *storage = route->rule->storage;
+
+	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
+
+	host_select_arg_t arg;
+	arg.storage = storage;
+	arg.tsa = tsa;
+
+	od_storage_endpoint_t *endpoints[OD_STORAGE_MAX_ENDPOINTS];
+	size_t count;
+	count = od_storage_balancing_select(
+		&storage->balancing, route, endpoints,
+		sizeof(endpoints) / sizeof(endpoints[0]), host_filter, &arg);
+
+	int acquire_fail_fast =
+		route->rule->pool->acquire_fail_fast && count > 1;
+
+	od_frontend_status_t status = OD_EATTACH;
+
+	status = attach_to_first(client, context, route_params, endpoints,
+				 count, tsa, acquire_fail_fast);
+	if (status != OD_OK) {
+		/*
+		 * attach failed
+		 *
+		 * if this was an attempt to do it without awaiting - retry with awaiting
+		 * for connections from pool
+		 */
+
+		if (acquire_fail_fast) {
+			status = attach_to_first(
+				client, context, route_params, endpoints, count,
+				tsa, 0 /* wait for connection from pool */);
+		}
 	}
 
 	return status;
@@ -2290,6 +2327,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			client->startup.database.value,
 			client->startup.user.value,
 			client->rule != NULL ? client->rule->pool->size : -1);
+		od_frontend_on_client_disconnect(status, client, context,
+						 0 /* force server close */);
 		break;
 
 	case OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH:

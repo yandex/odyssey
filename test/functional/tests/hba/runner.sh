@@ -13,6 +13,9 @@ PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_allow -c "SELE
   echo "ERROR: failed auth with hba trust, correct password and plain password in config"
 
 	cat /var/log/odyssey.log
+	for i in /asan-output*; do
+		cat $i
+	done
 	echo "
 
 	"
@@ -25,6 +28,9 @@ PGPASSWORD=incorrect_password psql -h ip4-localhost -p 6432 -U user_allow -c "SE
   echo "ERROR: successfully auth with hba trust, but incorrect password"
 
 	cat /var/log/odyssey.log
+	for i in /asan-output*; do
+		cat $i
+	done
 	echo "
 
 	"
@@ -37,6 +43,9 @@ PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_reject -c "SEL
   echo "ERROR: successfully auth with hba reject"
 
 	cat /var/log/odyssey.log
+	for i in /asan-output*; do
+		cat $i
+	done
 	echo "
 
 	"
@@ -49,6 +58,9 @@ PGPASSWORD=correct_password psql -h ip4-localhost -p 6432 -U user_unknown -c "SE
   echo "ERROR: successfully auth without hba rule"
 
 	cat /var/log/odyssey.log
+	for i in /asan-output*; do
+		cat $i
+	done
 	echo "
 
 	"
@@ -63,6 +75,9 @@ PGPASSWORD=correct_password PGCONNECT_TIMEOUT=5 psql -h ip4-localhost -p 6432 -U
   echo "ERROR: unable to connect after SIGHUP"
 
 	cat /var/log/odyssey.log
+	for i in /asan-output*; do
+		cat $i
+	done
 	echo "
 	"
 	cat /var/log/postgresql/postgresql-16-main.log
@@ -84,6 +99,9 @@ PGPASSWORD=correct_password psql -h /tmp -p 6432 -U user_allow -c "SELECT 1" hba
     echo "ERROR: failed auth with hba trust, correct password and plain password in config"
 
 	cat /var/log/odyssey.log
+	for i in /asan-output*; do
+		cat $i
+	done
 	echo "
 
 	"
@@ -96,6 +114,9 @@ PGPASSWORD=correct_password psql -h /tmp -p 6432 -U user_reject -c "SELECT 1" hb
   echo "ERROR: successfully auth with hba reject"
 
 	cat /var/log/odyssey.log
+	for i in /asan-output*; do
+		cat $i
+	done
 	echo "
 
 	"

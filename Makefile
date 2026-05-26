@@ -140,21 +140,21 @@ quickstart: build_images
 
 dev_run: format local_build console_run
 
-start-dev-env-release:
+start-test-env-release:
 	docker compose -f ./test/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_release \
 	ODYSSEY_TEST_TARGET=dev-env \
 	ODYSSEY_CC="$(ODYSSEY_CC)" \
 	docker compose -f ./test/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
-start-dev-env-dbg:
+start-test-env-dbg:
 	docker compose -f ./test/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_dbg \
 	ODYSSEY_TEST_TARGET=dev-env \
 	ODYSSEY_CC="$(ODYSSEY_CC)" \
 	docker compose -f ./test/functional/docker-compose.yml up --force-recreate --build -d --remove-orphans
 
-start-dev-env-asan:
+start-test-env-asan:
 	docker compose -f ./test/functional/docker-compose.yml down || true
 	ODYSSEY_FUNCTIONAL_BUILD_TYPE=build_asan \
 	ODYSSEY_TEST_TARGET=dev-env \

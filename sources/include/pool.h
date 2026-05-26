@@ -44,6 +44,7 @@ struct od_rule_pool {
 	int pin_on_listen;
 	int notice_after_waiting_ms;
 	int attach_check;
+	int acquire_fail_fast;
 	uint64_t reset_timeout_ms;
 
 	/* --------  makes sense only for transaction pooling --------------------------- */
