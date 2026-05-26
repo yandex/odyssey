@@ -1,0 +1,160 @@
+daemonize yes
+
+log_format "%p %t %l [%i %s] (%c) %m\n"
+
+log_to_stdout no
+
+log_syslog no
+log_syslog_ident "odyssey"
+log_syslog_facility "daemon"
+
+log_debug yes
+log_config yes
+log_session no
+log_query no
+log_stats no
+log_file "/tmp/odyssey.log"
+stats_interval 60
+
+workers 1
+resolvers 1
+
+readahead 4096
+
+cache_coroutine 0
+
+coroutine_stack_size 16
+
+nodelay yes
+
+keepalive 15
+keepalive_keep_interval 75
+keepalive_probes 9
+
+keepalive_usr_timeout 0
+
+virtual_processing yes
+
+listen {
+	host "*"
+	port 6432
+	backlog 128
+	compression yes
+	tls "disable"
+}
+
+storage "postgres_server" {
+	type "remote"
+	host "localhost:5432"
+	endpoints_status_poll_interval 5000
+}
+
+database "postgres" {
+	user "suser" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "session"
+		pool_size 32
+		pool_timeout 0
+		pool_ttl 1201
+		pool_discard yes
+		pool_cancel yes
+		pool_rollback yes
+		pool_reserve_prepared_statement yes
+		pool_client_idle_timeout 4
+		pool_idle_in_transaction_timeout 5
+		client_fwd_error yes
+		client_show_id no
+		application_name_add_host yes
+		server_lifetime 1901
+		log_debug no
+		client_max 200000
+	}
+
+	user "tuser" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 0
+		pool_ttl 1201
+		pool_discard yes
+		pool_cancel yes
+		pool_rollback yes
+		pool_reserve_prepared_statement yes
+		pool_client_idle_timeout 4
+		pool_idle_in_transaction_timeout 5
+		client_fwd_error yes
+		client_show_id no
+		application_name_add_host yes
+		server_lifetime 1901
+		log_debug no
+		client_max 200000
+		pool_pin_on_listen yes
+	}
+}
+
+database "broken_collation" {
+	user "suser" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "session"
+		pool_size 32
+		pool_timeout 0
+		pool_ttl 1201
+		pool_discard yes
+		pool_cancel yes
+		pool_rollback yes
+		pool_reserve_prepared_statement yes
+		pool_client_idle_timeout 4
+		pool_idle_in_transaction_timeout 5
+		client_show_id no
+		client_fwd_error yes
+		application_name_add_host yes
+		server_lifetime 1901
+		log_debug no
+		client_max 200000
+	}
+
+	user "tuser" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 0
+		pool_ttl 1201
+		pool_discard yes
+		pool_cancel yes
+		pool_rollback yes
+		pool_reserve_prepared_statement yes
+		pool_client_idle_timeout 4
+		pool_idle_in_transaction_timeout 20000
+		client_fwd_error yes
+		client_show_id no
+		application_name_add_host yes
+		server_lifetime 1901
+		log_debug no
+		client_max 200000
+		pool_pin_on_listen yes
+	}
+}
+
+
+storage "local" {
+	type "local"
+}
+
+database "console" {
+	user default {
+		authentication "none"
+		role "admin"
+		pool "session"
+		storage "local"
+	}
+}
+
+bindwith_reuseport yes

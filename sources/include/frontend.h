@@ -25,9 +25,19 @@ static inline machine_msg_t *od_frontend_error_msg(od_client_t *client,
 {
 	char msg[OD_QRY_MAX_SZ];
 	int msg_len;
-	msg_len = od_snprintf(msg, sizeof(msg),
-			      "odyssey: %s%.*s: ", client->id.id_prefix,
-			      (signed)sizeof(client->id.id), client->id.id);
+	int show_id = 1;
+	if (client->rule != NULL) {
+		show_id = client->rule->client_show_id;
+	}
+
+	if (show_id) {
+		msg_len = od_snprintf(msg, sizeof(msg),
+				      "odyssey: %s%.*s: ", client->id.id_prefix,
+				      (signed)sizeof(client->id.id),
+				      client->id.id);
+	} else {
+		msg_len = od_snprintf(msg, sizeof(msg), "odyssey: ");
+	}
 	msg_len +=
 		od_vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
 	return kiwi_be_write_error(stream, code, msg, msg_len);
@@ -40,9 +50,19 @@ od_frontend_fatal_msg(od_client_t *client, machine_msg_t *stream,
 {
 	char msg[OD_QRY_MAX_SZ];
 	int msg_len;
-	msg_len = od_snprintf(msg, sizeof(msg),
-			      "odyssey: %s%.*s: ", client->id.id_prefix,
-			      (signed)sizeof(client->id.id), client->id.id);
+	int show_id = 1;
+	if (client->rule != NULL) {
+		show_id = client->rule->client_show_id;
+	}
+
+	if (show_id) {
+		msg_len = od_snprintf(msg, sizeof(msg),
+				      "odyssey: %s%.*s: ", client->id.id_prefix,
+				      (signed)sizeof(client->id.id),
+				      client->id.id);
+	} else {
+		msg_len = od_snprintf(msg, sizeof(msg), "odyssey: ");
+	}
 	msg_len += od_vsnprintf(msg + msg_len, sizeof(msg) - msg_len, msg_fmt,
 				args);
 
@@ -68,9 +88,19 @@ static inline machine_msg_t *od_frontend_info_msg(od_client_t *client,
 {
 	char msg[OD_QRY_MAX_SZ];
 	int msg_len;
-	msg_len = od_snprintf(msg, sizeof(msg),
-			      "odyssey: %s%.*s: ", client->id.id_prefix,
-			      (signed)sizeof(client->id.id), client->id.id);
+	int show_id = 1;
+	if (client->rule != NULL) {
+		show_id = client->rule->client_show_id;
+	}
+
+	if (show_id) {
+		msg_len = od_snprintf(msg, sizeof(msg),
+				      "odyssey: %s%.*s: ", client->id.id_prefix,
+				      (signed)sizeof(client->id.id),
+				      client->id.id);
+	} else {
+		msg_len = od_snprintf(msg, sizeof(msg), "odyssey: ");
+	}
 	msg_len +=
 		od_vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
 	return kiwi_be_write_notice_info(stream, msg, msg_len);

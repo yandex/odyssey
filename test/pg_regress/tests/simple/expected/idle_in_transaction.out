@@ -1,0 +1,30 @@
+\! psql --echo-all --no-psqlrc --quiet -p ${PGTEST_PORT} -h localhost -U ${PGTEST_USER} -d ${PGTEST_DB} -f ${PGTEST_DIR}/sql/idle_in_transaction_body.sql 2>&1; true
+begin;
+select 53;
+ ?column? 
+----------
+       53
+(1 row)
+
+\! sleep 1
+select 73;
+ ?column? 
+----------
+       73
+(1 row)
+
+-- long op is not broken
+select pg_sleep(6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+\! sleep 6
+select 76;
+psql:/home/postgres/regress/tests/simple/sql/idle_in_transaction_body.sql:13: FATAL:  odyssey: Odyssey has dropped the connection
+DETAIL:  Connection was dropped by Odyssey due to idle in transaction timeout
+psql:/home/postgres/regress/tests/simple/sql/idle_in_transaction_body.sql:13: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+psql:/home/postgres/regress/tests/simple/sql/idle_in_transaction_body.sql:13: error: connection to server was lost

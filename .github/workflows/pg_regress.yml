@@ -1,0 +1,29 @@
+name: pg_regress tests
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+    paths:
+      - "sources/**"
+      - "test/**"
+      - "CMakeLists.txt"
+      - "docker/**"
+      - "modules/**"
+      - "cmake/**"
+      - "!docker/prom-exporter/**"
+jobs:
+  regress_tests:
+    name: pg_regress
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: ['build_release', 'build_asan', 'build_dbg']
+        cc: ['clang', 'gcc']
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        submodules: recursive
+    - name: Odyssey pg_regress tests
+      run: make regress_test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_CC=${{ matrix.cc }}

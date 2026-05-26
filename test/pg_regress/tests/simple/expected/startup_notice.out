@@ -1,0 +1,21 @@
+DROP DATABASE IF EXISTS broken_collation;
+NOTICE:  database "broken_collation" does not exist, skipping
+CREATE DATABASE broken_collation;
+UPDATE pg_database SET datcollversion = 'bogus-version' WHERE datname = 'broken_collation';
+\connect broken_collation
+WARNING:  database "broken_collation" has no actual collation version, but a version was recorded
+select 42;
+ ?column? 
+----------
+       42
+(1 row)
+
+\connect postgres
+-- drop connections to avoid error of 'There is 1 other session using the database.'
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'broken_collation';
+ pg_terminate_backend 
+----------------------
+ t
+(1 row)
+
+DROP DATABASE IF EXISTS broken_collation;

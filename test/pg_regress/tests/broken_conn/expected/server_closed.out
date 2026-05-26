@@ -5,7 +5,7 @@ select 43;
 (1 row)
 
 set application_name to 'kill_me';
-\! /tests/broken_conn/kill_server.sh
+\! ${PGTEST_DIR}/sql/kill_server.sh
  pg_terminate_backend 
 ----------------------
  t

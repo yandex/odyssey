@@ -185,6 +185,7 @@ struct od_rule {
 
 	/* misc */
 	int client_fwd_error;
+	int client_show_id;
 	int reserve_session_server_connection;
 	int application_name_add_host;
 	int client_max_set;

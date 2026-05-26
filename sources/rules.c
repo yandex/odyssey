@@ -559,6 +559,7 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->auth_common_names_count = 0;
 	rule->server_lifetime_us = 3600 * 1000000L;
 	rule->server_drop_on_cached_plan_error = 1;
+	rule->client_show_id = 1;
 	rule->reserve_session_server_connection = 1;
 #ifdef PAM_FOUND
 	rule->auth_pam_data = od_pam_auth_data_create();
@@ -1419,6 +1420,10 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 
 	/* client_fwd_error */
 	if (a->client_fwd_error != b->client_fwd_error) {
+		return 0;
+	}
+
+	if (a->client_show_id != b->client_show_id) {
 		return 0;
 	}
 
