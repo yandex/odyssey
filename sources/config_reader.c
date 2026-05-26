@@ -105,6 +105,7 @@ typedef enum {
 	OD_LSERVER_LOGIN_RETRY,
 	OD_LCLIENT_LOGIN_TIMEOUT,
 	OD_LCLIENT_FWD_ERROR,
+	OD_LCLIENT_SHOW_ID,
 	OD_LPRESERVE_SESSION_SERVER_CONN,
 	OD_LAPPLICATION_NAME_ADD_HOST,
 	OD_LBACKEND_CONNECT_TIMEOUT_MS,
@@ -309,6 +310,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("server_login_retry", OD_LSERVER_LOGIN_RETRY),
 	od_keyword("client_login_timeout", OD_LCLIENT_LOGIN_TIMEOUT),
 	od_keyword("client_fwd_error", OD_LCLIENT_FWD_ERROR),
+	od_keyword("client_show_id", OD_LCLIENT_SHOW_ID),
 	od_keyword("reserve_session_server_connection",
 		   OD_LPRESERVE_SESSION_SERVER_CONN),
 	od_keyword("application_name_add_host", OD_LAPPLICATION_NAME_ADD_HOST),
@@ -2157,6 +2159,13 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		case OD_LCLIENT_FWD_ERROR:
 			if (!od_config_reader_yes_no(reader,
 						     &rule->client_fwd_error)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
+		/* client_show_id */
+		case OD_LCLIENT_SHOW_ID:
+			if (!od_config_reader_yes_no(reader,
+						     &rule->client_show_id)) {
 				return NOT_OK_RESPONSE;
 			}
 			continue;

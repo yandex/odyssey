@@ -2,7 +2,7 @@ select 43;
 
 set application_name to 'kill_me';
 
-\! /tests/broken_conn/kill_server.sh
+\! ${PGTEST_DIR}/sql/kill_server.sh
 
 \! sleep 1
 

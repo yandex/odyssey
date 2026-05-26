@@ -228,6 +228,13 @@ jdbc_test: build_images
 userver_test: build_images
 	docker compose -f ./test/drivers/userver/docker-compose.yml up --build --abort-on-container-exit --exit-code-from userver_test --remove-orphans # --force-recreate
 
+regress_test:
+	docker build -f ./test/pg_regress/Dockerfile \
+		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
+		--build-arg odyssey_cc=$(ODYSSEY_CC) \
+		--tag=odyssey/regress-tester .
+	docker run odyssey/regress-tester
+
 ci-unittests:
 	docker build \
 		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \

@@ -12,3 +12,5 @@ alter table zsb alter column id type float;
 \g
 
 select 42;
+
+drop table if exists zsb;
