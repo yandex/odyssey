@@ -21,7 +21,7 @@ NOTICE:  select host tcp://localhost:5434
  t
 (1 row)
 
-\connect 'host=localhost port=8432 user=rwuser dbname=postgres'
+\connect 'host=localhost port=6432 user=rwuser dbname=postgres'
 NOTICE:  select host tcp://localhost:5432
 select pg_is_in_recovery();
 NOTICE:  select host tcp://localhost:5432
