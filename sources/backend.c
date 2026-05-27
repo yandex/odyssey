@@ -466,11 +466,42 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	/* connect to server */
-	rc = mm_io_connect(
-		server->io.io, saddr,
-		(uint32_t)instance->config.backend_connect_timeout_ms);
-	if (ai) {
+	if (ai != NULL) {
+		for (struct addrinfo *cur = ai; cur != NULL;
+		     cur = cur->ai_next) {
+			saddr = cur->ai_addr;
+			rc = mm_io_connect(server->io.io, saddr,
+					   (uint32_t)instance->config
+						   .backend_connect_timeout_ms);
+			if (rc == 0) {
+				break;
+			}
+
+			char addr_str[INET6_ADDRSTRLEN] = "<unknown>";
+			if (cur->ai_family == AF_INET) {
+				inet_ntop(AF_INET,
+					  &((struct sockaddr_in *)cur->ai_addr)
+						   ->sin_addr,
+					  addr_str, sizeof(addr_str));
+			} else if (cur->ai_family == AF_INET6) {
+				inet_ntop(AF_INET6,
+					  &((struct sockaddr_in6 *)cur->ai_addr)
+						   ->sin6_addr,
+					  addr_str, sizeof(addr_str));
+			}
+
+			int err = mm_errno_get();
+			od_error(
+				&instance->logger, context, server->client,
+				server,
+				"failed to connect to %s:%d, errno=%d (%s), trying next address...",
+				addr_str, address->port, err, strerror(err));
+		}
 		freeaddrinfo(ai);
+	} else {
+		rc = mm_io_connect(
+			server->io.io, saddr,
+			(uint32_t)instance->config.backend_connect_timeout_ms);
 	}
 
 	if (rc == NOT_OK_RESPONSE) {
