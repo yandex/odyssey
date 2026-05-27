@@ -470,7 +470,7 @@ od_frontend_attach_to_endpoint(od_client_t *client, char *context,
 					  addr, sizeof(addr) - 1);
 
 			char msg[256];
-			od_snprintf(msg, sizeof(msg), "selected host %s", addr);
+			od_snprintf(msg, sizeof(msg), "select host %s", addr);
 
 			char buf[256];
 			int n = kiwi_be_format_notice(buf, sizeof(buf), 'M',
