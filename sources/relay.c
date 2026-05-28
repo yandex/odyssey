@@ -732,7 +732,6 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 		size_t len = sizeof(od_relay_deffered_begin_bytes);
 		if (xbuf_append_raw(&relay->xbuf, od_relay_deffered_begin_bytes,
 				    len)) {
-			machine_msg_free(q);
 			return -1;
 		}
 
