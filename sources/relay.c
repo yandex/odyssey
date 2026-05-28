@@ -77,6 +77,23 @@ static int xbuf_append(od_relay_xbuf_t *xbuf, machine_msg_t *msg)
 	return mm_vector_append(&xbuf->msgs, &xmsg);
 }
 
+static int xbuf_append_raw(od_relay_xbuf_t *xbuf, const void *data, size_t len)
+{
+	machine_msg_t *copy = machine_msg_create(len);
+	if (copy == NULL) {
+		return -1;
+	}
+
+	char *d = machine_msg_data(copy);
+	memcpy(d, data, len);
+
+	od_xbuf_msg_t xmsg;
+	memset(&xmsg, 0, sizeof(od_xbuf_msg_t));
+	xmsg.msg = copy;
+
+	return mm_vector_append(&xbuf->msgs, &xmsg);
+}
+
 static void xbuf_clear(od_relay_xbuf_t *xbuf)
 {
 	xbuf_destroy_msgs(xbuf);
@@ -713,15 +730,8 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 
 	if (client->pending_begin) {
 		size_t len = sizeof(od_relay_deffered_begin_bytes);
-		machine_msg_t *q = machine_msg_create(len);
-		if (q == NULL) {
-			return -1;
-		}
-
-		char *data = machine_msg_data(q);
-		memcpy(data, od_relay_deffered_begin_bytes, len);
-
-		if (xbuf_append(&relay->xbuf, q)) {
+		if (xbuf_append_raw(&relay->xbuf, od_relay_deffered_begin_bytes,
+				    len)) {
 			machine_msg_free(q);
 			return -1;
 		}
