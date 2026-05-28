@@ -40,7 +40,11 @@ FROM golang:1.26.0 AS go-builder
 
 WORKDIR /
 
-RUN git clone --depth 1 https://github.com/pg-sharding/spqr.git
+ARG spqr_ref=master
+RUN git clone --depth 1 https://github.com/pg-sharding/spqr.git && \
+    cd spqr && \
+    git fetch --depth 1 origin ${spqr_ref} && \
+    git checkout ${spqr_ref}
 
 WORKDIR /spqr
 RUN go mod tidy

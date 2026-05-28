@@ -214,6 +214,12 @@ static inline int od_write(od_io_t *io, machine_msg_t *msg)
 	return machine_write(io->io, msg, UINT32_MAX);
 }
 
+static inline int od_write2(od_io_t *io, machine_msg_t *msg,
+			    uint32_t timeout_ms)
+{
+	return machine_write(io->io, msg, timeout_ms);
+}
+
 int od_io_read_some(od_io_t *io, uint32_t timeout_ms);
 
 int od_io_try_read_some(od_io_t *io);

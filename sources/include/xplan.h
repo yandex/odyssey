@@ -90,6 +90,11 @@ typedef enum {
 	 * virtual ErrorResponse for unknown or already exists statements
 	 */
 	OD_XPLAN_VIRTUAL_ERROR_RESPONSE,
+
+	/*
+	 * deffered simple query begin
+	 */
+	OD_XPLAN_DEFFERED_BEGIN,
 } od_xplan_entry_type_t;
 
 typedef struct {

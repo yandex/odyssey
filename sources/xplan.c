@@ -32,6 +32,16 @@ static inline kiwi_fe_type_t msg_fe_type(machine_msg_t *msg)
 	return type;
 }
 
+static int msg_is_begin_query(machine_msg_t *msg)
+{
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	return size == sizeof(od_relay_deffered_begin_bytes) &&
+	       memcmp(data, od_relay_deffered_begin_bytes,
+		      sizeof(od_relay_deffered_begin_bytes)) == 0;
+}
+
 static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 {
 	switch (type) {
@@ -47,6 +57,8 @@ static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 		return "OD_XPLAN_VIRTUAL_CLOSE_COMPLETE";
 	case OD_XPLAN_VIRTUAL_PARSE_COMPLETE:
 		return "OD_XPLAN_VIRTUAL_PARSE_COMPLETE";
+	case OD_XPLAN_DEFFERED_BEGIN:
+		return "OD_XPLAN_DEFFERED_BEGIN";
 	default:
 		abort();
 	}
@@ -71,6 +83,8 @@ static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 		}
 		abort();
 		break;
+	case OD_XPLAN_DEFFERED_BEGIN:
+		return entry->clmsg;
 	case OD_XPLAN_VIRTUAL_ERROR_RESPONSE:
 	case OD_XPLAN_VIRTUAL_PARSE_COMPLETE:
 	case OD_XPLAN_VIRTUAL_CLOSE_COMPLETE:
@@ -263,6 +277,14 @@ static void entry_init_virtual_close_complete(od_xplan_entry_t *e,
 			    NULL);
 }
 
+static void entry_init_deffered_begin(od_xplan_entry_t *e, machine_msg_t *begin)
+{
+	assert(msg_is_begin_query(begin));
+
+	entry_init_internal(e, OD_XPLAN_DEFFERED_BEGIN, begin, NULL, NULL,
+			    OD_XPLAN_DELTA_NONE, NULL, NULL);
+}
+
 static int xplan_append(od_xplan_t *xp, const od_xplan_entry_t *e)
 {
 	return mm_vector_append(&xp->entries, e);
@@ -370,6 +392,20 @@ xplan_append_virtual_close_complete(od_xplan_t *xp, const char *client_pstmt,
 {
 	od_xplan_entry_t e;
 	entry_init_virtual_close_complete(&e, client_pstmt, original);
+
+	int rc = xplan_append(xp, &e);
+	if (rc != 0) {
+		return OD_EOOM;
+	}
+
+	return OD_OK;
+}
+
+static inline od_frontend_status_t
+xplan_append_deffered_begin(od_xplan_t *xp, machine_msg_t *begin)
+{
+	od_xplan_entry_t e;
+	entry_init_deffered_begin(&e, begin);
 
 	int rc = xplan_append(xp, &e);
 	if (rc != 0) {
@@ -773,6 +809,14 @@ static od_frontend_status_t plan_sync(od_relay_t *relay, od_xplan_t *xp,
 	return xplan_append_fwd_no_delta(xp, m->msg, NULL /* no rewrite */);
 }
 
+static od_frontend_status_t
+plan_deffered_begin(od_relay_t *relay, od_xplan_t *xp, od_xbuf_msg_t *m)
+{
+	(void)relay;
+
+	return xplan_append_deffered_begin(xp, m->msg);
+}
+
 static od_frontend_status_t plan_simple(od_xplan_t *xp, od_relay_t *relay)
 {
 	od_relay_xbuf_t *xbuf = &relay->xbuf;
@@ -783,8 +827,15 @@ static od_frontend_status_t plan_simple(od_xplan_t *xp, od_relay_t *relay)
 	for (size_t i = 0; i < count; ++i) {
 		od_xbuf_msg_t *m = mm_vector_get(&xbuf->msgs, i);
 
-		od_frontend_status_t status =
-			xplan_append_fwd_no_delta(xp, m->msg, NULL);
+		od_frontend_status_t status;
+
+		if (i == 0 && msg_is_begin_query(m->msg)) {
+			/* deffered begin plan entry is always at the beggining */
+			status = xplan_append_deffered_begin(xp, m->msg);
+		} else {
+			status = xplan_append_fwd_no_delta(xp, m->msg, NULL);
+		}
+
 		if (status != OD_OK) {
 			return status;
 		}
@@ -812,6 +863,15 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 		kiwi_fe_type_t type = msg_fe_type(m->msg);
 
 		switch (type) {
+		case KIWI_FE_QUERY:
+			if (od_unlikely(i != 0 ||
+					!msg_is_begin_query(m->msg))) {
+				/* deffered begin must always be at the begginig of the plan */
+				abort();
+			}
+			status = plan_deffered_begin(relay, xp, m);
+			break;
+
 		case KIWI_FE_PARSE:
 			status = plan_parse(relay, xp, m);
 			break;
@@ -1076,6 +1136,77 @@ static od_frontend_status_t run_parse_shadow(od_xplan_entry_t *ps,
 	return status;
 }
 
+static od_frontend_status_t run_deffered_begin(od_xplan_entry_t *ps,
+					       od_client_t *client,
+					       od_server_t *server,
+					       uint32_t timeout_ms)
+{
+	(void)ps;
+
+	/*
+	 * read until RFQ
+	 * do not resend CommandComplete and RFQ to client
+	 */
+
+	int rc;
+	int done = 0;
+	machine_msg_t *msg = NULL;
+
+	while (!done) {
+		msg = od_read(&server->io, timeout_ms);
+		if (msg == NULL) {
+			return OD_ESERVER_READ;
+		}
+
+		char *data = machine_msg_data(msg);
+		int size = machine_msg_size(msg);
+		kiwi_be_type_t type = *data;
+		od_instance_t *instance = client->global->instance;
+
+		if (instance->config.log_debug) {
+			if (type == KIWI_BE_COMMAND_COMPLETE) {
+				const char *command_tag =
+					data + sizeof(kiwi_header_t);
+				od_debug(&instance->logger, "main", client,
+					 server, "%s - %s",
+					 kiwi_be_type_to_string(type),
+					 command_tag);
+			} else {
+				od_debug(&instance->logger, "main", client,
+					 server, "%s",
+					 kiwi_be_type_to_string(type));
+			}
+		}
+
+		switch (type) {
+		case KIWI_BE_READY_FOR_QUERY:
+			done = 1;
+			/* fallthrough */
+		case KIWI_BE_COMMAND_COMPLETE:
+			machine_msg_free(msg);
+			break;
+		case KIWI_BE_PARAMETER_STATUS:
+			rc = od_backend_update_parameter(server, "main", data,
+							 size, 0);
+			if (rc == -1) {
+				machine_msg_free(msg);
+				od_gerror("main", client, server,
+					  "can't update parameter");
+				return OD_ESERVER_READ;
+			}
+			/* fallthrough */
+		default:
+			rc = od_write2(&client->io, msg, timeout_ms);
+			if (rc != 0) {
+				return OD_ECLIENT_READ;
+			}
+			break;
+		}
+	}
+
+	return OD_OK;
+}
+
 static od_frontend_status_t run_parse(od_xplan_entry_t *ps, od_client_t *client,
 				      od_server_t *server, uint32_t timeout_ms)
 {
@@ -1240,6 +1371,7 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	 *
 	 * individually:
 	 * Flush	-> <no response>
+	 * Deffered BEGIN -> read until RFQ, resend only async messages to client
 	 * no response awaiting from server
 	 */
 
@@ -1287,6 +1419,10 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		}
 
 		switch (entry->type) {
+		case OD_XPLAN_DEFFERED_BEGIN:
+			status = run_deffered_begin(entry, client, server,
+						    timeout_ms);
+			break;
 		case OD_XPLAN_PARSE:
 			status = run_parse(entry, client, server, timeout_ms);
 			break;

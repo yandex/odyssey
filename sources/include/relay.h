@@ -62,3 +62,5 @@ od_frontend_status_t od_relay_process_xflush(od_relay_t *relay,
 od_frontend_status_t od_relay_process_xsync(od_relay_t *relay,
 					    machine_msg_t *msg,
 					    uint32_t timeout_ms);
+
+extern uint8_t od_relay_deffered_begin_bytes[12];
