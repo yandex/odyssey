@@ -20,6 +20,7 @@ services:
       args:
         odyssey_build_type: "${ODYSSEY_BUILD_TYPE:-build_release}"
         odyssey_cc: "${ODYSSEY_CC:-gcc}"
+        spqr_ref: "${ODYSSEY_PROTO_TEST_SPQR_REF:-master}"
         test_tag: "${ODYSSEY_PROTO_TEST_TAG:-all}"
     networks:
       - od_proto_test

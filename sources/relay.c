@@ -77,6 +77,23 @@ static int xbuf_append(od_relay_xbuf_t *xbuf, machine_msg_t *msg)
 	return mm_vector_append(&xbuf->msgs, &xmsg);
 }
 
+static int xbuf_append_raw(od_relay_xbuf_t *xbuf, const void *data, size_t len)
+{
+	machine_msg_t *copy = machine_msg_create(len);
+	if (copy == NULL) {
+		return -1;
+	}
+
+	char *d = machine_msg_data(copy);
+	memcpy(d, data, len);
+
+	od_xbuf_msg_t xmsg;
+	memset(&xmsg, 0, sizeof(od_xbuf_msg_t));
+	xmsg.msg = copy;
+
+	return mm_vector_append(&xbuf->msgs, &xmsg);
+}
+
 static void xbuf_clear(od_relay_xbuf_t *xbuf)
 {
 	xbuf_destroy_msgs(xbuf);
@@ -704,6 +721,30 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	return status;
 }
 
+uint8_t od_relay_deffered_begin_bytes[12] = { 'Q', 0,	0,   0,	  11,  'B',
+					      'E', 'G', 'I', 'N', ';', 0 };
+
+static int relay_append(od_relay_t *relay, machine_msg_t *msg)
+{
+	od_client_t *client = relay->client;
+
+	if (client->pending_begin) {
+		size_t len = sizeof(od_relay_deffered_begin_bytes);
+		if (xbuf_append_raw(&relay->xbuf, od_relay_deffered_begin_bytes,
+				    len)) {
+			return -1;
+		}
+
+		client->pending_begin = 0;
+	}
+
+	if (xbuf_append(&relay->xbuf, msg)) {
+		return -1;
+	}
+
+	return 0;
+}
+
 static od_frontend_status_t execute_xbuf(od_relay_t *relay, machine_msg_t *msg,
 					 uint32_t timeout_ms)
 {
@@ -716,7 +757,7 @@ static od_frontend_status_t execute_xbuf(od_relay_t *relay, machine_msg_t *msg,
 		return OD_ATTACH;
 	}
 
-	if (xbuf_append(&relay->xbuf, msg)) {
+	if (relay_append(relay, msg)) {
 		status = OD_EOOM;
 		goto to_return;
 	}
@@ -806,7 +847,7 @@ od_frontend_status_t od_relay_process_xmsg(od_relay_t *relay,
 
 	/* no any handling - real queries will be executed on flush/sync */
 
-	if (xbuf_append(&relay->xbuf, msg)) {
+	if (relay_append(relay, msg)) {
 		return OD_EOOM;
 	}
 

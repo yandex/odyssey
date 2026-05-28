@@ -25,7 +25,7 @@ do_test() {
   POSTGRES_USER="$user" \
   /usr/bin/proto.test \
       -test.v \
-      -test.run 'Test[^(DeallocatePrepareRemovesPstmtsByXproto|DeallocateRemovesPstmtsByXproto)]'
+      -test.skip 'TestDeallocatePrepareRemovesPstmtsByXproto|TestDeallocateRemovesPstmtsByXproto'
 }
 
 do_test suser

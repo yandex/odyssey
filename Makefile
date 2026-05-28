@@ -184,6 +184,7 @@ proto-test:
 	ODYSSEY_PROTO_TEST_TAG=$(PROTO_TEST_TAG) \
 	ODYSSEY_CC="$(ODYSSEY_CC)" \
 	ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) \
+	ODYSSEY_PROTO_TEST_SPQR_REF=$(shell git ls-remote https://github.com/pg-sharding/spqr HEAD | cut -f1) \
 	docker compose -f ./test/proto/docker-compose.yml up --exit-code-from tester --force-recreate --build --remove-orphans
 
 functional-test:
