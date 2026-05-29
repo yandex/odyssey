@@ -297,6 +297,7 @@ set(od_test_src
     tests/machinarium/test_wait_group_lifetime.c
     tests/machinarium/test_wait_flag_simple.c
     tests/machinarium/test_wait_flag_timeout.c
+    tests/machinarium/test_hm_hash.c
     tests/machinarium/test_getaddrinfo0.c
     tests/machinarium/test_getaddrinfo1.c
     tests/machinarium/test_getaddrinfo2.c
