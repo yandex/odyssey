@@ -514,6 +514,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	machinarium_set_pool_size(instance->config.resolvers);
 	machinarium_set_coroutine_cache_size(instance->config.cache_coroutine);
 	machinarium_set_msg_cache_gc_size(instance->config.cache_msg_gc_size);
+	machinarium_set_dns_ttl_ms(instance->config.dns_ttl_ms);
 	rc = machinarium_init();
 	if (rc == -1) {
 		od_error(&instance->logger, "init", NULL, NULL,

@@ -71,6 +71,8 @@ MACHINE_API void machinarium_set_coroutine_cache_size(int size);
 
 MACHINE_API void machinarium_set_msg_cache_gc_size(int size);
 
+MACHINE_API void machinarium_set_dns_ttl_ms(int ttl_ms);
+
 /* main */
 
 MACHINE_API int machinarium_init(void);
@@ -218,10 +220,6 @@ MACHINE_API int machine_tls_set_key_file(machine_tls_t *, char *);
 MACHINE_API int machine_getsockname(mm_io_t *, struct sockaddr *, int *);
 
 MACHINE_API int machine_getpeername(mm_io_t *, struct sockaddr *, int *);
-
-MACHINE_API int machine_getaddrinfo(char *addr, char *service,
-				    struct addrinfo *hints,
-				    struct addrinfo **res, uint32_t time_ms);
 
 /* iov */
 

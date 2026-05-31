@@ -8,6 +8,7 @@
 
 #include <machinarium/machinarium.h>
 #include <machinarium/eventfd.h>
+#include <machinarium/dns.h>
 
 #include <types.h>
 #include <id.h>
@@ -18,7 +19,7 @@ struct od_system_server {
 	mm_eventfd_t shutdown_efd;
 	machine_tls_t *tls;
 	od_config_listen_t *config;
-	struct addrinfo *addr;
+	mm_addrinfo_t *addr;
 	od_global_t *global;
 	od_list_t link;
 	od_id_t sid;

@@ -12,6 +12,7 @@
 #include <netdb.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/dns.h>
 
 #include <util.h>
 
@@ -57,7 +58,7 @@ int od_getsockaddrname(struct sockaddr *sa, char *buf, int size, int add_addr,
 	return -1;
 }
 
-int od_getaddrname(struct addrinfo *ai, char *buf, int size, int add_addr,
+int od_getaddrname(mm_addrinfo_t *ai, char *buf, int size, int add_addr,
 		   int add_port)
 {
 	return od_getsockaddrname(ai->ai_addr, buf, size, add_addr, add_port);

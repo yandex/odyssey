@@ -14,11 +14,16 @@
 
 enum { MM_TASK, MM_TASK_EXIT };
 
-static void mm_taskmgr_main(void *arg __attribute__((unused)))
+static void mm_taskmgr_main(void *arg)
 {
+	mm_taskmgr_worker_t *worker = arg;
+
 	sigset_t mask;
 	sigfillset(&mask);
 	pthread_sigmask(SIG_BLOCK, &mask, NULL);
+
+	mm_list_init(&worker->dns_cache);
+
 	for (;;) {
 		mm_msg_t *msg;
 		msg = mm_channel_read(&machinarium.task_mgr.channel,
@@ -33,12 +38,19 @@ static void mm_taskmgr_main(void *arg __attribute__((unused)))
 
 		mm_task_t *task;
 		task = (mm_task_t *)msg->data.start;
-		task->function(task->arg);
+		task->function(worker, task->arg);
 		int event_mgr_fd;
 		event_mgr_fd = mm_eventmgr_signal(&task->on_complete);
 		if (event_mgr_fd > 0) {
 			mm_eventmgr_wakeup(event_mgr_fd);
 		}
+	}
+
+	mm_list_t *i, *s;
+	mm_list_foreach_safe (&worker->dns_cache, i, s) {
+		mm_dns_cache_entry_t *e;
+		e = mm_container_of(i, mm_dns_cache_entry_t, link);
+		mm_free_dns_cache_entry(e);
 	}
 }
 
@@ -49,10 +61,10 @@ void mm_taskmgr_init(mm_taskmgr_t *mgr)
 	mm_channel_init(&mgr->channel);
 }
 
-int mm_taskmgr_start(mm_taskmgr_t *mgr, int workers_count)
+int mm_taskmgr_start(mm_taskmgr_t *mgr, int workers_count, uint64_t dns_ttl_ms)
 {
 	mgr->workers_count = workers_count;
-	mgr->workers = mm_malloc(sizeof(int) * workers_count);
+	mgr->workers = mm_malloc(sizeof(mm_taskmgr_worker_t) * workers_count);
 	if (mgr->workers == NULL) {
 		return -1;
 	}
@@ -60,7 +72,9 @@ int mm_taskmgr_start(mm_taskmgr_t *mgr, int workers_count)
 	for (; i < workers_count; i++) {
 		char name[32];
 		mm_snprintf(name, sizeof(name), "resolver: %d", i);
-		mgr->workers[i] = machine_create(name, mm_taskmgr_main, NULL);
+		mgr->workers[i].dns_ttl_ms = dns_ttl_ms;
+		mgr->workers[i].id =
+			machine_create(name, mm_taskmgr_main, &mgr->workers[i]);
 	}
 	return 0;
 }
@@ -81,7 +95,7 @@ void mm_taskmgr_stop(mm_taskmgr_t *mgr)
 		mm_channel_write(&mgr->channel, msg);
 	}
 	for (i = 0; i < mgr->workers_count; i++) {
-		rc = machine_wait(mgr->workers[i]);
+		rc = machine_wait(mgr->workers[i].id);
 		if (rc != MM_OK_RETCODE) {
 			/* TODO: handle gracefully */
 			abort();

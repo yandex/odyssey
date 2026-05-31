@@ -222,7 +222,7 @@ void od_system_server_free(od_system_server_t *server)
 
 static inline od_retcode_t od_system_server_start(od_system_t *system,
 						  od_config_listen_t *config,
-						  struct addrinfo *addr)
+						  mm_addrinfo_t *addr)
 {
 	od_instance_t *instance;
 	od_system_server_t *server;
@@ -386,9 +386,8 @@ static inline int od_system_listen(od_system_t *system)
 		/* resolve listen address and port */
 		char port[16];
 		od_snprintf(port, sizeof(port), "%d", listen->port);
-		struct addrinfo *ai = NULL;
-		rc = machine_getaddrinfo(host, port, hints_ptr, &ai,
-					 UINT32_MAX);
+		mm_addrinfo_t *ai = NULL;
+		rc = mm_getaddrinfo(host, port, hints_ptr, &ai, UINT32_MAX);
 		if (rc != 0) {
 			od_error(&instance->logger, "system", NULL, NULL,
 				 "failed to resolve %s:%d", listen->host,
@@ -402,10 +401,10 @@ static inline int od_system_listen(od_system_t *system)
 			if (rc == 0) {
 				binded++;
 			}
-			freeaddrinfo(ai);
+			mm_freeaddrinfo(ai);
 			continue;
 		}
-		struct addrinfo *orig = ai;
+		mm_addrinfo_t *orig = ai;
 		while (ai) {
 			rc = od_system_server_start(system, listen, ai);
 			if (rc == 0) {
@@ -413,7 +412,7 @@ static inline int od_system_listen(od_system_t *system)
 			}
 			ai = ai->ai_next;
 		}
-		freeaddrinfo(orig);
+		mm_freeaddrinfo(orig);
 	}
 
 #ifdef ODYSSEY_VERSION_GIT

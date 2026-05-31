@@ -13,6 +13,7 @@
 #include <sys/un.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/dns.h>
 
 #include <backend.h>
 #include <types.h>
@@ -409,7 +410,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	struct sockaddr_in saddr_v4;
 	struct sockaddr_in6 saddr_v6;
 	struct sockaddr *saddr;
-	struct addrinfo *ai = NULL;
+	mm_addrinfo_t *ai = NULL;
 
 	/* resolve server address */
 	if (address->type == OD_ADDRESS_TYPE_TCP) {
@@ -438,8 +439,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 			char rport[16];
 			od_snprintf(rport, sizeof(rport), "%d", address->port);
 
-			rc = machine_getaddrinfo(address->host, rport, NULL,
-						 &ai, 0);
+			rc = mm_getaddrinfo(address->host, rport, NULL, &ai, 0);
 			if (rc != 0) {
 				od_error(&instance->logger, context, NULL,
 					 server, "failed to resolve %s:%d",
@@ -467,8 +467,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 
 	/* connect to server */
 	if (ai != NULL) {
-		for (struct addrinfo *cur = ai; cur != NULL;
-		     cur = cur->ai_next) {
+		for (mm_addrinfo_t *cur = ai; cur != NULL; cur = cur->ai_next) {
 			saddr = cur->ai_addr;
 			rc = mm_io_connect(server->io.io, saddr,
 					   (uint32_t)instance->config
@@ -497,7 +496,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 				"failed to connect to %s:%d, errno=%d (%s), trying next address...",
 				addr_str, address->port, err, strerror(err));
 		}
-		freeaddrinfo(ai);
+		mm_freeaddrinfo(ai);
 	} else {
 		rc = mm_io_connect(
 			server->io.io, saddr,
