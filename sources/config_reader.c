@@ -88,6 +88,7 @@ typedef enum {
 	OD_LWORKERS,
 	OD_LCPU_AFFINITY,
 	OD_LRESOLVERS,
+	OD_LDNS_CACHE_TTL,
 	OD_LPIPELINE,
 	OD_LSMART_SEARCH_PATH_ENQUOTING,
 	OD_LPACKET_READ_SIZE,
@@ -296,6 +297,7 @@ static od_keyword_t od_config_keywords[] = {
 	od_keyword("workers", OD_LWORKERS),
 	od_keyword("cpu_affinity", OD_LCPU_AFFINITY),
 	od_keyword("resolvers", OD_LRESOLVERS),
+	od_keyword("dns_cache_ttl", OD_LDNS_CACHE_TTL),
 	od_keyword("pipeline", OD_LPIPELINE),
 	od_keyword("packet_read_size", OD_LPACKET_READ_SIZE),
 	od_keyword("packet_write_queue", OD_LPACKET_WRITE_QUEUE),
@@ -3799,6 +3801,13 @@ static int od_config_reader_parse(od_config_reader_t *reader,
 				goto error;
 			}
 
+			continue;
+		/* dns_cache_ttl */
+		case OD_LDNS_CACHE_TTL:
+			if (!od_config_reader_number(reader,
+						     &config->dns_ttl_ms)) {
+				goto error;
+			}
 			continue;
 		/* pipeline */
 		case OD_LPIPELINE:

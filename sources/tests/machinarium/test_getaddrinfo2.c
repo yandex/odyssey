@@ -1,5 +1,6 @@
 
 #include <machinarium/machinarium.h>
+#include <machinarium/dns.h>
 #include <tests/odyssey_test.h>
 
 static int gai_complete = 0;
@@ -7,15 +8,14 @@ static int gai_complete = 0;
 static void test_gai_coroutine(void *arg)
 {
 	(void)arg;
-	struct addrinfo *res = NULL;
-	int rc = machine_getaddrinfo("localhost", "http", NULL, &res,
-				     UINT32_MAX);
+	mm_addrinfo_t *res = NULL;
+	int rc = mm_getaddrinfo("localhost", "http", NULL, &res, UINT32_MAX);
 	if (rc < 0) {
 		printf("failed to resolve address\n");
 	} else {
 		test(res != NULL);
 		if (res) {
-			freeaddrinfo(res);
+			mm_freeaddrinfo(res);
 		}
 	}
 	gai_complete++;

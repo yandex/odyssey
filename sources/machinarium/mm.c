@@ -14,6 +14,7 @@ static int machinarium_pool_size = 0;
 static int machinarium_coroutine_cache_size = 0;
 static int machinarium_msg_cache_gc_size = 0;
 static int machinarium_initialized = 0;
+static int machinarium_dns_ttl_ms = -1;
 mm_t machinarium;
 
 static inline size_t machinarium_page_size(void)
@@ -41,6 +42,11 @@ MACHINE_API void machinarium_set_msg_cache_gc_size(int size)
 	machinarium_msg_cache_gc_size = size;
 }
 
+MACHINE_API void machinarium_set_dns_ttl_ms(int ttl_ms)
+{
+	machinarium_dns_ttl_ms = ttl_ms;
+}
+
 MACHINE_API int machinarium_init(void)
 {
 	if (machinarium_initialized) {
@@ -55,17 +61,23 @@ MACHINE_API int machinarium_init(void)
 		machinarium_pool_size = 1;
 	}
 
+	if (machinarium_dns_ttl_ms < 0) {
+		machinarium_dns_ttl_ms = 30 * 1000;
+	}
+
 	machinarium.config.page_size = machinarium_page_size();
 	machinarium.config.stack_size = machinarium_stack_size;
 	machinarium.config.pool_size = machinarium_pool_size;
 	machinarium.config.coroutine_cache_size =
 		machinarium_coroutine_cache_size;
 	machinarium.config.msg_cache_gc_size = machinarium_msg_cache_gc_size;
+	machinarium.config.dns_ttl_ms = machinarium_dns_ttl_ms;
 
 	mm_machinemgr_init(&machinarium.machine_mgr);
 	mm_tls_engine_init();
 	mm_taskmgr_init(&machinarium.task_mgr);
-	mm_taskmgr_start(&machinarium.task_mgr, machinarium.config.pool_size);
+	mm_taskmgr_start(&machinarium.task_mgr, machinarium.config.pool_size,
+			 machinarium.config.dns_ttl_ms);
 	machinarium_initialized = 1;
 	return 0;
 }

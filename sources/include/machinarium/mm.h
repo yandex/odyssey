@@ -18,6 +18,7 @@ struct mm_config {
 	int pool_size;
 	int coroutine_cache_size;
 	int msg_cache_gc_size;
+	uint64_t dns_ttl_ms;
 };
 
 struct mm {

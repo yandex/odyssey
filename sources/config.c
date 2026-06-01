@@ -96,6 +96,8 @@ void od_config_init(od_config_t *config)
 	config->host_watcher_enabled = 0;
 
 	config->smart_search_path_enquoting = 0;
+
+	config->dns_ttl_ms = 30 * 1000;
 }
 
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)
