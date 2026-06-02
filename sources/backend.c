@@ -610,15 +610,86 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-static inline od_retcode_t
-od_backend_update_endpoint_status(od_instance_t *instance, od_client_t *client,
-				  od_server_t *server, char *context,
-				  od_storage_endpoint_t *endpoint)
+static inline int strtol_safe(const char *s, int len)
+{
+	const int buff_len = 32;
+	char buff[buff_len];
+	memset(buff, 0, sizeof(buff));
+	memcpy(buff, s, len);
+
+	return strtol(buff, NULL, 0);
+}
+
+static inline int parse_lag_from_datarow(machine_msg_t *msg, int *repl_lag)
+{
+	char *pos = (char *)machine_msg_data(msg) + 1;
+	uint32_t pos_size = machine_msg_size(msg) - 1;
+
+	/* size */
+	uint32_t size;
+	int rc;
+	rc = kiwi_read32(&size, &pos, &pos_size);
+	if (kiwi_unlikely(rc == -1)) {
+		goto error;
+	}
+	/* count */
+	uint16_t count;
+	rc = kiwi_read16(&count, &pos, &pos_size);
+
+	if (kiwi_unlikely(rc == -1)) {
+		goto error;
+	}
+
+	if (count != 1) {
+		goto error;
+	}
+
+	uint32_t lag_len;
+	rc = kiwi_read32(&lag_len, &pos, &pos_size);
+	if (kiwi_unlikely(rc == -1)) {
+		goto error;
+	}
+
+	*repl_lag = strtol_safe(pos, (int)lag_len);
+
+	return OK_RESPONSE;
+error:
+	return NOT_OK_RESPONSE;
+}
+
+int od_backend_update_endpoint_status(od_instance_t *instance,
+				      od_client_t *client, od_server_t *server,
+				      char *context, const char *lag_query,
+				      od_storage_endpoint_t *endpoint)
 {
 	od_storage_endpoint_status_t status;
-	od_storage_endpoint_status_init(&status);
+	od_storage_endpoint_status_get(&endpoint->status, &status);
 
 	machine_msg_t *msg;
+
+	if (lag_query != NULL) {
+		msg = od_query_do(server, context, lag_query, NULL);
+		if (msg == NULL) {
+			od_error(
+				&instance->logger, context, client, server,
+				"receive msg failed, closing backend connection");
+			return NOT_OK_RESPONSE;
+		}
+
+		int last_heartbeat;
+		int rc = parse_lag_from_datarow(msg, &last_heartbeat);
+		machine_msg_free(msg);
+		msg = NULL;
+
+		if (rc == 0) {
+			status.repl_time_sec = (int64_t)last_heartbeat;
+		} else {
+			od_error(&instance->logger, context, client, server,
+				 "can't parse lag");
+			return NOT_OK_RESPONSE;
+		}
+	}
+
 	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL);
 	if (msg == NULL) {
 		od_error(&instance->logger, context, client, server,
@@ -665,9 +736,10 @@ int od_backend_check_tsa(od_storage_endpoint_t *endpoint, char *context,
 	if (od_storage_endpoint_status_is_outdated(
 		    &endpoint->status,
 		    storage->endpoints_status_poll_interval_ms)) {
-		if (od_backend_update_endpoint_status(instance, client, server,
-						      context, endpoint) !=
-		    OK_RESPONSE) {
+		if (od_backend_update_endpoint_status(
+			    instance, client, server, context,
+			    NULL /* do not update lag */,
+			    endpoint) != OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
 	}
@@ -816,7 +888,7 @@ int od_backend_ready_wait(od_server_t *server, char *ctx, uint32_t time_ms)
 }
 
 od_retcode_t od_backend_query_send(od_server_t *server, char *context,
-				   char *query, char *param, int len)
+				   const char *query, char *param, int len)
 {
 	od_instance_t *instance = server->global->instance;
 

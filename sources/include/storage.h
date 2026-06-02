@@ -53,6 +53,7 @@ typedef struct {
 	pthread_spinlock_t values_lock;
 	int alive;
 	bool is_read_write;
+	int64_t repl_time_sec;
 } od_storage_endpoint_status_t;
 
 void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status);

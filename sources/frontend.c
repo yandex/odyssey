@@ -2723,7 +2723,8 @@ void od_frontend(void *arg)
 		} else {
 			rc = od_auth_frontend(client);
 
-			if (instance->config.log_session) {
+			if (instance->config.log_session &&
+			    instance->config.hba_file) {
 				od_log(&instance->logger, "auth", client, NULL,
 				       "ip '%s' user '%s.%s': host based authentication allowed",
 				       client_ip,

@@ -13,10 +13,10 @@
 #include <backend.h>
 #include <server.h>
 
-static inline od_frontend_status_t
-od_attach_extended_try_endpoint(od_instance_t *instance, char *context,
-				od_router_t *router, od_client_t *client,
-				od_storage_endpoint_t *endpoint)
+od_frontend_status_t
+od_attach_extended_endpoint(od_instance_t *instance, char *context,
+			    od_router_t *router, od_client_t *client,
+			    od_storage_endpoint_t *endpoint)
 {
 	od_router_status_t status;
 
@@ -79,7 +79,7 @@ int od_attach_extended(od_instance_t *instance, char *context,
 				od_router_close(router, client);
 			}
 
-			status = od_attach_extended_try_endpoint(
+			status = od_attach_extended_endpoint(
 				instance, context, router, client, endpoint);
 		}
 
