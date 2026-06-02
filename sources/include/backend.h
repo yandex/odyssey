@@ -44,10 +44,15 @@ int od_backend_ready(od_server_t *, char *, uint32_t);
 int od_backend_ready_wait(od_server_t *, char *, uint32_t);
 
 od_retcode_t od_backend_query_send(od_server_t *server, char *context,
-				   char *query, char *param, int len);
+				   const char *query, char *param, int len);
 od_retcode_t od_backend_query(od_server_t *, char *, char *, char *, int,
 			      uint32_t);
 
 int od_backend_not_connected(od_server_t *);
 
 int od_backend_need_startup(od_server_t *);
+
+int od_backend_update_endpoint_status(od_instance_t *instance,
+				      od_client_t *client, od_server_t *server,
+				      char *context, const char *lag_query,
+				      od_storage_endpoint_t *endpoint);

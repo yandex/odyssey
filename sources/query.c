@@ -16,8 +16,8 @@
 #include <backend.h>
 #include <util.h>
 
-machine_msg_t *od_query_do(od_server_t *server, char *context, char *query,
-			   char *param)
+machine_msg_t *od_query_do(od_server_t *server, char *context,
+			   const char *query, char *param)
 {
 	od_instance_t *instance = server->global->instance;
 	od_debug(&instance->logger, context, server->client, server, "%s",

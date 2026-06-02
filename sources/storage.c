@@ -14,6 +14,7 @@
 #include <global.h>
 #include <instance.h>
 #include <route.h>
+#include <backend.h>
 #include <query.h>
 #include <attach.h>
 #include <router.h>
@@ -25,6 +26,7 @@ void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status)
 	status->last_update_time_ms = 0ULL;
 	status->alive = 1;
 	status->is_read_write = true;
+	status->repl_time_sec = 0;
 	pthread_spin_init(&status->values_lock, PTHREAD_PROCESS_PRIVATE);
 }
 
@@ -53,6 +55,7 @@ void od_storage_endpoint_status_get(od_storage_endpoint_status_t *status,
 	out->last_update_time_ms = status->last_update_time_ms;
 	out->is_read_write = status->is_read_write;
 	out->alive = status->alive;
+	out->repl_time_sec = status->repl_time_sec;
 
 	pthread_spin_unlock(&status->values_lock);
 }
@@ -65,6 +68,7 @@ void od_storage_endpoint_status_set(od_storage_endpoint_status_t *status,
 	status->last_update_time_ms = value->last_update_time_ms;
 	status->is_read_write = value->is_read_write;
 	status->alive = value->alive;
+	status->repl_time_sec = value->repl_time_sec;
 
 	pthread_spin_unlock(&status->values_lock);
 }
@@ -76,6 +80,7 @@ void od_storage_endpoint_status_set_dead(od_storage_endpoint_status_t *status)
 	endp_status.alive = 0;
 	endp_status.is_read_write = 0;
 	endp_status.last_update_time_ms = machine_time_ms();
+	endp_status.repl_time_sec = 0;
 
 	od_storage_endpoint_status_set(status, &endp_status);
 }
@@ -310,54 +315,6 @@ od_storage_endpoint_t *od_storage_find_endpoint(od_rule_storage_t *storage,
 	return NULL;
 }
 
-static inline int strtol_safe(const char *s, int len)
-{
-	const int buff_len = 32;
-	char buff[buff_len];
-	memset(buff, 0, sizeof(buff));
-	memcpy(buff, s, len);
-
-	return strtol(buff, NULL, 0);
-}
-
-static inline int od_storage_watchdog_parse_lag_from_datarow(machine_msg_t *msg,
-							     int *repl_lag)
-{
-	char *pos = (char *)machine_msg_data(msg) + 1;
-	uint32_t pos_size = machine_msg_size(msg) - 1;
-
-	/* size */
-	uint32_t size;
-	int rc;
-	rc = kiwi_read32(&size, &pos, &pos_size);
-	if (kiwi_unlikely(rc == -1)) {
-		goto error;
-	}
-	/* count */
-	uint16_t count;
-	rc = kiwi_read16(&count, &pos, &pos_size);
-
-	if (kiwi_unlikely(rc == -1)) {
-		goto error;
-	}
-
-	if (count != 1) {
-		goto error;
-	}
-
-	uint32_t lag_len;
-	rc = kiwi_read32(&lag_len, &pos, &pos_size);
-	if (kiwi_unlikely(rc == -1)) {
-		goto error;
-	}
-
-	*repl_lag = strtol_safe(pos, (int)lag_len);
-
-	return OK_RESPONSE;
-error:
-	return NOT_OK_RESPONSE;
-}
-
 static inline int od_router_update_heartbeat_cb(od_route_t *route, void **argv)
 {
 	od_route_lock(route);
@@ -426,31 +383,37 @@ od_storage_watchdog_close_client(od_storage_watchdog_t *watchdog,
 }
 
 static inline od_client_t *
-od_storage_create_and_connect_watchdog_client(od_storage_watchdog_t *watchdog)
+od_storage_create_and_connect_watchdog_client(od_storage_watchdog_t *watchdog,
+					      od_storage_endpoint_t *endp)
 {
 	od_global_t *global = watchdog->global;
 	od_router_t *router = global->router;
 	od_instance_t *instance = global->instance;
 
-	od_client_t *watchdog_client;
-	watchdog_client = od_storage_watchdog_prepare_client(watchdog);
-	if (watchdog_client == NULL) {
+	od_client_t *client;
+	client = od_storage_watchdog_prepare_client(watchdog);
+	if (client == NULL) {
 		od_error(&instance->logger, "watchdog", NULL, NULL,
 			 "route storage watchdog failed to prepare client");
 
 		return NULL;
 	}
 
-	int rc;
-	rc = od_attach_extended(instance, "watchdog", router, watchdog_client);
-	if (rc != OK_RESPONSE) {
-		od_router_unroute(router, watchdog_client);
-		od_client_free_extended(watchdog_client);
+	od_frontend_status_t status;
+	status = od_attach_extended_endpoint(instance, "watchdog", router,
+					     client, endp);
+	if (status != OD_OK) {
+		od_error(&instance->logger, "watchdog", client, NULL,
+			 "attach failed with status = %d (%s)", status,
+			 od_frontend_status_to_str(status));
+
+		od_router_unroute(router, client);
+		od_client_free_extended(client);
 
 		return NULL;
 	}
 
-	return watchdog_client;
+	return client;
 }
 
 static inline void od_storage_update_route_last_heartbeats(
@@ -466,56 +429,68 @@ static inline void od_storage_update_route_last_heartbeats(
 	od_router_foreach(router, od_router_update_heartbeat_cb, argv);
 }
 
-static inline void
-od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
+static inline void watchdog_update_endpoint(od_storage_watchdog_t *watchdog,
+					    od_storage_endpoint_t *endp)
 {
 	od_global_t *global = watchdog->global;
 	od_router_t *router = global->router;
 	od_instance_t *instance = global->instance;
 
-	od_client_t *watchdog_client;
-	watchdog_client =
-		od_storage_create_and_connect_watchdog_client(watchdog);
-	if (watchdog_client == NULL) {
+	od_client_t *client;
+	client = od_storage_create_and_connect_watchdog_client(watchdog, endp);
+	if (client == NULL) {
 		return;
 	}
 
-	od_server_t *server;
-	server = watchdog_client->server;
+	od_server_t *server = client->server;
 
-	machine_msg_t *msg;
-	msg = od_query_do(server, "watchdog", watchdog->query, NULL);
-	if (msg == NULL) {
-		od_error(&instance->logger, "watchdog", watchdog_client, server,
-			 "receive msg failed, closing backend connection");
+	/* try to update, ignore errors - cant do nothing with it */
+	int rc = od_backend_update_endpoint_status(
+		instance, client, server, "watchdog", watchdog->query, endp);
 
-		od_storage_watchdog_close_client(watchdog, watchdog_client);
-		return;
+	if (rc == 0) {
+		od_storage_endpoint_status_t status;
+		od_storage_endpoint_status_get(&endp->status, &status);
+
+		od_storage_update_route_last_heartbeats(
+			instance, client, server, router,
+			(int)status.repl_time_sec);
 	}
 
-	int last_heartbeat;
-	if (od_storage_watchdog_parse_lag_from_datarow(msg, &last_heartbeat) ==
-	    0) {
-		od_storage_update_route_last_heartbeats(instance,
-							watchdog_client, server,
-							router, last_heartbeat);
-	} else {
-		od_error(&instance->logger, "watchdog", watchdog_client, server,
-			 "can't parse lag");
+	od_storage_watchdog_close_client(watchdog, client);
+}
+
+static inline void
+od_storage_watchdog_do_polling_step(od_storage_watchdog_t *watchdog)
+{
+	od_rule_storage_t *storage = watchdog->storage;
+
+	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		od_storage_endpoint_t *endp = &storage->endpoints[i];
+
+		watchdog_update_endpoint(watchdog, endp);
 	}
-
-	machine_msg_free(msg);
-
-	od_storage_watchdog_close_client(watchdog, watchdog_client);
 }
 
 static inline void
 od_storage_watchdog_do_polling_loop(od_storage_watchdog_t *watchdog)
 {
 	od_instance_t *instance = od_global_get_instance();
+	od_rule_storage_t *storage = watchdog->storage;
+
+	uint64_t poll_ms = storage->endpoints_status_poll_interval_ms;
+
+	/*
+	 * increase the probability of using
+	 * the status obtained through watchdog
+	 */
+	poll_ms = poll_ms * 3 / 4;
+	if (poll_ms == 0) {
+		poll_ms = storage->endpoints_status_poll_interval_ms;
+	}
 
 	while (1) {
-		int rc = machine_wait_flag_wait(watchdog->online, 1000);
+		int rc = machine_wait_flag_wait(watchdog->online, poll_ms);
 		if (rc == 0) {
 			od_log(&instance->logger, "watchdog", NULL, NULL,
 			       "online flag is set, exiting from watchdog for %s",
