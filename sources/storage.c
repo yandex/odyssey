@@ -452,10 +452,6 @@ static inline void watchdog_update_endpoint(od_storage_watchdog_t *watchdog,
 		od_storage_endpoint_status_t status;
 		od_storage_endpoint_status_get(&endp->status, &status);
 
-		od_debug(&instance->logger, "watchdog", client, server,
-			 "sending last_heartbeat = %d",
-			 (int)status.repl_time_sec);
-
 		od_storage_update_route_last_heartbeats(
 			instance, client, server, router,
 			(int)status.repl_time_sec);
