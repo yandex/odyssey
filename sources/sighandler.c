@@ -99,11 +99,12 @@ static void shutdown_worker(void *arg)
 
 #ifdef ODYSSEY_VERSION_GIT
 	od_setproctitlef(&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
-			 "odyssey %s (git %s) stop accepting any connections",
-			 ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT);
+			 "%s %s (git %s) stop accepting any connections",
+			 ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER,
+			 ODYSSEY_VERSION_GIT);
 #else
 	od_setproctitlef(&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
-			 "odyssey %s stop accepting any connections",
+			 "%s %s stop accepting any connections", ODYSSEY_NAME,
 			 ODYSSEY_VERSION_NUMBER);
 #endif
 
