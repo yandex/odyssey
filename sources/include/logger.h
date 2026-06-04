@@ -22,6 +22,12 @@ typedef struct od_logger od_logger_t;
 typedef enum { OD_LOG, OD_ERROR, OD_DEBUG, OD_FATAL } od_logger_level_t;
 
 typedef enum {
+	OD_LOGGER_ONLINE,
+	OD_LOGGER_REOPENING,
+	OD_LOGGER_OFFLINE
+} od_logger_state_t;
+
+typedef enum {
 	OD_LOGGER_FORMAT_TEXT,
 	OD_LOGGER_FORMAT_JSON
 } od_logger_format_type_t;
@@ -44,9 +50,10 @@ struct od_logger {
 	int format_len;
 	od_logger_format_type_t format_type;
 
-	int fd;
+	atomic_int fd;
+	atomic_int batching;
 
-	atomic_uint_fast64_t loaded;
+	atomic_uint_fast64_t state;
 	int64_t machine;
 
 	od_logger_slot_t *slots;
@@ -104,8 +111,8 @@ static inline void od_logger_set_queue_depth(od_logger_t *logger,
 	logger->queue_depth = queue_depth;
 }
 
-extern int od_logger_open(od_logger_t *, char *);
-extern int od_logger_reopen(od_logger_t *, char *);
+extern int od_logger_open(od_logger_t *, const char *);
+extern int od_logger_reopen(od_logger_t *);
 extern int od_logger_open_syslog(od_logger_t *, char *, char *);
 extern void od_logger_shutdown(od_logger_t *);
 extern void od_logger_close(od_logger_t *);

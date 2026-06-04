@@ -338,19 +338,7 @@ void od_system_signal_handler(void *arg)
 			if (instance->config.log_file) {
 				od_log(&instance->logger, "system", NULL, NULL,
 				       "SIGUSR1 received, reopening log");
-				rc = od_logger_reopen(
-					&instance->logger,
-					instance->config.log_file);
-				if (rc == -1) {
-					od_error(
-						&instance->logger, "system",
-						NULL, NULL,
-						"failed to reopen log file '%s'",
-						instance->config.log_file);
-				} else {
-					od_log(&instance->logger, "system",
-					       NULL, NULL, "log reopened");
-				}
+				od_logger_reopen(&instance->logger);
 			}
 			break;
 		case OD_SIG_ONLINE_RESTART:
