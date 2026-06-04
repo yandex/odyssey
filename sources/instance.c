@@ -145,7 +145,7 @@ void od_instance_free(od_instance_t *instance)
 
 void od_usage(od_instance_t *instance, char *path)
 {
-	od_log(&instance->logger, "init", NULL, NULL, "odyssey %s",
+	od_log(&instance->logger, "init", NULL, NULL, "%s %s", ODYSSEY_NAME,
 	       ODYSSEY_VERSION_FULL);
 	od_log(&instance->logger, "init", NULL, NULL, "usage: %s <config_file>",
 	       path);
@@ -208,13 +208,14 @@ static inline void od_bind_version(void)
 
 #ifdef ODYSSEY_VERSION_GIT
 	od_asprintf((char **__restrict)&argp_program_version,
-		    "odyssey %s (git %s) %s%s\ncompiled by %s",
+		    "%s %s (git %s) %s%s\ncompiled by %s", ODYSSEY_NAME,
 		    ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
 		    ODYSSEY_BUILD_TYPE, features, ODYSSEY_COMPILER_STRING);
 #else
 	od_asprintf((char **__restrict)&argp_program_version,
-		    "odyssey %s %s%s\ncompiled by %s", ODYSSEY_VERSION_NUMBER,
-		    ODYSSEY_BUILD_TYPE, features, ODYSSEY_COMPILER_STRING);
+		    "%s %s %s%s\ncompiled by %s", ODYSSEY_NAME,
+		    ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE, features,
+		    ODYSSEY_COMPILER_STRING);
 #endif
 }
 
@@ -478,12 +479,13 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	fill_supported_features_string(features, sizeof(features));
 
 #ifdef ODYSSEY_VERSION_GIT
-	od_log(&instance->logger, "init", NULL, NULL,
-	       "odyssey %s (git: %s) %s%s", ODYSSEY_VERSION_NUMBER,
-	       ODYSSEY_VERSION_GIT, ODYSSEY_BUILD_TYPE, features);
+	od_log(&instance->logger, "init", NULL, NULL, "%s %s (git: %s) %s%s",
+	       ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
+	       ODYSSEY_BUILD_TYPE, features);
 #else
-	od_log(&instance->logger, "init", NULL, NULL, "odyssey %s %s%s",
-	       ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE, features);
+	od_log(&instance->logger, "init", NULL, NULL, "%s %s %s%s",
+	       ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE,
+	       features);
 #endif
 	od_log(&instance->logger, "init", NULL, NULL, "");
 

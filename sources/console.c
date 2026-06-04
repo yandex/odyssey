@@ -584,15 +584,15 @@ static inline int od_console_show_version(machine_msg_t *stream)
 	int data_len;
 	/* current version and build */
 #ifdef ODYSSEY_VERSION_GIT
-	data_len = od_snprintf(data, sizeof(data),
-			       "Odyssey %s (git %s) %s, compiled by %s",
-			       ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
-			       ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
-#else
 	data_len =
-		od_snprintf(data, sizeof(data), "Odyssey %s %s, compiled by %s",
-			    ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE,
-			    ODYSSEY_COMPILER_STRING);
+		od_snprintf(data, sizeof(data),
+			    "%s %s (git %s) %s, compiled by %s", ODYSSEY_NAME,
+			    ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
+			    ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
+#else
+	data_len = od_snprintf(data, sizeof(data), "%s %s %s, compiled by %s",
+			       ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER,
+			       ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
 #endif
 
 	int rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);

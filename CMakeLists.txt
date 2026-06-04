@@ -9,6 +9,8 @@ set(CMAKE_C_STANDARD 11)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(ODYSSEY_NAME "odyssey")
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/VERSION")
     file(READ "${CMAKE_SOURCE_DIR}/VERSION" ODYSSEY_VERSION_NUMBER)
     string(STRIP "${ODYSSEY_VERSION_NUMBER}" ODYSSEY_VERSION_NUMBER)
@@ -29,6 +31,10 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
     )
 endif()
 
+if(DEFINED ENV{ODYSSEY_NAME})
+    set(ODYSSEY_NAME $ENV{ODYSSEY_NAME})
+endif()
+
 if(DEFINED ENV{ODYSSEY_VERSION})
     set(ODYSSEY_VERSION_NUMBER $ENV{ODYSSEY_VERSION})
 endif()
@@ -45,6 +51,7 @@ endif()
 
 message(STATUS "")
 message(STATUS "Odyssey version configuration:")
+message(STATUS "  Name:           ${ODYSSEY_NAME}")
 message(STATUS "  Version number: ${ODYSSEY_VERSION_NUMBER}")
 message(STATUS "  Git hash:       ${ODYSSEY_VERSION_GIT}")
 message(STATUS "  Full version:   ${ODYSSEY_VERSION_FULL}")

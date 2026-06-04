@@ -418,12 +418,12 @@ static inline int od_system_listen(od_system_t *system)
 #ifdef ODYSSEY_VERSION_GIT
 	od_setproctitlef(
 		&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
-		"odyssey %s (git %s) listening and accepting new connections ",
-		ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT);
+		"%s %s (git %s) listening and accepting new connections ",
+		ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT);
 #else
 	od_setproctitlef(&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
-			 "odyssey %s listening and accepting new connections ",
-			 ODYSSEY_VERSION_NUMBER);
+			 "%s %s listening and accepting new connections ",
+			 ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER);
 #endif
 
 	return binded;
