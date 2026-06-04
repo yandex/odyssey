@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/vfs.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/channel_limit.h>
@@ -19,6 +20,8 @@
 #include <client.h>
 #include <dns.h>
 #include <server.h>
+#include <global.h>
+#include <instance.h>
 #include <route.h>
 #include <rules.h>
 #include <msg.h>
@@ -48,6 +51,28 @@ static int od_log_syslog_level[] = { LOG_INFO, LOG_ERR, LOG_DEBUG, LOG_CRIT };
 
 static char *od_log_level[] = { "info", "error", "debug", "fatal" };
 
+static int have_writev(int fd)
+{
+	/*
+	 * not all fs have atomic writev impl
+	 * see `man 2 open`, the part about O_APPEND
+	 */
+	struct statfs sfs;
+	if (fstatfs(fd, &sfs) == -1) {
+		return 0;
+	}
+
+	/* man 2 fstatfs */
+	switch (sfs.f_type) {
+	case 0xef53: /* EXT4_SUPER_MAGIC */
+	case 0x58465342: /* XFS_SUPER_MAGIC */
+	case 0x01021994: /* TMPFS_MAGIC */
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 {
 	logger->pid = pid;
@@ -57,8 +82,9 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->format = NULL;
 	logger->format_len = 0;
 	logger->format_type = OD_LOGGER_FORMAT_TEXT;
-	logger->fd = -1;
-	atomic_init(&logger->loaded, 0);
+	atomic_init(&logger->fd, -1);
+	atomic_init(&logger->batching, 0);
+	atomic_init(&logger->state, OD_LOGGER_OFFLINE);
 
 	memset(&logger->tasks, 0, sizeof(mm_queue_t));
 	logger->slots = NULL;
@@ -68,7 +94,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	od_list_init(&logger->free_slots);
 	pthread_spin_init(&logger->free_slots_lock, PTHREAD_PROCESS_PRIVATE);
 
-	mm_wait_list_init(&logger->notifier, &logger->loaded);
+	mm_wait_list_init(&logger->notifier, &logger->state);
 
 	/* set temporary format */
 	od_logger_set_format(logger, "%p %t %l (%c) %h %m\n");
@@ -84,7 +110,7 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 		return OK_RESPONSE;
 	}
 
-	if (atomic_load(&logger->loaded) == 1) {
+	if (atomic_load(&logger->state) == OD_LOGGER_ONLINE) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -124,25 +150,34 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 	return OK_RESPONSE;
 }
 
-int od_logger_open(od_logger_t *logger, char *path)
+int od_logger_open(od_logger_t *logger, const char *path)
 {
-	logger->fd = open(path, O_RDWR | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
-	if (logger->fd == -1) {
+	int fd = open(path, O_RDWR | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
+	if (fd == -1) {
 		return -1;
 	}
+	int batching = have_writev(fd);
+	atomic_store(&logger->batching, batching);
+	atomic_store(&logger->fd, fd);
 	return 0;
 }
 
-int od_logger_reopen(od_logger_t *logger, char *path)
+int od_logger_reopen(od_logger_t *logger)
 {
-	int old_fd = logger->fd;
-	int rc = od_logger_open(logger, path);
-	if (rc == -1) {
-		logger->fd = old_fd;
-	} else if (old_fd != -1) {
-		close(old_fd);
+	while (1) {
+		uint64_t state = atomic_load(&logger->state);
+		if (state != OD_LOGGER_ONLINE) {
+			break;
+		}
+
+		if (atomic_compare_exchange_strong(&logger->state, &state,
+						   OD_LOGGER_REOPENING)) {
+			mm_wait_list_notify(&logger->notifier);
+			break;
+		}
 	}
-	return rc;
+
+	return 0;
 }
 
 int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
@@ -173,10 +208,12 @@ int od_logger_open_syslog(od_logger_t *logger, char *ident, char *facility)
 
 void od_logger_close(od_logger_t *logger)
 {
-	if (logger->fd != -1) {
-		close(logger->fd);
+	int fd = atomic_load(&logger->fd);
+	atomic_store(&logger->fd, -1);
+	atomic_store(&logger->batching, 0);
+	if (fd != -1) {
+		close(fd);
 	}
-	logger->fd = -1;
 }
 
 static char od_logger_escape_tab[256] = {
@@ -497,9 +534,22 @@ static inline void _od_logger_write_batch(od_logger_t *l,
 					  od_logger_slot_t *slots[],
 					  struct iovec *iovecs, size_t n)
 {
+	int fd = atomic_load(&l->fd);
+	int batching = atomic_load(&l->batching);
+
 	int rc;
-	if (l->fd != -1) {
-		rc = writev(l->fd, iovecs, n);
+	if (fd != -1) {
+		if (batching) {
+			rc = writev(fd, iovecs, n);
+		} else {
+			for (size_t i = 0; i < n; ++i) {
+				struct iovec *vec = &iovecs[i];
+				rc = write(fd, vec->iov_base, vec->iov_len);
+				if (rc <= 0) {
+					break;
+				}
+			}
+		}
 	}
 	if (l->log_stdout) {
 		rc = writev(STDOUT_FILENO, iovecs, n);
@@ -517,9 +567,10 @@ static inline void _od_logger_write_batch(od_logger_t *l,
 static inline void _od_logger_write(od_logger_t *l, char *data, int len,
 				    od_logger_level_t lvl)
 {
+	int fd = atomic_load(&l->fd);
 	int rc;
-	if (l->fd != -1) {
-		rc = write(l->fd, data, len);
+	if (fd != -1) {
+		rc = write(fd, data, len);
 	}
 	if (l->log_stdout) {
 		rc = write(STDOUT_FILENO, data, len);
@@ -581,20 +632,53 @@ static void process_log_queue(od_logger_t *logger, od_logger_slot_t **slot_buf,
 	pthread_spin_unlock(&logger->free_slots_lock);
 }
 
+static void do_reopen_logfile(od_logger_t *logger)
+{
+	const char *path = od_global_get_instance()->config.log_file;
+
+	int old = atomic_load(&logger->fd);
+	int rc = od_logger_open(logger, path);
+	if (rc == 0) {
+		close(old);
+
+		od_log(logger, "logger", NULL, NULL, "log reopened");
+	} else {
+		/* do nothing, keep use old file */
+		od_error(logger, "logger", NULL, NULL,
+			 "failed to reopen log file '%s'", path);
+	}
+}
+
 static inline void od_logger(void *arg)
 {
 	od_logger_t *logger = arg;
 	static od_logger_slot_t *slot_buf[IOV_MAX];
 	static struct iovec iovecs[IOV_MAX];
 
-	atomic_store(&logger->loaded, 1);
+	atomic_store(&logger->state, OD_LOGGER_ONLINE);
 
-	while (atomic_load(&logger->loaded) == 1) {
+	while (1) {
+		uint64_t state = atomic_load(&logger->state);
+
+		if (state == OD_LOGGER_OFFLINE) {
+			break;
+		}
+
+		if (state == OD_LOGGER_REOPENING) {
+			do_reopen_logfile(logger);
+
+			/* do not check - the state might have been changed to CLOSED */
+			atomic_compare_exchange_strong(&logger->state, &state,
+						       OD_LOGGER_ONLINE);
+			continue;
+		}
+
 		process_log_queue(logger, slot_buf, iovecs, IOV_MAX);
 
 		if (mm_queue_size(&logger->tasks) == 0) {
-			mm_wait_list_compare_wait(&logger->notifier, NULL,
-						  1 /* still loaded? */, 500);
+			mm_wait_list_compare_wait(
+				&logger->notifier, NULL,
+				OD_LOGGER_ONLINE /* still online? */, 500);
 		}
 	}
 
@@ -602,7 +686,7 @@ static inline void od_logger(void *arg)
 	 * process messages that stays in queue after shutdown
 	 * did not writen smth like plain while (queue size > 0)
 	 * because i want to be sure that this function will return in case
-	 * some bug with loaded flag
+	 * some bug with state
 	 *
 	 * divide by IOV_MAX because this is max chunk size
 	 * of process_log_queue
@@ -616,7 +700,7 @@ static inline void od_logger(void *arg)
 
 void od_logger_shutdown(od_logger_t *logger)
 {
-	atomic_store(&logger->loaded, 0);
+	atomic_store(&logger->state, OD_LOGGER_OFFLINE);
 	mm_wait_list_notify(&logger->notifier);
 }
 
@@ -901,7 +985,9 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		logger = od_global_get_logger();
 	}
 
-	if (logger->fd == -1 && !logger->log_stdout && !logger->log_syslog) {
+	int fd = atomic_load(&logger->fd);
+
+	if (fd == -1 && !logger->log_stdout && !logger->log_syslog) {
 		return;
 	}
 
@@ -932,7 +1018,9 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	size_t output_max;
 	od_logger_slot_t *async_slot = NULL;
 
-	uint64_t async = atomic_load(&logger->loaded);
+	uint64_t state = atomic_load(&logger->state);
+	uint64_t async =
+		(state == OD_LOGGER_ONLINE) || (state == OD_LOGGER_REOPENING);
 
 	if (async) {
 		pthread_spin_lock(&logger->free_slots_lock);
