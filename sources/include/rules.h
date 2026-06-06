@@ -225,8 +225,15 @@ struct od_rules {
 	int next_order;
 };
 
-#define od_rules_lock(r) mm_mutex_lock2(&(r)->mu)
-#define od_rules_unlock(r) mm_mutex_unlock(&(r)->mu)
+static inline void od_rules_lock(od_rules_t *rules)
+{
+	mm_mutex_lock2(&rules->mu);
+}
+
+static inline void od_rules_unlock(od_rules_t *rules)
+{
+	mm_mutex_unlock(&rules->mu);
+}
 
 /* rules */
 

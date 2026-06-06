@@ -32,8 +32,15 @@ struct od_router {
 	od_list_t servers;
 };
 
-#define od_router_lock(router) mm_mutex_lock2(&router->lock);
-#define od_router_unlock(router) mm_mutex_unlock(&router->lock);
+static inline void od_router_lock(od_router_t *router)
+{
+	mm_mutex_lock2(&router->lock);
+}
+
+static inline void od_router_unlock(od_router_t *router)
+{
+	mm_mutex_unlock(&router->lock);
+}
 
 void od_router_init(od_router_t *, od_global_t *);
 void od_router_free(od_router_t *);
