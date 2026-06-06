@@ -25,7 +25,7 @@
 
 void od_router_init(od_router_t *router, od_global_t *global)
 {
-	pthread_mutex_init(&router->lock, NULL);
+	mm_mutex_init(&router->lock);
 	od_rules_init(&router->rules);
 	od_list_init(&router->servers);
 	od_route_pool_init(&router->route_pool);
@@ -76,7 +76,7 @@ void od_router_free(od_router_t *router)
 	od_router_foreach(router, od_router_immed_close_cb, NULL);
 	od_rules_free(&router->rules);
 	od_route_pool_free(&router->route_pool);
-	pthread_mutex_destroy(&router->lock);
+	mm_mutex_destroy(&router->lock);
 	od_err_logger_free(router->router_err_logger);
 }
 

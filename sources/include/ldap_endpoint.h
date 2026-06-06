@@ -1,14 +1,14 @@
 #pragma once
 
 #include <stdatomic.h>
-#include <pthread.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/mutex.h>
 
 #include <list.h>
 
 typedef struct {
-	pthread_mutex_t lock;
+	mm_mutex_t lock;
 	char *name;
 
 	char *ldapserver;
@@ -72,12 +72,12 @@ typedef struct {
 
 static inline void od_ldap_endpoint_lock(od_ldap_endpoint_t *le)
 {
-	pthread_mutex_lock(&le->lock);
+	mm_mutex_lock2(&le->lock);
 }
 
 static inline void od_ldap_endpoint_unlock(od_ldap_endpoint_t *le)
 {
-	pthread_mutex_unlock(&le->lock);
+	mm_mutex_unlock(&le->lock);
 }
 
 static inline int od_ldap_endpoint_wait(od_ldap_endpoint_t *le,

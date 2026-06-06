@@ -8,6 +8,8 @@
 
 #include <stdatomic.h>
 
+#include <machinarium/mutex.h>
+
 #include <address.h>
 #include <pam.h>
 #include <group.h>
@@ -214,7 +216,7 @@ struct od_rule {
 };
 
 struct od_rules {
-	pthread_mutex_t mu;
+	mm_mutex_t mu;
 	od_list_t storages;
 #ifdef LDAP_FOUND
 	od_list_t ldap_endpoints;
@@ -222,6 +224,16 @@ struct od_rules {
 	od_list_t rules;
 	int next_order;
 };
+
+static inline void od_rules_lock(od_rules_t *rules)
+{
+	mm_mutex_lock2(&rules->mu);
+}
+
+static inline void od_rules_unlock(od_rules_t *rules)
+{
+	mm_mutex_unlock(&rules->mu);
+}
 
 /* rules */
 

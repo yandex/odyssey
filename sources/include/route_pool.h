@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <pthread.h>
+#include <machinarium/mutex.h>
 
 #include <types.h>
 #include <route.h>
@@ -46,13 +46,20 @@ struct od_route_pool {
 	 * */
 	od_error_logger_t *err_logger;
 	int count;
-	pthread_mutex_t lock;
+	mm_mutex_t lock;
 
 	od_list_t list;
 };
 
-#define od_route_pool_lock(route_pool) pthread_mutex_lock(&route_pool.lock);
-#define od_route_pool_unlock(route_pool) pthread_mutex_unlock(&route_pool.lock);
+static inline void od_route_pool_lock(od_route_pool_t *route_pool)
+{
+	mm_mutex_lock2(&route_pool->lock);
+}
+
+static inline void od_route_pool_unlock(od_route_pool_t *route_pool)
+{
+	mm_mutex_unlock(&route_pool->lock);
+}
 
 typedef od_retcode_t (*od_route_pool_stat_frontend_error_cb_t)(
 	od_route_pool_t *pool, void **argv);
@@ -62,7 +69,7 @@ static inline void od_route_pool_init(od_route_pool_t *pool)
 	od_list_init(&pool->list);
 	pool->err_logger = od_err_logger_create_default();
 	pool->count = 0;
-	pthread_mutex_init(&pool->lock, NULL);
+	mm_mutex_init(&pool->lock);
 }
 
 static inline void od_route_pool_free(od_route_pool_t *pool)
@@ -71,7 +78,7 @@ static inline void od_route_pool_free(od_route_pool_t *pool)
 		return;
 	}
 
-	pthread_mutex_destroy(&pool->lock);
+	mm_mutex_destroy(&pool->lock);
 
 	od_err_logger_free(pool->err_logger);
 	od_list_t *i, *n;

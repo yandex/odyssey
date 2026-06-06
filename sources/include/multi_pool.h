@@ -12,7 +12,7 @@
 
 #include <stdatomic.h>
 
-#include <machinarium/wait_list.h>
+#include <machinarium/mutex.h>
 
 #include <types.h>
 #include <address.h>
@@ -40,7 +40,8 @@ typedef int (*od_multi_pool_element_cb_t)(od_multi_pool_element_t *, void **);
 struct od_multi_pool {
 	od_list_t pools;
 	od_server_pool_free_fn_t pool_free_fn;
-	pthread_spinlock_t lock;
+
+	mm_mutex_t lock;
 
 	/* should increase every time servers in the route's pool are changed */
 	atomic_uint_fast64_t version;
@@ -48,12 +49,12 @@ struct od_multi_pool {
 
 static inline void od_multi_pool_lock(od_multi_pool_t *mpool)
 {
-	pthread_spin_lock(&mpool->lock);
+	mm_mutex_lock2(&mpool->lock);
 }
 
 static inline void od_multi_pool_unlock(od_multi_pool_t *mpool)
 {
-	pthread_spin_unlock(&mpool->lock);
+	mm_mutex_unlock(&mpool->lock);
 }
 
 static inline uint64_t od_multi_pool_version(od_multi_pool_t *mpool)
