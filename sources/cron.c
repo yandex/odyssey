@@ -264,11 +264,11 @@ static void od_cron_err_stat(od_cron_t *cron)
 	}
 	od_router_unlock(router);
 
-	od_route_pool_lock(router->route_pool)
+	od_route_pool_lock(&router->route_pool);
 	{
 		od_err_logger_inc_interval(router->route_pool.err_logger);
 	}
-	od_route_pool_unlock(router->route_pool)
+	od_route_pool_unlock(&router->route_pool);
 }
 
 static void od_cron(void *arg)
