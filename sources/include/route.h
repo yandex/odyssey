@@ -47,6 +47,11 @@ struct od_route {
 	bool extra_logging_enabled;
 
 	od_list_t link;
+
+	struct {
+		char *password;
+		uint64_t valid_until_ms;
+	} auth_query_cache;
 };
 
 static inline int od_route_has_shared_pool(od_route_t *route)
@@ -194,6 +199,8 @@ static inline int od_route_init(od_route_t *route,
 		route->err_logger = NULL;
 	}
 
+	memset(&route->auth_query_cache, 0, sizeof(route->auth_query_cache));
+
 	od_stat_init(&route->stats);
 	od_stat_init(&route->stats_prev);
 	kiwi_params_lock_init(&route->params);
@@ -227,6 +234,8 @@ static inline void od_route_free(od_route_t *route)
 		od_err_logger_free(route->err_logger);
 		route->err_logger = NULL;
 	}
+
+	od_free(route->auth_query_cache.password);
 
 	mm_mutex_destroy(&route->lock);
 	od_free(route);

@@ -163,10 +163,6 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 	od_storage_balancing_init(&storage->balancing);
 	atomic_init(&storage->rr_counter, 0);
 
-#define OD_STORAGE_DEFAULT_HASHMAP_SZ 420u
-	storage->acache =
-		od_auth_query_create_cache(OD_STORAGE_DEFAULT_HASHMAP_SZ);
-
 	od_list_init(&storage->link);
 	return storage;
 }
@@ -195,10 +191,6 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 		}
 
 		od_free(storage->endpoints);
-	}
-
-	if (storage->acache) {
-		od_hashmap_free(storage->acache);
 	}
 
 	od_storage_balancing_destroy(&storage->balancing);

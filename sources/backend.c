@@ -668,7 +668,7 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 	machine_msg_t *msg;
 
 	if (lag_query != NULL) {
-		msg = od_query_do(server, context, lag_query, NULL);
+		msg = od_query_do(server, context, lag_query, NULL, 1000);
 		if (msg == NULL) {
 			od_error(
 				&instance->logger, context, client, server,
@@ -690,7 +690,8 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 		}
 	}
 
-	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL);
+	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL,
+			  1000);
 	if (msg == NULL) {
 		od_error(&instance->logger, context, client, server,
 			 "can't execute pg_is_in_recovery");
@@ -888,7 +889,8 @@ int od_backend_ready_wait(od_server_t *server, char *ctx, uint32_t time_ms)
 }
 
 od_retcode_t od_backend_query_send(od_server_t *server, char *context,
-				   const char *query, char *param, int len)
+				   const char *query, char *param, int len,
+				   uint32_t timeout_ms)
 {
 	od_instance_t *instance = server->global->instance;
 
@@ -904,7 +906,7 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 	}
 
 	int rc;
-	rc = od_write(&server->io, msg);
+	rc = od_write2(&server->io, msg, timeout_ms);
 	if (rc == -1) {
 		od_error(&instance->logger, context, server->client, server,
 			 "write error: %s", od_io_error(&server->io));
@@ -920,8 +922,8 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
 			      char *param, int len, uint32_t timeout)
 {
-	if (od_backend_query_send(server, context, query, param, len) ==
-	    NOT_OK_RESPONSE) {
+	if (od_backend_query_send(server, context, query, param, len,
+				  timeout) == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 

@@ -44,7 +44,8 @@ int od_backend_ready(od_server_t *, char *, uint32_t);
 int od_backend_ready_wait(od_server_t *, char *, uint32_t);
 
 od_retcode_t od_backend_query_send(od_server_t *server, char *context,
-				   const char *query, char *param, int len);
+				   const char *query, char *param, int len,
+				   uint32_t timeout_ms);
 od_retcode_t od_backend_query(od_server_t *, char *, char *, char *, int,
 			      uint32_t);
 

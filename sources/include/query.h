@@ -13,8 +13,8 @@
 #include <server.h>
 
 /* execute query with (optional) single string param */
-extern machine_msg_t *od_query_do(od_server_t *server, char *context,
-				  const char *query, char *param);
+machine_msg_t *od_query_do(od_server_t *server, char *context,
+			   const char *query, char *param, uint32_t timeout_ms);
 
 __attribute__((hot)) extern int od_query_format(char *format_pos,
 						char *format_end,
