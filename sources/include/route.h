@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <machinarium/mutex.h>
+
 #include <stdatomic.h>
 
 #include <types.h>
@@ -38,7 +40,8 @@ struct od_route {
 	kiwi_params_lock_t params;
 	int64_t tcp_connections;
 	int last_heartbeat;
-	pthread_mutex_t lock;
+
+	mm_mutex_t lock;
 
 	od_error_logger_t *err_logger;
 	bool extra_logging_enabled;
@@ -195,7 +198,7 @@ static inline int od_route_init(od_route_t *route,
 	od_stat_init(&route->stats_prev);
 	kiwi_params_lock_init(&route->params);
 	od_list_init(&route->link);
-	pthread_mutex_init(&route->lock, NULL);
+	mm_mutex_init(&route->lock);
 
 	return OK_RESPONSE;
 }
@@ -225,7 +228,7 @@ static inline void od_route_free(od_route_t *route)
 		route->err_logger = NULL;
 	}
 
-	pthread_mutex_destroy(&route->lock);
+	mm_mutex_destroy(&route->lock);
 	od_free(route);
 }
 
@@ -245,7 +248,7 @@ static inline od_route_t *od_route_allocate(od_shared_pool_t *shared_pool)
 
 static inline void od_route_lock(od_route_t *route)
 {
-	pthread_mutex_lock(&route->lock);
+	mm_mutex_lock2(&route->lock);
 
 	od_multi_pool_lock(od_route_server_pools(route));
 }
@@ -254,7 +257,7 @@ static inline void od_route_unlock(od_route_t *route)
 {
 	od_multi_pool_unlock(od_route_server_pools(route));
 
-	pthread_mutex_unlock(&route->lock);
+	mm_mutex_unlock(&route->lock);
 }
 
 static inline int od_route_is_dynamic(od_route_t *route)

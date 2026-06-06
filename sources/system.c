@@ -445,8 +445,8 @@ static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
 {
 	od_list_t *i, *n;
 
-	pthread_mutex_lock(&router->rules.mu);
-	pthread_mutex_lock(&rules->mu);
+	od_rules_lock(&router->rules);
+	od_rules_lock(rules);
 
 	od_list_foreach_safe (&rules->storages, i, n) {
 		od_rule_storage_t *storage;
@@ -456,8 +456,8 @@ static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
 		od_rules_storage_add(&router->rules, storage);
 	}
 
-	pthread_mutex_unlock(&rules->mu);
-	pthread_mutex_unlock(&router->rules.mu);
+	od_rules_unlock(rules);
+	od_rules_unlock(&router->rules);
 }
 
 void od_system_config_reload(od_system_t *system)
@@ -471,7 +471,7 @@ void od_system_config_reload(od_system_t *system)
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
 
-	pthread_mutex_lock(&router->rules.mu);
+	od_rules_lock(&router->rules);
 
 	od_rules_stop_checkers(&router->rules);
 	od_rules_stop_watchdogs(&router->rules);
@@ -496,7 +496,7 @@ void od_system_config_reload(od_system_t *system)
 	if (rc == -1) {
 		od_error(&instance->logger, "config", NULL, NULL, "%s",
 			 error.error);
-		pthread_mutex_unlock(&router->rules.mu);
+		od_rules_unlock(&router->rules);
 		od_config_free(&config);
 		od_rules_free(&rules);
 		return;
@@ -504,7 +504,7 @@ void od_system_config_reload(od_system_t *system)
 
 	rc = od_config_validate(&config, &instance->logger);
 	if (rc == -1) {
-		pthread_mutex_unlock(&router->rules.mu);
+		od_rules_unlock(&router->rules);
 		od_config_free(&config);
 		od_rules_free(&rules);
 		return;
@@ -512,7 +512,7 @@ void od_system_config_reload(od_system_t *system)
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
 	if (rc == -1) {
-		pthread_mutex_unlock(&router->rules.mu);
+		od_rules_unlock(&router->rules);
 		od_config_free(&config);
 		od_rules_free(&rules);
 		return;
@@ -526,13 +526,13 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_sort_for_matching(&rules);
 
 	if (rc == -1) {
-		pthread_mutex_unlock(&router->rules.mu);
+		od_rules_unlock(&router->rules);
 		od_config_free(&config);
 		od_rules_free(&rules);
 		return;
 	}
 
-	pthread_mutex_unlock(&router->rules.mu);
+	od_rules_unlock(&router->rules);
 
 	/* Reload TLS certificates */
 	od_list_foreach (&router->servers, i) {

@@ -126,7 +126,7 @@ od_multi_pool_t *od_multi_pool_create(od_server_pool_free_fn_t free_fn)
 
 	mpool->pool_free_fn = free_fn;
 	od_list_init(&mpool->pools);
-	pthread_spin_init(&mpool->lock, PTHREAD_PROCESS_PRIVATE);
+	mm_mutex_init(&mpool->lock);
 
 	return mpool;
 }
@@ -141,7 +141,7 @@ void od_multi_pool_destroy(od_multi_pool_t *mpool)
 		od_multi_pool_element_free(el, mpool->pool_free_fn);
 	}
 
-	pthread_spin_destroy(&mpool->lock);
+	mm_mutex_destroy(&mpool->lock);
 	od_free(mpool);
 }
 

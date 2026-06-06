@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
-	"github.com/jmoiron/sqlx"
 	"log"
 	"sync"
 
+	"github.com/jmoiron/sqlx"
+
 	"fmt"
-	_ "github.com/lib/pq"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 var dbname = "db1"
@@ -79,12 +81,19 @@ func prep() {
 func main() {
 
 	for range 10 {
+		var wg sync.WaitGroup
+
 		for range 10 {
-			go prep()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				prep()
+			}()
 		}
 
+		wg.Wait()
 		log.Println("ITER DONE")
-		time.Sleep(10 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 	log.Println("TEST OK")
 }

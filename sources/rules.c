@@ -45,7 +45,7 @@ const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
 
 void od_rules_init(od_rules_t *rules)
 {
-	pthread_mutex_init(&rules->mu, NULL);
+	mm_mutex_init(&rules->mu);
 	od_list_init(&rules->storages);
 #ifdef LDAP_FOUND
 	od_list_init(&rules->ldap_endpoints);
@@ -58,7 +58,7 @@ void od_rules_rule_free(od_rule_t *);
 
 void od_rules_free(od_rules_t *rules)
 {
-	pthread_mutex_destroy(&rules->mu);
+	mm_mutex_destroy(&rules->mu);
 	od_list_t *i, *n;
 
 #ifdef LDAP_FOUND

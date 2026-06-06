@@ -1641,7 +1641,7 @@ static inline int od_console_show_rules(machine_msg_t *stream)
 	od_router_t *router = global->router;
 	od_rules_t *rules = &router->rules;
 
-	pthread_mutex_lock(&rules->mu);
+	od_rules_lock(rules);
 
 	od_list_t *i, *n;
 	od_list_foreach_safe (&rules->rules, i, n) {
@@ -1711,12 +1711,12 @@ static inline int od_console_show_rules(machine_msg_t *stream)
 		}
 	}
 
-	pthread_mutex_unlock(&rules->mu);
+	od_rules_unlock(rules);
 
 	return kiwi_be_write_complete(stream, "SHOW", sizeof("SHOW"));
 
 error:
-	pthread_mutex_unlock(&rules->mu);
+	od_rules_unlock(rules);
 	return NOT_OK_RESPONSE;
 }
 
@@ -2185,7 +2185,7 @@ static inline int od_console_show_storages(od_client_t *client,
 	int rc;
 	int offset;
 
-	pthread_mutex_lock(&rules->mu);
+	od_rules_lock(rules);
 
 	od_list_t *i;
 	od_list_foreach (&rules->storages, i) {
@@ -2240,10 +2240,10 @@ static inline int od_console_show_storages(od_client_t *client,
 		}
 	}
 
-	pthread_mutex_unlock(&rules->mu);
+	od_rules_unlock(rules);
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 error:
-	pthread_mutex_unlock(&rules->mu);
+	od_rules_unlock(rules);
 	return rc;
 }
 

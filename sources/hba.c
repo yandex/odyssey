@@ -16,24 +16,24 @@
 
 void od_hba_init(od_hba_t *hba)
 {
-	pthread_mutex_init(&hba->lock, NULL);
+	mm_mutex_init(&hba->lock);
 	od_hba_rules_init(&hba->rules);
 }
 
 void od_hba_free(od_hba_t *hba)
 {
 	od_hba_rules_free(&hba->rules);
-	pthread_mutex_destroy(&hba->lock);
+	mm_mutex_destroy(&hba->lock);
 }
 
 void od_hba_lock(od_hba_t *hba)
 {
-	pthread_mutex_lock(&hba->lock);
+	mm_mutex_lock2(&hba->lock);
 }
 
 void od_hba_unlock(od_hba_t *hba)
 {
-	pthread_mutex_unlock(&hba->lock);
+	mm_mutex_unlock(&hba->lock);
 }
 
 void od_hba_reload(od_hba_t *hba, od_hba_rules_t *rules)

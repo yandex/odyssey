@@ -634,7 +634,7 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc(void)
 
 	atomic_store(&le->refs, 1);
 
-	pthread_mutex_init(&le->lock, NULL);
+	mm_mutex_init(&le->lock);
 	return le;
 }
 
@@ -702,7 +702,7 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	}
 #endif
 
-	pthread_mutex_destroy(&le->lock);
+	mm_mutex_destroy(&le->lock);
 	if (le->wait_bus) {
 		machine_channel_free(le->wait_bus);
 	}

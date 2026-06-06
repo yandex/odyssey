@@ -258,13 +258,13 @@ static void od_cron_err_stat(od_cron_t *cron)
 		od_route_unlock(current_route);
 	}
 
-	od_router_lock(router)
+	od_router_lock(router);
 	{
 		od_err_logger_inc_interval(router->router_err_logger);
 	}
-	od_router_unlock(router)
+	od_router_unlock(router);
 
-		od_route_pool_lock(router->route_pool)
+	od_route_pool_lock(router->route_pool)
 	{
 		od_err_logger_inc_interval(router->route_pool.err_logger);
 	}
