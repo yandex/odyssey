@@ -9,6 +9,7 @@
 #include <machinarium/machinarium.h>
 #include <machinarium/wait_list.h>
 #include <machinarium/machine.h>
+#include <stdatomic.h>
 
 /* holding wait_list lock */
 static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)
@@ -137,28 +138,42 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, void *private,
 	return 0;
 }
 
+
 void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
 			     void *arg)
 {
 	mm_sleeplock_lock(&wait_list->lock);
 
-	if (wait_list->sleepy_count == 0ULL) {
-		mm_sleeplock_unlock(&wait_list->lock);
-		return NULL;
+	mm_sleepy_t *sleepy = NULL;
+	int event_mgr_fd = 0;
+	void *private = NULL;
+
+	if (wait_list->sleepy_count > 0ULL) {
+		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
+
+		release_sleepy(wait_list, sleepy);
+
+		event_mgr_fd = mm_eventmgr_signal(&sleepy->event);
+
+		private = sleepy->private;
+
+		if (cb != NULL) {
+			cb(private, arg);
+		}
+	} else {
+		/* no sleepy to wake, still call cb if provided */
+		(void)cb;
+		(void)arg;
 	}
 
-	mm_sleepy_t *sleepy;
-	sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
-
-	release_sleepy(wait_list, sleepy);
-
-	int event_mgr_fd;
-	event_mgr_fd = mm_eventmgr_signal(&sleepy->event);
-
-	void *private = sleepy->private;
-
-	if (cb != NULL) {
-		cb(private, arg);
+	/* notify all registered listeners (listeners are invoked under wait_list lock) */
+	mm_list_t *j;
+	mm_list_foreach (&wait_list->listeners, j) {
+		mm_wait_list_listener_t *listener;
+		listener = mm_container_of(j, mm_wait_list_listener_t, link);
+		if (listener->cb) {
+			listener->cb(listener->arg);
+		}
 	}
 
 	mm_sleeplock_unlock(&wait_list->lock);
@@ -201,6 +216,17 @@ int mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 		event_mgr_fds[i] = mm_eventmgr_signal(&sleepy->event);
 	}
 
+	mm_list_t *j;
+	mm_list_foreach (&wait_list->listeners, j) {
+		mm_wait_list_listener_t *listener;
+		listener = mm_container_of(j, mm_wait_list_listener_t, link);
+		if (listener->cb) {
+			listener->cb(listener->arg);
+			signaled = 1;
+		}
+	}
+
+
 	mm_sleeplock_unlock(&wait_list->lock);
 
 	for (uint64_t i = 0; i < count; ++i) {
@@ -213,3 +239,119 @@ int mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 
 	return signaled;
 }
+
+
+
+
+
+void mm_wait_list_add_listener(mm_wait_list_t *wait_list, mm_wait_list_listener_t *listener)
+{
+	mm_sleeplock_lock(&wait_list->lock);
+	mm_list_init(&listener->link);
+	mm_list_append(&wait_list->listeners, &listener->link);
+	mm_sleeplock_unlock(&wait_list->lock);
+}
+
+void mm_wait_list_remove_listener(mm_wait_list_t *wait_list, mm_wait_list_listener_t *listener)
+{
+	mm_sleeplock_lock(&wait_list->lock);
+	/* unlink if linked */
+	mm_list_unlink(&listener->link);
+	mm_sleeplock_unlock(&wait_list->lock);
+}
+
+struct mm_waitv_cb_arg {
+	size_t idx;
+	size_t *which;
+	mm_event_t *event;
+	int *fired;
+};
+
+static void mm_waitv_listener_cb(void *arg)
+{
+	struct mm_waitv_cb_arg *p = arg;
+	/* try to mark fired only once */
+	if (__sync_bool_compare_and_swap(p->fired, 0, 1)) {
+		if (p->which) {
+			*p->which = p->idx;
+		}
+		int fd = mm_eventmgr_signal(p->event);
+		if (fd > 0) {
+			mm_eventmgr_wakeup(fd);
+		}
+	}
+}
+
+int mm_wait_list_waitv(mm_wait_list_t **wait_lists, void **privates, size_t count,
+					   uint32_t timeout_ms, size_t *index_out)
+{
+	(void)privates; /* reserved for future use */
+
+	if (count == 0 || wait_lists == NULL) {
+		mm_errno_set(EINVAL);
+		return -1;
+	}
+
+	/* prepare shared event for this waiter */
+	mm_event_t shared_event;
+	mm_eventmgr_add(&mm_self->event_mgr, &shared_event);
+
+	mm_wait_list_listener_t *listeners = mm_malloc(sizeof(*listeners) * count);
+	if (listeners == NULL) {
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	struct mm_waitv_cb_arg *args = mm_malloc(sizeof(*args) * count);
+	if (args == NULL) {
+		mm_free(listeners);
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	int *fired = mm_malloc(sizeof(int));
+	if (fired == NULL) {
+		mm_free(listeners);
+		mm_free(args);
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+	*fired = 0;
+
+	/* register listeners on all provided wait_lists */
+	for (size_t i = 0; i < count; ++i) {
+		mm_wait_list_listener_t *l = &listeners[i];
+		mm_list_init(&l->link);
+		l->cb = mm_waitv_listener_cb;
+		args[i].idx = i;
+		args[i].which = index_out;
+		args[i].event = &shared_event;
+		args[i].fired = fired;
+		l->arg = &args[i];
+		mm_wait_list_add_listener(wait_lists[i], l);
+	}
+
+	/* wait for any listener to signal shared_event */
+	(void)mm_eventmgr_wait(&mm_self->event_mgr, &shared_event, timeout_ms);
+
+	/* remove listeners (safe even if they already fired) */
+	for (size_t i = 0; i < count; ++i) {
+		mm_wait_list_remove_listener(wait_lists[i], &listeners[i]);
+	}
+
+	int result;
+	if (*fired) {
+		/* some listener fired and set index_out */
+		result = 0;
+	} else {
+		/* timeout or nothing fired */
+		mm_errno_set(ETIMEDOUT);
+		result = -1;
+	}
+
+	mm_free(listeners);
+	mm_free(args);
+	mm_free(fired);
+
+	return result;
+}
+
+

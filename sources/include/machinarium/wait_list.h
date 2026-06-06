@@ -43,6 +43,8 @@ typedef struct {
 	mm_sleeplock_t lock;
 	mm_list_t sleepies;
 	uint64_t sleepy_count;
+	//podpischiki
+	mm_list_t listeners;
 
 	/*
 	This field is analogous to a futex word.
@@ -78,3 +80,21 @@ int mm_wait_list_notify_all(mm_wait_list_t *wait_list);
 typedef void (*mm_wl_private_cb_t)(void *private, void *arg);
 void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
 			     void *arg);
+
+
+//listener support
+typedef void (*mm_wait_list_listener_cb_t)(void *arg);
+typedef struct mm_wait_list_listener {
+	mm_list_t link;
+	mm_wait_list_listener_cb_t cb;
+	void *arg;
+} mm_wait_list_listener_t;
+
+void mm_wait_list_add_listener(mm_wait_list_t *wait_list, mm_wait_list_listener_t *listener);
+void mm_wait_list_remove_listener(mm_wait_list_t *wait_list, mm_wait_list_listener_t *listener);
+
+//wait for any of provided wait_lists to trigger.
+//On success returns 0 and stores index of triggered wait_list into *index_out.
+//On timeout or error returns -1
+int mm_wait_list_waitv(mm_wait_list_t **wait_lists, void **privates, size_t count,
+					   uint32_t timeout_ms, size_t *index_out);
