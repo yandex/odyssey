@@ -32,7 +32,6 @@ struct mm_call {
 	mm_coroutine_t *coroutine;
 	mm_cancel_t cancel_function;
 	void *arg;
-	void *data;
 	int timedout;
 	int status;
 };
