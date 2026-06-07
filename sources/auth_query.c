@@ -18,7 +18,6 @@
 #include <client.h>
 #include <internal_client.h>
 #include <global.h>
-#include <hashmap.h>
 #include <pool.h>
 #include <storage.h>
 #include <router.h>
