@@ -12,7 +12,7 @@
 
 #include <tls_config.h>
 #include <balancing.h>
-#include <hashmap.h>
+#include <list.h>
 #include <pool.h>
 #include <od_memory.h>
 #include <address.h>
@@ -75,13 +75,6 @@ struct od_storage_endpoint {
 int od_storage_parse_endpoints(const char *host_str,
 			       od_storage_endpoint_t **out, size_t *count);
 
-typedef struct od_auth_cache_value od_auth_cache_value_t;
-struct od_auth_cache_value {
-	uint64_t timestamp;
-	char *passwd;
-	uint32_t passwd_len;
-};
-
 struct od_rule_storage {
 	od_tls_opts_t *tls_opts;
 
@@ -99,8 +92,6 @@ struct od_rule_storage {
 
 	int server_max_routing;
 	od_storage_watchdog_t *watchdog;
-
-	od_hashmap_t *acache;
 
 	od_list_t link;
 

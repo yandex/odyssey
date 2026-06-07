@@ -276,11 +276,13 @@ static void do_group_check_poll_connected(od_instance_t *instance,
 
 	int rc = od_backend_query_send(server, "group_checker",
 				       group->group_query, NULL,
-				       strlen(group->group_query) + 1);
+				       strlen(group->group_query) + 1,
+				       1000 /* 1 sec */);
 	if (rc != OK_RESPONSE) {
 		/* retry later */
 		od_gerror("group_checker", client, server,
-			  "group query failed");
+			  "group query failed, errno=%d (%s)", mm_errno_get(),
+			  strerror(mm_errno_get()));
 		return;
 	}
 
@@ -1488,7 +1490,6 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 		rule = od_container_of(i, od_rule_t, link);
 		rule->mark = 1;
 		count_mark++;
-		od_hashmap_empty(rule->storage->acache);
 	}
 
 	/* select dropped rules */

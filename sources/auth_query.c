@@ -25,20 +25,9 @@
 #include <instance.h>
 #include <query.h>
 
-static inline void free_cache_value(od_hashmap_list_item_t *it)
-{
-	od_auth_cache_value_t *p = it->value.data;
-	od_free(p->passwd);
-}
-
-od_hashmap_t *od_auth_query_create_cache(size_t sz)
-{
-	return od_hashmap_create_with_dtor(sz, free_cache_value);
-}
-
-static inline int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
-						    machine_msg_t *msg,
-						    kiwi_password_t *result)
+static int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
+					     machine_msg_t *msg,
+					     kiwi_password_t *result)
 {
 	char *pos = (char *)machine_msg_data(msg) + 1;
 	uint32_t pos_size = machine_msg_size(msg) - 1;
@@ -126,181 +115,152 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-int od_auth_query(od_client_t *client, char *peer)
+static od_client_t *create_auth_client(od_global_t *global,
+				       od_instance_t *instance, od_rule_t *rule,
+				       od_client_t *orig_client)
 {
-	od_global_t *global = client->global;
-	od_rule_t *rule = client->rule;
-	od_rule_storage_t *storage = rule->storage;
-	kiwi_var_t *user = &client->startup.user;
-	kiwi_password_t *password = &client->password;
-	od_instance_t *instance = global->instance;
 	od_router_t *router = global->router;
 
-	/* check odyssey storage auh query cache before
-	* doing any actual work
-	*/
-	/* username -> password cache */
-	od_hashmap_elt_t *value;
-	od_hashmap_elt_t key;
-	od_auth_cache_value_t *cache_value;
-	od_hash_t keyhash;
-	uint64_t current_time;
-
-	key.data = user->value;
-	key.len = user->value_len;
-
-	keyhash = od_murmur_hash(key.data, key.len);
-	/* acquire hash map entry lock */
-	value = od_hashmap_lock_key(storage->acache, keyhash, &key);
-
-	if (value->data == NULL) {
-		/* one-time initialize */
-		value->len = sizeof(od_auth_cache_value_t);
-		value->data = od_malloc(value->len);
-		if (value->data == NULL) {
-			goto error;
-		}
-		memset(((od_auth_cache_value_t *)(value->data)), 0, value->len);
+	od_client_t *client = od_client_allocate_internal(global, "auth-query");
+	if (client == NULL) {
+		od_error(&instance->logger, "auth_query", orig_client, NULL,
+			 "can't allocate auth client");
+		return NULL;
 	}
 
-	cache_value = (od_auth_cache_value_t *)value->data;
-
-	current_time = machine_time_us();
-
-	if (/* password cached for 10 sec */
-	    current_time - cache_value->timestamp < 10 * interval_usec) {
-		od_debug(&instance->logger, "auth_query", NULL, NULL,
-			 "reusing cached password for user %.*s",
-			 user->value_len, user->value);
-		/* unlock hashmap entry */
-		password->password_len = cache_value->passwd_len;
-		if (cache_value->passwd_len > 0) {
-			/*  */
-			password->password =
-				od_malloc(password->password_len + 1);
-			if (password->password == NULL) {
-				goto error;
-			}
-			strncpy(password->password, cache_value->passwd,
-				cache_value->passwd_len);
-			password->password[password->password_len] = '\0';
-		}
-		od_hashmap_unlock_key(storage->acache, keyhash, &key);
-		return OK_RESPONSE;
-	}
-
-	/* create internal auth client */
-	od_client_t *auth_client;
-
-	auth_client = od_client_allocate_internal(global, "auth-query");
-
-	if (auth_client == NULL) {
-		od_debug(&instance->logger, "auth_query", auth_client, NULL,
-			 "failed to allocate internal auth query client");
-		goto error;
-	}
-
-	od_debug(&instance->logger, "auth_query", auth_client, NULL,
-		 "acquiring password for user %.*s", user->value_len,
-		 user->value);
-
-	/* set auth query route user and database */
-	kiwi_var_set(&auth_client->startup.user, KIWI_VAR_UNDEF,
+	kiwi_var_set(&client->startup.user, KIWI_VAR_UNDEF,
 		     rule->auth_query_user, strlen(rule->auth_query_user) + 1);
-
-	kiwi_var_set(&auth_client->startup.database, KIWI_VAR_UNDEF,
+	kiwi_var_set(&client->startup.database, KIWI_VAR_UNDEF,
 		     rule->auth_query_db, strlen(rule->auth_query_db) + 1);
 
-	/* set io from client */
-	od_io_t auth_client_io = auth_client->io;
-	auth_client->io = client->io;
-
-	/* route */
 	od_router_status_t status;
-	status = od_router_route(router, auth_client);
-
-	/* return io auth_client back */
-	auth_client->io = auth_client_io;
-
+	status = od_router_route(router, client);
 	if (status != OD_ROUTER_OK) {
-		od_debug(&instance->logger, "auth_query", auth_client, NULL,
+		od_debug(&instance->logger, "auth_query", client, NULL,
 			 "failed to route internal auth query client: %s",
 			 od_router_status_to_str(status));
-		od_client_free(auth_client);
-		goto error;
+		od_client_free_extended(client);
+		return NULL;
 	}
 
-	int rc;
-	rc = od_attach_extended(instance, "auth_query", router, auth_client);
+	int rc = od_attach_extended(instance, "auth_query", router, client);
 	if (rc != OK_RESPONSE) {
-		od_router_unroute(router, auth_client);
-		od_client_free_extended(auth_client);
-		goto error;
+		od_router_unroute(router, client);
+		od_client_free_extended(client);
+		return NULL;
 	}
 
-	od_server_t *server;
-	server = auth_client->server;
+	return client;
+}
 
-	/* preformat and execute query */
+static int do_auth_query(od_instance_t *instance, od_rule_t *rule,
+			 od_route_t *route, od_client_t *client,
+			 od_client_t *orig_client, char *peer)
+{
+	od_server_t *server = client->server;
+	assert(server != NULL);
+
+	kiwi_var_t *user = &orig_client->startup.user;
+
 	char query[OD_QRY_MAX_SZ];
 	char *format_pos = rule->auth_query;
 	char *format_end = rule->auth_query + strlen(rule->auth_query);
 	od_query_format(format_pos, format_end, user, peer, query,
 			sizeof(query));
 
-	machine_msg_t *msg;
-	msg = od_query_do(server, "auth_query", query, user->value);
+	machine_msg_t *msg =
+		od_query_do(server, "auth_query", query, user->value, 500);
 	if (msg == NULL) {
-		od_log(&instance->logger, "auth_query", auth_client, server,
-		       "auth query returned empty msg");
-		od_router_close(router, auth_client);
-		od_router_unroute(router, auth_client);
-		od_client_free_extended(auth_client);
-		goto error;
+		od_error(&instance->logger, "auth_query", client, server,
+			 "auth query returned empty msg");
+		return NOT_OK_RESPONSE;
 	}
-	rc = od_auth_parse_passwd_from_datarow(&instance->logger, msg,
-					       password);
+
+	kiwi_password_t password;
+	int rc = od_auth_parse_passwd_from_datarow(&instance->logger, msg,
+						   &password);
 	machine_msg_free(msg);
-	if (rc == NOT_OK_RESPONSE) {
-		od_debug(&instance->logger, "auth_query", auth_client, server,
-			 "auth query returned datarow in incompatible format");
-		od_router_close(router, auth_client);
-		od_router_unroute(router, auth_client);
-		od_client_free_extended(auth_client);
-		goto error;
+
+	if (rc != OK_RESPONSE) {
+		return rc;
 	}
 
-	/* save received password and receive timestamp */
-	if (cache_value->passwd != NULL) {
-		/* drop previous value */
-		od_free(cache_value->passwd);
+	od_free(route->auth_query_cache.password);
+	route->auth_query_cache.password = password.password;
+	route->auth_query_cache.valid_until_ms = machine_time_ms() + 10 * 1000;
 
-		/* there should be cache_value->passwd = NULL for sanity
-		* but this is meaninigless since we assign new value just below
-		*/
-	}
-	cache_value->passwd_len = password->password_len;
-	cache_value->passwd = od_malloc(password->password_len);
-	if (cache_value->passwd == NULL) {
-		od_router_close(router, auth_client);
-		od_router_unroute(router, auth_client);
-		od_client_free_extended(auth_client);
-		goto error;
-	}
-	strncpy(cache_value->passwd, password->password,
-		cache_value->passwd_len);
-
-	cache_value->timestamp = current_time;
-
-	/* detach and unroute */
-	od_router_close(router, auth_client);
-	od_router_unroute(router, auth_client);
-	od_client_free_extended(auth_client);
-	od_hashmap_unlock_key(storage->acache, keyhash, &key);
 	return OK_RESPONSE;
+}
 
-error:
-	/* unlock hashmap entry */
-	od_hashmap_unlock_key(storage->acache, keyhash, &key);
-	return NOT_OK_RESPONSE;
+static int do_update_auth_cache(od_global_t *global, od_instance_t *instance,
+				od_rule_t *rule, od_route_t *route,
+				od_client_t *orig_client, char *peer)
+{
+	od_router_t *router = global->router;
+
+	od_client_t *client =
+		create_auth_client(global, instance, rule, orig_client);
+	if (client == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	od_debug(&instance->logger, "auth_query", orig_client, NULL,
+		 "got auth client %s%.*s", client->id.id_prefix,
+		 (int)sizeof(client->id.id), client->id.id);
+
+	int rc =
+		do_auth_query(instance, rule, route, client, orig_client, peer);
+
+	od_router_close(router, client);
+	od_router_unroute(router, client);
+	od_client_free_extended(client);
+
+	return rc;
+}
+
+static int get_password_route_locked(od_global_t *global,
+				     od_instance_t *instance, od_rule_t *rule,
+				     od_route_t *route, od_client_t *client,
+				     char *peer)
+{
+	uint64_t now_ms = machine_time_ms();
+
+	if (route->auth_query_cache.valid_until_ms < now_ms) {
+		od_debug(&instance->logger, "auth_query", client, NULL,
+			 "need to update cached password");
+
+		int rc = do_update_auth_cache(global, instance, rule, route,
+					      client, peer);
+		if (rc != OK_RESPONSE) {
+			return rc;
+		}
+	}
+
+	client->password.password = od_strdup(route->auth_query_cache.password);
+	if (client->password.password == NULL) {
+		od_error(&instance->logger, "auth_query", client, NULL,
+			 "can't reuse password: OOM");
+		return -1;
+	}
+	client->password.password_len = strlen(client->password.password) + 1;
+
+	return 0;
+}
+
+int od_auth_query(od_client_t *client, char *peer)
+{
+	od_global_t *global = client->global;
+	od_instance_t *instance = global->instance;
+	od_route_t *route = client->route;
+	od_rule_t *rule = client->rule;
+
+	assert(route != NULL);
+	assert(rule->auth_query != NULL);
+
+	od_route_lock(route);
+	int rc = get_password_route_locked(global, instance, rule, route,
+					   client, peer);
+	od_route_unlock(route);
+
+	return rc;
 }

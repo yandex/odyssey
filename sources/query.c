@@ -17,14 +17,15 @@
 #include <util.h>
 
 machine_msg_t *od_query_do(od_server_t *server, char *context,
-			   const char *query, char *param)
+			   const char *query, char *param, uint32_t timeout_ms)
 {
 	od_instance_t *instance = server->global->instance;
 	od_debug(&instance->logger, context, server->client, server, "%s",
 		 query);
 
 	if (od_backend_query_send(server, context, query, param,
-				  strlen(query) + 1) == NOT_OK_RESPONSE) {
+				  strlen(query) + 1,
+				  timeout_ms) == NOT_OK_RESPONSE) {
 		return NULL;
 	}
 	machine_msg_t *ret_msg = NULL;
@@ -33,7 +34,7 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 	/* wait for response */
 	int has_result = 0;
 	for (;;) {
-		msg = od_read(&server->io, UINT32_MAX);
+		msg = od_read(&server->io, timeout_ms);
 		if (msg == NULL) {
 			if (!machine_timedout()) {
 				od_error(&instance->logger, context,
