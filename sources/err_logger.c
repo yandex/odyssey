@@ -24,7 +24,7 @@ od_error_logger_t *od_err_logger_create(size_t intervals_count)
 		goto error;
 	}
 
-	err_logger->intervals_cnt = intervals_count;
+	err_logger->nintervals = intervals_count;
 	atomic_init(&err_logger->current_interval_num, 0);
 
 	for (size_t i = 0; i < intervals_count; ++i) {
@@ -42,7 +42,7 @@ od_error_logger_t *od_err_logger_create(size_t intervals_count)
 error:
 
 	if (err_logger) {
-		for (size_t i = 0; i < err_logger->intervals_cnt; ++i) {
+		for (size_t i = 0; i < err_logger->nintervals; ++i) {
 			if (err_logger->interval_counters[i] == NULL) {
 				continue;
 			}
@@ -61,7 +61,7 @@ od_retcode_t od_err_logger_free(od_error_logger_t *err_logger)
 		return OK_RESPONSE;
 	}
 
-	for (size_t i = 0; i < err_logger->intervals_cnt; ++i) {
+	for (size_t i = 0; i < err_logger->nintervals; ++i) {
 		if (err_logger->interval_counters[i] == NULL) {
 			continue;
 		}
@@ -80,21 +80,26 @@ od_retcode_t od_err_logger_free(od_error_logger_t *err_logger)
 
 od_retcode_t od_error_logger_store_err(od_error_logger_t *l, size_t err_t)
 {
-	od_counter_inc(l->interval_counters[l->current_interval_num], err_t);
+	size_t idx = atomic_load(&l->current_interval_num);
+	od_counter_inc(l->interval_counters[idx], err_t);
 	return OK_RESPONSE;
 }
 
 od_retcode_t od_err_logger_inc_interval(od_error_logger_t *l)
 {
-	size_t old = atomic_load(&l->current_interval_num);
-	while (!atomic_compare_exchange_weak(&l->current_interval_num, &old,
-					     (old + 1) % l->intervals_cnt)) {
+	while (1) {
+		size_t i = atomic_load(&l->current_interval_num);
+		size_t next = (i + 1) % l->nintervals;
+
+		if (atomic_compare_exchange_weak(&l->current_interval_num, &i,
+						 next)) {
+			/* some errors may be lost */
+			od_counter_reset_all(l->interval_counters[next]);
+			break;
+		}
+
 		OD_ERR_LOGGER_CAS_BACKOFF;
 	}
-
-	size_t new = (old + 1) % l->intervals_cnt;
-	/* some errors may be lost */
-	od_counter_reset_all(l->interval_counters[new]);
 
 	return OK_RESPONSE;
 }
@@ -102,7 +107,7 @@ od_retcode_t od_err_logger_inc_interval(od_error_logger_t *l)
 size_t od_err_logger_get_aggr_errors_count(od_error_logger_t *l, size_t err_t)
 {
 	size_t ret_val = 0;
-	for (size_t i = 0; i < l->intervals_cnt; ++i) {
+	for (size_t i = 0; i < l->nintervals; ++i) {
 		ret_val += od_counter_get_count(l->interval_counters[i], err_t);
 	}
 	return ret_val;

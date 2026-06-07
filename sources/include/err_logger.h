@@ -12,7 +12,7 @@
 #define DEFAULT_ERROR_INTERVAL_NUMBER (5 * 60)
 
 struct od_error_logger {
-	size_t intervals_cnt;
+	size_t nintervals;
 
 	atomic_size_t current_interval_num;
 	/* ISO C99 flexible array member */
