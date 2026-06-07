@@ -123,7 +123,6 @@ set(od_src
     server.c
     shared_pool.c
     murmurhash.c
-    hashmap.c
     address.c
     hba.c
     hba_reader.c
@@ -334,7 +333,6 @@ set(od_test_src
     tests/odyssey/test_hba_parse.c
     tests/odyssey/test_address.c
     tests/odyssey/test_affinity.c
-    tests/odyssey/test_hashmap.c
     tests/odyssey/test_pstmt.c
     tests/odyssey/test_query_processing.c
     tests/odyssey/test_duration_parse.c)
