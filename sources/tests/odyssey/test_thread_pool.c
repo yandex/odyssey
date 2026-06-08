@@ -40,7 +40,7 @@ static void test_integral(void *arg)
 	test(od_thread_pool_init(&pool, "integrator", 5, 100) == 0);
 
 	for (size_t i = 0; i < n; ++i) {
-		futures[i] = od_thread_pool_submit(&pool, calc, &value);
+		futures[i] = od_thread_pool_submit(&pool, calc, &value, 0);
 		test(futures[i] != NULL);
 	}
 
@@ -78,13 +78,13 @@ static void test_queue_full(void *arg)
 	od_thread_pool_t pool;
 	test(od_thread_pool_init(&pool, "sleeper", 2, 2) == 0);
 
-	futures[0] = od_thread_pool_submit(&pool, sleepy, NULL);
+	futures[0] = od_thread_pool_submit(&pool, sleepy, NULL, 0);
 	test(futures[0] != NULL);
 
-	futures[1] = od_thread_pool_submit(&pool, sleepy, NULL);
+	futures[1] = od_thread_pool_submit(&pool, sleepy, NULL, 0);
 	test(futures[1] != NULL);
 
-	od_future_t *f = od_thread_pool_submit(&pool, sleepy, NULL);
+	od_future_t *f = od_thread_pool_submit(&pool, sleepy, NULL, 0);
 	test(f == NULL);
 	test(mm_errno_get() == EAGAIN);
 

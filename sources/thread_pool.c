@@ -75,9 +75,18 @@ static void tp_work(void *arg)
 				break;
 			}
 
-			void *result = task.fn(task.arg);
-			atomic_store(&task.future->value, (uintptr_t)result);
-			mm_wait_flag_set(task.future->wait);
+			if (task.detached ||
+			    atomic_load(&task.future->refs) > 1) {
+				/*
+				 * the user might have give up waiting the task
+				 * lets execute task only if user is awaiting the result
+				 */
+				void *result = task.fn(task.arg);
+				atomic_store(&task.future->value,
+					     (uintptr_t)result);
+				mm_wait_flag_set(task.future->wait);
+			}
+
 			od_future_unref(task.future);
 
 			continue;
@@ -179,7 +188,8 @@ void od_thread_pool_destroy(od_thread_pool_t *pool)
 }
 
 od_future_t *od_thread_pool_submit(od_thread_pool_t *pool,
-				   od_thread_pool_task_fn_t fn, void *arg)
+				   od_thread_pool_task_fn_t fn, void *arg,
+				   int detach)
 {
 	od_future_t *future = od_future_create();
 	if (future == NULL) {
@@ -191,6 +201,7 @@ od_future_t *od_thread_pool_submit(od_thread_pool_t *pool,
 	task.future = future;
 	task.fn = fn;
 	task.arg = arg;
+	task.detached = detach;
 
 	/* one another ref for 'user' */
 	od_future_ref(future);

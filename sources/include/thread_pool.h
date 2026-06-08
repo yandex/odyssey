@@ -34,6 +34,7 @@ typedef struct {
 	od_thread_pool_task_fn_t fn;
 	void *arg;
 	od_future_t *future;
+	int detached;
 } od_thread_pool_task_t;
 
 typedef struct {
@@ -58,5 +59,6 @@ int od_thread_pool_init(od_thread_pool_t *pool, const char *name, size_t size,
 void od_thread_pool_shutdown(od_thread_pool_t *pool);
 void od_thread_pool_destroy(od_thread_pool_t *pool);
 od_future_t *od_thread_pool_submit(od_thread_pool_t *pool,
-				   od_thread_pool_task_fn_t fn, void *arg);
+				   od_thread_pool_task_fn_t fn, void *arg,
+				   int detach);
 int od_thread_pool_wait(od_future_t *future, uint32_t timeout_ms);
