@@ -323,8 +323,6 @@ static inline int od_ldap_server_auth(od_ldap_server_t *serv, od_client_t *cl,
 	return rc;
 }
 
-/*#define USE_POOL */
-
 od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 				      bool auth_pool)
 {
@@ -333,97 +331,7 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 	od_ldap_endpoint_t *le = rule->ldap_endpoint;
 	od_ldap_server_t *ldap_server = NULL;
 
-#if USE_POOL
-	od_server_pool_t *ldap_server_pool;
-	if (auth_pool) {
-		ldap_server_pool = le->ldap_auth_pool;
-	} else {
-		ldap_server_pool = le->ldap_search_pool;
-	}
-
-	od_debug(logger, "auth_ldap", NULL, NULL,
-		 "total connections in selected pool: %d",
-		 od_server_pool_total(ldap_server_pool));
-#endif
 	od_ldap_endpoint_lock(le);
-
-#if USE_POOL
-	/* get client server from route server pool */
-	for (;;) {
-		ldap_server = od_ldap_server_pool_next(ldap_server_pool,
-						       OD_SERVER_IDLE);
-		if (ldap_server) {
-			od_debug(logger, "auth_ldap", NULL, NULL,
-				 "pulling ldap_server from ldap_pool");
-			if (rule->ldap_pool_ttl > 0) {
-				if (time(NULL) - ldap_server->idle_timestamp >
-				    rule->ldap_pool_ttl) {
-					od_debug(
-						logger, "auth_ldap", NULL, NULL,
-						"bad ldap_server_ttl - closing ldap connection");
-					od_ldap_server_pool_set(
-						ldap_server_pool, ldap_server,
-						OD_SERVER_UNDEF);
-					od_ldap_server_free(ldap_server);
-					ldap_server = NULL;
-					od_ldap_endpoint_unlock(le);
-					break;
-				}
-			}
-			od_ldap_server_pool_set(ldap_server_pool, ldap_server,
-						OD_SERVER_ACTIVE);
-			od_ldap_endpoint_unlock(le);
-			break;
-		}
-
-		if (false) {
-			/* special case, when we are interested only in an idle connection
-			 * and do not want to start a new one */
-			/* NOT IMPL */
-			od_ldap_endpoint_unlock(le);
-			return NULL;
-		} else {
-			/* Maybe start new connection, if pool_size is zero */
-			/* Maybe start new connection, if we still have capacity for it */
-
-			int connections_in_pool =
-				od_server_pool_total(ldap_server_pool);
-			int pool_size = rule->ldap_pool_size;
-
-			if (pool_size == 0 || connections_in_pool < pool_size) {
-				/*
-				 * TODO: better limit logic here
-				 * We are allowed to spun new server connection
-				 */
-				od_debug(
-					logger, "auth_ldap", NULL, NULL,
-					"spun new connection to ldap server %s",
-					rule->ldap_endpoint_name);
-				break;
-			}
-		}
-
-		/*
-		 * Wait wakeup condition for pool_timeout milliseconds.
-		 *
-		 * The condition triggered when a server connection
-		 * put into idle state by DETACH events.
-		 */
-		od_ldap_endpoint_unlock(le);
-
-		uint32_t timeout = rule->ldap_pool_timeout;
-		if (timeout == 0) {
-			timeout = UINT32_MAX;
-		}
-		rc = od_ldap_endpoint_wait(le, timeout);
-
-		if (rc == -1) {
-			return NULL;
-		}
-
-		od_ldap_endpoint_lock(le);
-	}
-#endif
 
 	if (ldap_server == NULL) {
 		/* create new server object */
@@ -439,10 +347,7 @@ od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
 			od_ldap_endpoint_unlock(le);
 			return NULL;
 		}
-#if USE_POOL
-		od_ldap_server_pool_set(ldap_server_pool, ldap_server,
-					OD_SERVER_ACTIVE);
-#endif
+
 		od_ldap_endpoint_unlock(le);
 	}
 
@@ -475,21 +380,12 @@ static inline od_retcode_t od_ldap_server_attach(od_client_t *client)
 	if (rc == NOT_OK_RESPONSE) {
 		od_debug(&instance->logger, "auth_ldap", client, NULL,
 			 "closing bad ldap connection, need relogin");
-#if USE_POOL
-		od_ldap_server_pool_set(
-			client->rule->ldap_endpoint->ldap_search_pool, server,
-			OD_SERVER_UNDEF);
-#endif
+
 		od_ldap_server_free(server);
 	} else {
 		server->idle_timestamp = (int)time(NULL);
-#if USE_POOL
-		od_ldap_server_pool_set(
-			client->rule->ldap_endpoint->ldap_search_pool, server,
-			OD_SERVER_IDLE);
-#else
+
 		od_ldap_server_free(server);
-#endif
 	}
 
 	od_ldap_endpoint_unlock(client->rule->ldap_endpoint);
@@ -537,12 +433,7 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 	switch (ldap_rc) {
 	case LDAP_SUCCESS: {
 		serv->idle_timestamp = (int)time(NULL);
-#if USE_POOL
-		od_ldap_server_pool_set(cl->rule->ldap_endpoint->ldap_auth_pool,
-					serv, OD_SERVER_IDLE);
-#else
 		od_ldap_server_free(serv);
-#endif
 		rc = OK_RESPONSE;
 		break;
 	}
@@ -550,22 +441,11 @@ od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
 		/* fallthrough */
 	case LDAP_INVALID_CREDENTIALS: {
 		serv->idle_timestamp = (int)time(NULL);
-#if USE_POOL
-		od_ldap_server_pool_set(cl->rule->ldap_endpoint->ldap_auth_pool,
-					serv, OD_SERVER_IDLE);
-#else
-
 		od_ldap_server_free(serv);
-#endif
 		rc = NOT_OK_RESPONSE;
 		break;
 	}
 	default: {
-/*Need to rebind */
-#if USE_POOL
-		od_ldap_server_pool_set(cl->rule->ldap_endpoint->ldap_auth_pool,
-					serv, OD_SERVER_UNDEF);
-#endif
 		od_ldap_server_free(serv);
 		rc = NOT_OK_RESPONSE;
 		break;
@@ -614,17 +494,6 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc(void)
 	le->ldapbinddn = NULL;
 	/* preparsed connect url */
 	le->ldapurl = NULL;
-
-#ifdef USE_POOL
-	od_server_pool_t *ldap_auth_pool = od_malloc(sizeof(od_server_pool_t));
-	od_server_pool_init(ldap_auth_pool);
-	le->ldap_auth_pool = ldap_auth_pool;
-
-	od_server_pool_t *ldap_search_pool =
-		od_malloc(sizeof(od_server_pool_t));
-	od_server_pool_init(ldap_search_pool);
-	le->ldap_search_pool = ldap_search_pool;
-#endif
 
 	le->wait_bus = machine_channel_create();
 	if (le->wait_bus == NULL) {
@@ -692,15 +561,6 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	}
 
 	od_list_unlink(&le->link);
-#if USE_POOL
-	if (le->ldap_search_pool) {
-		od_ldap_server_pool_free(le->ldap_search_pool);
-	}
-
-	if (le->ldap_auth_pool) {
-		od_ldap_server_pool_free(le->ldap_auth_pool);
-	}
-#endif
 
 	mm_mutex_destroy(&le->lock);
 	if (le->wait_bus) {

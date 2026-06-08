@@ -713,13 +713,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		case OK_RESPONSE: {
 			od_ldap_endpoint_lock(rule->ldap_endpoint);
 			ldap_server->idle_timestamp = (int)time(NULL);
-#if USE_POOL
-			od_ldap_server_pool_set(
-				rule->ldap_endpoint->ldap_search_pool,
-				ldap_server, OD_SERVER_IDLE);
-#else
 			od_ldap_server_free(ldap_server);
-#endif
 
 			od_ldap_endpoint_unlock(rule->ldap_endpoint);
 			id.user = client->ldap_storage_username;
@@ -745,13 +739,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		case LDAP_INSUFFICIENT_ACCESS: {
 			od_ldap_endpoint_lock(rule->ldap_endpoint);
 			ldap_server->idle_timestamp = (int)time(NULL);
-#if USE_POOL
-			od_ldap_server_pool_set(
-				rule->ldap_endpoint->ldap_search_pool,
-				ldap_server, OD_SERVER_IDLE);
-#else
 			od_ldap_server_free(ldap_server);
-#endif
 
 			od_ldap_endpoint_unlock(rule->ldap_endpoint);
 			od_router_unlock(router);
@@ -760,13 +748,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		default: {
 			od_debug(&instance->logger, "routing", client, NULL,
 				 "closing bad ldap connection, need relogin");
-			od_ldap_endpoint_lock(rule->ldap_endpoint);
-#if USE_POOl
-			od_ldap_server_pool_set(
-				rule->ldap_endpoint->ldap_search_pool,
-				ldap_server, OD_SERVER_UNDEF);
-#endif
-			od_ldap_endpoint_unlock(rule->ldap_endpoint);
 			od_ldap_server_free(ldap_server);
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR_NOT_FOUND;
