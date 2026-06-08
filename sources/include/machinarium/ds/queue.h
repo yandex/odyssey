@@ -20,13 +20,12 @@ typedef struct {
 	pthread_spinlock_t lock;
 
 	size_t cap;
-	size_t cap_bytes;
 	size_t mask;
 	size_t elsize;
 
 	size_t size;
-	size_t head; /* in bytes */
-	size_t tail; /* in bytes */
+	size_t head; /* index */
+	size_t tail; /* index */
 
 	mm_queue_dtor_fn dtor;
 
