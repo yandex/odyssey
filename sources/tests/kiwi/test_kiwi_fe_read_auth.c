@@ -196,6 +196,43 @@ void test_sasl_scram_sha_256_third(void)
 	test(type == 10);
 }
 
+/* Test: Malformed packet - no null terminator within bounds (should fail safely) */
+void test_sasl_malformed_no_null_terminator(void)
+{
+	char buf[128];
+
+	/* Build a malformed message manually - mechanism string without null */
+	buf[0] = KIWI_BE_AUTHENTICATION;
+
+	/* Length = 4 + 4 + 10 (no null terminator in mechanism) */
+	uint32_t len = 4 + 4 + 10;
+	buf[1] = (len >> 24) & 0xFF;
+	buf[2] = (len >> 16) & 0xFF;
+	buf[3] = (len >> 8) & 0xFF;
+	buf[4] = len & 0xFF;
+
+	/* Auth type = 10 */
+	buf[5] = 0;
+	buf[6] = 0;
+	buf[7] = 0;
+	buf[8] = 10;
+
+	/* Mechanism data without null terminator - just fill with 'A' */
+	memset(buf + 9, 'A', 10);
+
+	uint32_t total_len = 1 + 4 + 4 + 10;
+
+	uint32_t type;
+	char salt[4];
+	char *auth_data;
+	size_t auth_data_size;
+
+	/* Should fail safely without reading past buffer */
+	int rc = kiwi_fe_read_auth(buf, total_len, &type, salt, &auth_data,
+				   &auth_data_size);
+	test(rc == -1);
+}
+
 void kiwi_test_fe_read_auth(void)
 {
 	test_sasl_single_scram_sha_256();
@@ -205,4 +242,5 @@ void kiwi_test_fe_read_auth(void)
 	test_sasl_scram_sha_256_plus_only();
 	test_sasl_empty_list();
 	test_sasl_scram_sha_256_third();
+	test_sasl_malformed_no_null_terminator();
 }

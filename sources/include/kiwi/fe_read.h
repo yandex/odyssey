@@ -102,12 +102,24 @@ KIWI_API static inline int kiwi_fe_read_auth(char *data, uint32_t size,
 		{
 			char *mechanism = pos;
 			int found = 0;
-			while (*mechanism && (size_t)(mechanism - pos) < pos_size) {
+			size_t offset = 0;
+			while (offset < pos_size && mechanism[0] != '\0') {
+				/* Find the end of this mechanism string safely */
+				size_t len = 0;
+				while (offset + len < pos_size &&
+				       mechanism[len] != '\0') {
+					len++;
+				}
+				/* Check if we found null terminator within bounds */
+				if (offset + len >= pos_size) {
+					break;
+				}
 				if (strcmp(mechanism, "SCRAM-SHA-256") == 0) {
 					found = 1;
 					break;
 				}
-				mechanism += strlen(mechanism) + 1;
+				offset += len + 1;
+				mechanism += len + 1;
 			}
 			if (!found) {
 				return -1;
