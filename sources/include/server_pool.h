@@ -48,10 +48,6 @@ static inline void od_server_pool_init(od_server_pool_t *pool)
 
 OD_SERVER_POOL_FREE_DECLARE(pg, od_server_t, od_server_free)
 
-#ifdef LDAP_FOUND
-OD_SERVER_POOL_FREE_DECLARE(ldap, od_ldap_server_t, od_ldap_server_free)
-#endif
-
 #define OD_SERVER_POOL_SET_DECLARE(name, type)                                 \
 	static inline void od_##name##_server_pool_set(                        \
 		od_server_pool_t *pool, type *server, od_server_state_t state) \
@@ -93,10 +89,6 @@ OD_SERVER_POOL_FREE_DECLARE(ldap, od_ldap_server_t, od_ldap_server_free)
 
 OD_SERVER_POOL_SET_DECLARE(pg, od_server_t)
 
-#ifdef LDAP_FOUND
-OD_SERVER_POOL_SET_DECLARE(ldap, od_ldap_server_t)
-#endif
-
 #define OD_SERVER_POOL_NEXT_DECLARE(name, type)                     \
 	static inline type *od_##name##_server_pool_next(           \
 		od_server_pool_t *pool, od_server_state_t state)    \
@@ -124,10 +116,6 @@ OD_SERVER_POOL_SET_DECLARE(ldap, od_ldap_server_t)
 	}
 
 OD_SERVER_POOL_NEXT_DECLARE(pg, od_server_t)
-
-#ifdef LDAP_FOUND
-OD_SERVER_POOL_NEXT_DECLARE(ldap, od_ldap_server_t)
-#endif
 
 static inline od_server_t *od_server_pool_foreach(od_server_pool_t *pool,
 						  od_server_state_t state,

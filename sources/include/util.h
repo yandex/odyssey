@@ -19,28 +19,42 @@ static inline int od_vsnprintf(char *buf, int size, const char *fmt,
 	return rc;
 }
 
-static inline int od_vasprintf(char **__restrict bufp, char *fmt, va_list args)
+static inline int od_vasprintf(char **__restrict bufp, const char *fmt,
+			       va_list args)
 {
-	vasprintf(bufp, fmt, args);
+	int rc = vasprintf(bufp, fmt, args);
+	if (rc == -1) {
+		*bufp = NULL;
+		return NOT_OK_RESPONSE;
+	}
 
-	if (*bufp == NULL) {
+	/* make it possible to od_free() the result */
+	char *t = od_strdup(*bufp);
+	free(*bufp);
+	*bufp = t;
+	if (t == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
 	return OK_RESPONSE;
 }
 
-static inline int od_asprintf(char **__restrict bufp, char *fmt, ...)
+static inline int od_asprintf(char **__restrict bufp, const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
 	int rc = vasprintf(bufp, fmt, args);
 	va_end(args);
 	if (rc == -1) {
+		*bufp = NULL;
 		return NOT_OK_RESPONSE;
 	}
 
-	if (*bufp == NULL) {
+	/* make it possible to od_free() the result */
+	char *t = od_strdup(*bufp);
+	free(*bufp);
+	*bufp = t;
+	if (t == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 

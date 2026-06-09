@@ -105,7 +105,6 @@ set(od_src
     counter.c
     err_logger.c
     setproctitle.c
-    debugprintf.c
     restart_sync.c
     readahead.c
     soft_oom.c

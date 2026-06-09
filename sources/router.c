@@ -698,24 +698,16 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	}
 #ifdef LDAP_FOUND
 	if (rule->ldap_storage_credentials_attr) {
-		od_ldap_server_t *ldap_server = NULL;
-		ldap_server =
-			od_ldap_server_pull(&instance->logger, rule, false);
-		if (ldap_server == NULL) {
-			od_error(&instance->logger, "routing", client, NULL,
-				 "failed to get ldap connection");
-			od_router_unlock(router);
-			return OD_ROUTER_ERROR_NOT_FOUND;
-		}
-		int ldap_rc = od_ldap_server_prepare(&instance->logger,
-						     ldap_server, rule, client);
-		switch (ldap_rc) {
-		case OK_RESPONSE: {
-			od_ldap_endpoint_lock(rule->ldap_endpoint);
-			ldap_server->idle_timestamp = (int)time(NULL);
-			od_ldap_server_free(ldap_server);
+		od_rules_ref(rule);
 
-			od_ldap_endpoint_unlock(rule->ldap_endpoint);
+		/* need to unlock - will do i/o operation */
+		od_router_unlock(router);
+		int rc = od_auth_ldap_resolve_storage_credentials(client, rule);
+		od_router_lock(router);
+
+		od_rules_unref(rule);
+
+		if (rc == OK_RESPONSE) {
 			id.user = client->ldap_storage_username;
 			id.user_len = client->ldap_storage_username_len + 1;
 			if (rule->storage_user != NULL) {
@@ -734,24 +726,10 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 				client->ldap_storage_password_len;
 			od_debug(&instance->logger, "routing", client, NULL,
 				 "route->id.user changed to %s", id.user);
-			break;
-		}
-		case LDAP_INSUFFICIENT_ACCESS: {
-			od_ldap_endpoint_lock(rule->ldap_endpoint);
-			ldap_server->idle_timestamp = (int)time(NULL);
-			od_ldap_server_free(ldap_server);
-
-			od_ldap_endpoint_unlock(rule->ldap_endpoint);
-			od_router_unlock(router);
-			return OD_ROUTER_INSUFFICIENT_ACCESS;
-		}
-		default: {
-			od_debug(&instance->logger, "routing", client, NULL,
-				 "closing bad ldap connection, need relogin");
-			od_ldap_server_free(ldap_server);
+		} else {
+			/* mask the possible insufficient access error */
 			od_router_unlock(router);
 			return OD_ROUTER_ERROR_NOT_FOUND;
-		}
 		}
 	}
 #endif

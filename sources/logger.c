@@ -1022,6 +1022,10 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	uint64_t async =
 		(state == OD_LOGGER_ONLINE) || (state == OD_LOGGER_REOPENING);
 
+	if (level == OD_FATAL) {
+		async = 0;
+	}
+
 	if (async) {
 		pthread_spin_lock(&logger->free_slots_lock);
 		if (logger->free_slots_count > 0) {

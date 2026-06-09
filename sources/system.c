@@ -42,6 +42,7 @@
 #include <systemd_notify.h>
 #include <restart_sync.h>
 #include <debugprintf.h>
+#include <od_ldap.h>
 
 void od_system_server_shutdown(od_system_server_t *server)
 {
@@ -639,6 +640,16 @@ static inline void od_system(void *arg)
 		return;
 	}
 
+#ifdef LDAP_FOUND
+	rc = od_ldap_workers_init(instance->config.workers);
+	if (rc == -1) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to start ldap pool, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+		return;
+	}
+#endif
+
 	/* start worker threads */
 	od_worker_pool_t *worker_pool = system->global->worker_pool;
 	rc = od_worker_pool_start(worker_pool, system->global,
@@ -680,6 +691,10 @@ static inline void od_system(void *arg)
 	}
 
 	od_soft_oom_stop_checker(&global->soft_oom);
+
+#ifdef LDAP_FOUND
+	od_ldap_workers_destroy();
+#endif
 
 	if (instance->config.host_watcher_enabled) {
 		od_host_watcher_destroy(&global->host_watcher);

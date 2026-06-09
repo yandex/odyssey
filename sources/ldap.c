@@ -16,20 +16,9 @@
 #include <instance.h>
 #include <global.h>
 #include <frontend.h>
+#include <thread_pool.h>
 
-od_retcode_t od_ldap_server_free(od_ldap_server_t *serv)
-{
-	od_list_unlink(&serv->link);
-	/* free memory alloc from LDAP lib */
-	if (serv->conn) {
-		ldap_unbind(serv->conn);
-	}
-
-	od_free(serv);
-	return OK_RESPONSE;
-}
-
-static inline od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
+static od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
 {
 	if (rc == LDAP_SUCCESS) {
 		return OK_RESPONSE;
@@ -44,29 +33,6 @@ static inline od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
 			  cl->startup.user.value, ldap_err2string(rc), rc);
 
 	return NOT_OK_RESPONSE;
-}
-
-static inline int od_init_ldap_conn(LDAP **l, char *uri)
-{
-	od_retcode_t rc = ldap_initialize(l, uri);
-	if (rc != LDAP_SUCCESS) {
-		/*
-		 * set to null, we do not need to unbind this
-		 * ldap_initialize frees assosated memory
-		 */
-		*l = NULL;
-		return NOT_OK_RESPONSE;
-	}
-
-	int ldapversion = LDAP_VERSION3;
-	rc = ldap_set_option(*l, LDAP_OPT_PROTOCOL_VERSION, &ldapversion);
-
-	if (rc != LDAP_SUCCESS) {
-		/* same as above */
-		*l = NULL;
-		return NOT_OK_RESPONSE;
-	}
-	return OK_RESPONSE;
 }
 
 od_retcode_t od_ldap_endpoint_prepare(od_ldap_endpoint_t *le)
@@ -105,24 +71,29 @@ od_ldap_change_storage_credentials(od_logger_t *logger,
 	return OK_RESPONSE;
 }
 
-od_retcode_t od_ldap_search_storage_credentials(od_logger_t *logger,
-						struct berval **values,
-						od_rule_t *rule,
-						od_client_t *client)
+int search_storage_credentials(od_logger_t *logger, struct berval **values,
+			       od_rule_t *rule, od_client_t *client)
 {
-	int i;
-	for (i = 0; i < ldap_count_values_len(values); i++) {
-		char host_db[128];
-		od_snprintf(host_db, sizeof(host_db), "%s_%s",
-			    rule->storage->host,
-			    client->startup.database.value);
+	char host_db[128];
+	od_snprintf(host_db, sizeof(host_db), "%s_%s", rule->storage->host,
+		    client->startup.database.value);
+
+	int len = ldap_count_values_len(values);
+
+	if (len == 0) {
+		od_error(logger, "auth_ldap", client, NULL,
+			 "empty search storage credentials result");
+		return LDAP_INSUFFICIENT_ACCESS;
+	}
+
+	for (int i = 0; i < len; i++) {
 		if (strstr((char *)values[i]->bv_val, host_db)) {
 			od_list_t *j;
 			od_list_foreach (&rule->ldap_storage_creds_list, j) {
 				od_ldap_storage_credentials_t *lsc = NULL;
 				lsc = od_container_of(
 					j, od_ldap_storage_credentials_t, link);
-				char host_db_user[128];
+				char host_db_user[256];
 				od_snprintf(host_db_user, sizeof(host_db_user),
 					    "%s_%s", host_db, lsc->name);
 
@@ -133,337 +104,16 @@ od_retcode_t od_ldap_search_storage_credentials(od_logger_t *logger,
 						 (char *)values[i]->bv_val);
 					od_ldap_change_storage_credentials(
 						logger, lsc, client);
-					return OK_RESPONSE;
+					return LDAP_SUCCESS;
 				}
 			}
 		}
 	}
-	od_debug(logger, "auth_ldap", client, NULL,
+
+	od_error(logger, "auth_ldap", client, NULL,
 		 "error: route does not match any user attribute");
-	return NOT_OK_RESPONSE;
-}
 
-od_retcode_t od_ldap_server_prepare(od_logger_t *logger, od_ldap_server_t *serv,
-				    od_rule_t *rule, od_client_t *client)
-{
-	od_retcode_t rc;
-	char *auth_user = NULL;
-
-	if (serv->endpoint->ldapbasedn) {
-		/* copy pasted from ./src/backend/libpq/auth.c:2635 */
-		char *filter = NULL;
-		LDAPMessage *search_message;
-		LDAPMessage *entry;
-		char *attributes[] = { LDAP_NO_ATTRS, NULL };
-		char *dn;
-		int count;
-
-		if (rule->ldap_storage_credentials_attr) {
-			attributes[0] = rule->ldap_storage_credentials_attr;
-		}
-
-		if (serv->endpoint->ldapsearchattribute) {
-			od_asprintf(&filter, "(%s=%s)",
-				    serv->endpoint->ldapsearchattribute,
-				    client->startup.user.value);
-		} else {
-			od_asprintf(&filter, "(uid=%s)",
-				    client->startup.user.value);
-		}
-
-		if (serv->endpoint->ldapsearchfilter) {
-			char *prev_filter = od_strdup(filter);
-			od_free(filter);
-			if (prev_filter == NULL) {
-				return NOT_OK_RESPONSE;
-			}
-
-			od_asprintf(&filter, "(&%s%s)", prev_filter,
-				    serv->endpoint->ldapsearchfilter);
-			od_free(prev_filter);
-		}
-
-		rc = ldap_search_s(serv->conn, serv->endpoint->ldapbasedn,
-				   LDAP_SCOPE_SUBTREE, filter, attributes, 0,
-				   &search_message);
-
-		od_debug(logger, "auth_ldap", client, NULL,
-			 "basedn search entries with filter: %s and attrib %s ",
-			 filter, attributes[0]);
-
-		od_free(filter);
-
-		if (rc != LDAP_SUCCESS) {
-			od_error(logger, "auth_ldap", client, NULL,
-				 "basednn search result: %d", rc);
-			return NOT_OK_RESPONSE;
-		}
-
-		count = ldap_count_entries(serv->conn, search_message);
-		if (count != 1) {
-			od_error(logger, "auth_ldap", client, NULL,
-				 "basedn search entries count: %d", count);
-
-			if (count == 0) {
-				ldap_msgfree(search_message);
-				return LDAP_INSUFFICIENT_ACCESS;
-			}
-
-			ldap_msgfree(search_message);
-			return NOT_OK_RESPONSE;
-		}
-
-		entry = ldap_first_entry(serv->conn, search_message);
-		dn = ldap_get_dn(serv->conn, entry);
-		if (dn == NULL) {
-			/* TODO: report err */
-			return NOT_OK_RESPONSE;
-		}
-
-		if (rule->ldap_storage_credentials_attr) {
-			struct berval **values = NULL;
-			values = ldap_get_values_len(serv->conn, entry,
-						     attributes[0]);
-			if (ldap_count_values_len(values) > 0) {
-				rc = od_ldap_search_storage_credentials(
-					logger, values, rule, client);
-				if (rc != OK_RESPONSE) {
-					ldap_memfree(dn);
-					ldap_value_free_len(values);
-					ldap_msgfree(search_message);
-					return LDAP_INSUFFICIENT_ACCESS;
-				}
-			} else {
-				od_debug(logger, "auth_ldap", client, NULL,
-					 "error: empty search results");
-				ldap_memfree(dn);
-				ldap_value_free_len(values);
-				ldap_msgfree(search_message);
-				return LDAP_INSUFFICIENT_ACCESS;
-			}
-			ldap_value_free_len(values);
-		}
-		auth_user = od_strdup(dn);
-
-		ldap_memfree(dn);
-		ldap_msgfree(search_message);
-
-		if (auth_user == NULL) {
-			return NOT_OK_RESPONSE;
-		}
-
-	} else {
-		od_asprintf(&auth_user, "%s%s%s",
-			    serv->endpoint->ldapprefix ?
-				    serv->endpoint->ldapprefix :
-				    "",
-			    client->startup.user.value,
-			    serv->endpoint->ldapsuffix ?
-				    serv->endpoint->ldapsuffix :
-				    "");
-	}
-
-	client->ldap_auth_dn = auth_user;
-
-	return OK_RESPONSE;
-}
-
-od_ldap_server_t *od_ldap_server_allocate(void)
-{
-	od_ldap_server_t *serv = od_malloc(sizeof(od_ldap_server_t));
-	serv->conn = NULL;
-	serv->endpoint = NULL;
-
-	return serv;
-}
-
-od_retcode_t od_ldap_server_init(od_logger_t *logger, od_ldap_server_t *server,
-				 od_rule_t *rule)
-{
-	od_retcode_t rc;
-	od_id_generate(&server->id, "ls");
-	od_list_init(&server->link);
-
-	server->global = NULL;
-
-	od_ldap_endpoint_t *le = rule->ldap_endpoint;
-	server->endpoint = le;
-
-	if (od_init_ldap_conn(&server->conn, le->ldapurl) != OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-
-	rc = ldap_simple_bind_s(server->conn,
-				server->endpoint->ldapbinddn ?
-					server->endpoint->ldapbinddn :
-					"",
-				server->endpoint->ldapbindpasswd ?
-					server->endpoint->ldapbindpasswd :
-					"");
-
-	if (rc) {
-		od_error(logger, "auth_ldap", NULL, NULL,
-			 "basednn simple bind result: %d", rc);
-	}
-
-	return rc;
-}
-
-static inline int od_ldap_server_auth(od_ldap_server_t *serv, od_client_t *cl,
-				      kiwi_password_t *tok)
-{
-	int rc;
-	rc = ldap_simple_bind_s(serv->conn, cl->ldap_auth_dn, tok->password);
-
-	od_route_t *route = cl->route;
-	if (route->rule->client_fwd_error) {
-		od_ldap_error_report_client(cl, rc);
-	}
-
-	return rc;
-}
-
-od_ldap_server_t *od_ldap_server_pull(od_logger_t *logger, od_rule_t *rule,
-				      bool auth_pool)
-{
-	(void)auth_pool;
-
-	od_ldap_endpoint_t *le = rule->ldap_endpoint;
-	od_ldap_server_t *ldap_server = NULL;
-
-	od_ldap_endpoint_lock(le);
-
-	if (ldap_server == NULL) {
-		/* create new server object */
-		ldap_server = od_ldap_server_allocate();
-
-		int ldap_rc = od_ldap_server_init(logger, ldap_server, rule);
-
-		if (ldap_rc != LDAP_SUCCESS) {
-			od_error(logger, "auth_ldap", NULL, NULL,
-				 "ldap server initialsize failed (rc=%d)",
-				 ldap_rc);
-			od_ldap_server_free(ldap_server);
-			od_ldap_endpoint_unlock(le);
-			return NULL;
-		}
-
-		od_ldap_endpoint_unlock(le);
-	}
-
-	return ldap_server;
-}
-
-static inline od_retcode_t od_ldap_server_attach(od_client_t *client)
-{
-	od_instance_t *instance = client->global->instance;
-	od_logger_t *logger = &instance->logger;
-
-	od_retcode_t rc;
-
-	/* get client server from route server pool */
-	od_ldap_server_t *server =
-		od_ldap_server_pull(logger, client->rule, false);
-
-	if (server == NULL) {
-		od_error(&instance->logger, "auth_ldap_prepare", client, NULL,
-			 "failed to get ldap connection on attach");
-		if (client->rule->client_fwd_error) {
-			od_ldap_error_report_client(client, NOT_OK_RESPONSE);
-		}
-		return NOT_OK_RESPONSE;
-	}
-
-	od_ldap_endpoint_lock(client->rule->ldap_endpoint);
-
-	rc = od_ldap_server_prepare(logger, server, client->rule, client);
-	if (rc == NOT_OK_RESPONSE) {
-		od_debug(&instance->logger, "auth_ldap", client, NULL,
-			 "closing bad ldap connection, need relogin");
-
-		od_ldap_server_free(server);
-	} else {
-		server->idle_timestamp = (int)time(NULL);
-
-		od_ldap_server_free(server);
-	}
-
-	od_ldap_endpoint_unlock(client->rule->ldap_endpoint);
-	if (rc != OK_RESPONSE) {
-		od_error(&instance->logger, "auth_ldap", client, NULL,
-			 "failed to get ldap connection on attach");
-		if (client->rule->client_fwd_error) {
-			od_ldap_error_report_client(client, rc);
-		}
-		return NOT_OK_RESPONSE;
-	}
-	return OK_RESPONSE;
-}
-
-od_retcode_t od_auth_ldap(od_client_t *cl, kiwi_password_t *tok)
-{
-	od_instance_t *instance = cl->global->instance;
-	od_retcode_t rc;
-	int ldap_rc;
-
-	if (cl->rule->ldap_storage_credentials_attr &&
-	    cl->rule->ldap_endpoint_name) {
-		rc = OK_RESPONSE;
-	} else {
-		rc = od_ldap_server_attach(cl);
-	}
-
-	if (rc != OK_RESPONSE) {
-		return rc;
-	}
-
-	od_ldap_server_t *serv =
-		od_ldap_server_pull(&instance->logger, cl->rule, true);
-
-	if (serv == NULL) {
-		od_error(&instance->logger, "auth_ldap", cl, NULL,
-			 "failed to get ldap connection for auth");
-		return NOT_OK_RESPONSE;
-	}
-
-	ldap_rc = od_ldap_server_auth(serv, cl, tok);
-
-	od_ldap_endpoint_lock(cl->rule->ldap_endpoint);
-
-	switch (ldap_rc) {
-	case LDAP_SUCCESS: {
-		serv->idle_timestamp = (int)time(NULL);
-		od_ldap_server_free(serv);
-		rc = OK_RESPONSE;
-		break;
-	}
-	case LDAP_INVALID_SYNTAX:
-		/* fallthrough */
-	case LDAP_INVALID_CREDENTIALS: {
-		serv->idle_timestamp = (int)time(NULL);
-		od_ldap_server_free(serv);
-		rc = NOT_OK_RESPONSE;
-		break;
-	}
-	default: {
-		od_ldap_server_free(serv);
-		rc = NOT_OK_RESPONSE;
-		break;
-	}
-	}
-
-	od_ldap_endpoint_unlock(cl->rule->ldap_endpoint);
-
-	return rc;
-}
-
-od_retcode_t od_ldap_conn_close(od_attribute_unused() od_route_t *route,
-				od_ldap_server_t *server)
-{
-	ldap_unbind(server->conn);
-	od_list_unlink(&server->link);
-
-	return OK_RESPONSE;
+	return LDAP_INSUFFICIENT_ACCESS;
 }
 
 /*---------------------------------------------------------------------------------------- */
@@ -495,15 +145,8 @@ od_ldap_endpoint_t *od_ldap_endpoint_alloc(void)
 	/* preparsed connect url */
 	le->ldapurl = NULL;
 
-	le->wait_bus = machine_channel_create();
-	if (le->wait_bus == NULL) {
-		od_ldap_endpoint_free(le);
-		return NULL;
-	}
-
 	atomic_store(&le->refs, 1);
 
-	mm_mutex_init(&le->lock);
 	return le;
 }
 
@@ -561,11 +204,6 @@ od_retcode_t od_ldap_endpoint_free(od_ldap_endpoint_t *le)
 	}
 
 	od_list_unlink(&le->link);
-
-	mm_mutex_destroy(&le->lock);
-	if (le->wait_bus) {
-		machine_channel_free(le->wait_bus);
-	}
 
 	od_free(le);
 
@@ -693,4 +331,419 @@ od_ldap_storage_credentials_find(od_list_t *ldap_storage_creds_list, char *name)
 
 	/* target storage user was not found */
 	return NULL;
+}
+
+static od_thread_pool_t workers;
+
+int od_ldap_workers_init(size_t count)
+{
+	return od_thread_pool_init(&workers, "ldap", count, 100);
+}
+
+void od_ldap_workers_destroy(void)
+{
+	od_thread_pool_destroy(&workers);
+}
+
+static int is_username_valid(od_client_t *client, const char *name)
+{
+	/* be sure LDAP-injection is not possible */
+	for (size_t i = 0; name[i] != '\0'; ++i) {
+		char c = name[i];
+		if (c == '*' || c == '(' || c == ')' || c == '\\' || c == '/') {
+			od_gerror(
+				"auth_ldap", client, NULL,
+				"invalid character in user name for LDAP authentication");
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+static int init_and_bind(od_instance_t *instance, od_client_t *client,
+			 od_ldap_endpoint_t *endpoint, LDAP **conn,
+			 int timeout_sec)
+{
+	unsigned int tcp_usr_timeout_ms = 23500;
+
+	struct timeval timeout_tv;
+	timeout_tv.tv_sec = timeout_sec;
+	timeout_tv.tv_usec = 0;
+
+	*conn = NULL;
+
+	int rc = ldap_initialize(conn, endpoint->ldapurl);
+	if (rc != LDAP_SUCCESS) {
+		od_error(&instance->logger, "auth_ldap", client, NULL,
+			 "ldap init failed: %d (%s)", rc, ldap_err2string(rc));
+		goto error;
+	}
+
+	int ldapversion = LDAP_VERSION3;
+	rc = ldap_set_option(*conn, LDAP_OPT_PROTOCOL_VERSION, &ldapversion);
+	if (rc != LDAP_SUCCESS) {
+		goto error;
+	}
+
+	rc = ldap_set_option(*conn, LDAP_OPT_NETWORK_TIMEOUT, &timeout_tv);
+	if (rc != LDAP_SUCCESS) {
+		goto error;
+	}
+
+	rc = ldap_set_option(*conn, LDAP_OPT_TIMELIMIT, &timeout_sec);
+	if (rc != LDAP_SUCCESS) {
+		goto error;
+	}
+
+	rc = ldap_set_option(*conn, LDAP_OPT_TIMEOUT, &timeout_tv);
+	if (rc != LDAP_SUCCESS) {
+		goto error;
+	}
+
+	rc = ldap_set_option(*conn, LDAP_OPT_TCP_USER_TIMEOUT,
+			     &tcp_usr_timeout_ms);
+	if (rc != LDAP_SUCCESS) {
+		goto error;
+	}
+
+	const char *binddn = endpoint->ldapbinddn ? endpoint->ldapbinddn : "";
+	const char *passwd =
+		endpoint->ldapbindpasswd ? endpoint->ldapbindpasswd : "";
+
+	rc = ldap_simple_bind_s(*conn, binddn, passwd);
+	if (rc != LDAP_SUCCESS) {
+		od_error(
+			&instance->logger, "auth_ldap", client, NULL,
+			"fail to do initial LDAP bind for ldapbinddn \"%s\" on \"%s\": %d (%s)",
+			binddn, endpoint->name, rc, ldap_err2string(rc));
+		goto error;
+	}
+
+	return LDAP_SUCCESS;
+
+error:
+	if (*conn != NULL) {
+		ldap_unbind_ext_s(*conn, NULL, NULL);
+	}
+	*conn = NULL;
+	return rc;
+}
+
+static int resolve_user(od_instance_t *instance, LDAP *ldap, od_rule_t *rule,
+			od_client_t *client)
+{
+	od_ldap_endpoint_t *endp = rule->ldap_endpoint;
+
+	if (endp->ldapbasedn == NULL) {
+		char *auth_user = NULL;
+		int rc = od_asprintf(&auth_user, "%s%s%s",
+				     endp->ldapprefix ? endp->ldapprefix : "",
+				     client->startup.user.value,
+				     endp->ldapsuffix ? endp->ldapsuffix : "");
+		if (rc == -1) {
+			return LDAP_NO_MEMORY;
+		}
+		if (client->ldap_auth_dn != NULL) {
+			od_free(client->ldap_auth_dn);
+		}
+		client->ldap_auth_dn = auth_user;
+		return LDAP_SUCCESS;
+	}
+
+	/*
+	 * inspired by src/backend/libpq/auth.c
+	 */
+
+	char *filter = NULL;
+	LDAPMessage *search_message;
+	LDAPMessage *entry;
+	char *attributes[] = { LDAP_NO_ATTRS, NULL };
+	char *dn;
+	int count;
+
+	if (rule->ldap_storage_credentials_attr) {
+		attributes[0] = rule->ldap_storage_credentials_attr;
+	}
+
+	if (endp->ldapsearchattribute) {
+		od_asprintf(&filter, "(%s=%s)", endp->ldapsearchattribute,
+			    client->startup.user.value);
+	} else {
+		od_asprintf(&filter, "(uid=%s)", client->startup.user.value);
+	}
+	if (filter == NULL) {
+		return LDAP_NO_MEMORY;
+	}
+
+	if (endp->ldapsearchfilter) {
+		char *prev_filter = od_strdup(filter);
+		od_free(filter);
+		if (prev_filter == NULL) {
+			return LDAP_NO_MEMORY;
+		}
+
+		od_asprintf(&filter, "(&%s%s)", prev_filter,
+			    endp->ldapsearchfilter);
+		od_free(prev_filter);
+		if (filter == NULL) {
+			return LDAP_NO_MEMORY;
+		}
+	}
+
+	int rc = ldap_search_s(ldap, endp->ldapbasedn, LDAP_SCOPE_SUBTREE,
+			       filter, attributes, 0, &search_message);
+	od_debug(&instance->logger, "auth_ldap", client, NULL,
+		 "basedn search entries with filter: %s and attrib %s", filter,
+		 attributes[0]);
+	od_free(filter);
+
+	if (rc != LDAP_SUCCESS) {
+		od_error(&instance->logger, "auth_ldap", client, NULL,
+			 "basedn search failed: %d (%s)", rc,
+			 ldap_err2string(rc));
+		return rc;
+	}
+
+	count = ldap_count_entries(ldap, search_message);
+	if (count != 1) {
+		od_error(&instance->logger, "auth_ldap", client, NULL,
+			 "invalid basedn search entries count: %d", count);
+		ldap_msgfree(search_message);
+		return LDAP_INSUFFICIENT_ACCESS;
+	}
+
+	entry = ldap_first_entry(ldap, search_message);
+	dn = ldap_get_dn(ldap, entry);
+	if (dn == NULL) {
+		int err = LDAP_OTHER;
+		ldap_get_option(ldap, LDAP_OPT_ERROR_NUMBER, &err);
+		od_error(&instance->logger, "auth_ldap", client, NULL,
+			 "ldap_get_dn failed: %d (%s)", err,
+			 ldap_err2string(err));
+		ldap_msgfree(search_message);
+		return err;
+	}
+
+	if (rule->ldap_storage_credentials_attr) {
+		struct berval **values = NULL;
+		values = ldap_get_values_len(ldap, entry, attributes[0]);
+		rc = search_storage_credentials(&instance->logger, values, rule,
+						client);
+		if (rc != LDAP_SUCCESS) {
+			ldap_memfree(dn);
+			ldap_value_free_len(values);
+			ldap_msgfree(search_message);
+			return rc;
+		}
+
+		ldap_value_free_len(values);
+	}
+
+	char *auth_user = od_strdup(dn);
+	ldap_memfree(dn);
+	ldap_msgfree(search_message);
+
+	if (auth_user == NULL) {
+		return LDAP_NO_MEMORY;
+	}
+
+	if (client->ldap_auth_dn != NULL) {
+		od_free(client->ldap_auth_dn);
+	}
+	client->ldap_auth_dn = auth_user;
+
+	return LDAP_SUCCESS;
+}
+
+static int ldap_auth_impl(od_client_t *client, kiwi_password_t *password)
+{
+	od_instance_t *instance = client->global->instance;
+	od_rule_t *rule = client->rule;
+	LDAP *ldap = NULL;
+
+	int rc = init_and_bind(instance, client, rule->ldap_endpoint, &ldap,
+			       5 /* seconds */);
+	if (rc != LDAP_SUCCESS) {
+		goto error;
+	}
+
+	/* can be resolved at routing time */
+	if (client->ldap_auth_dn == NULL) {
+		rc = resolve_user(instance, ldap, rule, client);
+		if (rc != LDAP_SUCCESS) {
+			goto error;
+		}
+	}
+
+	rc = ldap_simple_bind_s(ldap, client->ldap_auth_dn, password->password);
+	if (rc != LDAP_SUCCESS) {
+		goto error;
+	}
+
+	ldap_unbind_ext_s(ldap, NULL, NULL);
+
+	return LDAP_SUCCESS;
+
+error:
+	od_error(&instance->logger, "auth_ldap", client, NULL,
+		 "ldap auth failed with code %d (%s)", rc, ldap_err2string(rc));
+
+	if (ldap != NULL) {
+		ldap_unbind_ext_s(ldap, NULL, NULL);
+	}
+	return rc;
+}
+
+static int resolve_storage_credentials_impl(od_client_t *client,
+					    od_rule_t *rule)
+{
+	od_instance_t *instance = client->global->instance;
+	LDAP *ldap = NULL;
+
+	int rc = init_and_bind(instance, client, rule->ldap_endpoint, &ldap,
+			       5 /* seconds */);
+	if (rc != LDAP_SUCCESS) {
+		goto error;
+	}
+
+	/* will set client->ldap_auth_dn */
+	rc = resolve_user(instance, ldap, rule, client);
+	if (rc != LDAP_SUCCESS) {
+		goto error;
+	}
+
+	ldap_unbind_ext_s(ldap, NULL, NULL);
+
+	return LDAP_SUCCESS;
+
+error:
+	od_error(&instance->logger, "auth_ldap", client, NULL,
+		 "ldap storage crenedtials resolving failed with code %d (%s)",
+		 rc, ldap_err2string(rc));
+
+	if (ldap != NULL) {
+		ldap_unbind_ext_s(ldap, NULL, NULL);
+	}
+
+	return rc;
+}
+
+typedef struct {
+	od_client_t *client;
+	kiwi_password_t *password;
+
+	int rc;
+} auth_arg_t;
+
+static void *do_ldap_auth(void *a)
+{
+	auth_arg_t *arg = a;
+
+	arg->rc = ldap_auth_impl(arg->client, arg->password);
+
+	return NULL;
+}
+
+int od_auth_ldap(od_client_t *client, kiwi_password_t *cl_password)
+{
+	od_instance_t *instance = client->global->instance;
+	od_rule_t *rule = client->rule;
+
+	if (!is_username_valid(client, client->startup.user.value)) {
+		return NOT_OK_RESPONSE;
+	}
+
+	auth_arg_t arg;
+	memset(&arg, 0, sizeof(auth_arg_t));
+	arg.client = client;
+	arg.password = cl_password;
+
+	od_future_t *future = od_thread_pool_submit(&workers, do_ldap_auth,
+						    &arg, NULL, NULL, 0);
+	if (future == NULL) {
+		int err = mm_errno_get();
+		od_error(&instance->logger, "auth_ldap", client, NULL,
+			 "can't submit ldap auth task, errno=%d (%s)", err,
+			 strerror(err));
+		return NOT_OK_RESPONSE;
+	}
+
+	if (od_thread_pool_wait(future, UINT32_MAX)) {
+		int err = mm_errno_get();
+		od_error(&instance->logger, "auth_ldap", client, NULL,
+			 "ldap auth wait error, errno=%d (%s)", err,
+			 strerror(err));
+		od_future_unref(future);
+
+		return NOT_OK_RESPONSE;
+	}
+
+	od_future_unref(future);
+
+	if (arg.rc != LDAP_SUCCESS && rule->client_fwd_error) {
+		od_ldap_error_report_client(client, arg.rc);
+	}
+
+	return arg.rc == LDAP_SUCCESS ? OK_RESPONSE : NOT_OK_RESPONSE;
+}
+
+typedef struct {
+	od_client_t *client;
+	od_rule_t *rule;
+
+	int rc;
+} resolve_storage_creds_arg_t;
+
+static void *do_resolve_storage_credentials(void *a)
+{
+	resolve_storage_creds_arg_t *arg = a;
+
+	arg->rc = resolve_storage_credentials_impl(arg->client, arg->rule);
+
+	return NULL;
+}
+
+int od_auth_ldap_resolve_storage_credentials(od_client_t *client,
+					     od_rule_t *rule)
+{
+	od_instance_t *instance = client->global->instance;
+
+	if (!is_username_valid(client, client->startup.user.value)) {
+		return NOT_OK_RESPONSE;
+	}
+
+	resolve_storage_creds_arg_t arg;
+	memset(&arg, 0, sizeof(resolve_storage_creds_arg_t));
+
+	arg.client = client;
+	arg.rule = rule;
+
+	od_future_t *future = od_thread_pool_submit(
+		&workers, do_resolve_storage_credentials, &arg, NULL, NULL, 0);
+	if (future == NULL) {
+		int err = mm_errno_get();
+		od_error(&instance->logger, "auth_ldap", client, NULL,
+			 "can't submit ldap auth task, errno=%d (%s)", err,
+			 strerror(err));
+		return NOT_OK_RESPONSE;
+	}
+
+	if (od_thread_pool_wait(future, UINT32_MAX)) {
+		int err = mm_errno_get();
+		od_error(&instance->logger, "auth_ldap", client, NULL,
+			 "ldap auth wait error, errno=%d (%s)", err,
+			 strerror(err));
+		od_future_unref(future);
+
+		return NOT_OK_RESPONSE;
+	}
+
+	od_future_unref(future);
+
+	if (arg.rc != LDAP_SUCCESS && rule->client_fwd_error) {
+		od_ldap_error_report_client(client, arg.rc);
+	}
+
+	return arg.rc == LDAP_SUCCESS ? OK_RESPONSE : NOT_OK_RESPONSE;
 }
