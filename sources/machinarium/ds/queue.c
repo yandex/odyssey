@@ -45,16 +45,15 @@ int mm_queue_init(mm_queue_t *q, size_t capacity, size_t elsize,
 	capacity = next_pow2(capacity);
 
 	q->cap = capacity;
-	q->cap_bytes = capacity * elsize;
 	q->dtor = dtor;
 	q->elsize = elsize;
-	q->mask = q->cap_bytes - 1;
+	q->mask = capacity - 1;
 
-	q->buf = mm_malloc(q->cap_bytes);
+	q->buf = mm_malloc(capacity * elsize);
 	if (q->buf == NULL) {
 		return -1;
 	}
-	memset(q->buf, 0, q->cap_bytes);
+	memset(q->buf, 0, capacity * elsize);
 
 	return 0;
 }
@@ -63,10 +62,10 @@ void mm_queue_destroy(mm_queue_t *q)
 {
 	if (q->dtor != NULL) {
 		while (q->size > 0) {
-			void *val = &q->buf[q->head];
+			void *val = q->buf + (q->head * q->elsize);
 			q->dtor(val);
 
-			q->head += q->elsize;
+			++q->head;
 			q->head &= q->mask;
 			--q->size;
 		}
@@ -85,9 +84,9 @@ int mm_queue_push(mm_queue_t *q, const void *val)
 	queue_lock(q);
 
 	if (q->size < q->cap) {
-		void *dst = &q->buf[q->tail];
+		void *dst = q->buf + (q->tail * q->elsize);
 		memcpy(dst, val, q->elsize);
-		q->tail += q->elsize;
+		++q->tail;
 		q->tail &= q->mask;
 		++q->size;
 
@@ -106,9 +105,9 @@ int mm_queue_push_extended(mm_queue_t *q, const void *val)
 	queue_lock(q);
 
 	if (q->size < q->cap) {
-		void *dst = &q->buf[q->tail];
+		void *dst = q->buf + (q->tail * q->elsize);
 		memcpy(dst, val, q->elsize);
-		q->tail += q->elsize;
+		++q->tail;
 		q->tail &= q->mask;
 
 		rc = (int)(++q->size);
@@ -126,9 +125,9 @@ int mm_queue_pop(mm_queue_t *q, void *val)
 	queue_lock(q);
 
 	if (q->size > 0) {
-		const void *src = &q->buf[q->head];
+		const void *src = q->buf + (q->head * q->elsize);
 		memcpy(val, src, q->elsize);
-		q->head += q->elsize;
+		++q->head;
 		q->head &= q->mask;
 		--q->size;
 
@@ -146,27 +145,34 @@ size_t mm_queue_pop_batch(mm_queue_t *q, void *dst, size_t max)
 
 	queue_lock(q);
 
+	if (q->size == 0 || max == 0) {
+		queue_unlock(q);
+		return 0;
+	}
+
 	total = q->size;
 	if (total > max) {
 		total = max;
 	}
 
-	size_t total_bytes = total * q->elsize;
-	size_t to_end = q->cap_bytes - q->head;
+	size_t to_end = q->cap - q->head;
 
-	const void *src = &q->buf[q->head];
+	uint8_t *ptr_dst = (uint8_t *)dst;
+	uint8_t *ptr_src = q->buf + (q->head * q->elsize);
 
-	if (total_bytes <= to_end) {
+	if (total <= to_end) {
 		/* [ . . . head . . . . last . . . ] */
-		memcpy(dst, src, total_bytes);
+		memcpy(ptr_dst, ptr_src, total * q->elsize);
 	} else {
 		/* [ . . last . . . . head . . . ] */
-		memcpy(dst, src, to_end);
-		memcpy((uint8_t *)dst + to_end, q->buf, total_bytes - to_end);
+		size_t first_part_bytes = to_end * q->elsize;
+		size_t elements_left = total - to_end;
+		memcpy(ptr_dst, ptr_src, first_part_bytes);
+		memcpy(ptr_dst + first_part_bytes, q->buf,
+		       elements_left * q->elsize);
 	}
 
-	q->head += total_bytes;
-	q->head &= q->mask;
+	q->head = (q->head + total) & q->mask;
 	q->size -= total;
 
 	queue_unlock(q);

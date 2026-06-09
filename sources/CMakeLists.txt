@@ -131,6 +131,7 @@ set(od_src
     external_auth.c
     group.c
     query_processing.c
+    thread_pool.c
     xplan.c
     common/base64.c
     common/saslprep.c
@@ -335,7 +336,8 @@ set(od_test_src
     tests/odyssey/test_affinity.c
     tests/odyssey/test_pstmt.c
     tests/odyssey/test_query_processing.c
-    tests/odyssey/test_duration_parse.c)
+    tests/odyssey/test_duration_parse.c
+    tests/odyssey/test_thread_pool.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")
