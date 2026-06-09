@@ -246,6 +246,7 @@ set(od_test_src
     tests/odyssey_test.c
     tests/kiwi/test_kiwi_enquote.c
     tests/kiwi/test_kiwi_pgoptions.c
+    tests/kiwi/test_kiwi_fe_read_auth.c
     tests/machinarium/test_init.c
     tests/machinarium/test_create0.c
     tests/machinarium/test_create1.c
