@@ -41,7 +41,6 @@
 #include <od_error.h>
 #include <systemd_notify.h>
 #include <restart_sync.h>
-#include <debugprintf.h>
 #include <od_ldap.h>
 
 void od_system_server_shutdown(od_system_server_t *server)
@@ -335,8 +334,6 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 	/* register server in list for possible TLS reload */
 	od_router_t *router = system->global->router;
 	od_list_append(&router->servers, &server->link);
-	od_dbg_printf_on_dvl_lvl(1, "server %s started successfully on %s\n",
-				 server->sid.id, addr_name);
 	return OK_RESPONSE;
 
 error:

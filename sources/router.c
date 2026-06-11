@@ -21,7 +21,6 @@
 #include <od_ldap.h>
 #include <util.h>
 #include <stat.h>
-#include <debugprintf.h>
 
 void od_router_init(od_router_t *router, od_global_t *global)
 {

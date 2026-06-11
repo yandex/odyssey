@@ -31,7 +31,6 @@
 #include <system.h>
 #include <extension.h>
 #include <od_error.h>
-#include <debugprintf.h>
 
 static inline void fill_supported_features_string(char *out, size_t max)
 {
