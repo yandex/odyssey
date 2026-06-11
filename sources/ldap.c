@@ -401,11 +401,13 @@ static int init_and_bind(od_instance_t *instance, od_client_t *client,
 		goto error;
 	}
 
+#ifdef LDAP_OPT_TCP_USER_TIMEOUT
 	rc = ldap_set_option(*conn, LDAP_OPT_TCP_USER_TIMEOUT,
 			     &tcp_usr_timeout_ms);
 	if (rc != LDAP_SUCCESS) {
 		goto error;
 	}
+#endif
 
 	const char *binddn = endpoint->ldapbinddn ? endpoint->ldapbinddn : "";
 	const char *passwd =
