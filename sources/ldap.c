@@ -365,8 +365,6 @@ static int init_and_bind(od_instance_t *instance, od_client_t *client,
 			 od_ldap_endpoint_t *endpoint, LDAP **conn,
 			 int timeout_sec)
 {
-	unsigned int tcp_usr_timeout_ms = 23500;
-
 	struct timeval timeout_tv;
 	timeout_tv.tv_sec = timeout_sec;
 	timeout_tv.tv_usec = 0;
@@ -402,6 +400,7 @@ static int init_and_bind(od_instance_t *instance, od_client_t *client,
 	}
 
 #ifdef LDAP_OPT_TCP_USER_TIMEOUT
+	unsigned int tcp_usr_timeout_ms = timeout_sec * 1000;
 	rc = ldap_set_option(*conn, LDAP_OPT_TCP_USER_TIMEOUT,
 			     &tcp_usr_timeout_ms);
 	if (rc != LDAP_SUCCESS) {
