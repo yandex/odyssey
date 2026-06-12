@@ -39,7 +39,6 @@
 #include <deploy.h>
 #include <router_cancel.h>
 #include <server.h>
-#include <debugprintf.h>
 
 static inline void od_frontend_close(od_client_t *client)
 {
@@ -1339,10 +1338,6 @@ static inline int od_frontend_poll_catchup(od_client_t *client,
 {
 	od_instance_t *instance = client->global->instance;
 
-	od_dbg_printf_on_dvl_lvl(
-		1, "client %s polling replica for catchup with timeout %d\n",
-		client->id.id, timeout);
-
 	/*
 	 * Ensure heartbeet is initialized at least once.
 	 * Heartbeat might be 0 after reload\restart.
@@ -1362,8 +1357,6 @@ static inline int od_frontend_poll_catchup(od_client_t *client,
 	}
 
 	for (int check = 1; check <= route->rule->catchup_checks; ++check) {
-		od_dbg_printf_on_dvl_lvl(1, "current cached time %d\n",
-					 machine_timeofday_sec());
 		int lag = machine_timeofday_sec() - route->last_heartbeat;
 		if (lag < 0) {
 			lag = 0;

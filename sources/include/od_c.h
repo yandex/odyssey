@@ -21,9 +21,12 @@
 #include <time.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/uio.h>
 #include <endian.h>
 #include <math.h>
+
+#include <pthread.h>
 
 #define od_likely(EXPR) __builtin_expect(!!(EXPR), 1)
 #define od_unlikely(EXPR) __builtin_expect(!!(EXPR), 0)

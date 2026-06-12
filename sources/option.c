@@ -11,7 +11,6 @@
 #include <machinarium/machinarium.h>
 
 #include <option.h>
-#include <debugprintf.h>
 
 const char *argp_program_version;
 const char *argp_program_bug_address = "<x4mmm@yandex-team.ru>";
@@ -20,10 +19,6 @@ od_retcode_t od_apply_validate_cli_args(od_logger_t *logger, od_config_t *conf,
 					od_arguments_t *args, od_rules_t *rules)
 {
 	if (conf->daemonize && !args->console) {
-		od_dbg_printf_on_dvl_lvl(
-			1,
-			"daemonize config opt is %d and console flag is %d, so daemonizing process\n",
-			conf->daemonize, args->console);
 		conf->daemonize |= args->console;
 	} else {
 		conf->daemonize = 0;

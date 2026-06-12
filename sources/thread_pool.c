@@ -13,7 +13,7 @@
 #include <od_memory.h>
 #include <thread_pool.h>
 
-od_future_t *od_future_create(void)
+od_future_t *od_future_create(od_thread_pool_result_dtor_t dtor)
 {
 	od_future_t *f = od_malloc(sizeof(od_future_t));
 	if (f == NULL) {
@@ -24,6 +24,7 @@ od_future_t *od_future_create(void)
 	atomic_init(&f->value, (uintptr_t)NULL);
 	atomic_init(&f->refs, 1);
 
+	f->value_dtor = dtor;
 	f->wait = mm_wait_flag_create();
 	if (f->wait == NULL) {
 		od_free(f);
@@ -42,6 +43,11 @@ void od_future_unref(od_future_t *future)
 {
 	uint64_t r = atomic_fetch_sub(&future->refs, 1);
 	if (r == 1) {
+		void *value = od_future_get_result(future);
+		if (future->value_dtor != NULL && value != NULL) {
+			future->value_dtor(value);
+		}
+
 		mm_wait_flag_destroy(future->wait);
 		od_free(future);
 	}
@@ -87,6 +93,9 @@ static void tp_work(void *arg)
 				mm_wait_flag_set(task.future->wait);
 			}
 
+			if (task.arg_dtor) {
+				task.arg_dtor(task.arg);
+			}
 			od_future_unref(task.future);
 
 			continue;
@@ -182,16 +191,23 @@ void od_thread_pool_destroy(od_thread_pool_t *pool)
 		machine_wait(pool->workers[j].machine_id);
 	}
 
-	mm_free(pool->workers);
+	od_free(pool->workers);
 	mm_queue_destroy(&pool->queue);
 	mm_wait_list_destroy(&pool->notifier);
 }
 
 od_future_t *od_thread_pool_submit(od_thread_pool_t *pool,
 				   od_thread_pool_task_fn_t fn, void *arg,
+				   od_thread_pool_task_arg_dtor_t arg_dtor,
+				   od_thread_pool_result_dtor_t result_dtor,
 				   int detach)
 {
-	od_future_t *future = od_future_create();
+	if (atomic_load(&pool->stop)) {
+		mm_errno_set(ENOTCONN);
+		return NULL;
+	}
+
+	od_future_t *future = od_future_create(result_dtor);
 	if (future == NULL) {
 		return NULL;
 	}
@@ -202,6 +218,7 @@ od_future_t *od_thread_pool_submit(od_thread_pool_t *pool,
 	task.fn = fn;
 	task.arg = arg;
 	task.detached = detach;
+	task.arg_dtor = arg_dtor;
 
 	/* one another ref for 'user' */
 	od_future_ref(future);

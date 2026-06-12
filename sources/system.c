@@ -41,7 +41,7 @@
 #include <od_error.h>
 #include <systemd_notify.h>
 #include <restart_sync.h>
-#include <debugprintf.h>
+#include <od_ldap.h>
 
 void od_system_server_shutdown(od_system_server_t *server)
 {
@@ -334,8 +334,6 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 	/* register server in list for possible TLS reload */
 	od_router_t *router = system->global->router;
 	od_list_append(&router->servers, &server->link);
-	od_dbg_printf_on_dvl_lvl(1, "server %s started successfully on %s\n",
-				 server->sid.id, addr_name);
 	return OK_RESPONSE;
 
 error:
@@ -639,6 +637,16 @@ static inline void od_system(void *arg)
 		return;
 	}
 
+#ifdef LDAP_FOUND
+	rc = od_ldap_workers_init(instance->config.workers);
+	if (rc == -1) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to start ldap pool, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+		return;
+	}
+#endif
+
 	/* start worker threads */
 	od_worker_pool_t *worker_pool = system->global->worker_pool;
 	rc = od_worker_pool_start(worker_pool, system->global,
@@ -680,6 +688,10 @@ static inline void od_system(void *arg)
 	}
 
 	od_soft_oom_stop_checker(&global->soft_oom);
+
+#ifdef LDAP_FOUND
+	od_ldap_workers_destroy();
+#endif
 
 	if (instance->config.host_watcher_enabled) {
 		od_host_watcher_destroy(&global->host_watcher);
