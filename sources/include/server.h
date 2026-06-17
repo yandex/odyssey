@@ -60,7 +60,7 @@ struct od_server {
 	od_stat_state_t stats_state;
 
 	od_multi_pool_element_t *pool_element;
-	const od_storage_endpoint_t *endpoint;
+	od_storage_endpoint_t *endpoint;
 
 	uint64_t sync_request;
 	uint64_t sync_reply;
