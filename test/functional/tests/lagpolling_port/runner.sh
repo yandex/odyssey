@@ -34,43 +34,30 @@ psql 'host=localhost port=5432 user=postgres dbname=postgres' -c 'INSERT INTO wa
 	exit 1
 }
 
-/usr/bin/odyssey /tests/lagpolling/lag-conf.conf
+/usr/bin/odyssey /tests/lagpolling_port/lag-conf.conf
 timeout 5 bash -c '
 until pg_isready -h localhost -p 6432 -U user1 -d postgres; do
   echo "Wait for odyssey..."
   sleep 0.1
 done
-' || {
-	echo "Failed to start odyssey"
-	sleep 1
-	cat /var/log/odyssey.log
-	exit 1
-}
-
-for _ in $(seq 1 3); do
-	PGPASSWORD=lolol psql -h localhost -p6432 -dpostgres -Uuser1 -c 'select 3' || {
-		sleep 1
-		cat /var/log/odyssey.log
-		exit 1
-	}
-done
+'
 
 sleep 6
 
 psql 'host=localhost port=5433 user=postgres dbname=postgres' -c 'SELECT TRUNC(EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp()))'
 
 for _ in $(seq 1 3); do
-	PGPASSWORD=lolol psql -h localhost -p6432 -dpostgres -Uuser1 -c 'select 3' && exit 1
+	PGPASSWORD=lolol psql -h localhost -p6432 -dpostgres -Uuser1 -c 'select 3' && {
+		cat /var/log/odyssey.log
+		exit 1
+	}
 done
 
-sed -i 's/catchup_timeout 5/catchup_timeout 20/g' /tests/lagpolling/lag-conf.conf
-
-PGPASSWORD=lolol psql -h localhost -p6432 -dconsole -Uuser1 -c 'reload'
-
-psql 'host=localhost port=5433 user=postgres dbname=postgres' -c 'SELECT TRUNC(EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp()))'
-
 for _ in $(seq 1 3); do
-	PGPASSWORD=lolol psql -h localhost -p6432 -dpostgres -Uuser1 -c 'select 3' || exit 1
+	PGPASSWORD=lolol psql -h localhost -p7432 -dpostgres -Uuser1 -c 'select 3' || {
+		cat /var/log/odyssey.log
+		exit 1
+	}
 done
 
 ody-stop

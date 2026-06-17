@@ -662,6 +662,9 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 				      char *context, const char *lag_query,
 				      od_storage_endpoint_t *endpoint)
 {
+	char addr[256];
+	od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
+
 	od_storage_endpoint_status_t status;
 	od_storage_endpoint_status_get(&endpoint->status, &status);
 
@@ -682,7 +685,12 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 		msg = NULL;
 
 		if (rc == 0) {
-			status.repl_time_sec = (int64_t)last_heartbeat;
+			status.repl_lag_sec = (int64_t)machine_timeofday_sec() -
+					      (int64_t)last_heartbeat;
+
+			od_debug(&instance->logger, context, client, server,
+				 "replica lag time of %s is updated to %ld",
+				 addr, status.repl_lag_sec);
 		} else {
 			od_error(&instance->logger, context, client, server,
 				 "can't parse lag");
@@ -711,9 +719,6 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 	status.alive = 1;
 
 	od_storage_endpoint_status_set(&endpoint->status, &status);
-
-	char addr[256];
-	od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
 
 	od_debug(&instance->logger, context, client, server,
 		 "read-write status of '%s' is updated to '%s'", addr,

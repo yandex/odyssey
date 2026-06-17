@@ -53,7 +53,7 @@ typedef struct {
 	pthread_spinlock_t values_lock;
 	int alive;
 	bool is_read_write;
-	int64_t repl_time_sec;
+	int64_t repl_lag_sec;
 } od_storage_endpoint_status_t;
 
 void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status);
@@ -81,8 +81,6 @@ struct od_rule_storage {
 	char *name;
 	char *type;
 	od_rule_storage_type_t storage_type;
-	/* round-robin atomic counter for endpoint selection */
-	atomic_size_t rr_counter;
 
 	od_storage_endpoint_t *endpoints;
 	size_t endpoints_count;
@@ -97,11 +95,17 @@ struct od_rule_storage {
 
 	int endpoints_status_poll_interval_ms;
 	od_storage_balancing_t balancing;
+
+	atomic_int_fast64_t refs;
 };
 
 /* storage API */
 od_rule_storage_t *od_rules_storage_allocate(void);
+
+/* TODO: remove */
 od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *);
+
+od_rule_storage_t *od_rules_storage_ref(od_rule_storage_t *s);
 
 void od_rules_storage_free(od_rule_storage_t *);
 
