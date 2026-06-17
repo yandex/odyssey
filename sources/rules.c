@@ -1586,7 +1586,11 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 					       rule->conn_type);
 		if (origin) {
 			/* force drop rules with shared pools */
-			if (origin->shared_pool == NULL &&
+
+			/* TODO: temporary disable not changing rules */
+			(void)not_changed;
+
+			/* if (origin->shared_pool == NULL &&
 			    rule->shared_pool == NULL &&
 			    od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
@@ -1597,9 +1601,9 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 				od_list_append(not_changed, &rk->link);
 
 				continue;
-				/* select rules with changes what needed disconnect */
-			} else if (!od_rules_rule_compare_to_drop(origin,
-								  rule)) {
+			} else */
+
+			if (!od_rules_rule_compare_to_drop(origin, rule)) {
 				od_rule_key_t *rk = rk_of(origin);
 				od_list_append(to_drop, &rk->link);
 			}
