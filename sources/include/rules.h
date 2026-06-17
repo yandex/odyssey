@@ -153,10 +153,9 @@ struct od_rule {
 
 	char *auth_module;
 
-	/* password */
 	char *password;
 	int password_len;
-	/* storage */
+
 	od_rule_storage_t *storage;
 	char *storage_name;
 	char *storage_db;
@@ -243,7 +242,7 @@ int od_rules_validate(od_rules_t *, od_config_t *, od_logger_t *);
 /* auto-generate default rules (for auth query etc) if needed */
 int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger);
 int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
-		   od_list_t *deleted, od_list_t *drop);
+		   od_list_t *deleted, od_list_t *drop, od_list_t *not_changed);
 void od_rules_print(od_rules_t *, od_logger_t *);
 
 void od_rules_stop_watchdogs(od_rules_t *rules);

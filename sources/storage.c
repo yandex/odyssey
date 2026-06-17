@@ -26,7 +26,7 @@ void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status)
 	status->last_update_time_ms = 0ULL;
 	status->alive = 1;
 	status->is_read_write = true;
-	status->repl_time_sec = 0;
+	status->repl_lag_sec = 0;
 	pthread_spin_init(&status->values_lock, PTHREAD_PROCESS_PRIVATE);
 }
 
@@ -55,7 +55,7 @@ void od_storage_endpoint_status_get(od_storage_endpoint_status_t *status,
 	out->last_update_time_ms = status->last_update_time_ms;
 	out->is_read_write = status->is_read_write;
 	out->alive = status->alive;
-	out->repl_time_sec = status->repl_time_sec;
+	out->repl_lag_sec = status->repl_lag_sec;
 
 	pthread_spin_unlock(&status->values_lock);
 }
@@ -68,7 +68,7 @@ void od_storage_endpoint_status_set(od_storage_endpoint_status_t *status,
 	status->last_update_time_ms = value->last_update_time_ms;
 	status->is_read_write = value->is_read_write;
 	status->alive = value->alive;
-	status->repl_time_sec = value->repl_time_sec;
+	status->repl_lag_sec = value->repl_lag_sec;
 
 	pthread_spin_unlock(&status->values_lock);
 }
@@ -80,7 +80,7 @@ void od_storage_endpoint_status_set_dead(od_storage_endpoint_status_t *status)
 	endp_status.alive = 0;
 	endp_status.is_read_write = 0;
 	endp_status.last_update_time_ms = machine_time_ms();
-	endp_status.repl_time_sec = 0;
+	endp_status.repl_lag_sec = 0;
 
 	od_storage_endpoint_status_set(status, &endp_status);
 }
@@ -159,9 +159,11 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 		od_free(storage);
 		return NULL;
 	}
+
+	atomic_init(&storage->refs, 1);
+
 	storage->endpoints_status_poll_interval_ms = 1000;
 	od_storage_balancing_init(&storage->balancing);
-	atomic_init(&storage->rr_counter, 0);
 
 	od_list_init(&storage->link);
 	return storage;
@@ -169,6 +171,16 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 
 void od_rules_storage_free(od_rule_storage_t *storage)
 {
+	int64_t r = atomic_fetch_sub(&storage->refs, 1);
+
+	if (od_unlikely(r < 1)) {
+		abort();
+	}
+
+	if (r > 1) {
+		return;
+	}
+
 	if (storage->name) {
 		od_free(storage->name);
 	}
@@ -195,7 +207,6 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 
 	od_storage_balancing_destroy(&storage->balancing);
 
-	od_list_unlink(&storage->link);
 	od_free(storage);
 }
 
@@ -293,6 +304,12 @@ error:
 	return NULL;
 }
 
+od_rule_storage_t *od_rules_storage_ref(od_rule_storage_t *s)
+{
+	atomic_fetch_add(&s->refs, 1);
+	return s;
+}
+
 od_storage_endpoint_t *od_storage_find_endpoint(od_rule_storage_t *storage,
 						const od_address_t *address)
 {
@@ -305,14 +322,6 @@ od_storage_endpoint_t *od_storage_find_endpoint(od_rule_storage_t *storage,
 	}
 
 	return NULL;
-}
-
-static inline int od_router_update_heartbeat_cb(od_route_t *route, void **argv)
-{
-	od_route_lock(route);
-	route->last_heartbeat = *(int *)argv[0];
-	od_route_unlock(route);
-	return 0;
 }
 
 static inline od_client_t *
@@ -408,24 +417,10 @@ od_storage_create_and_connect_watchdog_client(od_storage_watchdog_t *watchdog,
 	return client;
 }
 
-static inline void od_storage_update_route_last_heartbeats(
-	od_instance_t *instance, od_client_t *watchdog_client,
-	od_server_t *server, od_router_t *router, int last_heartbeat)
-{
-	od_log(&instance->logger, "watchdog", watchdog_client, server,
-	       "send heartbeat arenda update to routes with value %d",
-	       last_heartbeat);
-
-	void *argv[] = { &last_heartbeat };
-
-	od_router_foreach(router, od_router_update_heartbeat_cb, argv);
-}
-
 static inline void watchdog_update_endpoint(od_storage_watchdog_t *watchdog,
 					    od_storage_endpoint_t *endp)
 {
 	od_global_t *global = watchdog->global;
-	od_router_t *router = global->router;
 	od_instance_t *instance = global->instance;
 
 	od_client_t *client;
@@ -437,17 +432,8 @@ static inline void watchdog_update_endpoint(od_storage_watchdog_t *watchdog,
 	od_server_t *server = client->server;
 
 	/* try to update, ignore errors - cant do nothing with it */
-	int rc = od_backend_update_endpoint_status(
-		instance, client, server, "watchdog", watchdog->query, endp);
-
-	if (rc == 0) {
-		od_storage_endpoint_status_t status;
-		od_storage_endpoint_status_get(&endp->status, &status);
-
-		od_storage_update_route_last_heartbeats(
-			instance, client, server, router,
-			(int)status.repl_time_sec);
-	}
+	od_backend_update_endpoint_status(instance, client, server, "watchdog",
+					  watchdog->query, endp);
 
 	od_storage_watchdog_close_client(watchdog, client);
 }
@@ -482,6 +468,8 @@ od_storage_watchdog_do_polling_loop(od_storage_watchdog_t *watchdog)
 	}
 
 	while (1) {
+		od_storage_watchdog_do_polling_step(watchdog);
+
 		int rc = machine_wait_flag_wait(watchdog->online, poll_ms);
 		if (rc == 0) {
 			od_log(&instance->logger, "watchdog", NULL, NULL,
@@ -496,8 +484,6 @@ od_storage_watchdog_do_polling_loop(od_storage_watchdog_t *watchdog)
 				 strerror(machine_errno()), machine_errno());
 			break;
 		}
-
-		od_storage_watchdog_do_polling_step(watchdog);
 	}
 }
 
