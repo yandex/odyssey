@@ -575,6 +575,10 @@ static inline int od_router_gc_cb(od_route_t *route, void **argv)
 		goto done;
 	}
 
+	if (route->auth_query_cache.refresh_in_progress) {
+		goto done;
+	}
+
 	if (!od_route_is_dynamic(route) && !route->rule->obsolete) {
 		goto done;
 	}

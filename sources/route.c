@@ -194,3 +194,46 @@ void od_route_signal_locked(od_route_t *route, od_server_t *server)
 
 	od_multi_pool_signal_locked(mpool, el, server);
 }
+
+od_route_pswd_t *od_route_pswd_create(const char *value)
+{
+	size_t len = strlen(value);
+	size_t t = sizeof(od_route_pswd_t) + len + 1;
+
+	od_route_pswd_t *p = od_malloc(t);
+	if (p == NULL) {
+		return NULL;
+	}
+
+	memset(p, 0, t);
+
+	atomic_store(&p->refs, 1);
+
+	memcpy(p->value, value, len + 1);
+
+	return p;
+}
+
+od_route_pswd_t *od_route_pswd_ref(od_route_pswd_t *p)
+{
+	if (p == NULL) {
+		return NULL;
+	}
+
+	atomic_fetch_add(&p->refs, 1);
+
+	return p;
+}
+
+void od_route_pswd_unref(od_route_pswd_t *p)
+{
+	if (p == NULL) {
+		return;
+	}
+
+	int64_t r = atomic_fetch_sub(&p->refs, 1);
+
+	if (r == 1) {
+		od_free(p);
+	}
+}

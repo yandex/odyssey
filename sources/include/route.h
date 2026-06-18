@@ -7,6 +7,7 @@
  */
 
 #include <machinarium/mutex.h>
+#include <machinarium/wait_flag.h>
 
 #include <stdatomic.h>
 
@@ -20,6 +21,15 @@
 #include <id.h>
 #include <shared_pool.h>
 #include <od_memory.h>
+
+typedef struct {
+	atomic_int_fast64_t refs;
+	char value[];
+} od_route_pswd_t;
+
+od_route_pswd_t *od_route_pswd_create(const char *value);
+od_route_pswd_t *od_route_pswd_ref(od_route_pswd_t *p);
+void od_route_pswd_unref(od_route_pswd_t *p);
 
 struct od_route {
 	od_rule_t *rule;
@@ -49,8 +59,11 @@ struct od_route {
 	od_list_t link;
 
 	struct {
-		char *password;
+		od_route_pswd_t *password;
 		uint64_t valid_until_ms;
+		/* password was set at least once */
+		mm_wait_flag_t *ready;
+		int refresh_in_progress;
 	} auth_query_cache;
 };
 
@@ -201,6 +214,12 @@ static inline int od_route_init(od_route_t *route,
 
 	memset(&route->auth_query_cache, 0, sizeof(route->auth_query_cache));
 
+	route->auth_query_cache.ready = mm_wait_flag_create();
+	if (route->auth_query_cache.ready == NULL) {
+		od_multi_pool_destroy(route->exclusive_pool);
+		return NOT_OK_RESPONSE;
+	}
+
 	od_stat_init(&route->stats);
 	od_stat_init(&route->stats_prev);
 	kiwi_params_lock_init(&route->params);
@@ -235,7 +254,8 @@ static inline void od_route_free(od_route_t *route)
 		route->err_logger = NULL;
 	}
 
-	od_free(route->auth_query_cache.password);
+	od_route_pswd_unref(route->auth_query_cache.password);
+	mm_wait_flag_destroy(route->auth_query_cache.ready);
 
 	mm_mutex_destroy(&route->lock);
 	od_free(route);
