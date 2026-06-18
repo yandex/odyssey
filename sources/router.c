@@ -21,6 +21,7 @@
 #include <od_ldap.h>
 #include <util.h>
 #include <stat.h>
+#include <pool.h>
 
 void od_router_init(od_router_t *router, od_global_t *global)
 {
@@ -1043,7 +1044,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		end_time_ms = now_ms + (uint64_t)route->rule->pool->timeout;
 	}
 
-	int internal = route->rule->pool->pool_type == OD_RULE_POOL_INTERNAL;
+	int internal = route->rule->pool->routing == OD_RULE_POOL_INTERNAL;
 
 	int notice_sent = 0;
 	int notice_sending =
