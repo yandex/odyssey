@@ -1043,8 +1043,11 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		end_time_ms = now_ms + (uint64_t)route->rule->pool->timeout;
 	}
 
+	int internal = route->rule->pool->pool_type == OD_RULE_POOL_INTERNAL;
+
 	int notice_sent = 0;
-	int notice_sending = route->rule->pool->notice_after_waiting_ms >= 0;
+	int notice_sending =
+		route->rule->pool->notice_after_waiting_ms >= 0 && !internal;
 	uint64_t notice_deadline =
 		now_ms + route->rule->pool->notice_after_waiting_ms;
 	uint64_t waiting_start = now_ms;
@@ -1100,7 +1103,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 		}
 
 		/* client disconnected while awaiting for attaching */
-		if (!od_io_connected(&client->io)) {
+		if (!internal && !od_io_connected(&client->io)) {
 			return OD_ROUTER_CLIENT_DISCONNECTED;
 		}
 
