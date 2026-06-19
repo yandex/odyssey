@@ -14,8 +14,15 @@
 
 int od_backend_connect(od_server_t *, char *, kiwi_params_t *, od_client_t *);
 
-int od_backend_check_tsa(od_storage_endpoint_t *, char *, od_server_t *,
-			 od_client_t *, od_target_session_attrs_t);
+typedef enum {
+	OD_TSA_CHECK_OK,
+	OD_TSA_CHECK_FAIL,
+	OD_TSA_CHECK_BACKEND_ERROR,
+} od_tsa_check_result_t;
+
+od_tsa_check_result_t od_backend_check_tsa(od_storage_endpoint_t *, char *,
+					   od_server_t *, od_client_t *,
+					   od_target_session_attrs_t);
 
 int od_backend_connect_cancel(od_server_t *, od_rule_storage_t *,
 			      const od_address_t *, kiwi_key_t *);
