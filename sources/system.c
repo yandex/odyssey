@@ -629,6 +629,8 @@ static inline void od_system(void *arg)
 		return;
 	}
 
+	mm_sem_init(&global->cancel_sem, 2 * instance->config.workers);
+
 	/* start cron coroutine */
 	od_cron_t *cron = system->global->cron;
 	int rc;
@@ -709,6 +711,8 @@ static inline void od_system(void *arg)
 
 	od_logger_shutdown(&instance->logger);
 	od_logger_wait_finish(&instance->logger);
+
+	mm_sem_destroy(&global->cancel_sem);
 
 	od_instance_free(instance);
 	od_global_destroy(global);
