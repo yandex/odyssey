@@ -120,6 +120,16 @@ void od_server_detach_client(od_server_t *server)
 
 	client->server = NULL;
 	server->client = NULL;
+
+	/*
+	 * this can lead to errors in PG like:
+	 * PID 0 in cancel request did not match any process
+	 *
+	 * we currently believe that this is not real problem
+	 * because it is better to have extra message in PG log
+	 * that does nothing than sending cancel to another
+	 * than current client
+	 */
 	kiwi_key_init(&server->key_client);
 
 	if (od_server_unref(server) == 2) {

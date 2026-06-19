@@ -62,6 +62,7 @@ set(od_src
     machinarium/zpq_stream.c
     machinarium/compression.c
     machinarium/cert_hash.c
+    machinarium/sem.c
     od_memory.c
     affinity.c
     balancing.c
@@ -328,6 +329,7 @@ set(od_test_src
     tests/machinarium/test_tsan_simple_race_example.c
     tests/machinarium/test_vrb.c
     tests/machinarium/test_queue.c
+    tests/machinarium/test_sem.c
     tests/odyssey/test_attribute.c
     tests/odyssey/test_tdigest.c
     tests/odyssey/test_util.c
