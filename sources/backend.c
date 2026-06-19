@@ -651,12 +651,13 @@ od_backend_update_endpoint_status(od_instance_t *instance, od_client_t *client,
 	return OK_RESPONSE;
 }
 
-int od_backend_check_tsa(od_storage_endpoint_t *endpoint, char *context,
-			 od_server_t *server, od_client_t *client,
-			 od_target_session_attrs_t attrs)
+od_tsa_check_result_t od_backend_check_tsa(od_storage_endpoint_t *endpoint,
+					   char *context, od_server_t *server,
+					   od_client_t *client,
+					   od_target_session_attrs_t attrs)
 {
 	if (attrs == OD_TARGET_SESSION_ATTRS_ANY) {
-		return OK_RESPONSE;
+		return OD_TSA_CHECK_OK;
 	}
 
 	od_global_t *global = server->global;
@@ -669,7 +670,7 @@ int od_backend_check_tsa(od_storage_endpoint_t *endpoint, char *context,
 		if (od_backend_update_endpoint_status(instance, client, server,
 						      context, endpoint) !=
 		    OK_RESPONSE) {
-			return NOT_OK_RESPONSE;
+			return OD_TSA_CHECK_BACKEND_ERROR;
 		}
 	}
 
@@ -677,10 +678,10 @@ int od_backend_check_tsa(od_storage_endpoint_t *endpoint, char *context,
 	od_storage_endpoint_status_get(&endpoint->status, &status);
 
 	if (!od_tsa_match_rw_state(attrs, status.is_read_write)) {
-		return NOT_OK_RESPONSE;
+		return OD_TSA_CHECK_FAIL;
 	}
 
-	return OK_RESPONSE;
+	return OD_TSA_CHECK_OK;
 }
 
 static inline int od_backend_connect_on_server_address(

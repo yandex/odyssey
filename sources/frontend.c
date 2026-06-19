@@ -448,8 +448,9 @@ od_frontend_attach_to_endpoint(od_client_t *client, char *context,
 			return OD_ESERVER_CONNECT;
 		}
 
-		if (od_backend_check_tsa(endpoint, context, server, client,
-					 tsa) != OK_RESPONSE) {
+		od_tsa_check_result_t trc = od_backend_check_tsa(
+			endpoint, context, server, client, tsa);
+		if (trc != OD_TSA_CHECK_OK) {
 			od_address_to_str(&endpoint->address, addr,
 					  sizeof(addr) - 1);
 			od_debug(
@@ -457,8 +458,11 @@ od_frontend_attach_to_endpoint(od_client_t *client, char *context,
 				"read-write status of '%s' is mismatched with expected '%s' or failed to update",
 				addr, od_target_session_attrs_to_str(tsa));
 
-			/* push server to router server pool */
-			od_router_detach(router, client);
+			if (trc == OD_TSA_CHECK_BACKEND_ERROR) {
+				od_router_close(router, client);
+			} else {
+				od_router_detach(router, client);
+			}
 
 			/* try another host */
 			return OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH;
@@ -575,6 +579,10 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 	od_rule_storage_t *storage = route->rule->storage;
 
 	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
+
+	if (storage->endpoints_count == 1) {
+		tsa = OD_TARGET_SESSION_ATTRS_ANY;
+	}
 
 	host_select_arg_t arg;
 	arg.storage = storage;
