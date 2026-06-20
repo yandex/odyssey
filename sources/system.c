@@ -629,7 +629,11 @@ static inline void od_system(void *arg)
 		return;
 	}
 
-	mm_sem_init(&global->cancel_sem, 2 * instance->config.workers);
+	uint64_t max_inflight =
+		instance->config.cancel_max_inflight > 0 ?
+			(uint64_t)instance->config.cancel_max_inflight :
+			2 * (uint64_t)instance->config.workers;
+	mm_sem_init(&global->cancel_sem, max_inflight);
 
 	/* start cron coroutine */
 	od_cron_t *cron = system->global->cron;

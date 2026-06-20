@@ -80,6 +80,8 @@ void od_config_init(od_config_t *config)
 
 	config->backend_connect_timeout_ms = 30U * 1000U; /* 30 seconds */
 	config->cancel_timeout_ms = 1U * 1000U; /* 1 seconds */
+	config->cancel_queue_timeout_ms = -1;
+	config->cancel_max_inflight = -1;
 	config->virtual_processing = 0;
 
 	config->graceful_shutdown_timeout_ms = 30 * 1000; /* 30 seconds */
