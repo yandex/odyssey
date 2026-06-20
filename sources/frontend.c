@@ -2538,7 +2538,7 @@ void od_frontend(void *arg)
 			instance->config.cancel_queue_timeout_ms >= 0 ?
 				(uint32_t)instance->config
 					.cancel_queue_timeout_ms :
-				2 * instance->config.cancel_timeout_ms;
+				2 * (uint32_t)instance->config.cancel_timeout_ms;
 
 		rc = mm_sem_timedwait(&global->cancel_sem, queue_timeout);
 		if (rc == -1) {
