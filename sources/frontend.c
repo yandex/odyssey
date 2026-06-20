@@ -2532,6 +2532,8 @@ void od_frontend(void *arg)
 		od_log(&instance->logger, "startup", client, NULL,
 		       "cancel request");
 
+		od_atomic_u32_dec(&router->clients_routing);
+
 		mm_sem_wait(&global->cancel_sem);
 
 		od_router_cancel_t cancel;
@@ -2559,7 +2561,6 @@ void od_frontend(void *arg)
 		mm_sem_post(&global->cancel_sem);
 
 		od_frontend_close(client);
-		od_atomic_u32_dec(&router->clients_routing);
 		return;
 	}
 
