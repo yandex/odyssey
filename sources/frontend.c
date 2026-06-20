@@ -2529,12 +2529,26 @@ void od_frontend(void *arg)
 
 	/* handle cancel request */
 	if (client->startup.is_cancel) {
-		od_log(&instance->logger, "startup", client, NULL,
-		       "cancel request");
+		od_debug(&instance->logger, "startup", client, NULL,
+			 "cancel request");
 
 		od_atomic_u32_dec(&router->clients_routing);
 
-		mm_sem_wait(&global->cancel_sem);
+		uint32_t queue_timeout =
+			instance->config.cancel_queue_timeout_ms >= 0 ?
+				(uint32_t)instance->config
+					.cancel_queue_timeout_ms :
+				2 * instance->config.cancel_timeout_ms;
+
+		rc = mm_sem_timedwait(&global->cancel_sem, queue_timeout);
+		if (rc == -1) {
+			od_error(
+				&instance->logger, "startup", client, NULL,
+				"dropping cancel request due to queue timeout %u ms",
+				queue_timeout);
+			od_frontend_close(client);
+			return;
+		}
 
 		od_router_cancel_t cancel;
 		od_router_cancel_init(&cancel);
