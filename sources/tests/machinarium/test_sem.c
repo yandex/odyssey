@@ -1,5 +1,6 @@
 #include <machinarium/machinarium.h>
 #include <machinarium/sem.h>
+#include <machinarium/machine.h>
 #include <tests/odyssey_test.h>
 
 #define NUM_THREADS 10
@@ -53,6 +54,20 @@ static void do_test(void *arg)
 	mm_sem_destroy(&sem);
 }
 
+static void do_timeout_test(void *arg)
+{
+	(void)arg;
+
+	mm_sem_t sem;
+	mm_sem_init(&sem, 0);
+
+	int rc = mm_sem_timedwait(&sem, 500);
+	test(rc == -1);
+	test(mm_errno_get() == ETIMEDOUT);
+
+	mm_sem_destroy(&sem);
+}
+
 void machinarium_test_sem(void)
 {
 	machinarium_init();
@@ -62,6 +77,13 @@ void machinarium_test_sem(void)
 	test(id != -1);
 
 	int rc;
+	rc = machine_wait(id);
+	test(rc != -1);
+
+	id = machine_create("machinarium_test_sem_timeout", do_timeout_test,
+			    NULL);
+	test(id != -1);
+
 	rc = machine_wait(id);
 	test(rc != -1);
 

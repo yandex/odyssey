@@ -22,4 +22,5 @@ void mm_sem_init(mm_sem_t *sem, uint64_t value);
 void mm_sem_destroy(mm_sem_t *sem);
 
 int mm_sem_wait(mm_sem_t *sem);
+int mm_sem_timedwait(mm_sem_t *sem, uint32_t timeout_ms);
 void mm_sem_post(mm_sem_t *sem);
