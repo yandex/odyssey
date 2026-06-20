@@ -79,7 +79,7 @@ void od_config_init(od_config_t *config)
 	od_list_init(&config->listen);
 
 	config->backend_connect_timeout_ms = 30U * 1000U; /* 30 seconds */
-	config->cancel_timeout_ms = 5U * 1000U; /* 5 seconds */
+	config->cancel_timeout_ms = 1U * 1000U; /* 1 seconds */
 	config->virtual_processing = 0;
 
 	config->graceful_shutdown_timeout_ms = 30 * 1000; /* 30 seconds */

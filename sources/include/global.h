@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/wait_list.h>
+#include <machinarium/sem.h>
 
 #include <types.h>
 #include <soft_oom.h>
@@ -30,6 +30,8 @@ struct od_global {
 
 	od_atomic_u64_t pause;
 	mm_wait_list_t *resume_waiters;
+
+	mm_sem_t cancel_sem;
 };
 
 od_global_t *od_global_create(od_instance_t *instance, od_system_t *system,
