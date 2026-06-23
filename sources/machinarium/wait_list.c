@@ -9,6 +9,7 @@
 #include <machinarium/machinarium.h>
 #include <machinarium/wait_list.h>
 #include <machinarium/machine.h>
+#include <stdatomic.h>
 
 /* holding wait_list lock */
 static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)
@@ -28,7 +29,8 @@ static inline void release_sleepy(mm_wait_list_t *wait_list,
 	}
 }
 
-static inline void init_sleepy(mm_sleepy_t *sleepy, void *private)
+static inline void init_sleepy(mm_sleepy_t *sleepy, void *private,
+			       mm_event_t *event)
 {
 	if (mm_self == NULL || mm_self->scheduler.current == NULL) {
 		abort();
@@ -40,7 +42,13 @@ static inline void init_sleepy(mm_sleepy_t *sleepy, void *private)
 	sleepy->released = 0;
 
 	mm_list_init(&sleepy->link);
-	mm_eventmgr_add(&mm_self->event_mgr, &sleepy->event);
+	if (event) {
+		sleepy->type = SHARED;
+		sleepy->shared_event = event;
+	} else {
+		sleepy->type = EXCLUSIVE;
+		mm_eventmgr_add(&mm_self->event_mgr, &sleepy->event);
+	}
 }
 
 static inline void release_sleepy_with_lock(mm_wait_list_t *wait_list,
@@ -96,7 +104,7 @@ int mm_wait_list_wait(mm_wait_list_t *wait_list, void *private,
 		      uint32_t timeout_ms)
 {
 	mm_sleepy_t this;
-	init_sleepy(&this, private);
+	init_sleepy(&this, private, NULL);
 
 	mm_sleeplock_lock(&wait_list->lock);
 	add_sleepy(wait_list, &this);
@@ -123,7 +131,7 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, void *private,
 	}
 
 	mm_sleepy_t this;
-	init_sleepy(&this, private);
+	init_sleepy(&this, private, NULL);
 
 	add_sleepy(wait_list, &this);
 
@@ -135,6 +143,15 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, void *private,
 		return -1;
 	}
 	return 0;
+}
+
+int wakeup_event_from_sleepy(mm_sleepy_t *sleepy)
+{
+	if (sleepy->type == EXCLUSIVE) {
+		return mm_eventmgr_signal(&sleepy->event);
+	} else {
+		return mm_eventmgr_signal(sleepy->shared_event);
+	}
 }
 
 void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
@@ -149,11 +166,10 @@ void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
 
 	mm_sleepy_t *sleepy;
 	sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
-
 	release_sleepy(wait_list, sleepy);
 
 	int event_mgr_fd;
-	event_mgr_fd = mm_eventmgr_signal(&sleepy->event);
+	event_mgr_fd = wakeup_event_from_sleepy(sleepy);
 
 	void *private = sleepy->private;
 
@@ -198,7 +214,7 @@ int mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 
 		release_sleepy(wait_list, sleepy);
 
-		event_mgr_fds[i] = mm_eventmgr_signal(&sleepy->event);
+		event_mgr_fds[i] = wakeup_event_from_sleepy(sleepy);
 	}
 
 	mm_sleeplock_unlock(&wait_list->lock);
@@ -212,4 +228,51 @@ int mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 	mm_free(event_mgr_fds);
 
 	return signaled;
+}
+
+int mm_wait_list_waitv(mm_wait_list_t **wait_lists, size_t count,
+		       uint32_t timeout_ms)
+{
+	if (count == 0 || wait_lists == NULL) {
+		mm_errno_set(EINVAL);
+		return -1;
+	}
+
+	/* prepare shared event for this waiter */
+	mm_event_t shared_event;
+
+	mm_sleepy_t *sleepy_list = mm_malloc(count * sizeof(mm_sleepy_t));
+	if (sleepy_list == NULL) {
+		return -1;
+	}
+
+	for (size_t i = 0; i < count; ++i) {
+		mm_sleeplock_lock(&wait_lists[i]->lock);
+	}
+
+	/* register listeners on all provided wait_lists */
+	for (size_t i = 0; i < count; ++i) {
+		init_sleepy(&sleepy_list[i], NULL, &shared_event);
+		add_sleepy(wait_lists[i], &sleepy_list[i]);
+	}
+	mm_eventmgr_add(&mm_self->event_mgr, &shared_event);
+
+	for (size_t i = count; i > 0; --i) {
+		mm_sleeplock_unlock(&wait_lists[i - 1]->lock);
+	}
+
+	/* wait for any listener to signal shared_event */
+	(void)mm_eventmgr_wait(&mm_self->event_mgr, &shared_event, timeout_ms);
+
+	for (size_t i = 0; i > 0; --i) {
+		release_sleepy_with_lock(wait_lists[i], &sleepy_list[i]);
+	}
+	mm_free(sleepy_list);
+
+	int status = shared_event.call.status;
+	mm_errno_set(status);
+	if (status != 0) {
+		return -1;
+	}
+	return 0;
 }
