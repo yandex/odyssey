@@ -13,7 +13,6 @@
 
 #include <machinarium/machinarium.h>
 #include <machinarium/epoll.h>
-#include <machinarium/poll.h>
 #include <machinarium/memory.h>
 
 typedef struct mm_epoll_t mm_epoll_t;
