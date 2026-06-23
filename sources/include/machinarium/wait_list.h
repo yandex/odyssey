@@ -86,8 +86,10 @@ typedef void (*mm_wl_private_cb_t)(void *private, void *arg);
 void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
 			     void *arg);
 
-//wait for any of provided wait_lists to trigger.
-//On success returns 0
-//On timeout or error returns -1
+/*
+ * Wait for any of provided wait_lists to trigger.
+ * On success returns 0
+ * On timeout or error returns -1
+ */
 int mm_wait_list_waitv(mm_wait_list_t **wait_lists, size_t count,
 		       uint32_t timeout_ms);
