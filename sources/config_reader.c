@@ -1954,6 +1954,30 @@ error:
 }
 #endif
 
+static char *unescape(const char *s)
+{
+	char *result = od_malloc(strlen(s) + 1);
+	if (result == NULL) {
+		return NULL;
+	}
+
+	char *w = result;
+	const char *r = s;
+
+	while (*r != '\0') {
+		if (*r != '\\' || *(r + 1) == 0) {
+			*w++ = *r++;
+			continue;
+		}
+
+		++r;
+	}
+
+	*w = '\0';
+
+	return result;
+}
+
 static int od_config_reader_rule_settings(od_config_reader_t *reader,
 					  od_rule_t *rule,
 					  od_extension_t *extensions,
@@ -2125,6 +2149,12 @@ static int od_config_reader_rule_settings(od_config_reader_t *reader,
 		/* password */
 		case OD_LPASSWORD:
 			if (!od_config_reader_string(reader, &rule->password)) {
+				return NOT_OK_RESPONSE;
+			}
+			char *orig = rule->password;
+			rule->password = unescape(orig);
+			od_free(orig);
+			if (rule->password == NULL) {
 				return NOT_OK_RESPONSE;
 			}
 			rule->password_len = strlen(rule->password);
