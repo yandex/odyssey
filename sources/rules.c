@@ -549,7 +549,7 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 
 	rule->obsolete = 0;
 	rule->mark = 0;
-	atomic_init(&rule->refs, 1);
+	atomic_store(&rule->refs, 1);
 
 	rule->order = rules->next_order++;
 
@@ -1476,8 +1476,29 @@ int od_rules_rule_compare_to_drop(od_rule_t *a, od_rule_t *b)
 	return 1;
 }
 
+static od_rule_key_t *rk_of(od_rule_t *rule)
+{
+	od_rule_key_t *rk = od_malloc(sizeof(od_rule_key_t));
+	if (rk == NULL) {
+		/* TODO: better */
+		abort();
+	}
+
+	od_rule_key_init(rk);
+
+	rk->usr_name = od_strndup(rule->user_name, rule->user_name_len);
+	rk->db_name = od_strndup(rule->db_name, rule->db_name_len);
+
+	od_address_range_copy(&rule->address_range, &rk->address_range);
+
+	rk->conn_type = rule->conn_type;
+
+	return rk;
+}
+
 int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
-		   od_list_t *deleted, od_list_t *to_drop)
+		   od_list_t *deleted, od_list_t *to_drop,
+		   od_list_t *not_changed)
 {
 	int count_mark = 0;
 	int count_deleted = 0;
@@ -1517,21 +1538,9 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 		}
 
 		if (!ok) {
-			od_rule_key_t *rk = od_malloc(sizeof(od_rule_key_t));
-
-			od_rule_key_init(rk);
-
-			rk->usr_name = od_strndup(rule_old->user_name,
-						  rule_old->user_name_len);
-			rk->db_name = od_strndup(rule_old->db_name,
-						 rule_old->db_name_len);
-
-			od_address_range_copy(&rule_old->address_range,
-					      &rk->address_range);
-
-			rk->conn_type = rule_old->conn_type;
-
+			od_rule_key_t *rk = rk_of(rule_old);
 			od_list_append(deleted, &rk->link);
+			++count_deleted;
 		}
 	};
 
@@ -1559,23 +1568,10 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 		}
 
 		if (!ok) {
-			od_rule_key_t *rk = od_malloc(sizeof(od_rule_key_t));
-
-			od_rule_key_init(rk);
-
-			rk->usr_name = od_strndup(rule_new->user_name,
-						  rule_new->user_name_len);
-			rk->db_name = od_strndup(rule_new->db_name,
-						 rule_new->db_name_len);
-
-			od_address_range_copy(&rule_new->address_range,
-					      &rk->address_range);
-
-			rk->conn_type = rule_new->conn_type;
-
+			od_rule_key_t *rk = rk_of(rule_new);
 			od_list_append(added, &rk->link);
 		}
-	};
+	}
 
 	/* select new rules */
 	od_list_foreach_safe (&src->rules, i, n) {
@@ -1590,30 +1586,25 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 					       rule->conn_type);
 		if (origin) {
 			/* force drop rules with shared pools */
-			if (origin->shared_pool == NULL &&
+
+			/* TODO: temporary disable not changing rules */
+			(void)not_changed;
+
+			/* if (origin->shared_pool == NULL &&
 			    rule->shared_pool == NULL &&
 			    od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
 				count_mark--;
 				origin->order = rule->order;
+
+				od_rule_key_t *rk = rk_of(origin);
+				od_list_append(not_changed, &rk->link);
+
 				continue;
-				/* select rules with changes what needed disconnect */
-			} else if (!od_rules_rule_compare_to_drop(origin,
-								  rule)) {
-				od_rule_key_t *rk =
-					od_malloc(sizeof(od_rule_key_t));
+			} else */
 
-				od_rule_key_init(rk);
-
-				rk->usr_name =
-					od_strndup(origin->user_name,
-						   origin->user_name_len);
-				rk->db_name = od_strndup(origin->db_name,
-							 origin->db_name_len);
-
-				od_address_range_copy(&origin->address_range,
-						      &rk->address_range);
-
+			if (!od_rules_rule_compare_to_drop(origin, rule)) {
+				od_rule_key_t *rk = rk_of(origin);
 				od_list_append(to_drop, &rk->link);
 			}
 
@@ -1863,11 +1854,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 
 	rule->pool->size = OD_DEFAULT_INTERNAL_POLL_SZ;
 	rule->enable_password_passthrough = true;
-	rule->storage = od_rules_storage_copy(default_rule->storage);
-	if (rule->storage == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-
+	rule->storage = od_rules_storage_ref(default_rule->storage);
 	rule->storage_password = od_strdup(default_rule->storage_password);
 	if (rule->storage_password == NULL) {
 		return NOT_OK_RESPONSE;
@@ -2027,10 +2014,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			return NOT_OK_RESPONSE;
 		}
 
-		rule->storage = od_rules_storage_copy(storage);
-		if (rule->storage == NULL) {
-			return NOT_OK_RESPONSE;
-		}
+		rule->storage = od_rules_storage_ref(storage);
 
 		if (od_pool_validate(logger, rule->pool, rule->db_name,
 				     rule->user_name,
@@ -2223,6 +2207,7 @@ int od_rules_cleanup(od_rules_t *rules)
 	od_list_foreach_safe (&rules->storages, i, n) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
+		od_list_unlink(&storage->link);
 		od_rules_storage_free(storage);
 	}
 	od_list_init(&rules->storages);

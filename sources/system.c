@@ -450,8 +450,12 @@ static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 
+		od_rule_storage_t *s = od_rules_storage_ref(storage);
+
 		od_list_unlink(&storage->link);
-		od_rules_storage_add(&router->rules, storage);
+		od_rules_storage_free(storage);
+
+		od_rules_storage_add(&router->rules, s);
 	}
 
 	od_rules_unlock(rules);

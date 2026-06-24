@@ -1302,6 +1302,13 @@ static int od_config_reader_listen(od_config_reader_t *reader)
 				return NOT_OK_RESPONSE;
 			}
 			continue;
+		/* catchup_timeout */
+		case OD_LCATCHUP_TIMEOUT:
+			if (!od_config_reader_number(
+				    reader, &listen->catchup_timeout)) {
+				return NOT_OK_RESPONSE;
+			}
+			continue;
 		/* client_login_timeout */
 		case OD_LCLIENT_LOGIN_TIMEOUT:
 			if (!od_config_reader_number(

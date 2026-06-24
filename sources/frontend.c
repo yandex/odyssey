@@ -491,10 +491,63 @@ od_frontend_attach_to_endpoint(od_client_t *client, char *context,
 	}
 }
 
+static uint32_t get_effective_catchup_timeout(od_client_t *client)
+{
+	uint32_t effective_timeout = 0;
+
+	/*
+	 * next priorities to get the catchup timeout:
+	 *
+	 * var from pgoption > value from rule > value from listen
+	 */
+
+	od_config_listen_t *listen = client->config_listen;
+
+	int default_timeout = 0;
+	if (listen != NULL) {
+		default_timeout = listen->catchup_timeout;
+	}
+
+	if (client->rule->catchup_timeout != 0) {
+		default_timeout = client->rule->catchup_timeout;
+	}
+
+	effective_timeout = (uint32_t)default_timeout;
+
+	kiwi_var_t *timeout_var =
+		kiwi_vars_get(&client->vars, KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT);
+
+	if (timeout_var != NULL) {
+		/* if there is catchup pgoption variable in startup packet */
+		char *end;
+		uint32_t user_catchup_timeout =
+			strtol(timeout_var->value, &end, 10);
+		if (end == timeout_var->value + timeout_var->value_len) {
+			/* if where is no junk after number, thats ok */
+			effective_timeout = user_catchup_timeout;
+		} else {
+			od_gerror("catchup", client, NULL,
+				  "junk after catchup timeout, ignore value");
+		}
+	}
+
+	return effective_timeout;
+}
+
 typedef struct {
 	od_rule_storage_t *storage;
 	od_target_session_attrs_t tsa;
+	uint32_t lag_timeout;
 } host_select_arg_t;
+
+static int check_lag(uint32_t timeout, int64_t lag)
+{
+	if (timeout == 0) {
+		return 1;
+	}
+
+	return lag <= (int64_t)timeout;
+}
 
 static int host_filter(od_storage_endpoint_t *endpoint, void *a)
 {
@@ -508,19 +561,19 @@ static int host_filter(od_storage_endpoint_t *endpoint, void *a)
 
 	int status_is_recent = !od_storage_endpoint_status_is_outdated(
 		&status, storage->endpoints_status_poll_interval_ms);
-	int tsa_match = od_tsa_match_rw_state(tsa, status.is_read_write);
 
-	if (status_is_recent && !tsa_match) {
-		/* no point in host attach attempt */
-		return 0;
+	if (status_is_recent) {
+		int tsa_match =
+			od_tsa_match_rw_state(tsa, status.is_read_write);
+		int lag_match =
+			check_lag(arg->lag_timeout, status.repl_lag_sec);
+
+		if (!status.alive || !lag_match || !tsa_match) {
+			return 0;
+		}
 	}
 
-	if (status_is_recent && !status.alive) {
-		/* no point in host attach attempt */
-		return 0;
-	}
-
-	/* lets check the host */
+	/* lets try the host */
 	return 1;
 }
 
@@ -578,10 +631,12 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 	od_rule_storage_t *storage = route->rule->storage;
 
 	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
+	uint32_t lag_timeout = get_effective_catchup_timeout(client);
 
 	host_select_arg_t arg;
 	arg.storage = storage;
 	arg.tsa = tsa;
+	arg.lag_timeout = lag_timeout;
 
 	od_storage_endpoint_t *endpoints[OD_STORAGE_MAX_ENDPOINTS];
 	size_t count;
@@ -1329,61 +1384,82 @@ static inline od_retcode_t od_frontend_log_bind(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
-/*
-* machine_sleep with ODYSSEY_CATCHUP_RECHECK_INTERVAL value
-* will be effitiently just a context switch.
-*/
-
-#define ODYSSEY_CATCHUP_RECHECK_INTERVAL 1
-
 static inline int od_frontend_poll_catchup(od_client_t *client,
 					   od_route_t *route, uint32_t timeout,
 					   int *lag_out)
 {
 	od_instance_t *instance = client->global->instance;
+	od_rule_storage_t *storage = route->rule->storage;
+	od_server_t *server = client->server;
+	int64_t lag = 0;
 
-	/*
-	 * Ensure heartbeet is initialized at least once.
-	 * Heartbeat might be 0 after reload\restart.
-	 */
-	int absent_heartbeat_checks = 0;
-	while (route->last_heartbeat == 0) {
-		machine_sleep(ODYSSEY_CATCHUP_RECHECK_INTERVAL);
-		/* add cast to int64_t for correct camparison 
-  			(int64_t > int and int64_t > uint32_t) */
-		if ((int64_t)absent_heartbeat_checks++ >
-		    (timeout * (int64_t)1000 /
-		     ODYSSEY_CATCHUP_RECHECK_INTERVAL)) {
+	if (server != NULL) {
+		/*
+		 * check the replication lag only for host
+		 * that we are currently connected
+		 */
+
+		od_storage_endpoint_status_t status;
+		od_storage_endpoint_status_get(&server->endpoint->status,
+					       &status);
+
+		if (instance->config.log_debug) {
+			char addr[256];
+			od_address_to_str(&server->endpoint->address, addr,
+					  sizeof(addr));
 			od_debug(&instance->logger, "catchup", client, NULL,
-				 "No heartbeat for route detected\n");
-			return OD_ECATCHUP_TIMEOUT;
+				 "checking against %s, repl lag time sec = %ld",
+				 addr, status.repl_lag_sec);
 		}
-	}
 
-	for (int check = 1; check <= route->rule->catchup_checks; ++check) {
-		int lag = machine_timeofday_sec() - route->last_heartbeat;
+		lag = status.repl_lag_sec;
 		if (lag < 0) {
 			lag = 0;
 		}
 
-		*lag_out = lag;
-
-		if ((uint32_t)lag < timeout) {
+		if (lag < (int64_t)timeout) {
 			return OD_OK;
 		}
-		od_debug(
-			&instance->logger, "catchup", client, NULL,
-			"client %s%.*s replication %d lag is over catchup timeout %d\n",
-			client->id.id_prefix, OD_ID_LEN, client->id.id, lag,
-			timeout);
+	} else {
 		/*
-		 * TBD: Consider configuring `ODYSSEY_CATCHUP_RECHECK_INTERVAL` in
-		 * frontend rule.
+		 * need to disallow new connections
+		 * when all hosts has too big replication lag
 		 */
-		if (check < route->rule->catchup_checks) {
-			machine_sleep(ODYSSEY_CATCHUP_RECHECK_INTERVAL);
+
+		for (size_t i = 0; i < storage->endpoints_count; ++i) {
+			od_storage_endpoint_t *endp = &storage->endpoints[i];
+			od_storage_endpoint_status_t status;
+			od_storage_endpoint_status_get(&endp->status, &status);
+
+			if (instance->config.log_debug) {
+				char addr[256];
+				od_address_to_str(&endp->address, addr,
+						  sizeof(addr));
+				od_debug(
+					&instance->logger, "catchup", client,
+					NULL,
+					"checking against %s, repl lag sec = %ld",
+					addr, status.repl_lag_sec);
+			}
+
+			lag = status.repl_lag_sec;
+			if (lag < 0) {
+				lag = 0;
+			}
+
+			if (lag < (int64_t)timeout) {
+				return OD_OK;
+			}
 		}
 	}
+
+	*lag_out = lag;
+
+	od_debug(
+		&instance->logger, "catchup", client, NULL,
+		"client %s%.*s replication %d lag is over catchup timeout %d\n",
+		client->id.id_prefix, OD_ID_LEN, client->id.id, lag, timeout);
+
 	return OD_ECATCHUP_TIMEOUT;
 }
 
@@ -1394,34 +1470,17 @@ od_frontend_check_replica_catchup(od_instance_t *instance, od_client_t *client)
 
 	assert(route);
 
-	uint32_t catchup_timeout = route->rule->catchup_timeout;
-	kiwi_var_t *timeout_var =
-		kiwi_vars_get(&client->vars, KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT);
-	od_frontend_status_t status = OD_OK;
+	uint32_t catchup_timeout = get_effective_catchup_timeout(client);
 
-	if (timeout_var != NULL) {
-		/* if there is catchup pgoption variable in startup packet */
-		char *end;
-		uint32_t user_catchup_timeout =
-			strtol(timeout_var->value, &end, 10);
-		if (end == timeout_var->value + timeout_var->value_len) {
-			/* if where is no junk after number, thats ok */
-			catchup_timeout = user_catchup_timeout;
-		} else {
-			od_error(&instance->logger, "catchup", client, NULL,
-				 "junk after catchup timeout, ignore value");
-		}
+	if (catchup_timeout == 0) {
+		return OD_OK;
 	}
 
-	if (catchup_timeout) {
-		od_debug(&instance->logger, "catchup", client, NULL,
-			 "checking for lag before doing any actual work");
-		status =
-			od_frontend_poll_catchup(client, route, catchup_timeout,
-						 &client->last_catchup_lag);
-	}
+	od_debug(&instance->logger, "catchup", client, NULL,
+		 "checking for lag before doing any actual work");
 
-	return status;
+	return od_frontend_poll_catchup(client, route, catchup_timeout,
+					&client->last_catchup_lag);
 }
 
 static int wait_resume_transactional_step(od_client_t *client)
