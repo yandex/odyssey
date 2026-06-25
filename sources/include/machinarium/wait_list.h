@@ -26,8 +26,15 @@
 
 #define MM_SLEEPY_NO_CORO_ID (~0ULL)
 
+typedef enum { EXCLUSIVE, SHARED } mm_sleepy_type_t;
+
 typedef struct mm_sleepy {
-	mm_event_t event;
+	union {
+		mm_event_t event;
+		mm_event_t *shared_event;
+	};
+	mm_sleepy_type_t type;
+
 	mm_list_t link;
 
 	/* some additional info about sleepy, to return it from notify() */
@@ -78,3 +85,11 @@ int mm_wait_list_notify_all(mm_wait_list_t *wait_list);
 typedef void (*mm_wl_private_cb_t)(void *private, void *arg);
 void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
 			     void *arg);
+
+/*
+ * Wait for any of provided wait_lists to trigger.
+ * On success returns 0
+ * On timeout or error returns -1
+ */
+int mm_wait_list_waitv(mm_wait_list_t **wait_lists, size_t count,
+		       uint32_t timeout_ms);
