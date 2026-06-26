@@ -14,265 +14,266 @@
 /* holding wait_list lock */
 static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)
 {
-	mm_list_append(&wait_list->sleepies, &sleepy->link);
-	++wait_list->sleepy_count;
+        mm_list_append(&wait_list->sleepies, &sleepy->link);
+        ++wait_list->sleepy_count;
 }
 
 /* holding wait_list lock */
 static inline void release_sleepy(mm_wait_list_t *wait_list,
-				  mm_sleepy_t *sleepy)
+                                  mm_sleepy_t *sleepy)
 {
-	if (!sleepy->released) {
-		mm_list_unlink(&sleepy->link);
-		--wait_list->sleepy_count;
-		sleepy->released = 1;
-	}
+        if (!sleepy->released) {
+                mm_list_unlink(&sleepy->link);
+                --wait_list->sleepy_count;
+                sleepy->released = 1;
+        }
 }
 
 static inline void init_sleepy(mm_sleepy_t *sleepy, void *private,
-			       mm_event_t *event)
+                               mm_event_t *event)
 {
-	if (mm_self == NULL || mm_self->scheduler.current == NULL) {
-		abort();
-	}
+        if (mm_self == NULL || mm_self->scheduler.current == NULL) {
+                abort();
+        }
 
-	sleepy->coro_id = mm_self->scheduler.current->id;
-	sleepy->private = private;
+        sleepy->coro_id = mm_self->scheduler.current->id;
+        sleepy->private = private;
 
-	sleepy->released = 0;
+        sleepy->released = 0;
 
-	mm_list_init(&sleepy->link);
-	if (event) {
-		sleepy->type = SHARED;
-		sleepy->shared_event = event;
-	} else {
-		sleepy->type = EXCLUSIVE;
-		mm_eventmgr_add(&mm_self->event_mgr, &sleepy->event);
-	}
+        mm_list_init(&sleepy->link);
+        if (event) {
+                sleepy->type = SHARED;
+                sleepy->shared_event = event;
+        } else {
+                sleepy->type = EXCLUSIVE;
+                mm_eventmgr_add(&mm_self->event_mgr, &sleepy->event);
+        }
 }
 
 static inline void release_sleepy_with_lock(mm_wait_list_t *wait_list,
-					    mm_sleepy_t *sleepy)
+                                            mm_sleepy_t *sleepy)
 {
-	mm_sleeplock_lock(&wait_list->lock);
-	release_sleepy(wait_list, sleepy);
-	mm_sleeplock_unlock(&wait_list->lock);
+        mm_sleeplock_lock(&wait_list->lock);
+        release_sleepy(wait_list, sleepy);
+        mm_sleeplock_unlock(&wait_list->lock);
 }
 
 void mm_wait_list_init(mm_wait_list_t *wait_list, atomic_uint_fast64_t *word)
 {
-	mm_sleeplock_init(&wait_list->lock);
-	mm_list_init(&wait_list->sleepies);
-	wait_list->sleepy_count = 0;
-	wait_list->word = word;
+        mm_sleeplock_init(&wait_list->lock);
+        mm_list_init(&wait_list->sleepies);
+        wait_list->sleepy_count = 0;
+        wait_list->word = word;
 }
 
 mm_wait_list_t *mm_wait_list_create(atomic_uint_fast64_t *word)
 {
-	mm_wait_list_t *wait_list = mm_malloc(sizeof(mm_wait_list_t));
-	if (wait_list == NULL) {
-		return NULL;
-	}
+        mm_wait_list_t *wait_list = mm_malloc(sizeof(mm_wait_list_t));
+        if (wait_list == NULL) {
+                return NULL;
+        }
 
-	mm_wait_list_init(wait_list, word);
+        mm_wait_list_init(wait_list, word);
 
-	return wait_list;
+        return wait_list;
 }
 
 void mm_wait_list_free(mm_wait_list_t *wait_list)
 {
-	mm_wait_list_destroy(wait_list);
-	mm_free(wait_list);
+        mm_wait_list_destroy(wait_list);
+        mm_free(wait_list);
 }
 
 void mm_wait_list_destroy(mm_wait_list_t *wait_list)
 {
-	(void)wait_list;
+        (void)wait_list;
 }
 
 static inline int wait_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy,
-			      uint32_t timeout_ms)
+                              uint32_t timeout_ms)
 {
-	mm_eventmgr_wait(&mm_self->event_mgr, &sleepy->event, timeout_ms);
+        mm_eventmgr_wait(&mm_self->event_mgr, &sleepy->event, timeout_ms);
 
-	release_sleepy_with_lock(wait_list, sleepy);
+        release_sleepy_with_lock(wait_list, sleepy);
 
-	return sleepy->event.call.status;
+        return sleepy->event.call.status;
 }
 
 int mm_wait_list_wait(mm_wait_list_t *wait_list, void *private,
-		      uint32_t timeout_ms)
+                      uint32_t timeout_ms)
 {
-	mm_sleepy_t this;
-	init_sleepy(&this, private, NULL);
+        mm_sleepy_t this;
+        init_sleepy(&this, private, NULL);
 
-	mm_sleeplock_lock(&wait_list->lock);
-	add_sleepy(wait_list, &this);
-	mm_sleeplock_unlock(&wait_list->lock);
+        mm_sleeplock_lock(&wait_list->lock);
+        add_sleepy(wait_list, &this);
+        mm_sleeplock_unlock(&wait_list->lock);
 
-	int status = wait_sleepy(wait_list, &this, timeout_ms);
-	mm_errno_set(status);
-	if (status != 0) {
-		return -1;
-	}
-	return 0;
+        int status = wait_sleepy(wait_list, &this, timeout_ms);
+        mm_errno_set(status);
+        if (status != 0) {
+                return -1;
+        }
+        return 0;
 }
 
 int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, void *private,
-			      uint64_t expected, uint32_t timeout_ms)
+                              uint64_t expected, uint32_t timeout_ms)
 {
-	mm_sleeplock_lock(&wait_list->lock);
+        mm_sleeplock_lock(&wait_list->lock);
 
-	if (atomic_load(wait_list->word) != expected) {
-		mm_sleeplock_unlock(&wait_list->lock);
+        if (atomic_load(wait_list->word) != expected) {
+                mm_sleeplock_unlock(&wait_list->lock);
 
-		mm_errno_set(EAGAIN);
-		return -1;
-	}
+                mm_errno_set(EAGAIN);
+                return -1;
+        }
 
-	mm_sleepy_t this;
-	init_sleepy(&this, private, NULL);
+        mm_sleepy_t this;
+        init_sleepy(&this, private, NULL);
 
-	add_sleepy(wait_list, &this);
+        add_sleepy(wait_list, &this);
 
-	mm_sleeplock_unlock(&wait_list->lock);
+        mm_sleeplock_unlock(&wait_list->lock);
 
-	int status = wait_sleepy(wait_list, &this, timeout_ms);
-	mm_errno_set(status);
-	if (status != 0) {
-		return -1;
-	}
-	return 0;
+        int status = wait_sleepy(wait_list, &this, timeout_ms);
+        mm_errno_set(status);
+        if (status != 0) {
+                return -1;
+        }
+        return 0;
 }
 
 int wakeup_event_from_sleepy(mm_sleepy_t *sleepy)
 {
-	if (sleepy->type == EXCLUSIVE) {
-		return mm_eventmgr_signal(&sleepy->event);
-	} else {
-		return mm_eventmgr_signal(sleepy->shared_event);
-	}
+        if (sleepy->type == EXCLUSIVE) {
+                return mm_eventmgr_signal(&sleepy->event);
+        } else {
+                return mm_eventmgr_signal(sleepy->shared_event);
+        }
 }
 
 void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
-			     void *arg)
+                             void *arg)
 {
-	mm_sleeplock_lock(&wait_list->lock);
+        mm_sleeplock_lock(&wait_list->lock);
 
-	if (wait_list->sleepy_count == 0ULL) {
-		mm_sleeplock_unlock(&wait_list->lock);
-		return NULL;
-	}
+        if (wait_list->sleepy_count == 0ULL) {
+                mm_sleeplock_unlock(&wait_list->lock);
+                return NULL;
+        }
 
-	mm_sleepy_t *sleepy;
-	sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
-	release_sleepy(wait_list, sleepy);
+        mm_sleepy_t *sleepy;
+        sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
+        release_sleepy(wait_list, sleepy);
 
-	int event_mgr_fd;
-	event_mgr_fd = wakeup_event_from_sleepy(sleepy);
+        int event_mgr_fd;
+        event_mgr_fd = wakeup_event_from_sleepy(sleepy);
 
-	void *private = sleepy->private;
+        void *private = sleepy->private;
 
-	if (cb != NULL) {
-		cb(private, arg);
-	}
+        if (cb != NULL) {
+                cb(private, arg);
+        }
 
-	mm_sleeplock_unlock(&wait_list->lock);
+        mm_sleeplock_unlock(&wait_list->lock);
 
-	if (event_mgr_fd > 0) {
-		mm_eventmgr_wakeup(event_mgr_fd);
-	}
+        if (event_mgr_fd > 0) {
+                mm_eventmgr_wakeup(event_mgr_fd);
+        }
 
-	return private;
+        return private;
 }
 
 void *mm_wait_list_notify(mm_wait_list_t *wait_list)
 {
-	return mm_wait_list_notify_cb(wait_list, NULL, NULL);
+        return mm_wait_list_notify_cb(wait_list, NULL, NULL);
 }
 
 int mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 {
-	int signaled = 0;
+        int signaled = 0;
 
-	mm_sleeplock_lock(&wait_list->lock);
+        mm_sleeplock_lock(&wait_list->lock);
 
-	uint64_t count = wait_list->sleepy_count;
+        uint64_t count = wait_list->sleepy_count;
 
-	int *event_mgr_fds = mm_malloc(sizeof(int) * count);
-	if (event_mgr_fds == NULL) {
-		abort();
-	}
+        int *event_mgr_fds = mm_malloc(sizeof(int) * count);
+        if (event_mgr_fds == NULL) {
+                abort();
+        }
 
-	if (count > 0) {
-		signaled = 1;
-	}
+        if (count > 0) {
+                signaled = 1;
+        }
 
-	mm_sleepy_t *sleepy;
-	for (uint64_t i = 0; i < count; ++i) {
-		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
+        mm_sleepy_t *sleepy;
+        for (uint64_t i = 0; i < count; ++i) {
+                sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
 
-		release_sleepy(wait_list, sleepy);
+                release_sleepy(wait_list, sleepy);
 
-		event_mgr_fds[i] = wakeup_event_from_sleepy(sleepy);
-	}
+                event_mgr_fds[i] = wakeup_event_from_sleepy(sleepy);
+        }
 
-	mm_sleeplock_unlock(&wait_list->lock);
+        mm_sleeplock_unlock(&wait_list->lock);
 
-	for (uint64_t i = 0; i < count; ++i) {
-		if (event_mgr_fds[i] > 0) {
-			mm_eventmgr_wakeup(event_mgr_fds[i]);
-		}
-	}
+        for (uint64_t i = 0; i < count; ++i) {
+                if (event_mgr_fds[i] > 0) {
+                        mm_eventmgr_wakeup(event_mgr_fds[i]);
+                }
+        }
 
-	mm_free(event_mgr_fds);
+        mm_free(event_mgr_fds);
 
-	return signaled;
+        return signaled;
 }
 
 int mm_wait_list_waitv(mm_wait_list_t **wait_lists, size_t count,
-		       uint32_t timeout_ms)
+                       uint32_t timeout_ms)
 {
-	if (count == 0 || wait_lists == NULL) {
-		mm_errno_set(EINVAL);
-		return -1;
-	}
+        if (count == 0 || wait_lists == NULL) {
+                mm_errno_set(EINVAL);
+                return -1;
+        }
 
-	/* prepare shared event for this waiter */
-	mm_event_t shared_event;
+        /* prepare shared event for this waiter */
+        mm_event_t shared_event;
 
-	mm_sleepy_t *sleepy_list = mm_malloc(count * sizeof(mm_sleepy_t));
-	if (sleepy_list == NULL) {
-		return -1;
-	}
+        mm_sleepy_t *sleepy_list = mm_malloc(count * sizeof(mm_sleepy_t));
+        if (sleepy_list == NULL) {
+                return -1;
+        }
 
-	for (size_t i = 0; i < count; ++i) {
-		mm_sleeplock_lock(&wait_lists[i]->lock);
-	}
+        for (size_t i = 0; i < count; ++i) {
+                mm_sleeplock_lock(&wait_lists[i]->lock);
+        }
 
-	/* register listeners on all provided wait_lists */
-	for (size_t i = 0; i < count; ++i) {
-		init_sleepy(&sleepy_list[i], NULL, &shared_event);
-		add_sleepy(wait_lists[i], &sleepy_list[i]);
-	}
-	mm_eventmgr_add(&mm_self->event_mgr, &shared_event);
+        /* register listeners on all provided wait_lists */
+        for (size_t i = 0; i < count; ++i) {
+                init_sleepy(&sleepy_list[i], NULL, &shared_event);
+                add_sleepy(wait_lists[i], &sleepy_list[i]);
+        }
+        mm_eventmgr_add(&mm_self->event_mgr, &shared_event);
 
-	for (size_t i = count; i > 0; --i) {
-		mm_sleeplock_unlock(&wait_lists[i - 1]->lock);
-	}
+        for (size_t i = count; i > 0; --i) {
+                mm_sleeplock_unlock(&wait_lists[i - 1]->lock);
+        }
 
-	/* wait for any listener to signal shared_event */
-	(void)mm_eventmgr_wait(&mm_self->event_mgr, &shared_event, timeout_ms);
+        /* wait for any listener to signal shared_event */
+        (void)mm_eventmgr_wait(&mm_self->event_mgr, &shared_event, timeout_ms);
 
-	for (size_t i = count; i > 0; --i) {
-		release_sleepy_with_lock(wait_lists[i-1], &sleepy_list[i-1]);
-	}
-	mm_free(sleepy_list);
+        for (size_t i = count; i > 0; --i) {
+                release_sleepy_with_lock(wait_lists[i - 1],
+                                         &sleepy_list[i - 1]);
+        }
+        mm_free(sleepy_list);
 
-	int status = shared_event.call.status;
-	mm_errno_set(status);
-	if (status != 0) {
-		return -1;
-	}
-	return 0;
+        int status = shared_event.call.status;
+        mm_errno_set(status);
+        if (status != 0) {
+                return -1;
+        }
+        return 0;
 }
