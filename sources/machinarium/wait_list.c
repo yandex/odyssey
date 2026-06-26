@@ -264,8 +264,8 @@ int mm_wait_list_waitv(mm_wait_list_t **wait_lists, size_t count,
 	/* wait for any listener to signal shared_event */
 	(void)mm_eventmgr_wait(&mm_self->event_mgr, &shared_event, timeout_ms);
 
-	for (size_t i = count; i > 0; --i) {
-		release_sleepy_with_lock(wait_lists[i-1], &sleepy_list[i-1]);
+	for (size_t i = count; i-- > 0; ) {
+	    release_sleepy_with_lock(wait_lists[i], &sleepy_list[i]);
 	}
 	mm_free(sleepy_list);
 
