@@ -51,20 +51,41 @@ int get_args_len_sum(int argc, char *argv[])
 	return sum;
 }
 
+#include <cfg/model.h>
+#include <cfg/reader.h>
+
 int main(int argc, char *argv[], char *envp[])
 {
 	init_tcmalloc_profile();
 
-	od_instance_t *odyssey = od_instance_create();
-	odyssey->orig_argv_ptr = argv[0];
-	odyssey->orig_argv_ptr_len = get_args_len_sum(argc, argv);
+	(void)argc;
+	(void)argv;
+	(void)envp;
 
-	int rc = od_instance_main(odyssey, argc, argv, envp);
-	if (rc == -1) {
-		rc = EXIT_FAILURE;
-	} else {
-		rc = EXIT_SUCCESS;
-	}
+	od_cfg_model_t model;
+	od_cfg_diag_list_t diags;
+
+	od_cfg_model_init(&model);
+	od_cfg_diag_list_init(&diags);
+
+	int rc = od_cfg_parse_file(argv[1], &model, &diags);
+
+	od_cfg_diag_dumpf(stderr, &diags);
+	od_cfg_model_dumpf(stdout, &model);
+
+	od_cfg_diag_list_free(&diags);
+	od_cfg_model_free(&model);
+
+	// od_instance_t *odyssey = od_instance_create();
+	// odyssey->orig_argv_ptr = argv[0];
+	// odyssey->orig_argv_ptr_len = get_args_len_sum(argc, argv);
+
+	// int rc = od_instance_main(odyssey, argc, argv, envp);
+	// if (rc == -1) {
+	// 	rc = EXIT_FAILURE;
+	// } else {
+	// 	rc = EXIT_SUCCESS;
+	// }
 
 	return rc;
 }

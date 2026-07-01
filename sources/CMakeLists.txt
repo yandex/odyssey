@@ -63,6 +63,12 @@ set(od_src
     machinarium/compression.c
     machinarium/cert_hash.c
     machinarium/sem.c
+    cfg/diag.c
+    cfg/model.c
+    cfg/keywords.c
+    cfg/reader.c
+    cfg/ctx.c
+    cfg/convert.c
     od_memory.c
     affinity.c
     balancing.c
@@ -144,6 +150,22 @@ set(od_src
     common/wchar.c
     common/string.c)
 
+set(CONFIG_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/cfg)
+file(MAKE_DIRECTORY ${CONFIG_GEN_DIR})
+
+BISON_TARGET(cfg_parser
+    cfg/parse.y
+    ${CONFIG_GEN_DIR}/parse.tab.c
+    DEFINES_FILE ${CONFIG_GEN_DIR}/parse.tab.h
+)
+FLEX_TARGET(cfg_scanner
+    cfg/scan.l
+    ${CONFIG_GEN_DIR}/scan.c
+    COMPILE_FLAGS "--header-file=${CONFIG_GEN_DIR}/scan.h"
+)
+ADD_FLEX_BISON_DEPENDENCY(cfg_scanner cfg_parser)
+list(APPEND od_src ${FLEX_cfg_scanner_OUTPUTS} ${BISON_cfg_parser_OUTPUTS})
+
 if (USE_TCMALLOC)
     find_library(TCMALLOC_STATIC_LIB
         NAMES libtcmalloc.a
@@ -218,6 +240,8 @@ include_directories("${PROJECT_BINARY_DIR}/sources/include")
 
 add_executable(${od_binary} ${od_src} main.c)
 add_dependencies(${od_binary} build_libs)
+
+target_include_directories(${od_binary} PRIVATE ${CONFIG_GEN_DIR})
 
 if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_binary} PROPERTY COMPILE_OPTIONS "-pthread")
@@ -357,6 +381,8 @@ if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_test_binary} PROPERTY COMPILE_OPTIONS "-pthread")
     set_property(TARGET ${od_test_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
 endif()
+
+target_include_directories(${od_test_binary} PRIVATE ${CONFIG_GEN_DIR})
 
 target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)
 

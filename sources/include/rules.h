@@ -280,7 +280,7 @@ od_group_t *od_rules_group_allocate(od_global_t *global);
 void od_rules_rule_free(od_rule_t *rule);
 
 /* storage API */
-od_rule_storage_t *od_rules_storage_match(od_rules_t *, char *);
+od_rule_storage_t *od_rules_storage_match(od_rules_t *, const char *);
 od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
 					od_rule_storage_t *storage);
 
