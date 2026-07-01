@@ -21,6 +21,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     cmake \
     clang \
     libsystemd-dev \
+    bison flex \
     libpthread-stubs0-dev libclang-rt-dev
 
 FROM odyssey-build-env AS odyssey-build

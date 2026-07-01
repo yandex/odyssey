@@ -20,6 +20,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     clang \
     libsystemd-dev \
     libpthread-stubs0-dev libclang-rt-dev \
+    bison flex \
     python3
 
 FROM common-builder AS pg-build

@@ -21,6 +21,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     wget \
     net-tools \
     curl \
+    bison flex \
     jq
     
 WORKDIR /
