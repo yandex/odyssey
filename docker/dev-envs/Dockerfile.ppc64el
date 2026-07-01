@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y \
     libpam0g-dev \
     libldap-dev \
     build-essential \
+    bison flex \
     libsystemd-dev
 
 RUN apt-get install -y --no-install-recommends python3 openssh-server
