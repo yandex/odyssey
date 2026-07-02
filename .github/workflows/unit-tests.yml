@@ -22,7 +22,7 @@ jobs:
         target-arch: ['linux/amd64']
         cc: ['gcc', 'clang']
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: qemu setup
