@@ -17,10 +17,13 @@
 #include <instance.h>
 #include <stream.h>
 
-static inline int complete_deploy(od_server_t *server, char *context)
+static inline int complete_deploy(od_instance_t *instance, od_server_t *server,
+				  char *context)
 {
+	uint32_t timeout = instance->config.backend_connect_timeout_ms;
+
 	if (od_service_stream_server_until_rfq(
-		    context, server, 0 /* ignore errors */, 1000) != OD_OK) {
+		    context, server, 0 /* ignore errors */, timeout) != OD_OK) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -75,7 +78,7 @@ int od_deploy(od_client_t *client, char *context)
 	if (query_count > 0) {
 		od_server_sync_request(server, query_count);
 
-		return complete_deploy(server, context);
+		return complete_deploy(instance, server, context);
 	}
 
 	return OK_RESPONSE;
