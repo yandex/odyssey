@@ -532,6 +532,9 @@ od_frontend_status_t od_frontend_attach_and_deploy(od_client_t *client,
 		int rc;
 		rc = od_deploy(client, context);
 		if (rc == -1) {
+			od_gerror("deploy", client, client->server,
+				  "deploy failed, errno=%d (%s)",
+				  mm_errno_get(), strerror(mm_errno_get()));
 			return OD_ESERVER_WRITE;
 		}
 	}
