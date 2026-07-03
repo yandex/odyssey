@@ -2567,6 +2567,7 @@ void od_frontend(void *arg)
 				  cancel.address, &cancel.key, &cancel.id);
 
 			od_route_lock(srv_route);
+			od_stat_cancel(&srv_route->stats);
 			od_server_cancel_end(cancel.server);
 			/* signal about possible free connection */
 			od_route_signal_locked(srv_route, NULL);
