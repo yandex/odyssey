@@ -114,126 +114,40 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 	}
 	char data[64];
 	int data_len;
-	/* total_xact_count */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->count_tx);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
+
+	uint64_t stats[] = {
+		total->count_tx,			/* total_xact_count */
+		total->count_query,			/* total_query_count */
+		total->count_wait,			/* total_server_assignment_count */
+		total->recv_client,			/* total_received */
+		total->recv_server,			/* total_sent */
+		total->tx_time, 			/* total_xact_time */
+		total->query_time,			/* total_query_time */
+		total->wait_time_us,		/* total_wait_time */
+
+		avg->count_tx,				/* avg_xact_count */
+		avg->count_query,			/* avg_query_count */
+		avg->count_wait,			/* avg_server_assignment_count */
+		avg->recv_client,			/* avg_recv */
+		avg->recv_server,			/* avg_sent */
+		avg->tx_time,				/* avg_xact_time */
+		avg->query_time,			/* avg_query_time */
+		avg->wait_time_us,			/* avg_wait_time */
+
+		total->count_parse,			/* count of backend parse msgs */
+		total->count_parse_reuse,	/* count of backend parse msgs reuse */
+		total->count_cancel			/* total_cancels */
+	};
+
+	for (size_t i = 0; i < sizeof(stats) / sizeof(stats[0]); i++)
+	{
+		data_len = od_snprintf(data, sizeof(data), "%" PRIu64, stats[i]);
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
 	}
-	/* total_query_count */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, total->count_query);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* total_server_assignment_count */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, total->count_wait);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* total_received */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, total->recv_client);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* total_sent */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, total->recv_server);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* total_xact_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, total->tx_time);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* total_query_time */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, total->query_time);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* total_wait_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
-			       total->wait_time_us);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* avg_xact_count */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->count_tx);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* avg_query_count */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, avg->count_query);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* avg_server_assignment_count */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->count_wait);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* avg_recv */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, avg->recv_client);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* avg_sent */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, avg->recv_server);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* avg_xact_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->tx_time);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* avg_query_time */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, avg->query_time);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* avg_wait_time */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, avg->wait_time_us);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* count of backend parse msgs */
-	data_len =
-		od_snprintf(data, sizeof(data), "%" PRIu64, total->count_parse);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* count of backend parse msgs reuse */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
-			       total->count_parse_reuse);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
+	
 	return 0;
 }
 
@@ -372,14 +286,15 @@ static inline int od_console_show_stats(od_client_t *client,
 	od_cron_t *cron = client->global->cron;
 
 	if (kiwi_be_write_row_descriptionf(
-		    stream, "sllllllllllllllllll", "database",
+		    stream, "slllllllllllllllllll", "database",
 		    "total_xact_count", "total_query_count",
 		    "total_server_assignment_count", "total_received",
 		    "total_sent", "total_xact_time", "total_query_time",
 		    "total_wait_time", "avg_xact_count", "avg_query_count",
 		    "avg_server_assignment_count", "avg_recv", "avg_sent",
 		    "avg_xact_time", "avg_query_time", "avg_wait_time",
-		    "total_parse_count", "total_parse_count_reuse") == NULL) {
+		    "total_parse_count", "total_parse_count_reuse",
+			"total_cancels") == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
