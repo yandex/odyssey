@@ -1226,6 +1226,7 @@ static inline int od_router_cancel_cb(od_route_t *route, void **argv)
 			od_route_unlock(route);
 			return -1;
 		}
+		od_stat_cancel(&route->stats);
 		cancel->address = od_server_pool_address(server);
 		cancel->server = server;
 		od_server_cancel_begin(server);
