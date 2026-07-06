@@ -783,6 +783,10 @@ process_fcall_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
 
+	if (server == NULL) {
+		return OD_ATTACH;
+	}
+
 	/* no need special handling - just write call and wait for rfq */
 
 	int rc = od_io_write(&server->io, msg, timeout_ms);
