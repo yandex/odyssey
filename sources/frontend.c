@@ -2562,6 +2562,7 @@ void od_frontend(void *arg)
 			 * so need to preserve it route ptr
 			 */
 			od_route_t *srv_route = cancel.server->route;
+			od_stat_cancel(&srv_route->stats);
 
 			od_cancel(client->global, cancel.storage,
 				  cancel.address, &cancel.key, &cancel.id);
