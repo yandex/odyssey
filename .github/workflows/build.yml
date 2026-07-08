@@ -21,7 +21,7 @@ jobs:
         os-version: ['jammy', 'noble', 'plucky', 'questing', 'resolute']
         build-type: ['build_release']
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Ubuntu build check
@@ -30,7 +30,7 @@ jobs:
     name: fedora-build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Fedora build check
@@ -43,7 +43,7 @@ jobs:
         os-version: ['8', '9']
         build-type: ['build_release']
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Oraclelinux build check
@@ -56,7 +56,7 @@ jobs:
         os-version: ['bookworm', 'bullseye', 'trixie', 'forky', 'sid']
         build-type: ['build_release']
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Debian build check
