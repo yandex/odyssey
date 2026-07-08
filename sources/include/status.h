@@ -27,6 +27,7 @@ typedef enum {
 	OD_ESERVER_CONNECT,
 	OD_ESERVER_READ,
 	OD_ESERVER_WRITE,
+	OD_ESERVER_OOM,
 	OD_ECLIENT_READ,
 	OD_ECLIENT_PROTOCOL_ERROR,
 	OD_ECLIENT_COPY_IN_XPROTO,
@@ -81,6 +82,8 @@ static inline char *od_frontend_status_to_str(od_frontend_status_t status)
 		return "OD_ESERVER_READ";
 	case OD_ESERVER_WRITE:
 		return "OD_ESERVER_WRITE";
+	case OD_ESERVER_OOM:
+		return "OD_ESERVER_OOM";
 	case OD_ECLIENT_READ:
 		return "OD_ECLIENT_READ";
 	case OD_ECLIENT_PROTOCOL_ERROR:
@@ -117,6 +120,7 @@ static const od_frontend_status_t od_frontend_status_errs[] = {
 	OD_ESERVER_CONNECT,
 	OD_ESERVER_READ,
 	OD_ESERVER_WRITE,
+	OD_ESERVER_OOM,
 	OD_ECLIENT_WRITE,
 	OD_ECLIENT_KILLED,
 	OD_ECLIENT_TIMEOUT,
