@@ -24,7 +24,7 @@ jobs:
         cc: ['clang', 'gcc']
         tag: ['simple', 'copy', 'xproto']
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Odyssey protocol tests
