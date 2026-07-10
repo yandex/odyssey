@@ -23,6 +23,10 @@ typedef enum {
 	KIWI_VAR_STATEMENT_TIMEOUT,
 	KIWI_VAR_WORK_MEM,
 	KIWI_VAR_LOCK_TIMEOUT,
+	KIWI_VAR_LOG_STATEMENT,
+	KIWI_VAR_LOG_MIN_MESSAGES,
+	KIWI_VAR_LOG_MIN_ERROR_STATEMENT,
+	KIWI_VAR_LOG_MIN_DURATION_STATEMENT,
 	KIWI_VAR_IDLE_IN_TRANSACTION_SESSION_TIMEOUT,
 	KIWI_VAR_DEFAULT_TABLE_ACCESS_METHOD,
 	KIWI_VAR_DEFAULT_TOAST_COMPRESSION,
@@ -140,6 +144,16 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 		      sizeof("work_mem"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_LOCK_TIMEOUT], "lock_timeout",
 		      sizeof("lock_timeout"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_LOG_STATEMENT], "log_statement",
+		      sizeof("log_statement"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_LOG_MIN_MESSAGES],
+		      "log_min_messages", sizeof("log_min_messages"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_LOG_MIN_ERROR_STATEMENT],
+		      "log_min_error_statement",
+		      sizeof("log_min_error_statement"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_LOG_MIN_DURATION_STATEMENT],
+		      "log_min_duration_statement",
+		      sizeof("log_min_duration_statement"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_IDLE_IN_TRANSACTION_SESSION_TIMEOUT],
 		      "idle_in_transaction_session_timeout",
 		      sizeof("idle_in_transaction_session_timeout"));
