@@ -571,6 +571,49 @@ attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 	return status;
 }
 
+static int is_read_write(od_storage_endpoint_t *e)
+{
+	od_storage_endpoint_status_t status;
+	od_storage_endpoint_status_init(&status);
+	od_storage_endpoint_status_get(&e->status, &status);
+
+	return status.is_read_write;
+}
+
+/*
+ * stable partition: RO (or unknown-status) hosts first,
+ * RW hosts last
+ *
+ * relative order inside each group (i.e. balancing order) is preserved
+ */
+static size_t prefer_standby_reorder(od_storage_endpoint_t **endpoints,
+				     size_t count, od_storage_endpoint_t **tmp,
+				     int *rw_status_tmp)
+{
+	for (size_t i = 0; i < count; ++i) {
+		rw_status_tmp[i] = is_read_write(endpoints[i]);
+	}
+
+	size_t ro_count = 0;
+
+	for (size_t i = 0; i < count; ++i) {
+		if (!rw_status_tmp[i]) {
+			tmp[ro_count++] = endpoints[i];
+		}
+	}
+
+	size_t idx = ro_count;
+	for (size_t i = 0; i < count; ++i) {
+		if (rw_status_tmp[i]) {
+			tmp[idx++] = endpoints[i];
+		}
+	}
+
+	memcpy(endpoints, tmp, count * sizeof(endpoints[0]));
+
+	return ro_count;
+}
+
 od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 					kiwi_params_t *route_params)
 {
@@ -588,6 +631,12 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 	count = od_storage_balancing_select(
 		&storage->balancing, route, endpoints,
 		sizeof(endpoints) / sizeof(endpoints[0]), host_filter, &arg);
+
+	if (tsa == OD_TARGET_SESSION_ATTRS_PREFER_STANDBY && count > 1) {
+		od_storage_endpoint_t *t[lengthof(endpoints)];
+		int status_tmp[lengthof(endpoints)];
+		prefer_standby_reorder(endpoints, count, t, status_tmp);
+	}
 
 	int acquire_fail_fast =
 		route->rule->pool->acquire_fail_fast && count > 1;
