@@ -13,7 +13,6 @@ typedef struct kiwi_vars kiwi_vars_t;
 typedef struct untyped_kiwi_var untyped_kiwi_var_t;
 
 typedef enum {
-
 	KIWI_VAR_CLIENT_ENCODING,
 	KIWI_VAR_DATESTYLE,
 	KIWI_VAR_TIMEZONE,
