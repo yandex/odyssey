@@ -121,75 +121,95 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	od_list_t added;
 	od_list_t deleted;
 	od_list_t to_drop;
+	od_list_t not_changed;
+	od_list_t *i, *j;
 	od_list_init(&added);
 	od_list_init(&deleted);
 	od_list_init(&to_drop);
+	od_list_init(&not_changed);
 
 	updates = od_rules_merge(&router->rules, rules, &added, &deleted,
-				 &to_drop);
+				 &to_drop, &not_changed);
 
-	if (updates > 0) {
-		od_extension_t *extensions = router->global->extensions;
-		od_list_t *i;
-		od_list_t *j;
-		od_module_t *modules = extensions->modules;
+	od_list_foreach_safe (&not_changed, i, j) {
+		od_rule_key_t *rk;
+		rk = od_container_of(i, od_rule_key_t, link);
+		od_debug(&instance->logger, "reload", NULL, NULL,
+			 "rule %s.%s %s %s was not changed", rk->db_name,
+			 rk->usr_name, rk->address_range.string_value,
+			 od_rule_conn_type_to_str(rk->conn_type));
 
-		od_list_foreach (&added, i) {
-			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
-			od_log(&instance->logger, "reload config", NULL, NULL,
-			       "added rule: %s %s %s %s", rk->usr_name,
-			       rk->db_name, rk->address_range.string_value,
-			       od_rule_conn_type_to_str(rk->conn_type));
+		od_rule_key_free(rk);
+	}
+
+	if (updates == 0) {
+		od_router_unlock(router);
+		return 0;
+	}
+
+	od_extension_t *extensions = router->global->extensions;
+	od_module_t *modules = extensions->modules;
+
+	od_list_foreach (&added, i) {
+		od_rule_key_t *rk;
+		rk = od_container_of(i, od_rule_key_t, link);
+		od_log(&instance->logger, "reload", NULL, NULL,
+		       "rule %s.%s %s %s was added", rk->usr_name, rk->db_name,
+		       rk->address_range.string_value,
+		       od_rule_conn_type_to_str(rk->conn_type));
+	}
+
+	od_list_foreach (&deleted, i) {
+		od_rule_key_t *rk;
+		rk = od_container_of(i, od_rule_key_t, link);
+		od_log(&instance->logger, "reload", NULL, NULL,
+		       "rule %s %s %s %s was deleted", rk->usr_name,
+		       rk->db_name, rk->address_range.string_value,
+		       od_rule_conn_type_to_str(rk->conn_type));
+	}
+
+	{
+		void *argv[] = { &to_drop };
+		od_route_pool_foreach(&router->route_pool,
+				      od_drop_obsolete_rule_connections_cb,
+				      argv);
+	}
+
+	/* reloadcallback */
+	od_list_foreach (&modules->link, i) {
+		od_module_t *module;
+		module = od_container_of(i, od_module_t, link);
+		if (module->od_config_reload_cb == NULL) {
+			continue;
 		}
 
-		od_list_foreach (&deleted, i) {
-			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
-			od_log(&instance->logger, "reload config", NULL, NULL,
-			       "deleted rule: %s %s %s %s", rk->usr_name,
-			       rk->db_name, rk->address_range.string_value,
-			       od_rule_conn_type_to_str(rk->conn_type));
+		if (module->od_config_reload_cb(&added, &deleted) ==
+		    OD_MODULE_CB_FAIL_RETCODE) {
+			break;
 		}
+	}
 
-		{
-			void *argv[] = { &to_drop };
-			od_route_pool_foreach(
-				&router->route_pool,
-				od_drop_obsolete_rule_connections_cb, argv);
-		}
+	od_list_foreach_safe (&added, i, j) {
+		od_rule_key_t *rk;
+		rk = od_container_of(i, od_rule_key_t, link);
+		od_rule_key_free(rk);
+	}
 
-		/* reloadcallback */
-		od_list_foreach (&modules->link, i) {
-			od_module_t *module;
-			module = od_container_of(i, od_module_t, link);
-			if (module->od_config_reload_cb == NULL) {
-				continue;
-			}
+	od_list_foreach_safe (&deleted, i, j) {
+		od_rule_key_t *rk;
+		rk = od_container_of(i, od_rule_key_t, link);
+		od_rule_key_free(rk);
+	}
 
-			if (module->od_config_reload_cb(&added, &deleted) ==
-			    OD_MODULE_CB_FAIL_RETCODE) {
-				break;
-			}
-		}
+	od_list_foreach_safe (&to_drop, i, j) {
+		od_rule_key_t *rk;
+		rk = od_container_of(i, od_rule_key_t, link);
+		od_debug(&instance->logger, "reload", NULL, NULL,
+			 "rule %s.%s %s %s was dropped", rk->db_name,
+			 rk->usr_name, rk->address_range.string_value,
+			 od_rule_conn_type_to_str(rk->conn_type));
 
-		od_list_foreach_safe (&added, i, j) {
-			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
-			od_rule_key_free(rk);
-		}
-
-		od_list_foreach_safe (&deleted, i, j) {
-			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
-			od_rule_key_free(rk);
-		}
-
-		od_list_foreach_safe (&to_drop, i, j) {
-			od_rule_key_t *rk;
-			rk = od_container_of(i, od_rule_key_t, link);
-			od_rule_key_free(rk);
-		}
+		od_rule_key_free(rk);
 	}
 
 	od_router_unlock(router);
@@ -753,8 +773,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	 * we assign client's rule to pass connection limit to the place where
 	 * error is handled Client does not actually belong to the pool
 	 */
-	client->rule = rule;
 	od_rules_ref(rule);
+	client->rule = rule;
 
 	od_route_lock(route);
 
@@ -824,7 +844,7 @@ bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
 
 static inline od_router_status_t
 od_router_try_create_new_server(od_router_t *router, od_client_t *client,
-				const od_storage_endpoint_t *endpoint,
+				od_storage_endpoint_t *endpoint,
 				od_server_t **out_server)
 {
 	od_server_t *server = NULL;
@@ -919,7 +939,7 @@ od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 
 static inline od_router_status_t
 od_router_try_attach(od_router_t *router, od_client_t *client,
-		     bool wait_for_idle, const od_storage_endpoint_t *endpoint)
+		     bool wait_for_idle, od_storage_endpoint_t *endpoint)
 {
 	od_server_t *server;
 	od_route_t *route = client->route;
@@ -1027,7 +1047,7 @@ static inline int send_waiting_finished_notice(od_client_t *client,
 
 od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    bool wait_for_idle,
-				    const od_storage_endpoint_t *endpoint,
+				    od_storage_endpoint_t *endpoint,
 				    int immediate)
 {
 	od_route_t *route;
@@ -1221,11 +1241,7 @@ static inline int od_router_cancel_cb(od_route_t *route, void **argv)
 		od_router_cancel_t *cancel = argv[1];
 		cancel->id = server->id;
 		cancel->key = server->key;
-		cancel->storage = od_rules_storage_copy(route->rule->storage);
-		if (cancel->storage == NULL) {
-			od_route_unlock(route);
-			return -1;
-		}
+		cancel->storage = od_rules_storage_ref(route->rule->storage);
 		cancel->address = od_server_pool_address(server);
 		cancel->server = server;
 		od_server_cancel_begin(server);

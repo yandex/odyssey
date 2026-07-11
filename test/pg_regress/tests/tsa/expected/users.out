@@ -1,12 +1,4 @@
 \connect 'host=localhost port=6432 user=rouser dbname=postgres'
-NOTICE:  select host tcp://localhost:5433
-select pg_is_in_recovery();
-NOTICE:  select host tcp://localhost:5434
- pg_is_in_recovery 
--------------------
- t
-(1 row)
-
 select pg_is_in_recovery();
 NOTICE:  select host tcp://localhost:5433
  pg_is_in_recovery 
@@ -16,13 +8,19 @@ NOTICE:  select host tcp://localhost:5433
 
 select pg_is_in_recovery();
 NOTICE:  select host tcp://localhost:5434
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5433
  pg_is_in_recovery 
 -------------------
  t
 (1 row)
 
 \connect 'host=localhost port=6432 user=rwuser dbname=postgres'
-NOTICE:  select host tcp://localhost:5432
 select pg_is_in_recovery();
 NOTICE:  select host tcp://localhost:5432
  pg_is_in_recovery 
@@ -45,7 +43,6 @@ NOTICE:  select host tcp://localhost:5432
 (1 row)
 
 \connect 'host=localhost port=6432 user=preferstandbyuser-rw dbname=postgres'
-NOTICE:  select host tcp://localhost:5432
 select pg_is_in_recovery();
 NOTICE:  select host tcp://localhost:5432
  pg_is_in_recovery 
@@ -68,7 +65,6 @@ NOTICE:  select host tcp://localhost:5432
 (1 row)
 
 \connect 'host=localhost port=6432 user=preferstandbyuser-ro dbname=postgres'
-NOTICE:  select host tcp://localhost:5432
 select pg_is_in_recovery();
 NOTICE:  select host tcp://localhost:5433
  pg_is_in_recovery 
@@ -77,7 +73,7 @@ NOTICE:  select host tcp://localhost:5433
 (1 row)
 
 select pg_is_in_recovery();
-NOTICE:  select host tcp://localhost:5433
+NOTICE:  select host tcp://localhost:5434
  pg_is_in_recovery 
 -------------------
  t
