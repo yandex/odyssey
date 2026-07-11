@@ -689,6 +689,7 @@ Possible values are:
 
 - read-write - always select host, available for write
 - read-only - never select host, available for write
+- prefer-standby - try to select host available for write last of all
 - any (the default) - select host randomly
 
 `target_session_attrs "read-write"`

@@ -71,6 +71,16 @@ storage "postgres_server" {
 	}
 }
 
+storage "only_rw_alive" {
+	type "remote"
+	host "localhost:5432,localhost:5430"
+	endpoints_status_poll_interval 5000
+	balancing {
+		method "roundrobin" {}
+		show_notice_messages yes
+	}
+}
+
 database "postgres" {
 	user "postgres" {
 		authentication "none"
@@ -102,6 +112,28 @@ database "postgres" {
 		pool_timeout 1000
 		client_show_id no
 		target_session_attrs "read-write"
+	}
+
+	user "preferstandbyuser-rw" {
+		authentication "none"
+		storage "only_rw_alive"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+		target_session_attrs "prefer-standby"
+	}
+
+	user "preferstandbyuser-ro" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+		target_session_attrs "prefer-standby"
 	}
 }
 
