@@ -49,7 +49,6 @@ struct od_route {
 
 	kiwi_params_lock_t params;
 	int64_t tcp_connections;
-	int last_heartbeat;
 
 	mm_mutex_t lock;
 
@@ -183,7 +182,6 @@ static inline int od_route_init(od_route_t *route,
 {
 	route->rule = NULL;
 	route->tcp_connections = 0;
-	route->last_heartbeat = 0;
 
 	od_route_id_init(&route->id);
 
@@ -368,7 +366,7 @@ int od_route_server_pool_can_add_locked(od_route_t *route,
 int od_route_server_pool_total(od_route_t *route, od_multi_pool_element_t *el);
 
 int od_route_server_pool_next_idle_locked(od_route_t *route,
-					  const od_storage_endpoint_t *endpoint,
+					  od_storage_endpoint_t *endpoint,
 					  od_server_t **server);
 
 od_multi_pool_element_t *

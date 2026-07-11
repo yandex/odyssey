@@ -32,6 +32,7 @@ struct od_config_listen {
 	od_list_t link;
 
 	od_target_session_attrs_t target_session_attrs;
+	int catchup_timeout;
 };
 
 struct od_config_conn_drop_options {
