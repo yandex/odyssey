@@ -346,11 +346,10 @@ void od_frontend_attach_init_candidates(
 	      candidate_cmp_desc);
 }
 
-static inline od_frontend_status_t
-od_frontend_attach_to_endpoint(od_client_t *client, char *context,
-			       kiwi_params_t *route_params,
-			       od_storage_endpoint_t *endpoint,
-			       od_target_session_attrs_t tsa, int immediate)
+static inline od_frontend_status_t od_frontend_attach_to_endpoint(
+	od_client_t *client, char *context, kiwi_params_t *route_params,
+	od_storage_endpoint_t *endpoint, od_target_session_attrs_t tsa,
+	int immediate, int is_deploy)
 {
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
@@ -467,7 +466,7 @@ od_frontend_attach_to_endpoint(od_client_t *client, char *context,
 			return OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH;
 		}
 
-		if (storage->balancing.debug_notice &&
+		if (is_deploy && storage->balancing.debug_notice &&
 		    storage->endpoints_count > 1) {
 			od_address_to_str(&client->server->endpoint->address,
 					  addr, sizeof(addr) - 1);
@@ -580,7 +579,7 @@ static int host_filter(od_storage_endpoint_t *endpoint, void *a)
 static od_frontend_status_t
 attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 		od_storage_endpoint_t **endpoints, size_t count,
-		od_target_session_attrs_t tsa, int fail_fast)
+		od_target_session_attrs_t tsa, int fail_fast, int is_deploy)
 {
 	od_instance_t *instance = client->global->instance;
 	od_frontend_status_t status = OD_EATTACH;
@@ -610,7 +609,8 @@ attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 
 		status = od_frontend_attach_to_endpoint(client, context,
 							route_params, endpoint,
-							tsa, fail_fast);
+							tsa, fail_fast,
+							is_deploy);
 
 		if (status == OD_OK) {
 			return status;
@@ -667,8 +667,9 @@ static size_t prefer_standby_reorder(od_storage_endpoint_t **endpoints,
 	return ro_count;
 }
 
-od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
-					kiwi_params_t *route_params)
+static od_frontend_status_t attach_impl(od_client_t *client, char *context,
+					kiwi_params_t *route_params,
+					int is_deploy)
 {
 	od_route_t *route = client->route;
 	od_rule_storage_t *storage = route->rule->storage;
@@ -699,7 +700,7 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 	od_frontend_status_t status = OD_EATTACH;
 
 	status = attach_to_first(client, context, route_params, endpoints,
-				 count, tsa, acquire_fail_fast);
+				 count, tsa, acquire_fail_fast, is_deploy);
 	if (status != OD_OK) {
 		/*
 		 * attach failed
@@ -711,11 +712,18 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 		if (acquire_fail_fast) {
 			status = attach_to_first(
 				client, context, route_params, endpoints, count,
-				tsa, 0 /* wait for connection from pool */);
+				tsa, 0 /* wait for connection from pool */,
+				is_deploy);
 		}
 	}
 
 	return status;
+}
+
+od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
+					kiwi_params_t *route_params)
+{
+	return attach_impl(client, context, route_params, 0 /* is_deploy */);
 }
 
 od_frontend_status_t od_frontend_attach_and_deploy(od_client_t *client,
@@ -723,7 +731,7 @@ od_frontend_status_t od_frontend_attach_and_deploy(od_client_t *client,
 {
 	/* attach and maybe connect server */
 	od_frontend_status_t status;
-	status = od_frontend_attach(client, context, NULL);
+	status = attach_impl(client, context, NULL, 1 /* is_deploy */);
 	if (status != OD_OK) {
 		return status;
 	}
