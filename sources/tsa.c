@@ -63,6 +63,7 @@ od_target_session_attrs_t od_tsa_get_effective(od_client_t *client)
 int od_tsa_match_rw_state(od_target_session_attrs_t attrs, int is_rw)
 {
 	switch (attrs) {
+	case OD_TARGET_SESSION_ATTRS_PREFER_STANDBY:
 	case OD_TARGET_SESSION_ATTRS_ANY:
 		return 1;
 	case OD_TARGET_SESSION_ATTRS_RW:

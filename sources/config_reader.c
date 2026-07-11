@@ -699,6 +699,8 @@ od_config_reader_target_session_attrs(od_config_reader_t *reader,
 		*out = OD_TARGET_SESSION_ATTRS_ANY;
 	} else if (strcmp(tmp, "read-only") == 0) {
 		*out = OD_TARGET_SESSION_ATTRS_RO;
+	} else if (strcmp(tmp, "prefer-standby") == 0) {
+		*out = OD_TARGET_SESSION_ATTRS_PREFER_STANDBY;
 	} else {
 		od_config_reader_error(
 			reader, NULL,
