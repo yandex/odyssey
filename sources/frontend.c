@@ -880,7 +880,7 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 	if (instance->config.log_session) {
 		client->time_setup = machine_time_us();
 		od_log(&instance->logger, "setup", client, NULL,
-		       "login time: %d microseconds",
+		       "login time: %lu microseconds",
 		       (client->time_setup - client->time_accept));
 		od_log(&instance->logger, "setup", client, NULL,
 		       "client connection from %s to route %s.%s accepted",
@@ -1076,7 +1076,7 @@ od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
 			    client, server,
 			    client->rule->pool->idle_in_transaction_timeout)) {
 			od_log(&instance->logger, "shutdown", client, server,
-			       "drop idle in transaction connection on due timeout %d sec",
+			       "drop idle in transaction connection on due timeout %lu sec",
 			       client->rule->pool->idle_in_transaction_timeout);
 
 			return OD_EIDLE_IN_TRANSACTION_TIMEOUT;
@@ -1121,7 +1121,7 @@ od_process_drop_on_client_idle_timeout(od_client_t *client, od_server_t *server)
 			    client, server,
 			    client->rule->pool->client_idle_timeout)) {
 			od_log(&instance->logger, "shutdown", client, server,
-			       "drop idle client connection on due timeout %d sec",
+			       "drop idle client connection on due timeout %lu sec",
 			       client->rule->pool->client_idle_timeout);
 
 			return OD_EIDLE_TIMEOUT;
@@ -1517,7 +1517,7 @@ static inline int od_frontend_poll_catchup(od_client_t *client,
 
 	od_debug(
 		&instance->logger, "catchup", client, NULL,
-		"client %s%.*s replication %d lag is over catchup timeout %d\n",
+		"client %s%.*s replication %ld lag is over catchup timeout %d\n",
 		client->id.id_prefix, OD_ID_LEN, client->id.id, lag, timeout);
 
 	return OD_ECATCHUP_TIMEOUT;
@@ -2340,7 +2340,7 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	od_router_t *router = client->global->router;
 	od_server_t *server = client->server;
 	od_log(&instance->logger, context, client, server,
-	       "client disconnected, addr '%s', io error = %s, status %s, working time %lldus",
+	       "client disconnected, addr '%s', io error = %s, status %s, working time %luus",
 	       client->peer, od_io_error(&client->io),
 	       od_frontend_status_to_str(status),
 	       machine_time_us() - client->time_accept);
@@ -2400,7 +2400,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		/* graceful disconnect or kill */
 		if (instance->config.log_session) {
 			od_log(&instance->logger, context, client, server,
-			       "client disconnected (route %s.%s, working time: %lldus)",
+			       "client disconnected (route %s.%s, working time: %luus)",
 			       route->rule->db_name, route->rule->user_name,
 			       machine_time_us() - client->time_accept);
 		}
