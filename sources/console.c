@@ -136,7 +136,7 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 
 		total->count_parse, /* count of backend parse msgs */
 		total->count_parse_reuse, /* count of backend parse msgs reuse */
-		total->count_cancel /* total_cancels */
+		total->count_cancel /* total_cancel_count */
 	};
 
 	for (size_t i = 0; i < sizeof(stats) / sizeof(stats[0]); i++) {
@@ -294,7 +294,7 @@ static inline int od_console_show_stats(od_client_t *client,
 		    "avg_server_assignment_count", "avg_recv", "avg_sent",
 		    "avg_xact_time", "avg_query_time", "avg_wait_time",
 		    "total_parse_count", "total_parse_count_reuse",
-		    "total_cancels") == NULL) {
+		    "total_cancel_count") == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
