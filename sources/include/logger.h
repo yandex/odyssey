@@ -117,9 +117,43 @@ extern int od_logger_open_syslog(od_logger_t *, char *, char *);
 extern void od_logger_shutdown(od_logger_t *);
 extern void od_logger_close(od_logger_t *);
 extern void od_logger_write(od_logger_t *, od_logger_level_t, char *, void *,
-			    void *, char *, va_list);
+			    void *, char *, va_list)
+	__attribute__((format(printf, 6, 0)));
 
 void od_logger_wait_finish(od_logger_t *);
+
+static inline void od_log(od_logger_t *logger, char *context, void *client,
+			  void *server, char *fmt, ...)
+	__attribute__((format(printf, 5, 6)));
+static inline void od_glog(char *context, void *client, void *server, char *fmt,
+			   ...) __attribute__((format(printf, 4, 5)));
+static inline void od_debug(od_logger_t *logger, char *context, void *client,
+			    void *server, char *fmt, ...)
+	__attribute__((format(printf, 5, 6)));
+static inline void od_gdebug(char *context, void *client, void *server,
+			     char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
+static inline void od_gerror(char *context, void *client, void *server,
+			     char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
+static inline void od_fatal(od_logger_t *logger, char *context, void *client,
+			    void *server, char *fmt, ...)
+	__attribute__((format(printf, 5, 6)));
+static inline void od_gfatal(char *context, void *client, void *server,
+			     char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
+static inline void od_vglog(char *context, void *client, void *server,
+			    char *fmt, va_list args)
+	__attribute__((format(printf, 4, 0)));
+static inline void od_vgdebug(char *context, void *client, void *server,
+			      char *fmt, va_list args)
+	__attribute__((format(printf, 4, 0)));
+static inline void od_vgerror(char *context, void *client, void *server,
+			      char *fmt, va_list args)
+	__attribute__((format(printf, 4, 0)));
+static inline void od_vgfatal(char *context, void *client, void *server,
+			      char *fmt, va_list args)
+	__attribute__((format(printf, 4, 0)));
 
 static inline void od_log(od_logger_t *logger, char *context, void *client,
 			  void *server, char *fmt, ...)
