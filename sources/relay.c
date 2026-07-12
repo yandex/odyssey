@@ -262,7 +262,8 @@ static od_frontend_status_t process_set_appname(od_client_t *client,
 	rc = od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0);
 	if (rc != 0) {
 		od_gerror("query", client, client->server,
-			  "can't get peer name, errno = ", machine_errno());
+			  "can't get peer name, errno = %d (%s)",
+			  mm_errno_get(), strerror(mm_errno_get()));
 		goto error;
 	}
 

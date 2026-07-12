@@ -487,12 +487,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	       ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE,
 	       features);
 #endif
-	od_log(&instance->logger, "init", NULL, NULL, "");
+	od_log(&instance->logger, "init", NULL, NULL, "\n");
 
 	/* print configuration */
 	od_log(&instance->logger, "init", NULL, NULL,
 	       "using configuration file '%s'", instance->config_file);
-	od_log(&instance->logger, "init", NULL, NULL, "");
+	od_log(&instance->logger, "init", NULL, NULL, "\n");
 
 	if (instance->config.log_config) {
 		od_config_print(&instance->config, &instance->logger);

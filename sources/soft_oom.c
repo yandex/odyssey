@@ -11,6 +11,7 @@
 #include <signal.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/machine.h>
 
 #include <soft_oom.h>
 #include <config.h>
@@ -388,10 +389,11 @@ static inline void od_soft_oom_checker(void *arg)
 			break;
 		}
 
-		if (rc == -1 && machine_errno() != ETIMEDOUT) {
+		int errno_ = mm_errno_get();
+		if (rc == -1 && errno_ != ETIMEDOUT) {
 			od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
 				  "stop flag wait failed: %s (%d)",
-				  strerror(machine_errno()), machine_errno);
+				  strerror(errno_), errno_);
 			machine_sleep(checker->config->check_interval_ms);
 			continue;
 		}

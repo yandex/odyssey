@@ -415,7 +415,7 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 
 	od_log(logger, "config", NULL, NULL, "SCRAM auth method:       OK");
 
-	od_log(logger, "config", NULL, NULL, "");
+	od_log(logger, "config", NULL, NULL, "\n");
 	od_list_t *i;
 	od_list_foreach (&config->listen, i) {
 		od_config_listen_t *listen;
@@ -451,6 +451,6 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 			       "  tls_protocols %s",
 			       listen->tls_opts->tls_protocols);
 		}
-		od_log(logger, "config", NULL, NULL, "");
+		od_log(logger, "config", NULL, NULL, "\n");
 	}
 }
