@@ -1,5 +1,5 @@
 # Soft OOM support
-*since 1.5.1*
+*since 1.6.0*
 
 Sometimes, even when using a connection pooler, you may encounter
 Out Of Memory (OOM) situations on the PostgreSQL server. In such
