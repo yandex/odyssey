@@ -72,7 +72,10 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 	module_ptr->handle = handle;
 	od_list_init(&module_ptr->link);
 	od_list_append(&modules->link, &module_ptr->link);
-	strcat(module_ptr->path, target_module_path);
+	size_t existing_len = strlen(module_ptr->path);
+	snprintf(module_ptr->path + existing_len,
+		 sizeof(module_ptr->path) - existing_len,
+		 "%s", target_module_path);
 
 	if (module_ptr->module_init_cb) {
 		return module_ptr->module_init_cb(logger);
