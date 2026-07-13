@@ -93,7 +93,7 @@ static inline int pool_next_idle_shared_locked(od_route_t *route,
 
 	od_server_t *new_server = od_server_allocate(
 		route->rule->pool->reserve_prepared_statement);
-	if (server == NULL) {
+	if (new_server == NULL) {
 		return OD_ROUTER_ERROR;
 	}
 	od_id_generate(&new_server->id, "s");
