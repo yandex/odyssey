@@ -103,7 +103,7 @@ od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
 	return storage;
 }
 
-od_rule_storage_t *od_rules_storage_match(od_rules_t *rules, char *name)
+od_rule_storage_t *od_rules_storage_match(od_rules_t *rules, const char *name)
 {
 	od_list_t *i;
 	od_list_foreach (&rules->storages, i) {

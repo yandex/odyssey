@@ -1,6 +1,6 @@
 FROM fedora:40
 
-RUN dnf install -y cmake gcc make git openssl-devel systemd-devel 
+RUN dnf install -y cmake gcc make git openssl-devel systemd-devel bison flex
 
 COPY . /workdir
 WORKDIR /workdir

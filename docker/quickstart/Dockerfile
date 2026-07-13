@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libpam0g-dev \
     libldap-dev \
+    bison flex \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /odyssey

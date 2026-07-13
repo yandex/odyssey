@@ -56,3 +56,7 @@ error:
 
 bool od_config_reader_keyword(od_config_reader_t *reader,
 			      od_keyword_t *keyword);
+
+int od_config_reader_open(od_config_reader_t *reader, const char *config_file);
+
+void od_config_reader_close(od_config_reader_t *reader);

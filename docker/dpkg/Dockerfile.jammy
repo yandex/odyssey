@@ -18,6 +18,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     make cmake \
     tzdata \
     libsystemd-dev \
+    bison flex \
     debhelper debootstrap devscripts equivs
 
 RUN apt-get clean autoclean; \

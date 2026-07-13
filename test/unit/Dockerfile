@@ -18,6 +18,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     build-essential \
     cmake \
     clang \
+    bison flex \
     libpthread-stubs0-dev libclang-rt-dev
 
 RUN mkdir /odyssey

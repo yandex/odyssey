@@ -476,11 +476,11 @@ static od_keyword_t od_role_keywords[] = {
 	{ 0, 0, 0 },
 };
 
-static inline int od_config_reader_watchdog(od_config_reader_t *reader,
-					    od_storage_watchdog_t *watchdog,
-					    od_extension_t *extensions);
+static int od_config_reader_watchdog(od_config_reader_t *reader,
+				     od_storage_watchdog_t *watchdog,
+				     od_extension_t *extensions);
 
-static int od_config_reader_open(od_config_reader_t *reader, char *config_file)
+int od_config_reader_open(od_config_reader_t *reader, const char *config_file)
 {
 	od_list_init(&reader->shared_pools);
 	reader->config_file = config_file;
@@ -533,7 +533,7 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-static void od_config_reader_close(od_config_reader_t *reader)
+void od_config_reader_close(od_config_reader_t *reader)
 {
 	od_list_t *i, *s;
 	od_list_foreach_safe (&reader->shared_pools, i, s) {

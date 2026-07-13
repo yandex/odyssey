@@ -10,7 +10,9 @@ Build-Depends: debhelper-compat (= 13),
                libssl-dev (>= 1.0.1),
                libpam-dev,
                libldap-dev,
-               libsystemd-dev
+               libsystemd-dev,
+               bison,
+               flex
 Homepage: https://pg-odyssey.tech
 Vcs-Git: https://github.com/yandex/odyssey.git
 Vcs-Browser: https://github.com/yandex/odyssey
