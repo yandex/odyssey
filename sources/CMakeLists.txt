@@ -18,6 +18,7 @@ set(od_src
     machinarium/ds/hm.c
     machinarium/ds/vector.c
     machinarium/ds/queue.c
+    machinarium/ds/heap.c
     machinarium/thread.c
     machinarium/lrand48.c
     machinarium/loop.c
@@ -329,6 +330,7 @@ set(od_test_src
     tests/machinarium/test_tsan_simple_race_example.c
     tests/machinarium/test_vrb.c
     tests/machinarium/test_queue.c
+    tests/machinarium/test_heap.c
     tests/machinarium/test_sem.c
     tests/odyssey/test_attribute.c
     tests/odyssey/test_tdigest.c
