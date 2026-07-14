@@ -1,3 +1,9 @@
+odyssey (1.5.2-1) unstable; urgency=medium
+
+  * New upstream release 1.5.2
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Tue, 14 Jul 2026 05:44:16 +0000
+
 odyssey (1.5.1-rc9-1) unstable; urgency=medium
 
   * fix logger shutdown
