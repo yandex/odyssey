@@ -21,15 +21,15 @@ struct mm_clock {
 	uint64_t time_us;
 	uint64_t time_ns;
 	uint32_t time_sec;
-	mm_buf_t timers;
-	int timers_count;
+
+	mm_heap_t timers;
 	int timers_seq;
 };
 
 void mm_clock_init(mm_clock_t *);
 void mm_clock_free(mm_clock_t *);
 void mm_clock_update(mm_clock_t *);
-int mm_clock_step(mm_clock_t *);
+void mm_clock_step(mm_clock_t *);
 int mm_clock_timer_add(mm_clock_t *, mm_timer_t *);
 int mm_clock_timer_del(mm_clock_t *, mm_timer_t *);
 
@@ -56,7 +56,7 @@ static inline void mm_timer_stop(mm_timer_t *timer)
 	}
 	mm_clock_t *clock = timer->clock;
 	mm_clock_timer_del(clock, timer);
-	if (clock->timers_count == 0) {
+	if (mm_heap_size(&clock->timers) == 0) {
 		clock->active = 0;
 	}
 }
