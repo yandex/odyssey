@@ -9,11 +9,14 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <machinarium/ds/heap.h>
+
 typedef struct mm_timer mm_timer_t;
 
 typedef void (*mm_timer_callback_t)(mm_timer_t *);
 
 struct mm_timer {
+	mm_heap_node_t heap;
 	int active;
 	uint64_t timeout;
 	uint32_t interval;
@@ -33,4 +36,7 @@ static inline void mm_timer_init(mm_timer_t *timer, mm_timer_callback_t cb,
 	timer->callback = cb;
 	timer->arg = arg;
 	timer->clock = NULL;
+	timer->heap.parent = NULL;
+	timer->heap.left = NULL;
+	timer->heap.right = NULL;
 }
