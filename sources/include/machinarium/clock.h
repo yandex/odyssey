@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 
+#include <machinarium/ds/heap.h>
 #include <machinarium/buf.h>
 #include <machinarium/timer.h>
 
