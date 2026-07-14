@@ -32,6 +32,10 @@
 
 #define od_container_of(N, T, F) ((T *)((char *)(N) - __builtin_offsetof(T, F)))
 
+#ifndef lengthof
+#define lengthof(array) (sizeof(array) / sizeof((array)[0]))
+#endif
+
 #define OK_RESPONSE 0
 #define NOT_OK_RESPONSE -1
 
