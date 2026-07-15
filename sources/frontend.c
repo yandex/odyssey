@@ -2339,11 +2339,26 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
 	od_server_t *server = client->server;
-	od_log(&instance->logger, context, client, server,
-	       "client disconnected, addr '%s', io error = %s, status %s, working time %luus",
-	       client->peer, od_io_error(&client->io),
-	       od_frontend_status_to_str(status),
-	       machine_time_us() - client->time_accept);
+	od_route_t *route = client->route;
+	uint64_t working_time_us = machine_time_us() - client->time_accept;
+
+	if (instance->config.log_session) {
+		if (route != NULL) {
+			od_log(&instance->logger, context, client, server,
+			       "client disconnected addr '%s', io error = %s, status %s, route %s.%s, working time: %luus",
+			       client->peer, od_io_error(&client->io),
+			       od_frontend_status_to_str(status),
+			       route->rule->db_name, route->rule->user_name,
+			       working_time_us);
+		} else {
+			od_log(&instance->logger, context, client, server,
+			       "client disconnected, addr '%s', io error = %s, status %s, working time %luus",
+			       client->peer, od_io_error(&client->io),
+			       od_frontend_status_to_str(status),
+			       working_time_us);
+		}
+	}
+
 	if (server == NULL) {
 		return;
 	}
@@ -2373,7 +2388,6 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
-	int rc;
 
 	od_server_t *server = client->server;
 
@@ -2397,25 +2411,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_STOP:
 	/* fallthrough */
 	case OD_OK:
-		/* graceful disconnect or kill */
-		if (instance->config.log_session) {
-			od_log(&instance->logger, context, client, server,
-			       "client disconnected (route %s.%s, working time: %luus)",
-			       route->rule->db_name, route->rule->user_name,
-			       machine_time_us() - client->time_accept);
-		}
-		if (!client->server) {
-			break;
-		}
-
-		rc = od_reset(server);
-		if (rc != 1) {
-			/* close backend connection */
-			od_router_close(router, client);
-			break;
-		}
-		/* push server to router server pool */
-		od_router_detach(router, client);
+		od_frontend_on_client_disconnect(status, client, context,
+						 0 /* force server close */);
 		break;
 
 	case OD_EOOM:
@@ -2482,16 +2479,6 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			 * link in case of client errors */
 		od_frontend_on_client_disconnect(status, client, context,
 						 0 /* force server close */);
-		break;
-
-	case OD_ECLIENT_COPY_IN_XPROTO:
-		od_frontend_fatal_detailed(
-			client, KIWI_SYSTEM_ERROR,
-			"Odyssey met CopyInResponse when executing xproto messages, this is not implemented now",
-			"Contact developers, see https://github.com/yandex/odyssey for more",
-			"Copy protocol in xproto met, not implemented now");
-		od_frontend_on_client_disconnect(status, client, context,
-						 1 /* force server close */);
 		break;
 
 	case OD_ECLIENT_PROTOCOL_ERROR:
