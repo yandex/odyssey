@@ -59,6 +59,10 @@ void od_client_init(od_client_t *client)
 	memset(client->peer, 0, sizeof(client->peer));
 
 	client->pending_begin = 0;
+
+	memset(client->scram_client_key, 0, sizeof(client->scram_client_key));
+	memset(client->scram_server_key, 0, sizeof(client->scram_server_key));
+	client->scram_key_valid = 0;
 }
 
 void od_client_free(od_client_t *client)

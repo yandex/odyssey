@@ -133,6 +133,9 @@ static inline void od_debug(od_logger_t *logger, char *context, void *client,
 static inline void od_gdebug(char *context, void *client, void *server,
 			     char *fmt, ...)
 	__attribute__((format(printf, 4, 5)));
+static inline void od_error(od_logger_t *logger, char *context, void *client,
+			    void *server, char *fmt, ...)
+	__attribute__((format(printf, 5, 6)));
 static inline void od_gerror(char *context, void *client, void *server,
 			     char *fmt, ...)
 	__attribute__((format(printf, 4, 5)));
