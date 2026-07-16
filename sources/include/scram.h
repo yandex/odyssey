@@ -29,7 +29,7 @@ struct od_scram_state {
 	int iterations;
 	char *salt;
 
-	int has_scram_secret;
+	int use_passthrough_keys;
 	uint8_t stored_key[OD_SCRAM_MAX_KEY_LEN];
 	uint8_t server_key[OD_SCRAM_MAX_KEY_LEN];
 	uint8_t client_key[OD_SCRAM_MAX_KEY_LEN];

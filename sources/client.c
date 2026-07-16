@@ -87,6 +87,11 @@ void od_client_free(od_client_t *client)
 	if (client->external_id) {
 		od_free(client->external_id);
 	}
+
+	memset(client->scram_client_key, 0, sizeof(client->scram_client_key));
+	memset(client->scram_server_key, 0, sizeof(client->scram_server_key));
+	client->scram_key_valid = 0;
+
 	od_free(client);
 }
 

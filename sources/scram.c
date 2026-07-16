@@ -388,7 +388,7 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 	const char *errstr = NULL;
 	uint8_t client_key[OD_SCRAM_MAX_KEY_LEN];
 
-	if (scram_state->has_scram_secret) {
+	if (scram_state->use_passthrough_keys) {
 		memcpy(client_key, scram_state->client_key,
 		       OD_SCRAM_MAX_KEY_LEN);
 	} else {
@@ -609,7 +609,7 @@ od_retcode_t od_scram_verify_server_signature(od_scram_state_t *scram_state,
 
 	uint8_t server_key[OD_SCRAM_MAX_KEY_LEN];
 
-	if (scram_state->has_scram_secret) {
+	if (scram_state->use_passthrough_keys) {
 		memcpy(server_key, scram_state->server_key,
 		       OD_SCRAM_MAX_KEY_LEN);
 	} else {

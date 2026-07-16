@@ -1090,19 +1090,12 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 	/* use storage or user password */
 	char *password = NULL;
 
-	server->scram_state.has_scram_secret = 0;
+	server->scram_state.use_passthrough_keys = 0;
 
 	if (route->rule->storage_password) {
 		password = route->rule->storage_password;
-	} else if (client != NULL) {
-		if (!client->scram_key_valid) {
-			od_error(
-				&instance->logger, "auth", NULL, server,
-				"cannot authenticate without SCRAM secret from client");
-			return -1;
-		}
-
-		server->scram_state.has_scram_secret = true;
+	} else if (client != NULL && client->scram_key_valid) {
+		server->scram_state.use_passthrough_keys = 1;
 		memcpy(server->scram_state.client_key, client->scram_client_key,
 		       OD_SCRAM_MAX_KEY_LEN);
 		memcpy(server->scram_state.server_key, client->scram_server_key,
@@ -1125,7 +1118,7 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 #endif
 	od_debug(&instance->logger, "auth", NULL, server,
 		 "continue SASL authentication %s",
-		 server->scram_state.has_scram_secret ?
+		 server->scram_state.use_passthrough_keys ?
 			 "pass-through SCRAM key" :
 			 "password");
 
