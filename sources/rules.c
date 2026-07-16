@@ -2064,9 +2064,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				od_error(
 					logger, "rules", NULL, NULL,
 					"auth query and pam service auth method cannot be "
-					"used simultaneously",
-					rule->db_name, rule->user_name,
-					rule->address_range.string_value);
+					"used simultaneously");
 				return -1;
 			}
 #endif

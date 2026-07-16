@@ -236,6 +236,13 @@ regress_test:
 		--tag=odyssey/regress-tester .
 	docker run odyssey/regress-tester
 
+scram_passthrough_test:
+	docker build -f ./test/scram-passthrough/Dockerfile \
+		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
+		--build-arg odyssey_cc=$(ODYSSEY_CC) \
+		--tag=odyssey/scram-passthrough-tester .
+	docker run odyssey/scram-passthrough-tester
+
 ci-unittests:
 	docker build \
 		--platform $(ODYSSEY_TEST_TARGET_PLATFORM) \
