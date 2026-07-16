@@ -742,6 +742,14 @@ static inline int od_auth_frontend_scram_sha_256(od_client_t *client)
 
 	int rc = od_auth_frontend_scram_sha_256_internal(client, &scram_state);
 
+	if (rc == 0) {
+		memcpy(client->scram_client_key, scram_state.client_key,
+		       sizeof(scram_state.client_key));
+		memcpy(client->scram_server_key, scram_state.server_key,
+		       sizeof(scram_state.server_key));
+		client->scram_key_valid = 1;
+	}
+
 	od_scram_state_free(&scram_state);
 
 	return rc;
@@ -1080,17 +1088,18 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 	}
 
 	/* use storage or user password */
-	char *password;
+	char *password = NULL;
+
+	server->scram_state.use_passthrough_keys = 0;
 
 	if (route->rule->storage_password) {
 		password = route->rule->storage_password;
-	} else if (client != NULL && client->password.password != NULL) {
-		od_error(
-			&instance->logger, "auth", NULL, server,
-			"cannot authenticate with SCRAM secret from auth_query",
-			route->rule->db_name, route->rule->user_name);
-
-		return -1;
+	} else if (client != NULL && client->scram_key_valid) {
+		server->scram_state.use_passthrough_keys = 1;
+		memcpy(server->scram_state.client_key, client->scram_client_key,
+		       OD_SCRAM_MAX_KEY_LEN);
+		memcpy(server->scram_state.server_key, client->scram_server_key,
+		       OD_SCRAM_MAX_KEY_LEN);
 	} else if (route->rule->password) {
 		password = route->rule->password;
 	} else if (client->received_password.password) {
@@ -1108,7 +1117,10 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 	}
 #endif
 	od_debug(&instance->logger, "auth", NULL, server,
-		 "continue SASL authentication using password %s", password);
+		 "continue SASL authentication %s",
+		 server->scram_state.use_passthrough_keys ?
+			 "pass-through SCRAM key" :
+			 "password");
 
 	/* SASLResponse Message */
 	machine_msg_t *msg = od_scram_create_client_final_message(

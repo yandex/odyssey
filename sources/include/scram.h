@@ -8,6 +8,13 @@
 
 #include <od_memory.h>
 
+#include <pg_compat.h>
+#include <common/cryptohash.h>
+#include <common/scram-common.h>
+
+#define OD_SCRAM_MAX_KEY_LEN SCRAM_MAX_KEY_LEN
+#define OD_SCRAM_SHA_256_DEFAULT_ITERATIONS SCRAM_SHA_256_DEFAULT_ITERATIONS
+
 typedef struct od_scram_state od_scram_state_t;
 
 struct od_scram_state {
@@ -22,8 +29,10 @@ struct od_scram_state {
 	int iterations;
 	char *salt;
 
-	uint8_t stored_key[32];
-	uint8_t server_key[32];
+	int use_passthrough_keys;
+	uint8_t stored_key[OD_SCRAM_MAX_KEY_LEN];
+	uint8_t server_key[OD_SCRAM_MAX_KEY_LEN];
+	uint8_t client_key[OD_SCRAM_MAX_KEY_LEN];
 };
 
 static inline void od_scram_state_init(od_scram_state_t *state)
