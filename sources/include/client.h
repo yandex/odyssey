@@ -18,6 +18,7 @@
 #include <rules.h>
 #include <list.h>
 #include <pstmt.h>
+#include <scram.h>
 #include <od_ldap.h>
 
 typedef enum {
@@ -85,6 +86,10 @@ struct od_client {
 	char *external_id;
 
 	int pending_begin;
+
+	uint8_t scram_client_key[OD_SCRAM_MAX_KEY_LEN];
+	uint8_t scram_server_key[OD_SCRAM_MAX_KEY_LEN];
+	int scram_key_valid;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)
