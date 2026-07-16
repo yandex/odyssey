@@ -1,3 +1,16 @@
+odyssey (1.5.2-rc1-1) unstable; urgency=medium
+
+  * scram-passthrough impl (#1463)
+  * use heap in timers (#1458)
+  * catchup-timeout port (#1416)
+  * support for prefer-standby tsa (#1451)
+  * apply PG msg size limits (#1446)
+  * leastconn algo (#1385)
+  * deffered BEGIN execution (#1384)
+  * preserve endpoint in server (#1383)
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Thu, 16 Jul 2026 08:26:24 +0000
+
 odyssey (1.5.2-1) unstable; urgency=medium
 
   * New upstream release 1.5.2
