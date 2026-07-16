@@ -64,6 +64,7 @@ set(od_src
     machinarium/compression.c
     machinarium/cert_hash.c
     machinarium/sem.c
+    math/hdr.c
     od_memory.c
     affinity.c
     balancing.c
