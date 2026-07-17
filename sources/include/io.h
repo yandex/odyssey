@@ -172,7 +172,13 @@ static inline machine_msg_t *od_read_startup(od_io_t *io, uint32_t time_ms)
 	return msg;
 }
 
-static inline machine_msg_t *od_read(od_io_t *io, uint32_t time_ms)
+typedef enum {
+	OD_READ_FE,
+	OD_READ_BE,
+} od_read_msg_type_t;
+
+static inline machine_msg_t *od_read(od_io_t *io, uint32_t time_ms,
+				     od_read_msg_type_t type)
 {
 	kiwi_header_t header;
 	int rc;
@@ -183,7 +189,15 @@ static inline machine_msg_t *od_read(od_io_t *io, uint32_t time_ms)
 
 	/* pre-validate packet header */
 	uint32_t size;
-	rc = kiwi_validate_header((char *)&header, sizeof(header), &size);
+	if (type == OD_READ_FE) {
+		rc = kiwi_validate_fe_header((char *)&header, sizeof(header),
+					     &size);
+	} else if (type == OD_READ_BE) {
+		rc = kiwi_validate_be_header((char *)&header, sizeof(header),
+					     &size);
+	} else {
+		abort();
+	}
 	if (rc == -1) {
 		return NULL;
 	}

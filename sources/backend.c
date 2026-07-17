@@ -236,7 +236,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 	assert(server->client);
 
 	for (;;) {
-		msg = od_read(&server->io, UINT32_MAX);
+		msg = od_read(&server->io, UINT32_MAX, OD_READ_BE);
 		if (msg == NULL) {
 			od_error(&instance->logger, "startup", client, server,
 				 "read error: %s", od_io_error(&server->io));
@@ -843,7 +843,8 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	 * so just do the things older pg did - it will work too
 	 * https://github.com/postgres/postgres/blob/REL_16_0/src/interfaces/libpq/fe-connect.c#L4946-L4960
 	 */
-	machine_msg_t *unused = od_read(&server->io, cancel_timeout);
+	machine_msg_t *unused =
+		od_read(&server->io, cancel_timeout, OD_READ_BE);
 	if (unused != NULL) {
 		machine_msg_free(unused);
 	}

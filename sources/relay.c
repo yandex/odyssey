@@ -582,7 +582,7 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 	machine_msg_t *msg = NULL;
 
 	while (!done) {
-		msg = od_read(&server->io, timeout_ms);
+		msg = od_read(&server->io, timeout_ms, OD_READ_BE);
 		if (msg == NULL) {
 			return OD_ESERVER_READ;
 		}

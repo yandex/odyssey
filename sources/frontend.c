@@ -1233,7 +1233,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 				return status;
 			}
 			/* one minute */
-			msg = od_read(&client->io, 60000);
+			msg = od_read(&client->io, 60000, OD_READ_FE);
 
 			if (machine_timedout()) {
 				/* retry wait to recheck exit condition */
@@ -1846,8 +1846,8 @@ static od_frontend_status_t client_process_message(od_client_t *client,
 	od_frontend_status_t status;
 
 	uint32_t size;
-	int rc = kiwi_validate_header((char *)header, sizeof(kiwi_header_t),
-				      &size);
+	int rc = kiwi_validate_fe_header((char *)header, sizeof(kiwi_header_t),
+					 &size);
 	if (rc == -1) {
 		od_gerror(
 			"main", client, client->server,
@@ -2140,7 +2140,7 @@ static od_frontend_status_t process_server_async_msg(od_client_t *client,
 						     od_server_t *server)
 {
 	int rc;
-	machine_msg_t *msg = od_read(&server->io, UINT32_MAX);
+	machine_msg_t *msg = od_read(&server->io, UINT32_MAX, OD_READ_BE);
 	if (msg == NULL) {
 		return OD_ESERVER_READ;
 	}
