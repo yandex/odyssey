@@ -48,6 +48,7 @@ sleep 1
   -elephant-timeout 60s \
   -elephant-max-factor 1.2 \
   -elephant-max-duration 50s || {
+    sleep 1
     cat /odyssey.log
     for i in /asan-output*; do
       cat $i

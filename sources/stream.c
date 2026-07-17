@@ -388,10 +388,11 @@ static od_frontend_status_t stream_eat(char *ctx, stream_t *stream,
 	kiwi_be_type_t type = hdr->type;
 
 	uint32_t body;
-	int rc = kiwi_validate_header(data, sizeof(kiwi_header_t), &body);
+	int rc = kiwi_validate_be_header(data, sizeof(kiwi_header_t), &body);
 	if (rc != 0) {
 		od_gerror(ctx, server->client, server,
-			  "invalid package header from server");
+			  "invalid package header from server ('%c', size=%u)",
+			  hdr->type, hdr->len);
 		return OD_ESERVER_READ;
 	}
 	body -= sizeof(uint32_t);
@@ -706,10 +707,11 @@ static od_frontend_status_t copy_stream_eat(copy_stream_t *cs, char *ctx,
 	kiwi_fe_type_t type = hdr->type;
 
 	uint32_t body;
-	int rc = kiwi_validate_header(data, sizeof(kiwi_header_t), &body);
+	int rc = kiwi_validate_fe_header(data, sizeof(kiwi_header_t), &body);
 	if (rc != 0) {
 		od_gerror(ctx, client, client->server,
-			  "invalid package header from client");
+			  "invalid package header from client ('%c', size=%u)",
+			  hdr->type, hdr->len);
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
 	body -= sizeof(uint32_t);

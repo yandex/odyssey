@@ -34,7 +34,7 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 	/* wait for response */
 	int has_result = 0;
 	for (;;) {
-		msg = od_read(&server->io, timeout_ms);
+		msg = od_read(&server->io, timeout_ms, OD_READ_BE);
 		if (msg == NULL) {
 			if (!machine_timedout()) {
 				od_error(&instance->logger, context,

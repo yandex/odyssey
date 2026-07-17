@@ -172,14 +172,14 @@ kiwi_validate_startup_header(char *data, uint32_t data_size, uint32_t *size)
 	assert(data_size >= sizeof(uint32_t));
 	*size = kiwi_read_startup_size(data, sizeof(uint32_t));
 	/* do not expect big startup messages */
-	if (kiwi_unlikely(*size >= PQ_SMALL_MESSAGE_LIMIT)) {
+	if (kiwi_unlikely(*size > PQ_SMALL_MESSAGE_LIMIT)) {
 		return -1;
 	}
 	return 0;
 }
 
-KIWI_API static inline int kiwi_validate_header(char *data, uint32_t data_size,
-						uint32_t *size)
+KIWI_API static inline int
+kiwi_validate_fe_header(char *data, uint32_t data_size, uint32_t *size)
 {
 	(void)data_size; /* Silent Compiler warnings */
 	assert(data_size >= sizeof(kiwi_header_t));
@@ -195,7 +195,46 @@ KIWI_API static inline int kiwi_validate_header(char *data, uint32_t data_size,
 		return -1;
 	}
 
-	if (kiwi_likely(*size >= PQ_LARGE_MESSAGE_LIMIT)) {
+	uint32_t limit = PQ_LARGE_MESSAGE_LIMIT;
+
+	switch (header->type) {
+	case KIWI_FE_COPY_DONE:
+	case KIWI_FE_COPY_FAIL:
+	case KIWI_FE_FLUSH:
+	case KIWI_FE_SYNC:
+	case KIWI_FE_TERMINATE:
+	case KIWI_FE_CLOSE:
+	case KIWI_FE_DESCRIBE:
+	case KIWI_FE_EXECUTE:
+		limit = PQ_SMALL_MESSAGE_LIMIT;
+		break;
+	}
+
+	if (kiwi_likely(*size > limit)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+KIWI_API static inline int
+kiwi_validate_be_header(char *data, uint32_t data_size, uint32_t *size)
+{
+	(void)data_size; /* Silent Compiler warnings */
+	assert(data_size >= sizeof(kiwi_header_t));
+	*size = kiwi_read_size(data, sizeof(kiwi_header_t));
+
+	kiwi_header_t *header = (kiwi_header_t *)data;
+	if (kiwi_unlikely(*size < sizeof(uint32_t))) {
+		return -1;
+	}
+
+	/* check supported protocol message type */
+	if (kiwi_unlikely(header->type < 0x20)) {
+		return -1;
+	}
+
+	if (kiwi_likely(*size > PQ_LARGE_MESSAGE_LIMIT)) {
 		return -1;
 	}
 

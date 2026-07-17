@@ -242,7 +242,8 @@ static int read_group_list(od_client_t *client, od_server_t *server,
 			   od_list_t *members, uint32_t timeout_ms)
 {
 	while (1) {
-		machine_msg_t *msg = od_read(&server->io, timeout_ms);
+		machine_msg_t *msg =
+			od_read(&server->io, timeout_ms, OD_READ_BE);
 		if (msg == NULL) {
 			int err = mm_errno_get();
 			od_gerror("group_checker", client, server,

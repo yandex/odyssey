@@ -1098,7 +1098,7 @@ static od_frontend_status_t run_parse_shadow(od_xplan_entry_t *ps,
 
 	od_instance_t *instance = client->global->instance;
 
-	machine_msg_t *msg = od_read(&server->io, timeout_ms);
+	machine_msg_t *msg = od_read(&server->io, timeout_ms, OD_READ_BE);
 	if (msg == NULL) {
 		return OD_ESERVER_READ;
 	}
@@ -1153,7 +1153,7 @@ static od_frontend_status_t run_deffered_begin(od_xplan_entry_t *ps,
 	machine_msg_t *msg = NULL;
 
 	while (!done) {
-		msg = od_read(&server->io, timeout_ms);
+		msg = od_read(&server->io, timeout_ms, OD_READ_BE);
 		if (msg == NULL) {
 			return OD_ESERVER_READ;
 		}
