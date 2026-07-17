@@ -47,7 +47,8 @@ static inline int od_auth_frontend_external_authentication(od_client_t *client)
 
 	/* wait for password response */
 	for (;;) {
-		msg = od_read(&client->io, od_client_login_timeout(client));
+		msg = od_read(&client->io, od_client_login_timeout(client),
+			      OD_READ_FE);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -134,7 +135,8 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 
 	/* wait for password response */
 	for (;;) {
-		msg = od_read(&client->io, od_client_login_timeout(client));
+		msg = od_read(&client->io, od_client_login_timeout(client),
+			      OD_READ_FE);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -321,7 +323,8 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 
 	/* wait for password response */
 	for (;;) {
-		msg = od_read(&client->io, od_client_login_timeout(client));
+		msg = od_read(&client->io, od_client_login_timeout(client),
+			      OD_READ_FE);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -490,7 +493,8 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 
 	/* wait for SASLInitialResponse */
 	for (;;) {
-		msg = od_read(&client->io, od_client_login_timeout(client));
+		msg = od_read(&client->io, od_client_login_timeout(client),
+			      OD_READ_FE);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -640,7 +644,8 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 
 	/* wait for SASLResponse */
 	for (;;) {
-		msg = od_read(&client->io, od_client_login_timeout(client));
+		msg = od_read(&client->io, od_client_login_timeout(client),
+			      OD_READ_FE);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -1234,7 +1239,8 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 
 	/* wait for authentication response */
 	for (;;) {
-		msg = od_read(&server->io, od_client_login_timeout(client));
+		msg = od_read(&server->io, od_client_login_timeout(client),
+			      OD_READ_BE);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", NULL, server,
 				 "read error: %s", od_io_error(&server->io));
