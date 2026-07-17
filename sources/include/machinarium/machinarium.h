@@ -252,7 +252,7 @@ MACHINE_API ssize_t machine_write_raw(mm_io_t *, const void *, size_t,
 				      size_t *);
 
 MACHINE_API ssize_t machine_writev_raw(mm_io_t *, const struct iovec *iov,
-				       int iovcnt);
+				       int iovcnt, size_t *processed);
 
 MACHINE_API int machine_write(mm_io_t *, machine_msg_t *, uint32_t time_ms);
 

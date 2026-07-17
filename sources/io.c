@@ -115,12 +115,27 @@ int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 {
 	mm_io_set_deadline(io->io, timeout_ms);
 	while (iovcnt > 0) {
-		ssize_t rc = machine_writev_raw(io->io, iov, iovcnt);
-		if (rc > 0) {
-			struct iovec a = iov_advance(iov, iovcnt, rc);
+		size_t processed = 0;
+		ssize_t rc = machine_writev_raw(io->io, iov, iovcnt, &processed);
+
+		/*
+		 * Advance the scatter-gather vector by the number of consumed
+		 * input bytes. For the socket/TLS paths and for streaming
+		 * compression on success, rc itself is that number. For
+		 * compression, *processed is additionally set by the compressor
+		 * on partial-progress errors (rc <= 0) and holds the bytes
+		 * already accepted; those must not be resent on retry. This
+		 * additive accounting mirrors machine_write_no_free() which
+		 * uses machine_write_raw() the same way.
+		 */
+		size_t consumed = processed + (rc > 0 ? (size_t)rc : 0);
+		if (consumed > 0) {
+			struct iovec a = iov_advance(iov, iovcnt, consumed);
 			iov = a.iov_base;
 			iovcnt = a.iov_len;
+		}
 
+		if (rc > 0) {
 			continue;
 		}
 
