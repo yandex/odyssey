@@ -223,6 +223,7 @@ int machine_wait_nb(uint64_t machine_id)
 	}
 	int rc;
 	rc = mm_wait_flag_wait(machine->join_flag, UINT32_MAX);
+	mm_thread_join(&machine->thread);
 	if (machine->name) {
 		mm_free(machine->name);
 	}
