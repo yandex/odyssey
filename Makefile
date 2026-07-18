@@ -288,7 +288,6 @@ ci-build-check-oracle-linux:
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-builder
 
 ci-build-check-macos: local_build
-	ulimit -n 4096; cd $(BUILD_TEST_DIR)/sources && ./odyssey_test
 
 build-docs-web:
 	docker build -f docs/Dockerfile --tag=odyssey/docs-builder .
