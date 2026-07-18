@@ -3,6 +3,7 @@
 #include <pthread.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/spinlock.h>
 
 typedef struct {
 	uint64_t total;
@@ -20,7 +21,7 @@ typedef struct {
 typedef struct {
 	long hz;
 
-	pthread_spinlock_t lock;
+	mm_spinlock_t lock;
 	od_cpu_stat_t cpu_stat;
 	od_mem_stat_t mem_stat;
 

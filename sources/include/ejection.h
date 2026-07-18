@@ -8,13 +8,13 @@
 
 /* only for online restart */
 
-#include <pthread.h>
+#include <machinarium/spinlock.h>
 
 #include <types.h>
 
 typedef struct {
 	/* TODO: eject info is thread private, so mu is useless? */
-	pthread_spinlock_t mu;
+	mm_spinlock_t mu;
 	int interval_ms;
 	int limit;
 	uint64_t *queue;

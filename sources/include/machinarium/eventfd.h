@@ -12,6 +12,9 @@
 
 typedef struct {
 	mm_fd_t handle;
+#if !defined(__linux__)
+	int write_fd;
+#endif
 	mm_cond_t cond;
 	int attached;
 } mm_eventfd_t;

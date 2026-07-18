@@ -424,7 +424,19 @@ int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 		io->is_unix_socket = 1;
 	}
 	int fd;
+#if defined(SOCK_NONBLOCK)
 	fd = mm_socket(sa->sa_family, SOCK_STREAM | SOCK_NONBLOCK, 0);
+#else
+	fd = mm_socket(sa->sa_family, SOCK_STREAM, 0);
+	if (fd != -1) {
+		if (mm_socket_set_nonblock(fd, 1) == -1) {
+			int err = errno;
+			close(fd);
+			errno = err;
+			fd = -1;
+		}
+	}
+#endif
 	if (fd == -1) {
 		mm_errno_set(errno);
 		return -1;
@@ -634,7 +646,11 @@ int mm_io_poll(mm_io_t *io)
 	struct pollfd pfd;
 	memset(&pfd, 0, sizeof(struct pollfd));
 	pfd.fd = fd->fd;
+#if defined(POLLRDHUP)
 	pfd.events = POLLERR | POLLHUP | POLLRDHUP;
+#else
+	pfd.events = POLLERR | POLLHUP;
+#endif
 
 	int rc = poll(&pfd, 1, 0);
 	if (rc < 0) {
@@ -651,7 +667,11 @@ int mm_io_poll(mm_io_t *io)
 
 	int events = pfd.events;
 	int err = events & POLLERR;
+#if defined(POLLRDHUP)
 	int close = events & POLLHUP || events & POLLRDHUP;
+#else
+	int close = events & POLLHUP;
+#endif
 
 	if (err && fd->mask & MM_ERR) {
 		fd->on_err(&io->handle);

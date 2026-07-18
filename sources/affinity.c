@@ -159,6 +159,7 @@ error:
 	return -1;
 }
 
+#if defined(__linux__)
 void od_affinity_cpuset_export(const od_affinity_cpuset_t *set,
 			       cpu_set_t *cpuset)
 {
@@ -175,6 +176,7 @@ void od_affinity_cpuset_export(const od_affinity_cpuset_t *set,
 		}
 	}
 }
+#endif
 
 void od_affinity_cpuset_to_str(const od_affinity_cpuset_t *set, char *out,
 			       size_t max)

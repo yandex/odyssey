@@ -111,7 +111,8 @@ int od_reset(od_server_t *server)
 		if (!od_server_synchronized(server)) {
 			od_log(&instance->logger, "reset", server->client,
 			       server,
-			       "sync failed, server left in query (sync_reply = %lu, sync_request = %lu) - closing",
+			       "sync failed, server left in query (sync_reply = %" PRIu64
+			       ", sync_request = %" PRIu64 ") - closing",
 			       server->sync_reply, server->sync_request);
 			goto drop;
 		}

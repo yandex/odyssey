@@ -8,6 +8,7 @@
 
 #include <machinarium/ds/queue.h>
 #include <machinarium/wait_list.h>
+#include <machinarium/spinlock.h>
 
 #include <types.h>
 #include <list.h>
@@ -61,7 +62,7 @@ struct od_logger {
 
 	od_list_t free_slots;
 	size_t free_slots_count;
-	pthread_spinlock_t free_slots_lock;
+	mm_spinlock_t free_slots_lock;
 
 	mm_wait_list_t notifier;
 

@@ -612,8 +612,7 @@ error:
 
 static inline int strtol_safe(const char *s, int len)
 {
-	const int buff_len = 32;
-	char buff[buff_len];
+	char buff[32];
 	memset(buff, 0, sizeof(buff));
 	memcpy(buff, s, len);
 
@@ -688,9 +687,10 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 			status.repl_lag_sec = (int64_t)machine_timeofday_sec() -
 					      (int64_t)last_heartbeat;
 
-			od_debug(&instance->logger, context, client, server,
-				 "replica lag time of %s is updated to %ld",
-				 addr, status.repl_lag_sec);
+			od_debug(
+				&instance->logger, context, client, server,
+				"replica lag time of %s is updated to %" PRId64,
+				addr, status.repl_lag_sec);
 		} else {
 			od_error(&instance->logger, context, client, server,
 				 "can't parse lag");

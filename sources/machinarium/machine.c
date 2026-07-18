@@ -101,6 +101,8 @@ static void *machine_main(void *arg)
 
 	free_tls_container(machine->server_tls_ctx);
 
+	mm_wait_flag_set(machine->join_flag);
+
 	atomic_store(&machine->online, 0);
 	machine_instance_free(machine);
 
@@ -127,6 +129,14 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	machine->allocated_bytes = 0;
 	machine->freed_bytes = 0;
 #endif
+
+	machine->join_flag = mm_wait_flag_create();
+	if (machine->join_flag == NULL) {
+		mm_free(machine);
+		mm_errno_set(ENOMEM);
+		return -1;
+	}
+
 	if (name) {
 		machine->name = mm_strdup(name);
 		if (machine->name == NULL) {
@@ -184,8 +194,7 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	return machine->id;
 }
 
-static inline int machine_wait_internal(uint64_t machine_id,
-					int (*awaiter)(mm_thread_t *))
+MACHINE_API int machine_wait(uint64_t machine_id)
 {
 	mm_machine_t *machine;
 	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
@@ -194,23 +203,34 @@ static inline int machine_wait_internal(uint64_t machine_id,
 		return -1;
 	}
 	int rc;
-	rc = awaiter(&machine->thread);
+	rc = mm_thread_join(&machine->thread);
 	if (machine->name) {
 		mm_free(machine->name);
 	}
 
+	mm_wait_flag_destroy(machine->join_flag);
 	mm_free(machine);
 	return rc;
 }
 
-MACHINE_API int machine_wait(uint64_t machine_id)
-{
-	return machine_wait_internal(machine_id, mm_thread_join);
-}
-
 int machine_wait_nb(uint64_t machine_id)
 {
-	return machine_wait_internal(machine_id, mm_thread_join_nb);
+	mm_machine_t *machine;
+	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
+					     machine_id);
+	if (machine == NULL) {
+		return -1;
+	}
+	int rc;
+	rc = mm_wait_flag_wait(machine->join_flag, UINT32_MAX);
+	mm_thread_join(&machine->thread);
+	if (machine->name) {
+		mm_free(machine->name);
+	}
+
+	mm_wait_flag_destroy(machine->join_flag);
+	mm_free(machine);
+	return rc;
 }
 
 MACHINE_API int machine_stop(uint64_t machine_id)

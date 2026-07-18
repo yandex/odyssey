@@ -42,36 +42,14 @@ int mm_thread_join(mm_thread_t *thread)
 	return rc;
 }
 
-int mm_thread_join_nb(mm_thread_t *thread)
-{
-	/*
-	 * non-blocking version of thread joining
-	 * TODO: rewrite to smth without polling
-	 */
-
-	int rc;
-
-	while (1) {
-		rc = pthread_tryjoin_np(thread->id, NULL);
-		if (rc == 0) {
-			break;
-		}
-
-		if (rc == EBUSY) {
-			machine_sleep(100);
-			continue;
-		}
-
-		return rc;
-	}
-
-	return rc;
-}
-
 int mm_thread_set_name(char *name)
 {
 	int rc;
+#if defined(__linux__)
 	rc = pthread_setname_np(pthread_self(), name);
+#else
+	rc = pthread_setname_np(name);
+#endif
 	return rc;
 }
 

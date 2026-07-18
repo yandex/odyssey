@@ -1,8 +1,16 @@
-.text
-.globl mm_context_swap_impl
-.type mm_context_swap_impl, @function
+#if defined(__APPLE__)
+#define MM_SYM(name) _##name
+#else
+#define MM_SYM(name) name
+#endif
 
-mm_context_swap_impl:
+.text
+.globl MM_SYM(mm_context_swap_impl)
+#if defined(__linux__)
+.type mm_context_swap_impl, @function
+#endif
+
+MM_SYM(mm_context_swap_impl):
     pushq %rbp
     pushq %rbx
     pushq %r12
@@ -22,4 +30,6 @@ mm_context_swap_impl:
 
     ret
 
+#if defined(__linux__)
 .section .note.GNU-stack,"",@progbits
+#endif
