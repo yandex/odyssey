@@ -6,14 +6,14 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <pthread.h>
+#include <machinarium/spinlock.h>
 
 #include <types.h>
 #include <list.h>
 
 struct od_shared_pool {
 	od_multi_pool_t *mpool;
-	pthread_spinlock_t lock;
+	mm_spinlock_t lock;
 	char *name;
 	od_list_t link;
 	int pool_size; /* TODO: use full od_rule_pool_t here? */

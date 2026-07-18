@@ -19,6 +19,7 @@
 #include <machinarium/msg_cache.h>
 #include <machinarium/loop.h>
 #include <machinarium/list.h>
+#include <machinarium/wait_flag.h>
 
 typedef struct mm_machine mm_machine_t;
 
@@ -38,6 +39,7 @@ struct mm_machine {
 	mm_coroutine_cache_t coroutine_cache;
 	mm_loop_t loop;
 	mm_list_t link;
+	mm_wait_flag_t *join_flag;
 	struct mm_tls_ctx *server_tls_ctx;
 	struct mm_tls_ctx *client_tls_ctx;
 #ifdef MM_MEM_PROF

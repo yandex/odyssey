@@ -23,7 +23,6 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/uio.h>
-#include <endian.h>
 #include <math.h>
 
 #include <pthread.h>
@@ -31,7 +30,11 @@
 #define od_likely(EXPR) __builtin_expect(!!(EXPR), 1)
 #define od_unlikely(EXPR) __builtin_expect(!!(EXPR), 0)
 
+#if defined(__linux__)
 #define od_read_mostly __attribute__((__section__(".data.read_mostly")))
+#else
+#define od_read_mostly
+#endif
 
 #define od_container_of(N, T, F) ((T *)((char *)(N) - __builtin_offsetof(T, F)))
 
@@ -87,4 +90,61 @@ typedef int od_retcode_t;
 #define OD_THREAD_LOCAL __declspec(thread)
 #else
 #define OD_THREAD_LOCAL __thread
+#endif
+
+#if defined(__linux__)
+
+#include <endian.h>
+
+#elif defined(__APPLE__)
+
+#include <libkern/OSByteOrder.h>
+
+#define htobe16(x) OSSwapHostToBigInt16(x)
+#define htole16(x) OSSwapHostToLittleInt16(x)
+#define be16toh(x) OSSwapBigToHostInt16(x)
+#define le16toh(x) OSSwapLittleToHostInt16(x)
+
+#define htobe32(x) OSSwapHostToBigInt32(x)
+#define htole32(x) OSSwapHostToLittleInt32(x)
+#define be32toh(x) OSSwapBigToHostInt32(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+
+#define htobe64(x) OSSwapHostToBigInt64(x)
+#define htole64(x) OSSwapHostToLittleInt64(x)
+#define be64toh(x) OSSwapBigToHostInt64(x)
+#define le64toh(x) OSSwapLittleToHostInt64(x)
+
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+
+#include <sys/endian.h>
+
+#elif defined(__OpenBSD__)
+
+#include <sys/types.h>
+#include <sys/endian.h>
+
+/* OpenBSD historically lacks the *toh names in some versions */
+#ifndef be16toh
+#define be16toh(x) betoh16(x)
+#define le16toh(x) letoh16(x)
+#define be32toh(x) betoh32(x)
+#define le32toh(x) letoh32(x)
+#define be64toh(x) betoh64(x)
+#define le64toh(x) letoh64(x)
+#endif
+
+#else
+#error "machinarium: unsupported platform, no endian.h replacement available"
+#endif
+
+static inline void od_explicit_bzero(void *buf, size_t len)
+{
+	memset(buf, 0, len);
+	/* prevent the compiler from optimizing away the memset above */
+	__asm__ __volatile__("" : : "r"(buf) : "memory");
+}
+
+#if !defined(explicit_bzero)
+#define explicit_bzero od_explicit_bzero
 #endif

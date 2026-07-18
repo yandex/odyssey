@@ -75,6 +75,9 @@ And for fedora-based distros:
 * openssl-devel
 * systemd-devel (optional, for systemd notify)
 
+For Mac-OS you will need:
+* brew install argp-standalone
+
 ```sh
 git clone git://github.com/yandex/odyssey.git
 cd odyssey

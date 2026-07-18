@@ -9,12 +9,16 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#if defined(__linux__)
 #include <sched.h>
+#endif
 
 #include <misc.h>
 
-#ifndef OD_AFFINITY_MAX_CPUS
+#if defined(__linux__)
 #define OD_AFFINITY_MAX_CPUS CPU_SETSIZE
+#else
+#define OD_AFFINITY_MAX_CPUS 256
 #endif
 
 #ifndef OD_AFFINITY_MAX_RULES
@@ -35,12 +39,16 @@ void od_affinity_cpuset_init(od_affinity_cpuset_t *set);
 int od_affinity_cpuset_add(od_affinity_cpuset_t *set, int i);
 int od_affinity_cpuset_get(const od_affinity_cpuset_t *set, int i);
 int od_affinity_cpuset_count(const od_affinity_cpuset_t *set);
+
+#if defined(__linux__)
 /*
  * convert internal mask representation to cpu_set_t suitable for
  * pthread_setaffinity_np() / sched_setaffinity().
  */
 void od_affinity_cpuset_export(const od_affinity_cpuset_t *set,
 			       cpu_set_t *cpuset);
+#endif
+
 void od_affinity_cpuset_to_str(const od_affinity_cpuset_t *set, char *out,
 			       size_t max);
 

@@ -11,7 +11,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/time.h>
+
+#if defined(__linux__)
 #include <sys/vfs.h>
+#else
+#include <sys/param.h>
+#include <sys/mount.h>
+#endif
 
 #include <machinarium/machinarium.h>
 #include <machinarium/channel_limit.h>
@@ -62,6 +68,7 @@ static int have_writev(int fd)
 		return 0;
 	}
 
+#if defined(__linux__)
 	/* man 2 fstatfs */
 	switch (sfs.f_type) {
 	case 0xef53: /* EXT4_SUPER_MAGIC */
@@ -71,6 +78,13 @@ static int have_writev(int fd)
 	default:
 		return 0;
 	}
+#else
+	if (strcmp(sfs.f_fstypename, "apfs") == 0 ||
+	    strcmp(sfs.f_fstypename, "hfs") == 0) {
+		return 1;
+	}
+	return 0;
+#endif
 }
 
 od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
@@ -92,7 +106,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	atomic_init(&logger->dropped_lines, 0);
 
 	od_list_init(&logger->free_slots);
-	pthread_spin_init(&logger->free_slots_lock, PTHREAD_PROCESS_PRIVATE);
+	mm_spinlock_init(&logger->free_slots_lock);
 
 	mm_wait_list_init(&logger->notifier, &logger->state);
 
@@ -596,7 +610,7 @@ static inline void log_machine_stats(od_logger_t *logger)
 	       "logger: msg (%" PRIu64 " allocated, %" PRIu64
 	       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
 	       "coroutines (%" PRIu64 " active, %" PRIu64 " cached), "
-	       "dropped lines %" PRIu64 ", queue size %" PRIu64,
+	       "dropped lines %" PRIu64 ", queue size %zu",
 	       msg_allocated, msg_cache_count, msg_cache_gc_count,
 	       msg_cache_size, count_coroutine, count_coroutine_cache,
 	       atomic_load(&logger->dropped_lines),
@@ -624,12 +638,12 @@ static void process_log_queue(od_logger_t *logger, od_logger_slot_t **slot_buf,
 
 	_od_logger_write_batch(logger, slot_buf, iovecs, nmsg);
 
-	pthread_spin_lock(&logger->free_slots_lock);
+	mm_spinlock_lock(&logger->free_slots_lock);
 	for (size_t i = 0; i < nmsg; ++i) {
 		od_list_append(&logger->free_slots, &(slot_buf[i]->link));
 	}
 	logger->free_slots_count += nmsg;
-	pthread_spin_unlock(&logger->free_slots_lock);
+	mm_spinlock_unlock(&logger->free_slots_lock);
 }
 
 static void do_reopen_logfile(od_logger_t *logger)
@@ -1027,13 +1041,13 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 
 	if (async) {
-		pthread_spin_lock(&logger->free_slots_lock);
+		mm_spinlock_lock(&logger->free_slots_lock);
 		if (logger->free_slots_count > 0) {
 			od_list_t *i = od_list_pop(&logger->free_slots);
 			async_slot = od_container_of(i, od_logger_slot_t, link);
 			logger->free_slots_count--;
 		}
-		pthread_spin_unlock(&logger->free_slots_lock);
+		mm_spinlock_unlock(&logger->free_slots_lock);
 
 		if (async_slot == NULL) {
 			/* silently drop lines for overloaded logger */

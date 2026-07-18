@@ -69,7 +69,7 @@ od_retcode_t od_conn_eject_info_init(od_conn_eject_info **info,
 	}
 	memset(*info, 0, sizeof(od_conn_eject_info));
 
-	pthread_spin_init(&(*info)->mu, PTHREAD_PROCESS_PRIVATE);
+	mm_spinlock_init(&(*info)->mu);
 
 	(*info)->head = 0;
 	(*info)->tail = 0;
@@ -91,7 +91,7 @@ od_retcode_t od_conn_eject_info_init(od_conn_eject_info **info,
 
 od_retcode_t od_conn_eject_info_free(od_conn_eject_info *info)
 {
-	pthread_spin_destroy(&info->mu);
+	mm_spinlock_destroy(&info->mu);
 
 	od_free(info->queue);
 	od_free(info);
@@ -103,7 +103,7 @@ int od_conn_eject_info_try(od_conn_eject_info *info, uint64_t now_ms)
 {
 	int rc = 0;
 
-	pthread_spin_lock(&info->mu);
+	mm_spinlock_lock(&info->mu);
 
 	if (info->limit > 0) {
 		queue_clean(info, now_ms);
@@ -112,7 +112,7 @@ int od_conn_eject_info_try(od_conn_eject_info *info, uint64_t now_ms)
 		rc = 1;
 	}
 
-	pthread_spin_unlock(&info->mu);
+	mm_spinlock_unlock(&info->mu);
 
 	return rc;
 }

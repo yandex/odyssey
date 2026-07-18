@@ -27,22 +27,22 @@ void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status)
 	status->alive = 1;
 	status->is_read_write = true;
 	status->repl_lag_sec = 0;
-	pthread_spin_init(&status->values_lock, PTHREAD_PROCESS_PRIVATE);
+	mm_spinlock_init(&status->values_lock);
 }
 
 void od_storage_endpoint_status_destroy(od_storage_endpoint_status_t *status)
 {
-	pthread_spin_destroy(&status->values_lock);
+	mm_spinlock_destroy(&status->values_lock);
 }
 
 bool od_storage_endpoint_status_is_outdated(
 	od_storage_endpoint_status_t *status, uint64_t recheck_interval)
 {
-	pthread_spin_lock(&status->values_lock);
+	mm_spinlock_lock(&status->values_lock);
 
 	uint64_t last_update_time_ms = status->last_update_time_ms;
 
-	pthread_spin_unlock(&status->values_lock);
+	mm_spinlock_unlock(&status->values_lock);
 
 	return (machine_time_ms() - last_update_time_ms) > recheck_interval;
 }
@@ -50,27 +50,27 @@ bool od_storage_endpoint_status_is_outdated(
 void od_storage_endpoint_status_get(od_storage_endpoint_status_t *status,
 				    od_storage_endpoint_status_t *out)
 {
-	pthread_spin_lock(&status->values_lock);
+	mm_spinlock_lock(&status->values_lock);
 
 	out->last_update_time_ms = status->last_update_time_ms;
 	out->is_read_write = status->is_read_write;
 	out->alive = status->alive;
 	out->repl_lag_sec = status->repl_lag_sec;
 
-	pthread_spin_unlock(&status->values_lock);
+	mm_spinlock_unlock(&status->values_lock);
 }
 
 void od_storage_endpoint_status_set(od_storage_endpoint_status_t *status,
 				    const od_storage_endpoint_status_t *value)
 {
-	pthread_spin_lock(&status->values_lock);
+	mm_spinlock_lock(&status->values_lock);
 
 	status->last_update_time_ms = value->last_update_time_ms;
 	status->is_read_write = value->is_read_write;
 	status->alive = value->alive;
 	status->repl_lag_sec = value->repl_lag_sec;
 
-	pthread_spin_unlock(&status->values_lock);
+	mm_spinlock_unlock(&status->values_lock);
 }
 
 void od_storage_endpoint_status_set_dead(od_storage_endpoint_status_t *status)

@@ -12,12 +12,13 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <pthread.h>
+
+#include <machinarium/spinlock.h>
 
 typedef void (*mm_queue_dtor_fn)(void *val);
 
 typedef struct {
-	pthread_spinlock_t lock;
+	mm_spinlock_t lock;
 
 	size_t cap;
 	size_t mask;

@@ -114,7 +114,13 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
 add_custom_target(build_libs)
-set(od_libraries "rt" "dl")
+if (APPLE)
+    # macOS: librt/libdl functionality is part of the base libSystem,
+    # there are no separate librt.dylib / libdl.dylib to link against.
+    set(od_libraries "")
+else()
+    set(od_libraries "rt" "dl")
+endif()
 
 set(OPENSSL_INCLUDE_DIR $ENV{OPENSSL_INCLUDE_DIR})
 set(OPENSSL_LIBRARIES $ENV{OPENSSL_LIBRARIES})

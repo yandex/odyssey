@@ -28,7 +28,13 @@ ifeq ($(OS), Linux)
 	CONCURRENCY:=$(shell nproc)
 endif
 ifeq ($(OS), Darwin)
-	CONCURRENCY:=$(shell sysctl -n hw.logicalcpu')
+	CONCURRENCY:=$(shell sysctl -n hw.logicalcpu)
+endif
+
+ifeq ($(OS), Darwin)
+STAT_OWNER_CMD := stat -f "%u:%g" .
+else
+STAT_OWNER_CMD := stat -c "%u:%g" .
 endif
 
 .PHONY: clean apply_fmt
@@ -54,7 +60,7 @@ check-format:
 
 format:
 	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
-	docker run --user=`stat -c "%u:%g" .` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources
+	docker run --user=`$(STAT_OWNER_CMD)` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources
 
 build_images:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey

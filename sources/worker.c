@@ -35,9 +35,6 @@ static void setup_affinity(od_instance_t *instance, int wid)
 		return;
 	}
 
-	cpu_set_t cpuset;
-	CPU_ZERO(&cpuset);
-
 	od_affinity_rule_t rule;
 	od_affinity_rule_init(&rule);
 
@@ -46,6 +43,15 @@ static void setup_affinity(od_instance_t *instance, int wid)
 	if (mode == OD_AFFINITY_MODE_OFF) {
 		return;
 	}
+
+#if !defined(__linux__)
+	(void)rule;
+	od_log(&instance->logger, "worker_init", NULL, NULL,
+	       "cpu affinity is not supported on this platform, ignoring");
+	return;
+#else
+	cpu_set_t cpuset;
+	CPU_ZERO(&cpuset);
 
 	if (mode == OD_AFFINITY_MODE_RULES) {
 		od_affinity_cpuset_export(&rule.cpuset, &cpuset);
@@ -72,6 +78,7 @@ static void setup_affinity(od_instance_t *instance, int wid)
 		od_error(&instance->logger, "worker_init", NULL, NULL,
 			 "can't set worker cpu affinity: %s", strerror(errno));
 	}
+#endif
 }
 
 static inline void od_worker(void *arg)

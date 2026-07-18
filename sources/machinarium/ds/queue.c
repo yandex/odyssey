@@ -23,12 +23,12 @@ static uint64_t next_pow2(uint64_t n)
 
 static inline void queue_lock(mm_queue_t *q)
 {
-	pthread_spin_lock(&q->lock);
+	mm_spinlock_lock(&q->lock);
 }
 
 static inline void queue_unlock(mm_queue_t *q)
 {
-	pthread_spin_unlock(&q->lock);
+	mm_spinlock_unlock(&q->lock);
 }
 
 int mm_queue_init(mm_queue_t *q, size_t capacity, size_t elsize,
@@ -40,7 +40,7 @@ int mm_queue_init(mm_queue_t *q, size_t capacity, size_t elsize,
 
 	memset(q, 0, sizeof(mm_queue_t));
 
-	pthread_spin_init(&q->lock, PTHREAD_PROCESS_PRIVATE);
+	mm_spinlock_init(&q->lock);
 
 	capacity = next_pow2(capacity);
 
@@ -71,7 +71,7 @@ void mm_queue_destroy(mm_queue_t *q)
 		}
 	}
 
-	pthread_spin_destroy(&q->lock);
+	mm_spinlock_destroy(&q->lock);
 	mm_free(q->buf);
 
 	q->buf = NULL;
