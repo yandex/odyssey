@@ -2288,7 +2288,6 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 				       storage->watchdog->interval);
 			}
 		}
-		od_log(logger, "storage", NULL, NULL, "\n");
 	}
 
 	od_list_foreach (&rules->rules, i) {
@@ -2493,8 +2492,6 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 
 		od_log(logger, "rules", NULL, NULL,
 		       "  options:                         %s", "todo");
-
-		od_log(logger, "rules", NULL, NULL, "\n");
 	}
 }
 
