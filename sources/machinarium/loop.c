@@ -7,11 +7,21 @@
 
 #include <machinarium/machinarium.h>
 #include <machinarium/loop.h>
+
+#if defined(__linux__)
 #include <machinarium/epoll.h>
+#define MM_POLL_IF mm_epoll_if
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || \
+	defined(__OpenBSD__) || defined(__DragonFly__)
+#include <machinarium/kqueue.h>
+#define MM_POLL_IF mm_kqueue_if
+#else
+#error "machinarium: unsupported platform, no poll backend available"
+#endif
 
 int mm_loop_init(mm_loop_t *loop)
 {
-	loop->poll = mm_epoll_if.create();
+	loop->poll = MM_POLL_IF.create();
 	if (loop->poll == NULL) {
 		return -1;
 	}

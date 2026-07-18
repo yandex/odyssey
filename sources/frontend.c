@@ -478,7 +478,7 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 			int n = kiwi_be_format_notice(buf, sizeof(buf), 'M',
 						      msg);
 			if (n != -1) {
-				uint64_t unused;
+				size_t unused;
 				if (od_io_write_raw(&client->io, buf, n,
 						    &unused, 1000) != 0) {
 					return OD_ECLIENT_WRITE;
@@ -880,7 +880,7 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 	if (instance->config.log_session) {
 		client->time_setup = machine_time_us();
 		od_log(&instance->logger, "setup", client, NULL,
-		       "login time: %lu microseconds",
+		       "login time: %" PRIu64 " microseconds",
 		       (client->time_setup - client->time_accept));
 		od_log(&instance->logger, "setup", client, NULL,
 		       "client connection from %s to route %s.%s accepted",
@@ -1076,7 +1076,8 @@ od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
 			    client, server,
 			    client->rule->pool->idle_in_transaction_timeout)) {
 			od_log(&instance->logger, "shutdown", client, server,
-			       "drop idle in transaction connection on due timeout %lu sec",
+			       "drop idle in transaction connection on due timeout %" PRIu64
+			       " sec",
 			       client->rule->pool->idle_in_transaction_timeout);
 
 			return OD_EIDLE_IN_TRANSACTION_TIMEOUT;
@@ -1121,7 +1122,8 @@ od_process_drop_on_client_idle_timeout(od_client_t *client, od_server_t *server)
 			    client, server,
 			    client->rule->pool->client_idle_timeout)) {
 			od_log(&instance->logger, "shutdown", client, server,
-			       "drop idle client connection on due timeout %lu sec",
+			       "drop idle client connection on due timeout %" PRIu64
+			       " sec",
 			       client->rule->pool->client_idle_timeout);
 
 			return OD_EIDLE_TIMEOUT;
@@ -1467,9 +1469,10 @@ static inline int od_frontend_poll_catchup(od_client_t *client,
 			char addr[256];
 			od_address_to_str(&server->endpoint->address, addr,
 					  sizeof(addr));
-			od_debug(&instance->logger, "catchup", client, NULL,
-				 "checking against %s, repl lag time sec = %ld",
-				 addr, status.repl_lag_sec);
+			od_debug(
+				&instance->logger, "catchup", client, NULL,
+				"checking against %s, repl lag time sec = %" PRId64,
+				addr, status.repl_lag_sec);
 		}
 
 		lag = status.repl_lag_sec;
@@ -1498,7 +1501,7 @@ static inline int od_frontend_poll_catchup(od_client_t *client,
 				od_debug(
 					&instance->logger, "catchup", client,
 					NULL,
-					"checking against %s, repl lag sec = %ld",
+					"checking against %s, repl lag sec = %" PRId64,
 					addr, status.repl_lag_sec);
 			}
 
@@ -1515,10 +1518,10 @@ static inline int od_frontend_poll_catchup(od_client_t *client,
 
 	*lag_out = lag;
 
-	od_debug(
-		&instance->logger, "catchup", client, NULL,
-		"client %s%.*s replication %ld lag is over catchup timeout %d\n",
-		client->id.id_prefix, OD_ID_LEN, client->id.id, lag, timeout);
+	od_debug(&instance->logger, "catchup", client, NULL,
+		 "client %s%.*s replication %" PRId64
+		 " lag is over catchup timeout %d\n",
+		 client->id.id_prefix, OD_ID_LEN, client->id.id, lag, timeout);
 
 	return OD_ECATCHUP_TIMEOUT;
 }
@@ -2345,14 +2348,16 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	if (instance->config.log_session) {
 		if (route != NULL) {
 			od_log(&instance->logger, context, client, server,
-			       "client disconnected addr '%s', io error = %s, status %s, route %s.%s, working time: %luus",
+			       "client disconnected addr '%s', io error = %s, status %s, route %s.%s, working time: %" PRIu64
+			       "us",
 			       client->peer, od_io_error(&client->io),
 			       od_frontend_status_to_str(status),
 			       route->rule->db_name, route->rule->user_name,
 			       working_time_us);
 		} else {
 			od_log(&instance->logger, context, client, server,
-			       "client disconnected, addr '%s', io error = %s, status %s, working time %luus",
+			       "client disconnected, addr '%s', io error = %s, status %s, working time %" PRIu64
+			       "us",
 			       client->peer, od_io_error(&client->io),
 			       od_frontend_status_to_str(status),
 			       working_time_us);
@@ -2875,7 +2880,8 @@ void od_frontend(void *arg)
 		od_frontend_fatal(client, KIWI_OUT_OF_MEMORY,
 				  "soft out of memory");
 		od_error(&instance->logger, "startup", client, NULL,
-			 "drop connection due to soft oom (usage is %lu KB)",
+			 "drop connection due to soft oom (usage is %" PRIu64
+			 " KB)",
 			 used_memory / 1024);
 		rc = NOT_OK_RESPONSE;
 	}

@@ -34,12 +34,12 @@ static inline void hw_update_mem_stat(od_host_watcher_t *hw,
 static inline void hw_update(od_host_watcher_t *hw, const od_cpu_stat_t *cpu,
 			     const od_mem_stat_t *mem)
 {
-	pthread_spin_lock(&hw->lock);
+	mm_spinlock_lock(&hw->lock);
 
 	hw_update_cpu_stat(hw, cpu);
 	hw_update_mem_stat(hw, mem);
 
-	pthread_spin_unlock(&hw->lock);
+	mm_spinlock_unlock(&hw->lock);
 }
 
 static inline int get_cpu_stat(od_cpu_stat_t *out)
@@ -67,7 +67,9 @@ static inline int get_cpu_stat(od_cpu_stat_t *out)
 	uint64_t io_wait = 0, irq = 0, soft_irq = 0, steal = 0, guest = 0,
 		 guestnice = 0;
 
-	sscanf(cpu_stat_buffer, "cpu  %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
+	sscanf(cpu_stat_buffer,
+	       "cpu  %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+	       " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
 	       &usertime, &nicetime, &systemtime, &idletime, &io_wait, &irq,
 	       &soft_irq, &steal, &guest, &guestnice);
 
@@ -101,11 +103,12 @@ static inline int get_memory_stat(od_mem_stat_t *out)
 	int64_t mem_available = 0, mem_total = 0;
 
 	while (fgets(line, sizeof(line), fp)) {
-		if (sscanf(line, "MemAvailable: %ld kB", &mem_available) == 1) {
+		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
+			   &mem_available) == 1) {
 			continue;
 		}
 
-		if (sscanf(line, "MemTotal: %ld kB", &mem_total) == 1) {
+		if (sscanf(line, "MemTotal: %" PRId64 " kB", &mem_total) == 1) {
 			continue;
 		}
 	}
@@ -165,7 +168,7 @@ int od_host_watcher_init(od_host_watcher_t *hw)
 	memset(&hw->cpu_stat, 0, sizeof(od_cpu_stat_t));
 	memset(&hw->mem_stat, 0, sizeof(od_mem_stat_t));
 
-	pthread_spin_init(&hw->lock, PTHREAD_PROCESS_PRIVATE);
+	mm_spinlock_init(&hw->lock);
 
 	hw->hz = sysconf(_SC_CLK_TCK);
 	if (hw->hz == -1) {
@@ -174,7 +177,7 @@ int od_host_watcher_init(od_host_watcher_t *hw)
 
 	hw->stop_flag = machine_wait_flag_create();
 	if (hw->stop_flag == NULL) {
-		pthread_spin_destroy(&hw->lock);
+		mm_spinlock_destroy(&hw->lock);
 		return -1;
 	}
 
@@ -182,7 +185,7 @@ int od_host_watcher_init(od_host_watcher_t *hw)
 	if (hw->worker_id == -1) {
 		hw_error("can't start host watcher machine");
 		machine_wait_flag_destroy(hw->stop_flag);
-		pthread_spin_destroy(&hw->lock);
+		mm_spinlock_destroy(&hw->lock);
 		return -1;
 	}
 
@@ -195,7 +198,7 @@ void od_host_watcher_destroy(od_host_watcher_t *hw)
 	machine_wait(hw->worker_id);
 	machine_wait_flag_destroy(hw->stop_flag);
 
-	pthread_spin_destroy(&hw->lock);
+	mm_spinlock_destroy(&hw->lock);
 }
 
 static inline float get_mem_util(const od_host_watcher_t *hw)
@@ -212,8 +215,8 @@ static inline float get_cpu_util(const od_host_watcher_t *hw)
 
 void od_host_watcher_read(od_host_watcher_t *hw, float *cpu, float *mem)
 {
-	pthread_spin_lock(&hw->lock);
+	mm_spinlock_lock(&hw->lock);
 	*cpu = get_cpu_util(hw);
 	*mem = get_mem_util(hw);
-	pthread_spin_unlock(&hw->lock);
+	mm_spinlock_unlock(&hw->lock);
 }

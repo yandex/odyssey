@@ -252,7 +252,7 @@ char *scram_build_secret(pg_cryptohash_type hash_type, int key_length,
 	result = palloc(maxlen);
 #endif
 
-	p = result + sprintf(result, "SCRAM-SHA-256$%d:", iterations);
+	p = result + snprintf(result, maxlen, "SCRAM-SHA-256$%d:", iterations);
 
 	/* salt */
 	encoded_result = pg_b64_encode(salt, saltlen, p, encoded_salt_len);

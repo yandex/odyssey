@@ -19,9 +19,20 @@ static void mm_eventmgr_on_read(mm_fd_t *handle)
 
 	uint64_t id;
 	int rc;
+#if defined(__linux__)
 	rc = read(mgr->fd.fd, &id, sizeof(id));
 	(void)rc;
 	assert(rc == sizeof(id));
+#else
+	/* drain pipe completely */
+	char buf[256];
+	while ((rc = read(mgr->fd.fd, buf, sizeof(buf))) > 0) {
+		if ((size_t)rc < sizeof(buf)) {
+			break;
+		}
+	}
+	(void)id;
+#endif
 
 	/* wakeup event waiters */
 	mm_sleeplock_lock(&mgr->lock);
@@ -55,7 +66,11 @@ int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
 	mgr->count_wait = 0;
 
 	memset(&mgr->fd, 0, sizeof(mgr->fd));
-	mgr->fd.fd = mm_socket_eventfd(0);
+#if defined(__linux__)
+	mgr->fd.fd = mm_socket_eventfd(0, NULL);
+#else
+	mgr->fd.fd = mm_socket_eventfd(0, &mgr->wakeup_fd);
+#endif
 	if (mgr->fd.fd == -1) {
 		return -1;
 	}
@@ -64,6 +79,9 @@ int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
 	rc = mm_loop_add_ro(loop, &mgr->fd, mm_eventmgr_on_read, mgr);
 	if (rc == -1) {
 		close(mgr->fd.fd);
+#if !defined(__linux__)
+		close(mgr->wakeup_fd);
+#endif
 		mgr->fd.fd = -1;
 		return -1;
 	}
@@ -77,6 +95,9 @@ void mm_eventmgr_free(mm_eventmgr_t *mgr, mm_loop_t *loop)
 	}
 	mm_loop_delete(loop, &mgr->fd);
 	close(mgr->fd.fd);
+#if !defined(__linux__)
+	close(mgr->wakeup_fd);
+#endif
 	mgr->fd.fd = -1;
 }
 
@@ -138,7 +159,7 @@ int mm_eventmgr_signal(mm_event_t *event)
 	}
 	int fd = 0;
 	if (mgr->count_ready == 0) {
-		fd = mgr->fd.fd;
+		fd = mm_eventmgr_wakeup_fd(mgr);
 	}
 	assert(event->state == MM_EVENT_WAIT);
 	mm_list_unlink(&event->link);

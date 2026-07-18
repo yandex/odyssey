@@ -25,7 +25,6 @@ set(od_src
     machinarium/clock.c
     machinarium/socket.c
     machinarium/stat.c
-    machinarium/epoll.c
     machinarium/context_stack.c
     machinarium/context.c
     machinarium/coroutine.c
@@ -145,6 +144,39 @@ set(od_src
     common/wchar.c
     common/string.c)
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND od_src machinarium/epoll.c)
+elseif (CMAKE_SYSTEM_NAME MATCHES "Darwin|.*BSD")
+    list(APPEND od_src machinarium/kqueue.c)
+else()
+    message(FATAL_ERROR "Unsupported platform for machinarium poll backend: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+message(STATUS "Poll backend: ${CMAKE_SYSTEM_NAME}")
+
+if (APPLE)
+    find_path(ARGP_INCLUDE_DIR argp.h
+        PATHS /opt/homebrew/opt/argp-standalone/include
+              /usr/local/opt/argp-standalone/include
+    )
+    find_library(ARGP_LIBRARY
+        NAMES argp
+        PATHS /opt/homebrew/opt/argp-standalone/lib
+              /usr/local/opt/argp-standalone/lib
+    )
+    if (NOT ARGP_INCLUDE_DIR OR NOT ARGP_LIBRARY)
+        message(FATAL_ERROR
+            "argp-standalone not found. Install it via: brew install argp-standalone")
+    endif()
+
+    message(STATUS "ARGP_INCLUDE_DIR: ${ARGP_INCLUDE_DIR}")
+    message(STATUS "ARGP_LIBRARY:     ${ARGP_LIBRARY}")
+
+    include_directories(${ARGP_INCLUDE_DIR})
+    set(od_libraries ${od_libraries} ${ARGP_LIBRARY})
+endif()
+
+
 if (USE_TCMALLOC)
     find_library(TCMALLOC_STATIC_LIB
         NAMES libtcmalloc.a
@@ -234,6 +266,8 @@ message(STATUS "od_libraries:   ${od_libraries}")
 target_link_libraries(${od_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)
 if(EXISTS "/etc/alpine-release")
     target_link_libraries(${od_binary} argp)
+elseif(APPLE)
+    target_link_libraries(${od_binary} ${ARGP_LIBRARY})
 endif()
 
 if (BUILD_COMPRESSION)
@@ -364,6 +398,8 @@ target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT
 
 if(EXISTS "/etc/alpine-release")
     target_link_libraries(${od_test_binary} argp)
+elseif(APPLE)
+    target_link_libraries(${od_test_binary} ${ARGP_LIBRARY})
 endif()
 
 if (BUILD_COMPRESSION)

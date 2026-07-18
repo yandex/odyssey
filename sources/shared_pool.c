@@ -19,7 +19,7 @@ static inline void od_shared_pool_free(od_shared_pool_t *sp)
 
 	od_free(sp->name);
 
-	pthread_spin_destroy(&sp->lock);
+	mm_spinlock_destroy(&sp->lock);
 
 	od_free(sp);
 }
@@ -48,16 +48,16 @@ od_shared_pool_t *od_shared_pool_create(const char *name)
 
 	od_list_init(&sp->link);
 
-	pthread_spin_init(&sp->lock, PTHREAD_PROCESS_PRIVATE);
+	mm_spinlock_init(&sp->lock);
 
 	return sp;
 }
 
 od_shared_pool_t *od_shared_pool_ref(od_shared_pool_t *sp)
 {
-	pthread_spin_lock(&sp->lock);
+	mm_spinlock_lock(&sp->lock);
 	++sp->refs;
-	pthread_spin_unlock(&sp->lock);
+	mm_spinlock_unlock(&sp->lock);
 
 	return sp;
 }
@@ -66,9 +66,9 @@ void od_shared_pool_unref(od_shared_pool_t *sp)
 {
 	int refs;
 
-	pthread_spin_lock(&sp->lock);
+	mm_spinlock_lock(&sp->lock);
 	refs = sp->refs--;
-	pthread_spin_unlock(&sp->lock);
+	mm_spinlock_unlock(&sp->lock);
 
 	if (refs == 1) {
 		od_shared_pool_free(sp);

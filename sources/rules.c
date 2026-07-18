@@ -2288,7 +2288,6 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 				       storage->watchdog->interval);
 			}
 		}
-		od_log(logger, "storage", NULL, NULL, "\n");
 	}
 
 	od_list_foreach (&rules->rules, i) {
@@ -2364,10 +2363,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  pool rollback                     %s",
 		       rule->pool->rollback ? "yes" : "no");
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool client_idle_timeout          %lu",
+		       "  pool client_idle_timeout          %" PRIu64,
 		       rule->pool->client_idle_timeout);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool idle_in_transaction_timeout  %lu",
+		       "  pool idle_in_transaction_timeout  %" PRIu64,
 		       rule->pool->idle_in_transaction_timeout);
 		if (rule->pool->pool_type != OD_RULE_POOL_SESSION) {
 			od_log(logger, "rules", NULL, NULL,
@@ -2493,8 +2492,6 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 
 		od_log(logger, "rules", NULL, NULL,
 		       "  options:                         %s", "todo");
-
-		od_log(logger, "rules", NULL, NULL, "\n");
 	}
 }
 

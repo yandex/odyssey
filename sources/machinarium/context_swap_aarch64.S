@@ -1,7 +1,13 @@
-.text
-.global mm_context_swap_impl
+#if defined(__APPLE__)
+#define MM_SYM(name) _##name
+#else
+#define MM_SYM(name) name
+#endif
 
-mm_context_swap_impl:
+.text
+.global MM_SYM(mm_context_swap_impl)
+
+MM_SYM(mm_context_swap_impl):
     stp x8, x16, [sp, #-16]!
     stp x17, x18, [sp, #-16]!
     stp x19, x20, [sp, #-16]!
@@ -27,4 +33,6 @@ mm_context_swap_impl:
 
     ret x30
 
+#if defined(__linux__)
 .section .note.GNU-stack,"",@progbits
+#endif

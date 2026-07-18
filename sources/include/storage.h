@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <pthread.h>
+#include <machinarium/spinlock.h>
 
 #include <kiwi/kiwi.h>
 
@@ -50,7 +50,7 @@ void od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog);
 
 typedef struct {
 	uint64_t last_update_time_ms;
-	pthread_spinlock_t values_lock;
+	mm_spinlock_t values_lock;
 	int alive;
 	bool is_read_write;
 	int64_t repl_lag_sec;

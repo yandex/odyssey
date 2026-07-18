@@ -61,3 +61,22 @@ jobs:
         submodules: recursive
     - name: Debian build check
       run: make ci-build-check-debian ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_DEBIAN_DISTRO=${{ matrix.os-version }}
+  macos-build:
+    name: macos-build
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14   # Apple Silicon (arm64)
+          - runner: macos-13   # Intel (x86_64)
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        submodules: recursive
+    - name: Install dependencies
+      run: |
+        brew update
+        brew install openssl@3 openldap argp-standalone
+    - name: Build and run unit tests
+      run: make ci-build-check-macos

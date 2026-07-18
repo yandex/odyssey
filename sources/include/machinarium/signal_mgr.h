@@ -24,6 +24,9 @@ struct mm_signalrd {
 
 struct mm_signalmgr {
 	mm_fd_t fd;
+#if !defined(__linux__)
+	int write_fd;
+#endif
 	mm_list_t readers;
 };
 

@@ -37,11 +37,12 @@ static inline int od_soft_oom_get_system_memory_consumption(uint64_t *result)
 	int64_t mem_available = 0, mem_total = 0;
 
 	while (fgets(line, sizeof(line), fp)) {
-		if (sscanf(line, "MemAvailable: %ld kB", &mem_available) == 1) {
+		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
+			   &mem_available) == 1) {
 			continue;
 		}
 
-		if (sscanf(line, "MemTotal: %ld kB", &mem_total) == 1) {
+		if (sscanf(line, "MemTotal: %" PRId64 " kB", &mem_total) == 1) {
 			continue;
 		}
 	}
@@ -58,7 +59,8 @@ static inline int od_soft_oom_get_system_memory_consumption(uint64_t *result)
 			*result);
 	} else {
 		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			"got negative mem used: total = %ld, available = %ld",
+			"got negative mem used: total = %" PRId64
+			", available = %" PRId64,
 			mem_total, mem_available);
 		*result = 0;
 	}
@@ -310,7 +312,8 @@ od_soft_oom_get_mem_consumption_from_processes(od_config_soft_oom_t *config,
 		config->process, od_soft_oom_aggregate_consumption_cb, &arg);
 
 	od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-		"updated memory consumption for '%s' (%d pids): %lu bytes",
+		"updated memory consumption for '%s' (%d pids): %" PRIu64
+		" bytes",
 		config->process, arg.npids, *result);
 
 	return rc;
@@ -342,7 +345,8 @@ static inline void od_soft_oom_signal_postgres(od_soft_oom_checker_t *checker)
 	}
 
 	od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-		"used memory (%lu) >= limit (%lu), need to signal %d to top %d pss consumers",
+		"used memory (%" PRIu64 ") >= limit (%" PRIu64
+		"), need to signal %d to top %d pss consumers",
 		used_bytes, config->limit_bytes, drop->signal, drop->max_rate);
 
 	list_procs_arg_t arg;

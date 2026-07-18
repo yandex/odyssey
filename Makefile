@@ -28,7 +28,14 @@ ifeq ($(OS), Linux)
 	CONCURRENCY:=$(shell nproc)
 endif
 ifeq ($(OS), Darwin)
-	CONCURRENCY:=$(shell sysctl -n hw.logicalcpu')
+	CONCURRENCY:=$(shell sysctl -n hw.logicalcpu)
+	CMAKE_FLAGS += -DOPENSSL_ROOT_DIR=$(shell brew --prefix openssl@3 2>/dev/null) -DCMAKE_PREFIX_PATH=$(shell brew --prefix 2>/dev/null)
+endif
+
+ifeq ($(OS), Darwin)
+STAT_OWNER_CMD := stat -f "%u:%g" .
+else
+STAT_OWNER_CMD := stat -c "%u:%g" .
 endif
 
 .PHONY: clean apply_fmt
@@ -54,7 +61,7 @@ check-format:
 
 format:
 	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
-	docker run --user=`stat -c "%u:%g" .` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources
+	docker run --user=`$(STAT_OWNER_CMD)` -v .:/odyssey:rw odyssey/clang-format-runner -i modules sources
 
 build_images:
 	docker build -f docker/quickstart/Dockerfile . --tag=odyssey
@@ -279,6 +286,8 @@ ci-build-check-oracle-linux:
 		--build-arg version=$(ODYSSEY_ORACLELINUX_VERSION) \
 		--tag=odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-builder .
 	docker run -e ODYSSEY_BUILD_TYPE=$(ODYSSEY_BUILD_TYPE) odyssey/oraclelinux-$(ODYSSEY_ORACLELINUX_VERSION)-builder
+
+ci-build-check-macos: local_build
 
 build-docs-web:
 	docker build -f docs/Dockerfile --tag=odyssey/docs-builder .

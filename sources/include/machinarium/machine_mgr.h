@@ -6,16 +6,16 @@
  * cooperative multitasking engine.
  */
 
-#include <pthread.h>
 #include <stdint.h>
 
 #include <machinarium/list.h>
 #include <machinarium/machine.h>
+#include <machinarium/spinlock.h>
 
 typedef struct mm_machinemgr mm_machinemgr_t;
 
 struct mm_machinemgr {
-	pthread_spinlock_t lock;
+	mm_spinlock_t lock;
 	mm_list_t list;
 	int count;
 	uint64_t seq;

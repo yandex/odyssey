@@ -24,6 +24,40 @@ static size_t align_by_pagesize(size_t capacity)
 	return (capacity + page_size - 1) & ~(page_size - 1);
 }
 
+static int mm_vrb_create_backing_fd(void)
+{
+#if defined(__linux__)
+	int fd = memfd_create("virtual-ring-buffer", MFD_CLOEXEC);
+	return fd;
+#else
+	/*
+	 * macOS/BSD have no memfd_create(), so emulate anonymous shared memory
+	 * via shm_open() + immediate shm_unlink() (POSIX shared memory
+	 * object name is only needed to establish the mapping, unlinking
+	 * it right away makes it behave like an anonymous fd)
+	 */
+	char name[32];
+	snprintf(name, sizeof(name), "/vrb%d%x", (int)getpid(), arc4random());
+
+	int fd = shm_open(name, O_CREAT | O_EXCL | O_RDWR, 0600);
+	if (fd < 0) {
+		mm_errno_set(errno);
+		return -1;
+	}
+	shm_unlink(name);
+
+	if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
+		int err = errno;
+		close(fd);
+		mm_errno_set(err);
+		errno = err;
+		return -1;
+	}
+
+	return fd;
+#endif
+}
+
 mm_virtual_rbuf_t *mm_virtual_rbuf_create(size_t capacity)
 {
 	mm_virtual_rbuf_t *vrb = mm_malloc(sizeof(mm_virtual_rbuf_t));
@@ -35,7 +69,7 @@ mm_virtual_rbuf_t *mm_virtual_rbuf_create(size_t capacity)
 
 	vrb->capacity = align_by_pagesize(capacity);
 
-	int fd = memfd_create("virtual-ring-buffer", MFD_CLOEXEC);
+	int fd = mm_vrb_create_backing_fd();
 	if (fd < 0) {
 		mm_errno_set(errno);
 		mm_free(vrb);
@@ -208,7 +242,7 @@ int mm_virtual_rbuf_cache_init(mm_virtual_rbuf_cache_t *cache, size_t max_bufs)
 	cache->count = 0;
 	cache->max = max_bufs;
 
-	pthread_spin_init(&cache->lock, PTHREAD_PROCESS_PRIVATE);
+	mm_spinlock_init(&cache->lock);
 
 	if (max_bufs == 0) {
 		return 0;
@@ -232,14 +266,14 @@ void mm_virtual_rbuf_cache_destroy(mm_virtual_rbuf_cache_t *cache)
 
 	mm_free(cache->rbufs);
 
-	pthread_spin_destroy(&cache->lock);
+	mm_spinlock_destroy(&cache->lock);
 }
 
 mm_virtual_rbuf_t *mm_virtual_rbuf_cache_get(mm_virtual_rbuf_cache_t *cache)
 {
 	mm_virtual_rbuf_t *vrb = NULL;
 
-	pthread_spin_lock(&cache->lock);
+	mm_spinlock_lock(&cache->lock);
 
 	if (cache->count > 0) {
 		--cache->count;
@@ -248,7 +282,7 @@ mm_virtual_rbuf_t *mm_virtual_rbuf_cache_get(mm_virtual_rbuf_cache_t *cache)
 		cache->rbufs[cache->count] = NULL;
 	}
 
-	pthread_spin_unlock(&cache->lock);
+	mm_spinlock_unlock(&cache->lock);
 
 	if (vrb != NULL) {
 		memset(vrb->data, 0, vrb->capacity);
@@ -262,17 +296,17 @@ mm_virtual_rbuf_t *mm_virtual_rbuf_cache_get(mm_virtual_rbuf_cache_t *cache)
 void mm_virtual_rbuf_cache_put(mm_virtual_rbuf_cache_t *cache,
 			       mm_virtual_rbuf_t *vrb)
 {
-	pthread_spin_lock(&cache->lock);
+	mm_spinlock_lock(&cache->lock);
 
 	if (cache->count == cache->max) {
 		mm_virtual_rbuf_free(vrb);
 
-		pthread_spin_unlock(&cache->lock);
+		mm_spinlock_unlock(&cache->lock);
 		return;
 	}
 
 	cache->rbufs[cache->count] = vrb;
 	cache->count++;
 
-	pthread_spin_unlock(&cache->lock);
+	mm_spinlock_unlock(&cache->lock);
 }
