@@ -217,7 +217,8 @@ static int send_negotiate(od_client_t *client)
 			      KIWI_VAR_PQ_TEST_PROTOCOL_NEGOTIATION) != NULL;
 	kiwi_vars_unset(&client->vars, KIWI_VAR_PQ_TEST_PROTOCOL_NEGOTIATION);
 
-	const char **unsupported = (const char *[]){ "_pq_.test_protocol_negotiation" };
+	const char **unsupported =
+		(const char *[]){ "_pq_.test_protocol_negotiation" };
 	size_t nunsupported;
 
 	if (has_pq_tpn) {
