@@ -498,9 +498,16 @@ static inline int mm_tls_verify_name(char *cert_name, const char *name)
 int mm_tls_verify_common_name(mm_io_t *io, char *name)
 {
 	X509 *cert = NULL;
+#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER >= 0x40000000)
+	const X509_NAME *subject_name = NULL;
+#else
 	X509_NAME *subject_name = NULL;
-	char *common_name = NULL;
+#endif
+	const X509_NAME_ENTRY *entry = NULL;
+	const ASN1_STRING *cn_asn1 = NULL;
+	unsigned char *common_name = NULL;
 	int common_name_len = 0;
+	int idx;
 
 	cert = SSL_get_peer_certificate(io->tls_ssl);
 	if (cert == NULL) {
@@ -512,40 +519,47 @@ int mm_tls_verify_common_name(mm_io_t *io, char *name)
 		mm_tls_error(io, 0, "X509_get_subject_name()");
 		goto error;
 	}
-	common_name_len = X509_NAME_get_text_by_NID(subject_name,
-						    NID_commonName, NULL, 0);
-	if (common_name_len < 0) {
-		mm_tls_error(io, 0, "X509_NAME_get_text_by_NID()");
+	idx = X509_NAME_get_index_by_NID(subject_name, NID_commonName, -1);
+	if (idx < 0) {
+		mm_tls_error(io, 0, "X509_NAME_get_index_by_NID()");
 		goto error;
 	}
-	common_name = mm_calloc(common_name_len + 1, 1);
-	if (common_name == NULL) {
-		mm_tls_error(io, 0, "memory allocation failed");
+	entry = X509_NAME_get_entry(subject_name, idx);
+	if (entry == NULL) {
+		mm_tls_error(io, 0, "X509_NAME_get_entry()");
 		goto error;
 	}
-	X509_NAME_get_text_by_NID(subject_name, NID_commonName, common_name,
-				  common_name_len + 1);
+	cn_asn1 = X509_NAME_ENTRY_get_data(entry);
+	if (cn_asn1 == NULL) {
+		mm_tls_error(io, 0, "X509_NAME_ENTRY_get_data()");
+		goto error;
+	}
+	common_name_len = ASN1_STRING_to_UTF8(&common_name, cn_asn1);
+	if (common_name_len < 0 || common_name == NULL) {
+		mm_tls_error(io, 0, "ASN1_STRING_to_UTF8()");
+		goto error;
+	}
 	/* validate name */
-	if (common_name_len != (int)strlen(common_name)) {
+	if (common_name_len != (int)strlen((char *)common_name)) {
 		mm_tls_error(
 			io, 0,
 			"NUL byte in Common Name field, probably a malicious "
 			"server certificate");
 		goto error;
 	}
-	if (mm_tls_verify_name(common_name, name) == -1) {
+	if (mm_tls_verify_name((char *)common_name, name) == -1) {
 		mm_tls_error(io, 0, "bad common name: %s (expected %s)",
 			     common_name, name);
 		goto error;
 	}
 	X509_free(cert);
-	mm_free(common_name);
+	OPENSSL_free(common_name);
 	return 0;
 
 error:
 	X509_free(cert);
 	if (common_name) {
-		mm_free(common_name);
+		OPENSSL_free(common_name);
 	}
 	return -1;
 }
