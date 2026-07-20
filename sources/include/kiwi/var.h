@@ -41,6 +41,7 @@ typedef enum {
 	KIWI_VAR_ROLE,
 	KIWI_VAR_SPQRGUARD_PREVENT_DISTRIBUTED_TABLE_MODIFY,
 	KIWI_VAR_SPQRGUARD_PREVENT_REFERENCE_TABLE_MODIFY,
+	KIWI_VAR_PQ_TEST_PROTOCOL_NEGOTIATION,
 
 	/* greenplum */
 	KIWI_VAR_GP_SESSION_ROLE,
@@ -187,6 +188,9 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 	kiwi_var_init(&vars->vars[KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT],
 		      "odyssey_catchup_timeout",
 		      sizeof("odyssey_catchup_timeout"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_PQ_TEST_PROTOCOL_NEGOTIATION],
+		      "_pq_.test_protocol_negotiation",
+		      sizeof("_pq_.test_protocol_negotiation"));
 	/* XXX: todo - also accept aliases */
 	kiwi_var_init(&vars->vars[KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS],
 		      "target_session_attrs", sizeof("target_session_attrs"));
