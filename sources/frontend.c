@@ -262,8 +262,8 @@ static int reject_unsupported_request(od_client_t *client)
 static int od_frontend_startup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-	int ssl_done;
-	int gss_done;
+	int ssl_done = 0;
+	int gss_done = 0;
 
 	while (1) {
 		int rc;
