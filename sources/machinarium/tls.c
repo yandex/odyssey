@@ -498,7 +498,11 @@ static inline int mm_tls_verify_name(char *cert_name, const char *name)
 int mm_tls_verify_common_name(mm_io_t *io, char *name)
 {
 	X509 *cert = NULL;
+#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER >= 0x40000000)
 	const X509_NAME *subject_name = NULL;
+#else
+	X509_NAME *subject_name = NULL;
+#endif
 	const X509_NAME_ENTRY *entry = NULL;
 	const ASN1_STRING *cn_asn1 = NULL;
 	unsigned char *common_name = NULL;
