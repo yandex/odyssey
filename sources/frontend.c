@@ -290,6 +290,7 @@ static int od_frontend_startup(od_client_t *client)
 				goto error;
 			}
 
+			client->startup.is_ssl_request = 0;
 			ssl_done = 1;
 			continue;
 		}
@@ -309,6 +310,8 @@ static int od_frontend_startup(od_client_t *client)
 
 		goto error;
 	}
+
+	client->startup.is_ssl_request = ssl_done;
 
 	if (client->startup.is_cancel) {
 		/* no need to proceed any further */

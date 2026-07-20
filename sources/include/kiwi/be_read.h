@@ -155,8 +155,6 @@ KIWI_API static inline int kiwi_be_read_startup(char *data, uint32_t size,
 		return KIWI_STARTUP_READ_VERSION_ERROR;
 	}
 	su->unsupported_request = 0;
-	su->is_ssl_request = 0;
-	su->is_cancel = 0;
 	switch (version) {
 	/* CancelRequest */
 	case CANCEL_REQUEST_CODE:
