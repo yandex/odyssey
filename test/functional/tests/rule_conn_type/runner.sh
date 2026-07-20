@@ -23,16 +23,22 @@ sleep 1
 # db1.user1 has host connection type - should work with ssl and without
 psql 'host=localhost port=6432 user=user1 dbname=db1 sslmode=disable' -c 'select 42' || {
 	echo 'db1.user1 should work without ssl'
+	sleep 1
+	cat /var/log/odyssey.log
 	exit 1
 }
 psql 'host=localhost port=6432 user=user1 dbname=db1 sslmode=verify-full sslrootcert=/tests/rule_conn_type/root.pem' -c 'select 42' || {
 	echo 'db1.user1 should work with ssl'
+	sleep 1
+	cat /var/log/odyssey.log
 	exit 1
 }
 
 # tsa_db.user_ro has hostsll connection type - only connections with ssl should work
 psql 'host=localhost port=6432 user=user_ro dbname=tsa_db sslmode=verify-full sslrootcert=/tests/rule_conn_type/root.pem' -c 'select 42' || {
 	echo 'tsa_db.user_ro should work with ssl'
+	sleep 1
+	cat /var/log/odyssey.log
 	exit 1
 }
 psql 'host=localhost port=6432 user=user_ro dbname=tsa_db sslmode=disable' -c 'select 42' && {

@@ -158,86 +158,184 @@ od_frontend_error_is_too_many_connections(od_client_t *client)
 	return strcmp(error.code, KIWI_TOO_MANY_CONNECTIONS) == 0;
 }
 
+static int read_and_parse_startup(od_client_t *client, int *parse_rc)
+{
+	od_instance_t *instance = client->global->instance;
+
+	machine_msg_t *msg = od_read_startup(
+		&client->io, client->config_listen->client_login_timeout);
+	if (msg == NULL) {
+		if (parse_rc) {
+			*parse_rc = KIWI_STARTUP_READ_LEN_ERROR;
+		}
+		return -1;
+	}
+
+	int rc = kiwi_be_read_startup(machine_msg_data(msg),
+				      machine_msg_size(msg) -
+					      1 /* extra 0-terminator */,
+				      &client->startup, &client->vars);
+	machine_msg_free(msg);
+
+	if (parse_rc) {
+		*parse_rc = rc;
+	}
+
+	if (rc != KIWI_STARTUP_READ_OK) {
+		od_error(&instance->logger, "startup", client, NULL,
+			 "startup packet parse error, code = %d", rc);
+		return -1;
+	}
+
+	return 0;
+}
+
+static void reject_unsupported_proto_version(od_client_t *client)
+{
+	od_frontend_fatal_detailed(
+		client, KIWI_FEATURE_NOT_SUPPORTED, "", "",
+		"unsupported frontend protocol %u.%u: server supports %u.0 to %u.%u",
+		PG_PROTOCOL_MAJOR(client->startup.proto_version),
+		PG_PROTOCOL_MINOR(client->startup.proto_version),
+		PG_PROTOCOL_MAJOR(PG_PROTOCOL_EARLIEST),
+		PG_PROTOCOL_MAJOR(PG_PROTOCOL_LATEST),
+		PG_PROTOCOL_MINOR(PG_PROTOCOL_LATEST));
+}
+
+static int has_unsupported_features(od_client_t *client)
+{
+	kiwi_var_t *pq_tpn = kiwi_vars_get(
+		&client->vars, KIWI_VAR_PQ_TEST_PROTOCOL_NEGOTIATION);
+
+	return pq_tpn != NULL;
+}
+
+static int send_negotiate(od_client_t *client)
+{
+	int has_pq_tpn =
+		kiwi_vars_get(&client->vars,
+			      KIWI_VAR_PQ_TEST_PROTOCOL_NEGOTIATION) != NULL;
+	kiwi_vars_unset(&client->vars, KIWI_VAR_PQ_TEST_PROTOCOL_NEGOTIATION);
+
+	const char **unsupported =
+		(const char *[]){ "_pq_.test_protocol_negotiation" };
+	size_t nunsupported;
+
+	if (has_pq_tpn) {
+		nunsupported = 1;
+	} else {
+		nunsupported = 0;
+	}
+
+	machine_msg_t *msg = kiwi_be_write_protocol_negotiation(
+		NULL, PG_PROTOCOL_LATEST, unsupported, nunsupported);
+	if (msg == NULL) {
+		return -1;
+	}
+
+	return od_write(&client->io, msg);
+}
+
+static int reject_unsupported_request(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+
+	machine_msg_t *msg = machine_msg_create(sizeof(uint8_t));
+	if (msg == NULL) {
+		return -1;
+	}
+
+	*(uint8_t *)machine_msg_data(msg) = 'N';
+
+	if (od_write(&client->io, msg) == -1) {
+		od_error(&instance->logger, "unsupported protocol (gssapi)",
+			 client, NULL, "write error: %s",
+			 od_io_error(&client->io));
+		return -1;
+	}
+
+	od_debug(&instance->logger, "unsupported protocol (gssapi)", client,
+		 NULL, "ignoring");
+	return 0;
+}
+
 static int od_frontend_startup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-	machine_msg_t *msg;
+	int ssl_done = 0;
+	int gss_done = 0;
 
-	for (uint32_t startup_attempt = 0;
-	     startup_attempt < MAX_STARTUP_ATTEMPTS; startup_attempt++) {
-		msg = od_read_startup(
-			&client->io,
-			client->config_listen->client_login_timeout);
-		if (msg == NULL) {
-			goto error;
-		}
+	while (1) {
+		int rc;
+		int parse_rc;
 
-		int rc = kiwi_be_read_startup(machine_msg_data(msg),
-					      machine_msg_size(msg),
-					      &client->startup, &client->vars);
-		machine_msg_free(msg);
+		rc = read_and_parse_startup(client, &parse_rc);
 		if (rc == -1) {
+			if (parse_rc == KIWI_STARTUP_INVALID_MAJOR_ERROR) {
+				reject_unsupported_proto_version(client);
+			}
 			goto error;
 		}
 
-		if (!client->startup.unsupported_request) {
+		if (!client->startup.unsupported_request &&
+		    !client->startup.is_ssl_request) {
+			/* that was real startup/cancel packet - its ok */
 			break;
 		}
-		/* not supported 'N' */
-		msg = machine_msg_create(sizeof(uint8_t));
-		if (msg == NULL) {
-			return -1;
-		}
-		uint8_t *type = machine_msg_data(msg);
-		*type = 'N';
-		rc = od_write(&client->io, msg);
-		if (rc == -1) {
-			od_error(&instance->logger,
-				 "unsupported protocol (gssapi)", client, NULL,
-				 "write error: %s", od_io_error(&client->io));
-			return -1;
-		}
-		od_debug(&instance->logger, "unsupported protocol (gssapi)",
-			 client, NULL, "ignoring");
-	}
 
-	/* client ssl request */
-	int rc = od_tls_frontend_accept(client, &instance->logger,
-					client->config_listen, client->tls);
-	if (rc == -1) {
+		if (client->startup.is_ssl_request && !ssl_done) {
+			if (od_tls_frontend_accept(client, &instance->logger,
+						   client->config_listen,
+						   client->tls) == -1) {
+				goto error;
+			}
+
+			client->startup.is_ssl_request = 0;
+			ssl_done = 1;
+			continue;
+		}
+
+		if (client->startup.unsupported_request && !gss_done) {
+			if (reject_unsupported_request(client) == -1) {
+				return -1;
+			}
+
+			gss_done = 1;
+			continue;
+		}
+
+		od_error(&instance->logger, "startup", client, NULL,
+			 "unexpected repeated %s negotiation request",
+			 client->startup.is_ssl_request ? "ssl" : "gss");
+
 		goto error;
 	}
 
-	if (!client->startup.is_ssl_request) {
-		rc = od_compression_frontend_setup(
-			client, client->config_listen, &instance->logger);
-		if (rc == -1) {
-			return -1;
-		}
+	client->startup.is_ssl_request = ssl_done;
+
+	if (client->startup.is_cancel) {
+		/* no need to proceed any further */
 		return 0;
 	}
 
-	/* read startup-cancel message followed after ssl
-	 * negotiation */
-	assert(client->startup.is_ssl_request);
-	msg = od_read_startup(&client->io,
-			      client->config_listen->client_login_timeout);
-	if (msg == NULL) {
-		goto error;
-	}
-	rc = kiwi_be_read_startup(machine_msg_data(msg), machine_msg_size(msg),
-				  &client->startup, &client->vars);
-	machine_msg_free(msg);
-	if (rc == -1) {
-		od_gerror("startup", client, NULL,
-			  "startup packet parse error");
-		goto error;
+	if (PG_PROTOCOL_MINOR(client->startup.proto_version) >
+		    PG_PROTOCOL_MINOR(PG_PROTOCOL_LATEST) ||
+	    has_unsupported_features(client)) {
+		int rc = send_negotiate(client);
+		if (rc != 0) {
+			od_error(&instance->logger, "startup", client, NULL,
+				 "negotiation sending failed, errno=%d (%s)",
+				 mm_errno_get(), strerror(mm_errno_get()));
+			goto error;
+		}
 	}
 
-	rc = od_compression_frontend_setup(client, client->config_listen,
-					   &instance->logger);
-	if (rc == -1) {
-		return -1;
+	if (od_compression_frontend_setup(client, client->config_listen,
+					  &instance->logger) == -1) {
+		od_error(&instance->logger, "startup", client, NULL,
+			 "can't setup compression, errno=%d (%s)",
+			 mm_errno_get(), strerror(mm_errno_get()));
+		goto error;
 	}
 
 	return 0;

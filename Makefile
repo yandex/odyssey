@@ -53,7 +53,7 @@ local_run:
 	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF)
 
 console_run: 
-	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF) --verbose --console --log_to_stdout
+	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF) --console --log_to_stdout --verbose
 
 check-format:
 	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .
@@ -109,6 +109,9 @@ build_dbg:
 
 gdb:
 	gdb --args ./build/sources/odyssey $(DEV_CONF) --console --log_to_stdout # --verbose
+
+lldb:
+	lldb -- ./build/sources/odyssey $(DEV_CONF) --console --log_to_stdout
 
 submit-cov:
 	mkdir cov-build && cd cov-build
