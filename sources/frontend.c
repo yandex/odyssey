@@ -165,6 +165,9 @@ static int read_and_parse_startup(od_client_t *client, int *parse_rc)
 	machine_msg_t *msg = od_read_startup(
 		&client->io, client->config_listen->client_login_timeout);
 	if (msg == NULL) {
+		if (parse_rc) {
+			*parse_rc = KIWI_STARTUP_READ_LEN_ERROR;
+		}
 		return -1;
 	}
 
