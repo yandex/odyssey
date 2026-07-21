@@ -69,7 +69,6 @@ jobs:
       matrix:
         include:
           - runner: macos-14   # Apple Silicon (arm64)
-          - runner: macos-13   # Intel (x86_64)
     steps:
     - uses: actions/checkout@v7
       with:
