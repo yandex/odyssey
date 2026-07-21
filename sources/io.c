@@ -12,36 +12,6 @@
 #include <readahead.h>
 #include <io.h>
 
-static void od_io_drain_readable(od_io_t *io)
-{
-	if (!mm_io_is_tls(io->io)) {
-		return;
-	}
-
-	while (1) {
-		int rc = od_io_try_read_some(io);
-		if (rc == 0) {
-			continue;
-		}
-
-		int errno_ = machine_errno();
-		if (errno_ == EWOULDBLOCK) {
-			/* no data in socket */
-			break;
-		}
-		if (errno_ == EINPROGRESS) {
-			/* no place in readahead */
-			break;
-		}
-
-		/*
-		 * real error
-		 * general write will reveal the error, so just break and ignore
-		 */
-		break;
-	}
-}
-
 int od_io_write_raw(od_io_t *io, const void *buf, size_t size,
 		    size_t *processed, uint32_t timeout_ms)
 {
@@ -71,13 +41,6 @@ int od_io_write_raw(od_io_t *io, const void *buf, size_t size,
 				mm_errno_set(EAGAIN);
 				return -1;
 			}
-
-			/*
-			 * sometimes writing can require reading, ex: KeyUpdate in TLS 1.3
-			 * so just try read into readahead as much as we can and then continue
-			 */
-			od_io_drain_readable(io);
-
 			continue;
 		}
 
@@ -135,13 +98,6 @@ int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 				mm_errno_set(EAGAIN);
 				return -1;
 			}
-
-			/*
-			 * sometimes writing can require reading, ex: KeyUpdate in TLS 1.3
-			 * so just try read into readahead as much as we can and then continue
-			 */
-			od_io_drain_readable(io);
-
 			continue;
 		}
 
