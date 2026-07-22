@@ -401,8 +401,11 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		}
 	}
 
+	/* snapshot log_session to avoid race on config reload (SIGHUP) */
+	int log_session = instance->config.log_session;
+
 	uint64_t time_connect_start = 0;
-	if (instance->config.log_session) {
+	if (log_session) {
 		time_connect_start = machine_time_us();
 	}
 
@@ -461,7 +464,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	uint64_t time_resolve = 0;
-	if (instance->config.log_session) {
+	if (log_session) {
 		time_resolve = machine_time_us() - time_connect_start;
 	}
 
@@ -529,12 +532,12 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	uint64_t time_connect = 0;
-	if (instance->config.log_session) {
+	if (log_session) {
 		time_connect = machine_time_us() - time_connect_start;
 	}
 
 	/* log server connection */
-	if (instance->config.log_session) {
+	if (log_session) {
 		char addr_buff[256];
 		mm_io_format_socket_addr(server->io.io, addr_buff,
 					 sizeof(addr_buff));
