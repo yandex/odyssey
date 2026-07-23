@@ -519,6 +519,7 @@ void od_system_config_reload(od_system_t *system)
 		return;
 	}
 	od_config_reload(&instance->config, &config);
+	od_logger_set_debug(&instance->logger, instance->config.log_debug);
 	od_hba_reload(hba, &hba_rules);
 
 	/* auto-generate default rule for auth_query if none specified */

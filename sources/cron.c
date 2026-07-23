@@ -134,7 +134,10 @@ static inline void od_cron_stat(od_cron_t *cron)
 	od_instance_t *instance = cron->global->instance;
 	od_worker_pool_t *worker_pool = cron->global->worker_pool;
 
-	if (instance->config.log_stats) {
+	/* snapshot log_stats to avoid race on config reload (SIGHUP) */
+	int log_stats = instance->config.log_stats;
+
+	if (log_stats) {
 		/* system worker stats */
 		uint64_t count_coroutine = 0;
 		uint64_t count_coroutine_cache = 0;
@@ -183,7 +186,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 
 	/* update stats per route and print info */
 	od_route_pool_stat_cb_t stat_cb;
-	if (!instance->config.log_stats) {
+	if (!log_stats) {
 		stat_cb = NULL;
 	} else {
 		stat_cb = od_cron_stat_cb;
