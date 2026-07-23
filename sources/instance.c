@@ -26,11 +26,78 @@
 #include <hba.h>
 #include <hba_rule.h>
 #include <cron.h>
-#include <config_reader.h>
 #include <worker_pool.h>
 #include <system.h>
 #include <extension.h>
 #include <od_error.h>
+#include <cfg/reader.h>
+#include <cfg/convert.h>
+#include <cfg_import.h>
+
+int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
+		  od_global_t *global, od_hba_rules_t *hba_rules,
+		  const char *config_file)
+{
+	od_cfg_model_t model;
+	od_cfg_diag_list_t diags;
+
+	od_cfg_model_init(&model);
+	od_cfg_diag_list_init(&diags);
+
+	int rc = od_cfg_parse_file(config_file, &model, &diags);
+
+	for (size_t i = 0; i < diags.count; i++) {
+		od_cfg_diag_t *d = &diags.items[i];
+		const char *fname = d->location.filename ?
+					    d->location.filename :
+					    config_file;
+		if (d->level == OD_CFG_DIAG_WARNING) {
+			od_log(logger, "config", NULL, NULL,
+			       "%s:%d:%d: warning: %s", fname,
+			       d->location.first_line, d->location.first_column,
+			       d->message);
+		} else {
+			od_error(logger, "config", NULL, NULL, "%s:%d:%d: %s",
+				 fname, d->location.first_line,
+				 d->location.first_column, d->message);
+		}
+	}
+
+	if (rc != 0 || od_cfg_diag_has_errors(&diags)) {
+		od_cfg_diag_list_free(&diags);
+		od_cfg_model_free(&model);
+		return -1;
+	}
+
+	od_cfg_diag_list_free(&diags);
+	od_cfg_diag_list_init(&diags);
+
+	rc = od_cfg_convert_model(&model, config, rules, global, hba_rules,
+				  &diags);
+
+	for (size_t i = 0; i < diags.count; i++) {
+		od_cfg_diag_t *d = &diags.items[i];
+		const char *fname = d->location.filename ?
+					    d->location.filename :
+					    config_file;
+		if (d->level == OD_CFG_DIAG_WARNING) {
+			od_log(logger, "config", NULL, NULL,
+			       "%s:%d:%d: warning: %s", fname,
+			       d->location.first_line, d->location.first_column,
+			       d->message);
+		} else {
+			od_error(logger, "config", NULL, NULL, "%s:%d:%d: %s",
+				 fname, d->location.first_line,
+				 d->location.first_column, d->message);
+		}
+	}
+
+	int has_errors = od_cfg_diag_has_errors(&diags);
+	od_cfg_diag_list_free(&diags);
+	od_cfg_model_free(&model);
+
+	return (rc != 0 || has_errors) ? -1 : 0;
+}
 
 static inline void fill_supported_features_string(char *out, size_t max)
 {
@@ -169,12 +236,9 @@ int od_config_testing(od_instance_t *instance)
 	};
 
 	int rc;
-	rc = od_config_reader_import(&instance->config, &router.rules, &error,
-				     &extensions, &global, &hba.rules,
-				     instance->config_file);
+	rc = od_cfg_import(&instance->logger, &instance->config, &router.rules,
+			   &global, &hba.rules, instance->config_file);
 	if (rc == -1) {
-		od_error(&instance->logger, "config", NULL, NULL, "%s",
-			 error.error);
 		goto error;
 	}
 
@@ -369,15 +433,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	router.global = global;
 
 	/* read config file */
-	od_error_t error;
-	od_error_init(&error);
 	int rc;
-	rc = od_config_reader_import(&instance->config, &router.rules, &error,
-				     extensions, global, &hba.rules,
-				     instance->config_file);
+	rc = od_cfg_import(&instance->logger, &instance->config, &router.rules,
+			   global, &hba.rules, instance->config_file);
 	if (rc == -1) {
-		od_error(&instance->logger, "config", NULL, NULL, "%s",
-			 error.error);
 		goto error;
 	}
 
@@ -495,6 +554,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	if (instance->config.log_config) {
 		od_config_print(&instance->config, &instance->logger);
 		od_rules_print(&router.rules, &instance->logger);
+		if (instance->config.hba_file) {
+			od_hba_rules_print(&hba, &instance->logger);
+		}
 	}
 
 	/* set process priority */
@@ -562,9 +624,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	return rc;
 
 error:
+	/*
+	TODO: proper cleanup
 	od_router_free(&router);
 	od_extension_free(&instance->logger, extensions);
 	od_system_free(system);
+	*/
 	return NOT_OK_RESPONSE;
 }
 

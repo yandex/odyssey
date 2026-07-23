@@ -360,14 +360,28 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       od_config_yes_no(config->log_query));
 	od_log(logger, "config", NULL, NULL, "log_stats               %s",
 	       od_config_yes_no(config->log_stats));
+	od_log(logger, "config", NULL, NULL, "log_general_stats_prom  %s",
+	       od_config_yes_no(config->log_general_stats_prom));
+	od_log(logger, "config", NULL, NULL, "log_route_stats_prom    %s",
+	       od_config_yes_no(config->log_route_stats_prom));
+	od_log(logger, "config", NULL, NULL, "log_queue_depth         %d",
+	       config->log_queue_depth);
 	od_log(logger, "config", NULL, NULL, "stats_interval          %d",
 	       config->stats_interval);
 	od_log(logger, "config", NULL, NULL, "readahead               %d",
 	       config->readahead);
 	od_log(logger, "config", NULL, NULL, "nodelay                 %s",
 	       od_config_yes_no(config->nodelay));
+	od_log(logger, "config", NULL, NULL, "disable_nolinger        %s",
+	       od_config_yes_no(config->disable_nolinger));
 	od_log(logger, "config", NULL, NULL, "keepalive               %d",
 	       config->keepalive);
+	od_log(logger, "config", NULL, NULL, "keepalive_keep_interval %d",
+	       config->keepalive_keep_interval);
+	od_log(logger, "config", NULL, NULL, "keepalive_probes        %d",
+	       config->keepalive_probes);
+	od_log(logger, "config", NULL, NULL, "keepalive_usr_timeout   %d",
+	       config->keepalive_usr_timeout);
 	if (config->client_max_set) {
 		od_log(logger, "config", NULL, NULL,
 		       "client_max              %d", config->client_max);
@@ -390,6 +404,24 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->backend_connect_timeout_ms);
 	od_log(logger, "config", NULL, NULL, "cancel_timeout_ms         %u",
 	       config->cancel_timeout_ms);
+	od_log(logger, "config", NULL, NULL, "cancel_queue_timeout_ms   %u",
+	       config->cancel_queue_timeout_ms);
+	od_log(logger, "config", NULL, NULL, "cancel_max_inflight       %d",
+	       config->cancel_max_inflight);
+	od_log(logger, "config", NULL, NULL, "dns_ttl_ms              %d",
+	       config->dns_ttl_ms);
+	od_log(logger, "config", NULL, NULL, "group_checker_interval  %d",
+	       config->group_checker_interval);
+	od_log(logger, "config", NULL, NULL, "max_sigterms_to_die     %d",
+	       config->max_sigterms_to_die);
+	od_log(logger, "config", NULL, NULL, "virtual_processing      %s",
+	       od_config_yes_no(config->virtual_processing));
+	od_log(logger, "config", NULL, NULL, "smart_search_path_enquoting %s",
+	       od_config_yes_no(config->smart_search_path_enquoting));
+	if (config->availability_zone[0]) {
+		od_log(logger, "config", NULL, NULL,
+		       "availability_zone       %s", config->availability_zone);
+	}
 	od_log(logger, "config", NULL, NULL, "enable_host_watcher.    %d",
 	       config->host_watcher_enabled);
 
@@ -405,6 +437,17 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		od_log(logger, "config", NULL, NULL,
 		       "socket bind with:       SO_REUSEPORT");
 	}
+	if (config->hba_file) {
+		od_log(logger, "config", NULL, NULL,
+		       "hba_file                %s", config->hba_file);
+	}
+
+	if (config->conn_drop_options.drop_enabled) {
+		od_log(logger, "config", NULL, NULL,
+		       "conn_drop_options: enabled, rate %d, interval_ms %d",
+		       config->conn_drop_options.rate,
+		       config->conn_drop_options.interval_ms);
+	}
 
 	if (config->soft_oom.enabled) {
 		od_log(logger, "config", NULL, NULL,
@@ -413,12 +456,16 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       config->soft_oom.process,
 		       config->soft_oom.check_interval_ms,
 		       config->soft_oom.limit_bytes);
+		if (config->soft_oom.drop.enabled) {
+			od_log(logger, "config", NULL, NULL,
+			       "soft_oom drop: signal %d, max_rate %d",
+			       config->soft_oom.drop.signal,
+			       config->soft_oom.drop.max_rate);
+		}
 	} else {
 		od_log(logger, "config", NULL, NULL,
 		       "soft_oom:         DISABLED");
 	}
-
-	od_log(logger, "config", NULL, NULL, "SCRAM auth method:       OK");
 
 	od_list_t *i;
 	od_list_foreach (&config->listen, i) {
@@ -431,6 +478,17 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       listen->port);
 		od_log(logger, "config", NULL, NULL, "  backlog       %d",
 		       listen->backlog);
+		od_log(logger, "config", NULL, NULL,
+		       "  client_login_timeout %d",
+		       listen->client_login_timeout);
+		od_log(logger, "config", NULL, NULL,
+		       "  target_session_attrs %s",
+		       od_target_session_attrs_to_str(
+			       listen->target_session_attrs));
+		if (listen->catchup_timeout) {
+			od_log(logger, "config", NULL, NULL,
+			       "  catchup_timeout %d", listen->catchup_timeout);
+		}
 		if (listen->tls_opts->tls) {
 			od_log(logger, "config", NULL, NULL,
 			       "  tls           %s", listen->tls_opts->tls);

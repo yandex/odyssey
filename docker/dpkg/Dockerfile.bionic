@@ -19,6 +19,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     tzdata \
     software-properties-common \
     libsystemd-dev \
+    bison flex \
     debhelper debootstrap devscripts equivs
 
 RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null

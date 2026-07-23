@@ -80,6 +80,96 @@ bool od_hba_validate_name(char *client_name, od_hba_rule_name_t *name,
 	return false;
 }
 
+void od_hba_rules_print(od_hba_t *hba, od_logger_t *logger)
+{
+	static const char *conn_type_str[] = {
+		[OD_CONFIG_HBA_LOCAL] = "local",
+		[OD_CONFIG_HBA_HOST] = "host",
+		[OD_CONFIG_HBA_HOSTSSL] = "hostssl",
+		[OD_CONFIG_HBA_HOSTNOSSL] = "hostnossl",
+	};
+
+	od_list_t *i;
+	od_list_foreach (&hba->rules, i) {
+		od_hba_rule_t *rule = od_container_of(i, od_hba_rule_t, link);
+
+		/* database names */
+		char db_buf[256];
+		int db_pos = 0;
+		if (rule->database.flags & OD_HBA_NAME_ALL) {
+			db_pos += snprintf(db_buf + db_pos,
+					   sizeof(db_buf) - db_pos, "all");
+		} else if (rule->database.flags & OD_HBA_NAME_SAMEUSER) {
+			db_pos += snprintf(db_buf + db_pos,
+					   sizeof(db_buf) - db_pos, "sameuser");
+		} else {
+			od_list_t *j;
+			od_list_foreach (&rule->database.values, j) {
+				od_hba_rule_name_item_t *item = od_container_of(
+					j, od_hba_rule_name_item_t, link);
+				if (db_pos > 0 && db_buf[db_pos - 1] != '(') {
+					db_pos += snprintf(
+						db_buf + db_pos,
+						sizeof(db_buf) - db_pos, ",");
+				}
+				db_pos += snprintf(db_buf + db_pos,
+						   sizeof(db_buf) - db_pos,
+						   "%s", item->value);
+			}
+		}
+		if (db_pos == 0) {
+			snprintf(db_buf, sizeof(db_buf), "(none)");
+		}
+
+		/* user names */
+		char user_buf[256];
+		int user_pos = 0;
+		if (rule->user.flags & OD_HBA_NAME_ALL) {
+			user_pos +=
+				snprintf(user_buf + user_pos,
+					 sizeof(user_buf) - user_pos, "all");
+		} else if (rule->user.flags & OD_HBA_NAME_SAMEUSER) {
+			user_pos += snprintf(user_buf + user_pos,
+					     sizeof(user_buf) - user_pos,
+					     "sameuser");
+		} else {
+			od_list_t *j;
+			od_list_foreach (&rule->user.values, j) {
+				od_hba_rule_name_item_t *item = od_container_of(
+					j, od_hba_rule_name_item_t, link);
+				if (user_pos > 0 &&
+				    user_buf[user_pos - 1] != '(') {
+					user_pos += snprintf(
+						user_buf + user_pos,
+						sizeof(user_buf) - user_pos,
+						",");
+				}
+				user_pos +=
+					snprintf(user_buf + user_pos,
+						 sizeof(user_buf) - user_pos,
+						 "%s", item->value);
+			}
+		}
+		if (user_pos == 0) {
+			snprintf(user_buf, sizeof(user_buf), "(none)");
+		}
+
+		const char *addr_str =
+			(rule->connection_type == OD_CONFIG_HBA_LOCAL) ?
+				"" :
+			(rule->address_range.string_value != NULL) ?
+				rule->address_range.string_value :
+				"";
+
+		od_log(logger, "config", NULL, NULL,
+		       "hba rule  %-10s  db=%-20s  user=%-20s  addr=%-20s  %s",
+		       conn_type_str[rule->connection_type], db_buf, user_buf,
+		       addr_str,
+		       rule->auth_method == OD_CONFIG_HBA_ALLOW ? "allow" :
+								  "deny");
+	}
+}
+
 int od_hba_process(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;

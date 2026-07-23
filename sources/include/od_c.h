@@ -12,7 +12,10 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <limits.h>
 #include <string.h>
+#include <signal.h>
 #include <strings.h>
 #include <stdio.h>
 #include <ctype.h>

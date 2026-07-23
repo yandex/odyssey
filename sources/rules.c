@@ -103,7 +103,7 @@ od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
 	return storage;
 }
 
-od_rule_storage_t *od_rules_storage_match(od_rules_t *rules, char *name)
+od_rule_storage_t *od_rules_storage_match(od_rules_t *rules, const char *name)
 {
 	od_list_t *i;
 	od_list_foreach (&rules->storages, i) {
@@ -2251,6 +2251,18 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 
 		od_log(logger, "storage", NULL, NULL, "  port          %d",
 		       storage->port);
+		od_log(logger, "storage", NULL, NULL, "  server_max_routing %d",
+		       storage->server_max_routing);
+		od_log(logger, "storage", NULL, NULL,
+		       "  endpoints_status_poll_interval_ms %d",
+		       storage->endpoints_status_poll_interval_ms);
+		for (size_t ep_i = 0; ep_i < storage->endpoints_count; ep_i++) {
+			char ep_str[256];
+			od_address_to_str(&storage->endpoints[ep_i].address,
+					  ep_str, sizeof(ep_str));
+			od_log(logger, "storage", NULL, NULL,
+			       "  endpoint[%zu] %s", ep_i, ep_str);
+		}
 
 		if (storage->tls_opts->tls) {
 			od_log(logger, "storage", NULL, NULL,
@@ -2328,6 +2340,34 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  auth_query_user                   %s",
 			       rule->auth_query_user);
 		}
+		if (rule->auth_module) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  auth_module                       %s",
+			       rule->auth_module);
+		}
+		{
+			const char *role_str = "undef";
+			switch (rule->user_role) {
+			case OD_RULE_ROLE_ADMIN:
+				role_str = "admin";
+				break;
+			case OD_RULE_ROLE_STAT:
+				role_str = "stat";
+				break;
+			case OD_RULE_ROLE_NOTALLOW:
+				role_str = "notallow";
+				break;
+			default:
+				break;
+			}
+			od_log(logger, "rules", NULL, NULL,
+			       "  role                              %s",
+			       role_str);
+		}
+		od_log(logger, "rules", NULL, NULL,
+		       "  target_session_attrs              %s",
+		       od_target_session_attrs_to_str(
+			       rule->target_session_attrs));
 
 		/* pool  */
 		od_log(logger, "rules", NULL, NULL,
@@ -2353,6 +2393,11 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool discard                      %s",
 		       rule->pool->discard ? "yes" : "no");
+		if (rule->pool->discard_query) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  pool discard_query                %s",
+			       rule->pool->discard_query);
+		}
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool smart discard                %s",
 		       rule->pool->smart_discard ? "yes" : "no");
@@ -2368,6 +2413,21 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool idle_in_transaction_timeout  %" PRIu64,
 		       rule->pool->idle_in_transaction_timeout);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool reset_timeout_ms             %" PRIu64,
+		       rule->pool->reset_timeout_ms);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool pin_on_listen                %s",
+		       rule->pool->pin_on_listen ? "yes" : "no");
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool notice_after_waiting_ms      %d",
+		       rule->pool->notice_after_waiting_ms);
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool attach_check                 %s",
+		       rule->pool->attach_check ? "yes" : "no");
+		od_log(logger, "rules", NULL, NULL,
+		       "  pool acquire_fail_fast            %s",
+		       rule->pool->acquire_fail_fast ? "yes" : "no");
 		if (rule->pool->pool_type != OD_RULE_POOL_SESSION) {
 			od_log(logger, "rules", NULL, NULL,
 			       "  pool prepared statement support   %s",
@@ -2387,6 +2447,21 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  reserve_session_server_connection %s",
 		       od_rules_yes_no(
 			       rule->reserve_session_server_connection));
+		od_log(logger, "rules", NULL, NULL,
+		       "  client_show_id                    %s",
+		       od_rules_yes_no(rule->client_show_id));
+		od_log(logger, "rules", NULL, NULL,
+		       "  application_name_add_host         %s",
+		       od_rules_yes_no(rule->application_name_add_host));
+		od_log(logger, "rules", NULL, NULL,
+		       "  server_drop_on_cached_plan_error  %s",
+		       od_rules_yes_no(rule->server_drop_on_cached_plan_error));
+		od_log(logger, "rules", NULL, NULL,
+		       "  password_passthrough              %s",
+		       od_rules_yes_no(rule->enable_password_passthrough));
+		od_log(logger, "rules", NULL, NULL,
+		       "  server_lifetime_us                %" PRIu64,
+		       rule->server_lifetime_us);
 #ifdef LDAP_FOUND
 		if (rule->ldap_endpoint_name) {
 			od_log(logger, "rules", NULL, NULL,
@@ -2490,8 +2565,21 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  log_query                         %s",
 		       od_rules_yes_no(rule->log_query));
 
-		od_log(logger, "rules", NULL, NULL,
-		       "  options:                         %s", "todo");
+		for (int vi = 0; vi < KIWI_VAR_MAX; vi++) {
+			kiwi_var_t *v = &rule->vars.vars[vi];
+			if (v->value_len > 0 && v->name) {
+				od_log(logger, "rules", NULL, NULL,
+				       "  pgoption %s=%s", v->name, v->value);
+			}
+		}
+		for (size_t vi = 0; vi < rule->backend_startup_vars_sz; vi++) {
+			untyped_kiwi_var_t *v = &rule->backend_startup_vars[vi];
+			if (v->name) {
+				od_log(logger, "rules", NULL, NULL,
+				       "  backend_startup_var %s=%s", v->name,
+				       v->value ? v->value : "");
+			}
+		}
 	}
 }
 
