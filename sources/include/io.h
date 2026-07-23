@@ -254,12 +254,15 @@ static inline int od_io_connected(od_io_t *io)
 	return mm_io_connected(io->io);
 }
 
+enum {
+	OD_IO_WRITE_DUPLEX = 1 << 0,
+};
 int od_io_write_raw(od_io_t *io, const void *buf, size_t size,
-		    size_t *processed, uint32_t timeout_ms);
+		    size_t *processed, uint32_t timeout_ms, int flags);
 
 /* breaks iovec arg */
 int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
-		 uint32_t timeout_ms);
+		 uint32_t timeout_ms, int flags);
 
 static inline int od_io_last_event(od_io_t *io)
 {

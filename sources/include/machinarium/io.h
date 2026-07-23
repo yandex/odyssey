@@ -35,6 +35,11 @@ struct mm_tls_ctx {
 	mm_tls_ctx_t *next;
 };
 
+enum {
+	MM_IO_WANT_READ = 1 << 0,
+	MM_IO_WANT_WRITE = 1 << 1,
+};
+
 struct mm_io {
 	int fd;
 	mm_fd_t handle;
@@ -68,6 +73,8 @@ struct mm_io {
 	mm_zpq_stream_t *zpq_stream;
 
 	uint64_t deadline_ms;
+
+	int want;
 };
 
 mm_io_t *mm_io_create(void);
@@ -109,6 +116,8 @@ int mm_io_shutdown(mm_io_t *);
 int mm_io_set_tls(mm_io_t *obj, machine_tls_t *tls, uint32_t timeout);
 
 int mm_io_last_event(mm_io_t *io);
+int mm_io_want_read(mm_io_t *io);
+int mm_io_want_write(mm_io_t *io);
 
 /* now + timeout_ms */
 void mm_io_set_deadline(mm_io_t *io, uint32_t timeout_ms);

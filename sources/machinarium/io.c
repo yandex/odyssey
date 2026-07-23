@@ -497,7 +497,9 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 int mm_io_read_pending(mm_io_t *io)
 {
 	if (mm_tls_is_active(io)) {
-		return mm_tls_read_pending(io);
+		if (mm_tls_read_pending(io)) {
+			return 1;
+		}
 	}
 
 	return mm_socket_read_pending(io->fd);
@@ -695,4 +697,14 @@ int mm_io_shutdown(mm_io_t *io)
 	}
 
 	return MM_OK_RETCODE;
+}
+
+int mm_io_want_read(mm_io_t *io)
+{
+	return io->want & MM_IO_WANT_READ;
+}
+
+int mm_io_want_write(mm_io_t *io)
+{
+	return io->want & MM_IO_WANT_WRITE;
 }

@@ -1062,7 +1062,7 @@ static od_frontend_status_t run_virtual_parse_complete(od_xplan_entry_t *pc,
 
 	size_t unused;
 	int rc = od_io_write_raw(&client->io, bytes, sizeof(bytes), &unused,
-				 timeout_ms);
+				 timeout_ms, 0);
 	if (rc != 0) {
 		return OD_ECLIENT_WRITE;
 	}
@@ -1081,7 +1081,7 @@ static od_frontend_status_t run_virtual_close_complete(od_xplan_entry_t *cc,
 
 	size_t unused;
 	int rc = od_io_write_raw(&client->io, bytes, sizeof(bytes), &unused,
-				 timeout_ms);
+				 timeout_ms, 0);
 	if (rc != 0) {
 		return OD_ECLIENT_WRITE;
 	}
@@ -1482,7 +1482,7 @@ send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
 
-	int rc = od_io_writev(&server->io, iovecs, niovecs, timeout_ms);
+	int rc = od_io_writev(&server->io, iovecs, niovecs, timeout_ms, 0);
 	if (rc == -1) {
 		return OD_ESERVER_WRITE;
 	}
