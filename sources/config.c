@@ -104,6 +104,11 @@ void od_config_init(od_config_t *config)
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 {
 	current_config->log_debug = new_config->log_debug;
+	current_config->log_config = new_config->log_config;
+	current_config->log_session = new_config->log_session;
+	current_config->log_query = new_config->log_query;
+	current_config->log_stats = new_config->log_stats;
+	current_config->stats_interval = new_config->stats_interval;
 	current_config->client_max_set = new_config->client_max_set;
 	current_config->client_max = new_config->client_max;
 	current_config->max_sigterms_to_die = new_config->max_sigterms_to_die;
