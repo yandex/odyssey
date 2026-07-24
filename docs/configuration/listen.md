@@ -61,12 +61,50 @@ Supported TLS modes:
 "verify_full" - require valid client certificate
 ```
 
-## **compression**
+## **tls\_ca\_file**
+*string*
+
+Path to CA certificate file used to verify client certificates (for `verify_ca` / `verify_full` modes).
+
+`tls_ca_file "/etc/odyssey/ssl/allCAs.pem"`
+
+## **tls\_key\_file**
+*string*
+
+Path to server private key file.
+
+`tls_key_file "/etc/odyssey/ssl/server.key"`
+
+## **tls\_cert\_file**
+*string*
+
+Path to server certificate file.
+
+`tls_cert_file "/etc/odyssey/ssl/server.crt"`
+
+## **tls\_protocols**
+*string*
+
+Allowed TLS protocol versions, e.g. `"tlsv1.2"` or `"tlsv1.3"`.
+
+`tls_protocols "tlsv1.2"`
+
+## **catchup\_timeout**
+*integer*
+
+Maximum replication lag in seconds allowed for connections accepted on this
+listen endpoint. When the selected backend lags more than this value the
+connection attempt is retried on another host.
+Set to 0 to disable (no lag check). See [catchup-timeout](../features/catchup-timeout.md).
+
+`catchup_timeout 10`
+
+## **compression** *(deprecated)*
+
 *yes|no*
 
-Support of PostgreSQL protocol compression (experimental). Set to 'yes' to enable, disabled by default.
-
-`compression no`
+**Deprecated.** Accepted for backwards compatibility but ignored — a
+deprecation warning is emitted.
 
 ## **target_session_attrs**
 *string*

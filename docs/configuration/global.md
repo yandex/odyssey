@@ -57,6 +57,21 @@ for all Odyssey rules.
 | `max_sigterms_to_die`                      | int              | `3`         | SIGHUP  | Max SIGTERMs before hard exit                         |
 | `enable_host_watcher`                      | int(bool)        | `3`         | restart | Start host cpu and mem consumption watcher thread      |
 | `smart_search_path_enquoting`              | int(bool)        | `no`        | SIGHUP | Smart enquoting when `search_path` deploing to server connect      |
+| `log_async`                                | int (bool)       | `yes`       | SIGHUP  | Write log messages asynchronously                                 |
+| `log_queue_depth`                          | int              | `30000`     | SIGHUP  | Max pending messages in async log queue                           |
+| `external_auth_socket_path`                | string           | unset       | restart | Unix socket path for external auth module                         |
+| `cpu_affinity`                             | string           | unset       | restart | CPU affinity mask for Odyssey threads                             |
+| `cancel_timeout_ms`                        | int (ms)         | `1000`      | SIGHUP  | Timeout for cancel request to backend                             |
+| `cancel_queue_timeout_ms`                  | int (ms)         | `-1` (none) | SIGHUP  | Timeout for queued cancel requests; -1 = no timeout               |
+| `cancel_max_inflight`                      | int              | `-1` (none) | SIGHUP  | Max concurrent in-flight cancel requests; -1 = unlimited          |
+| `dns_cache_ttl`                            | int (ms)         | `30000`     | SIGHUP  | TTL for DNS cache entries                                         |
+| `cache_msg_gc_size`                        | int              | `0`         | SIGHUP  | Message GC cache size; 0 = disabled                               |
+| `graceful_die_on_errors`                   | int (bool)       | `no`        | runtime | **Deprecated.** Use SIGUSR2 signal directly instead               |
+| `pipeline`                                 | int              | —           | —       | **Deprecated.** Ignored.                                          |
+| `cache`                                    | int              | —           | —       | **Deprecated.** Ignored.                                          |
+| `cache_chunk`                              | int              | —           | —       | **Deprecated.** Ignored.                                          |
+| `packet_read_size`                         | int              | —           | —       | **Deprecated.** Ignored.                                          |
+| `packet_write_queue`                       | int              | —           | —       | **Deprecated.** Ignored.                                          |
 
 
 
@@ -474,7 +489,11 @@ running new version (old one will automatically perform graceful shutdown)
 
 `enable_online_restart no`
 
-## **conn_drop_options** and **online_restart_drop_options**
+## **conn\_drop\_options** / **online\_restart\_drop\_options**
+
+Both names refer to the same section. `online_restart_drop_options` is an
+alias accepted for backwards compatibility. Only one of them may appear in
+a single config file.
 
 This section can be used to configure connections dropping during
 online restart or graceful shutdown.
@@ -572,4 +591,101 @@ $ PGOPTIONS='--search_path=public,\ "$user",\ another' ./psql 'host=localhost po
 Default is `no`.
 
 `smart_search_path_enquoting yes`
+
+## **log\_async**
+*yes|no*
+
+Write log messages asynchronously. When enabled, logging does not block the worker
+coroutine — messages are queued and written by a background thread. Useful under
+high load where synchronous writes would introduce latency.
+
+Enabled by default.
+
+`log_async yes`
+
+## **log\_queue\_depth**
+*integer*
+
+Maximum number of messages that can be pending in the async log queue before
+the producer is blocked. Only meaningful when `log_async yes`.
+
+Default: 30000.
+
+`log_queue_depth 30000`
+
+## **external\_auth\_socket\_path**
+*string*
+
+Path to the UNIX socket of an external authentication module. Odyssey will
+connect to this socket when the route authentication mode is `"external"`.
+
+`external_auth_socket_path "/var/run/odyssey-auth.sock"`
+
+## **cpu\_affinity**
+*string*
+
+Set CPU affinity for Odyssey threads. The value is passed directly to
+`sched_setaffinity` / `pthread_setaffinity_np` as a hex or decimal CPU
+mask string.
+
+`cpu_affinity "0x3"`
+
+## **cancel\_timeout\_ms**
+*integer*
+
+Timeout in milliseconds for sending a cancel request to the backend.
+Default: 1000 (1 second).
+
+`cancel_timeout_ms 1000`
+
+## **cancel\_queue\_timeout\_ms**
+*integer*
+
+Timeout in milliseconds for a cancel request that is waiting in the
+internal queue (when `cancel_max_inflight` is reached).
+Default: -1 (no timeout).
+
+`cancel_queue_timeout_ms 5000`
+
+## **cancel\_max\_inflight**
+*integer*
+
+Maximum number of cancel requests that can be sent to backends concurrently.
+Subsequent requests are queued. Default: -1 (unlimited).
+
+`cancel_max_inflight 16`
+
+## **dns\_cache\_ttl**
+*integer*
+
+TTL in **milliseconds** for entries in the internal DNS cache. After this time
+has elapsed the entry is resolved again on the next connection attempt.
+Default: 30000 (30 seconds). Set to 0 to disable caching.
+
+`dns_cache_ttl 30000`
+
+## **cache\_msg\_gc\_size**
+*integer*
+
+Size of the internal message garbage-collection cache (number of reusable
+message objects). Larger values reduce allocator pressure under high
+message rates. Default: 0 (disabled).
+
+`cache_msg_gc_size 100`
+
+---
+
+## Deprecated parameters
+
+The following parameters are accepted by the parser for backwards compatibility
+but are **ignored** — a deprecation warning is emitted in the log.
+
+| Parameter | Notes |
+|---|---|
+| `graceful_die_on_errors` | Accepted but ignored. Send SIGUSR2 directly to trigger graceful die. |
+| `pipeline` | Removed. |
+| `cache` | Removed. |
+| `cache_chunk` | Removed. |
+| `packet_read_size` | Removed. |
+| `packet_write_queue` | Removed. |
 
