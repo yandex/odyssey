@@ -94,6 +94,7 @@ typedef struct od_cfg_global {
 	od_cfg_int_field_t cache_msg_gc_size;
 	od_cfg_int_field_t cache_coroutine;
 	od_cfg_int_field_t coroutine_stack_size;
+	od_cfg_int_field_t system_coroutine_stack_size;
 	od_cfg_int_field_t promhttp_server_port;
 	od_cfg_int_field_t group_checker_interval;
 	od_cfg_int_field_t workers;

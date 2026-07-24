@@ -15,6 +15,7 @@ typedef struct mm mm_t;
 struct mm_config {
 	int page_size;
 	int stack_size;
+	int system_stack_size;
 	int pool_size;
 	int coroutine_cache_size;
 	int msg_cache_gc_size;

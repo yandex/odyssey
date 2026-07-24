@@ -461,6 +461,8 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_INT(cfg->cache_msg_gc_size, config->cache_msg_gc_size);
 	COPY_INT(cfg->cache_coroutine, config->cache_coroutine);
 	COPY_INT(cfg->coroutine_stack_size, config->coroutine_stack_size);
+	COPY_INT(cfg->system_coroutine_stack_size,
+		 config->system_coroutine_stack_size);
 	COPY_INT(cfg->group_checker_interval, config->group_checker_interval);
 	COPY_INT(cfg->workers, config->workers);
 

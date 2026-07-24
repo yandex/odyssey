@@ -40,7 +40,8 @@ for all Odyssey rules.
 | `keepalive_probes`                         | int              | `3`         | SIGHUP  | Probes before killing conn                            |
 | `keepalive_usr_timeout`                    | int (ms)         | `0`         | SIGHUP  | 0 = use system default (`TCP_USER_TIMEOUT`)           |
 | `backend_connect_timeout_ms`               | int (ms)         | `30000`     | SIGHUP  | Backend connection timeout                            |
-| `coroutine_stack_size`                     | int (pages)      | `4`         | restart | Coroutine stack size                                  |
+| `coroutine_stack_size`                     | int (pages)      | `4`         | restart | Coroutine stack size (client/worker coroutines)       |
+| `system_coroutine_stack_size`              | int (pages)      | `32`        | restart | Coroutine stack size for internal system coroutines   |
 | `client_max`                               | int              | `0`         | SIGHUP  | Max client connections (0/unset = no global limit)    |
 | `client_max_routing`                       | int              | `0`         | SIGHUP  | 0/unset → auto (typically `64 * workers`)             |
 | `server_login_retry`                       | int              | `1`         | SIGHUP  | Retry delay on "Too many clients"                     |
@@ -371,7 +372,7 @@ Timeout for connection to backend (postgres). Default value is 30000 (30 secs)
 ## **coroutine\_stack\_size**
 *integer*
 
-Coroutine stack size.
+Coroutine stack size for client and worker coroutines.
 
 Set coroutine stack size in pages. In some rare cases
 it might be necessary to make stack size bigger (like that using the Odyssey with LDAP auth required `coroutine_stack_size 16`). Actual stack will be
@@ -379,6 +380,26 @@ allocated as `(coroutine_stack_size + 1_guard_page) * page_size`.
 Guard page is used to track stack overflows. Stack by default is set to 16KB.
 
 `coroutine_stack_size 4`
+
+## **system\_coroutine\_stack\_size**
+*integer*
+
+Coroutine stack size for internal system coroutines.
+
+Odyssey uses two separate coroutine pools: one for client/worker coroutines
+(sized by `coroutine_stack_size`) and one for internal system coroutines such
+as signal handlers, config reload, cron tasks, and worker management
+(sized by this parameter).
+
+System coroutines are few in number but may require a larger stack — for
+example, the config parser (`yyparse`) allocates significant stack space when
+processing config files with `include` directives. Keeping this value separate
+from `coroutine_stack_size` avoids inflating memory usage for the large number
+of client coroutines just to accommodate the rare system operations.
+
+Actual stack is allocated as `(system_coroutine_stack_size + 1_guard_page) * page_size`.
+
+`system_coroutine_stack_size 32`
 
 ## **client\_max**
 *integer*

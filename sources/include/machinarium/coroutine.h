@@ -16,6 +16,8 @@
 
 typedef struct mm_coroutine mm_coroutine_t;
 
+typedef struct mm_coroutine_cache mm_coroutine_cache_t;
+
 typedef void (*mm_function_t)(void *arg);
 
 typedef enum { MM_CNEW, MM_CREADY, MM_CACTIVE, MM_CFREE } mm_coroutinestate_t;
@@ -30,6 +32,7 @@ struct mm_coroutine {
 	mm_contextstack_t stack;
 	mm_context_t context;
 	mm_coroutine_t *resume;
+	mm_coroutine_cache_t *origin_cache;
 	void *call_ptr;
 	mm_list_t joiners;
 	mm_list_t link_join;

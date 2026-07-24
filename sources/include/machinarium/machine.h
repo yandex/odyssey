@@ -36,7 +36,8 @@ struct mm_machine {
 	mm_signalmgr_t signal_mgr;
 	mm_eventmgr_t event_mgr;
 	mm_msgcache_t msg_cache;
-	mm_coroutine_cache_t coroutine_cache;
+	mm_coroutine_cache_t general_coroutine_cache;
+	mm_coroutine_cache_t system_coroutine_cache;
 	mm_loop_t loop;
 	mm_list_t link;
 	mm_wait_flag_t *join_flag;

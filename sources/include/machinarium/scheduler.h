@@ -36,7 +36,7 @@ static inline int mm_scheduler_online(mm_scheduler_t *scheduler)
 
 int mm_scheduler_init(mm_scheduler_t *);
 void mm_scheduler_free(mm_scheduler_t *);
-void mm_scheduler_run(mm_scheduler_t *, mm_coroutine_cache_t *);
+void mm_scheduler_run(mm_scheduler_t *);
 void mm_scheduler_new(mm_scheduler_t *, mm_coroutine_t *, mm_function_t,
 		      void *);
 

@@ -71,6 +71,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "cache_msg_gc_size", CACHE_MSG_GC_SIZE },
 	{ "cache_coroutine", CACHE_COROUTINE },
 	{ "coroutine_stack_size", COROUTINE_STACK_SIZE },
+	{ "system_coroutine_stack_size", SYSTEM_COROUTINE_STACK_SIZE },
 	{ "promhttp_server_port", PROMHTTP_SERVER_PORT },
 	{ "group_checker_interval", GROUP_CHECKER_INTERVAL },
 	{ "shared_pool", SHARED_POOL },

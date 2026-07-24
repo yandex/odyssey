@@ -65,6 +65,8 @@ typedef struct machine_ring_buffer machine_ring_buffer_t;
 
 MACHINE_API void machinarium_set_stack_size(int size);
 
+MACHINE_API void machinarium_set_system_stack_size(int size);
+
 MACHINE_API void machinarium_set_pool_size(int size);
 
 MACHINE_API void machinarium_set_coroutine_cache_size(int size);
@@ -120,6 +122,9 @@ MACHINE_API int64_t machine_coroutine_create(machine_coroutine_t, void *arg);
 
 MACHINE_API int64_t machine_coroutine_create_named(machine_coroutine_t, void *,
 						   const char *);
+
+MACHINE_API int64_t machine_coroutine_create_system(machine_coroutine_t, void *,
+						    const char *);
 
 MACHINE_API void machine_sleep(uint32_t time_ms);
 

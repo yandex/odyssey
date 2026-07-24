@@ -450,6 +450,8 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 	dump_int(file, "cache_coroutine", 0, &model->global.cache_coroutine);
 	dump_int(file, "coroutine_stack_size", 0,
 		 &model->global.coroutine_stack_size);
+	dump_int(file, "system_coroutine_stack_size", 0,
+		 &model->global.system_coroutine_stack_size);
 	dump_int(file, "promhttp_server_port", 0,
 		 &model->global.promhttp_server_port);
 	dump_int(file, "group_checker_interval", 0,

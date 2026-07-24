@@ -135,6 +135,7 @@
 %token CACHE_MSG_GC_SIZE "cache_msg_gc_size"
 %token CACHE_COROUTINE "cache_coroutine"
 %token COROUTINE_STACK_SIZE "coroutine_stack_size"
+%token SYSTEM_COROUTINE_STACK_SIZE "system_coroutine_stack_size"
 %token PROMHTTP_SERVER_PORT "promhttp_server_port"
 %token GROUP_CHECKER_INTERVAL "group_checker_interval"
 %token SHARED_POOL "shared_pool"
@@ -719,6 +720,14 @@ top_item:
 							$2,
 							@1,
 							"coroutine_stack_size");
+		}
+	| SYSTEM_COROUTINE_STACK_SIZE int_value
+		{
+			od_cfg_set_int_from_i64(ctx->diags,
+							&ctx->model->global.system_coroutine_stack_size,
+							$2,
+							@1,
+							"system_coroutine_stack_size");
 		}
 	| PROMHTTP_SERVER_PORT int_value
 		{

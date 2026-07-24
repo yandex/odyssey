@@ -46,15 +46,18 @@ mm_coroutine_t *mm_coroutine_cache_pop(mm_coroutine_cache_t *cache)
 		mm_list_t *first = mm_list_pop(&cache->list);
 		cache->count_free--;
 		coroutine = mm_container_of(first, mm_coroutine_t, link);
+		/* just in case, already set when allocated */
+		coroutine->origin_cache = cache;
 		return coroutine;
 	}
-	cache->count_total++;
 
 	coroutine = mm_coroutine_allocate(cache->stack_size,
 					  cache->stack_size_guard);
 	if (coroutine == NULL) {
-		cache->count_total--;
+		return NULL;
 	}
+	cache->count_total++;
+	coroutine->origin_cache = cache;
 	return coroutine;
 }
 

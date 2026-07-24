@@ -73,6 +73,7 @@ void od_config_init(od_config_t *config)
 	config->cache_coroutine = 256;
 	config->cache_msg_gc_size = 0;
 	config->coroutine_stack_size = 4;
+	config->system_coroutine_stack_size = 32;
 	config->hba_file = NULL;
 	config->max_sigterms_to_die = 3;
 	config->group_checker_interval = 7000; /* 7 seconds */
@@ -210,26 +211,28 @@ static void od_config_listen_free(od_config_listen_t *config)
 
 int od_config_validate(od_config_t *config, od_logger_t *logger)
 {
-	/* workers */
 	if (config->workers <= 0) {
 		od_error(logger, "config", NULL, NULL, "bad workers number");
 		return -1;
 	}
 
-	/* resolvers */
 	if (config->resolvers <= 0) {
 		od_error(logger, "config", NULL, NULL, "bad resolvers number");
 		return -1;
 	}
 
-	/* coroutine_stack_size */
 	if (config->coroutine_stack_size < 4) {
 		od_error(logger, "config", NULL, NULL,
 			 "bad coroutine_stack_size number");
 		return -1;
 	}
 
-	/* log format */
+	if (config->system_coroutine_stack_size < 4) {
+		od_error(logger, "config", NULL, NULL,
+			 "bad system_coroutine_stack_size number");
+		return -1;
+	}
+
 	if (config->log_format == NULL) {
 		od_error(logger, "config", NULL, NULL,
 			 "log_format is not defined");
@@ -396,6 +399,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->cache_coroutine);
 	od_log(logger, "config", NULL, NULL, "coroutine_stack_size    %d",
 	       config->coroutine_stack_size);
+	od_log(logger, "config", NULL, NULL, "system_coroutine_stack_size %d",
+	       config->system_coroutine_stack_size);
 	od_log(logger, "config", NULL, NULL, "workers                 %d",
 	       config->workers);
 	od_log(logger, "config", NULL, NULL, "resolvers               %d",
