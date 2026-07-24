@@ -2267,13 +2267,35 @@ static inline int od_console_kill_client(od_client_t *client,
 	return 0;
 }
 
+static void od_console_reload_coroutine(void *arg)
+{
+	od_system_config_reload(arg);
+}
+
 static inline int od_console_reload(od_client_t *client, machine_msg_t *stream)
 {
 	od_instance_t *instance = client->global->instance;
 
 	od_log(&instance->logger, "console", NULL, NULL,
 	       "RELOAD command received");
-	od_system_config_reload(client->global->system);
+
+	/*
+	 * reloading could use large amount of stack, due to config parsing
+	 * current function was run as client from od_frontend and have little stack
+	 */
+	int64_t id =
+		machine_coroutine_create_system(od_console_reload_coroutine,
+						client->global->system,
+						"reload_cmd");
+	if (id == -1) {
+		od_error(&instance->logger, "console", client, NULL,
+			 "failed to create reload coroutine, errno=%d (%s)",
+			 mm_errno_get(), strerror(mm_errno_get()));
+		return -1;
+	}
+
+	machine_join(id);
+
 	return kiwi_be_write_complete(stream, "RELOAD", 7);
 }
 
