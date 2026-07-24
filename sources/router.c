@@ -1030,7 +1030,7 @@ static inline int send_waiting_notice(od_client_t *client)
 				      "waiting for free backend connection");
 
 	size_t unused;
-	return od_io_write_raw(&client->io, buf, n, &unused, 1000);
+	return od_io_write_raw(&client->io, buf, n, &unused, 1000, 0);
 }
 
 static inline int send_waiting_finished_notice(od_client_t *client,
@@ -1042,7 +1042,7 @@ static inline int send_waiting_finished_notice(od_client_t *client,
 		    timeout ? ", timeout" : "");
 	int n = kiwi_be_format_notice(buf, sizeof(buf), 'M', msg);
 	size_t unused;
-	return od_io_write_raw(&client->io, buf, n, &unused, 1000);
+	return od_io_write_raw(&client->io, buf, n, &unused, 1000, 0);
 }
 
 od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
