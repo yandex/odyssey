@@ -2,6 +2,11 @@
 
 ----
 
+> **Note (since 1.5.3):** `flex` and `bison` are required build dependencies.
+> They are already listed in `debian/control` (`Build-Depends`).
+> If you are maintaining the RPM spec (`scripts/centos/odyssey.spec`), add
+> `BuildRequires: flex` and `BuildRequires: bison` to it.
+
 To create deb package for local or test-env use, you can do `cpack-*` targets from Makefile.
 Packages will be created at `build/packages` directory.
 ```sh

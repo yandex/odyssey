@@ -2,6 +2,28 @@
 
 ---
 
+## Prerequisites
+
+Since **1.5.3** the config parser is generated from a Flex/Bison grammar at
+build time. Make sure `flex` and `bison` are installed before running cmake.
+
+Ubuntu/Debian:
+```sh
+sudo apt-get install flex bison
+```
+
+Fedora/RHEL/CentOS:
+```sh
+sudo dnf install flex bison
+```
+
+macOS (Homebrew):
+```sh
+brew install flex bison
+```
+
+---
+
 Here's a concise list of useful development commands from the Makefile:
 
 ### Build & Run

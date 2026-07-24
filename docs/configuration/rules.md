@@ -68,7 +68,18 @@ A special `user default` is used when no user is matched.
 | target_session_attrs              | string enum                            | — (not set)   | runtime (new connections) | Target session attributes for connection routing; defaults to undefined behavior.                                                                                          |
 | quantiles                         | string (comma-separated)               | — (not set)   | runtime (new connections) | Comma-separated list of quantile values for statistics collection; disabled when not set.                                                                                  |
 | catchup_timeout                   | integer (sec)                          | 0             | runtime (new connections) | Timeout for replica catchup operations; 0 = no timeout.                                                                                                                    |
-| catchup_checks                    | integer                                | 0             | runtime (new connections) | Maximum number of catchup checks; 0 = no limit.                                                                                                                            |
+| catchup_checks                    | integer                                | 0             | runtime (new connections) | **Deprecated.** Accepted but ignored.                                                                                                                                      |
+| role                              | string (admin/client)                  | — (not set)   | runtime (new connections) | Route role. `"admin"` grants access to the admin console.                                                                                                                  |
+| client_show_id                    | boolean                                | no (0)        | runtime (new connections) | Include Odyssey client ID in log messages for this route.                                                                                                                  |
+| pool_routing                      | string                                 | — (not set)   | runtime (new connections) | Internal routing mode. Use `"internal"` for watchdog/system routes.                                                                                                        |
+| pool_reset_timeout_ms             | integer (ms)                           | 0             | runtime (new connections) | Timeout for executing the reset/discard query when returning a connection to the pool; 0 = no timeout.                                                                     |
+| auth_module                       | string                                 | — (not set)   | runtime (new connections) | Name of the external authentication module to use.                                                                                                                         |
+| enable_mdb_iamproxy_auth          | boolean                                | no (0)        | runtime (new connections) | Enable Yandex MDB IAM proxy authentication.                                                                                                                                |
+| mdb_iamproxy_socket_path          | string                                 | — (not set)   | runtime (new connections) | Path to the MDB IAM proxy UNIX socket.                                                                                                                                     |
+| log_query (per-route)             | boolean                                | no (0)        | runtime (new connections) | Log queries for this specific route (overrides global `log_query`).                                                                                                        |
+| ldap_pool_size                    | integer                                | 0             | runtime (new connections) | **Deprecated.** Accepted but ignored.                                                                                                                                      |
+| ldap_pool_timeout                 | integer (ms)                           | 0             | runtime (new connections) | **Deprecated.** Accepted but ignored.                                                                                                                                      |
+| ldap_pool_ttl                     | integer (sec)                          | 0             | runtime (new connections) | **Deprecated.** Accepted but ignored.                                                                                                                                      |
 
 ## **authentication**
 
@@ -717,15 +728,211 @@ See [catchup-timeout.md](../features/catchup-timeout.md) for more details
 
 ---
 
-## **catchup_checks**
+## **catchup\_checks** *(deprecated)*
 
 *integer*
 
-Maximum number of catchup checks before closing 
-the connection if the host replication lag is too big
-See [catchup-timeout.md](../features/catchup-timeout.md) for more details
+**Deprecated.** Accepted for backwards compatibility but ignored — a
+deprecation warning is emitted.
 
-`catchup_checks 10`
+---
+
+## **role**
+
+*string*
+
+Set the route role. Supported values:
+
+```
+"admin"  - grants access to the Odyssey admin console
+"client" - regular client route (default when not set)
+```
+
+`role "admin"`
+
+---
+
+## **client\_show\_id**
+
+*yes|no*
+
+Include the internal Odyssey client ID in log messages produced for
+connections on this route. Useful when correlating logs for a specific
+database/user pair.
+
+`client_show_id yes`
+
+---
+
+## **pool\_routing**
+
+*string*
+
+Internal routing mode for the connection. Use `"internal"` for
+system routes such as the `watchdog` sub-section. Normal client routes
+should leave this unset.
+
+`pool_routing "internal"`
+
+---
+
+## **pool\_reset\_timeout\_ms**
+
+*integer*
+
+Timeout in milliseconds for executing the reset/discard query when a
+server connection is returned to the pool. If the query does not
+complete within this time the connection is dropped instead.
+Set to 0 to disable the timeout.
+
+`pool_reset_timeout_ms 3000`
+
+---
+
+## **auth\_module**
+
+*string*
+
+Name of the external authentication module to use for this route.
+The module must be registered via `external_auth_socket_path` in the
+global section.
+
+`auth_module "my_auth_module"`
+
+---
+
+## **enable\_mdb\_iamproxy\_auth**
+
+*yes|no*
+
+Enable Yandex MDB IAM proxy authentication for this route.
+When set to `yes`, Odyssey will delegate token validation to the MDB IAM
+proxy service specified by `mdb_iamproxy_socket_path`.
+
+`enable_mdb_iamproxy_auth yes`
+
+---
+
+## **mdb\_iamproxy\_socket\_path**
+
+*string*
+
+Path to the UNIX socket of the MDB IAM proxy service.
+Used when `enable_mdb_iamproxy_auth yes`.
+
+`mdb_iamproxy_socket_path "/var/run/mdb-iamproxy.sock"`
+
+---
+
+## **log\_query** *(per-route)*
+
+*yes|no*
+
+Enable query logging for this specific route only, without enabling it
+globally. Overrides the global `log_query` setting for connections
+matched by this route.
+
+`log_query yes`
+
+---
+
+## **options**
+
+Key-value block that sets PostgreSQL GUC parameters sent to the server
+via the startup message (equivalent to `PGOPTIONS`). Each entry is a
+pair of quoted strings.
+
+```plain
+options {
+    "search_path" "myschema,public"
+    "TimeZone"    "UTC"
+}
+```
+
+---
+
+## **backend\_startup\_options**
+
+Key-value block for additional parameters sent to the backend during the
+startup handshake. Similar to `options` but intended for parameters that
+must arrive in the startup packet rather than as `SET` commands.
+
+```plain
+backend_startup_options {
+    "application_name" "my_app"
+}
+```
+
+---
+
+## **group**
+
+A `group` sub-section inside a `database` block defines a named set of
+route settings that is selected based on the client's group membership
+(looked up via a SQL query). A database block can contain multiple
+`group` entries as well as `user` entries.
+
+```
+database "mydb" {
+    group "power_users" {
+        group_query      "SELECT group FROM user_groups WHERE usename=$1"
+        group_query_user "monitor"
+        group_query_db   "postgres"
+
+        authentication "md5"
+        storage        "postgres_server"
+        pool           "transaction"
+        pool_size      20
+    }
+
+    user default {
+        authentication "md5"
+        storage        "postgres_server"
+        pool           "transaction"
+        pool_size      5
+    }
+}
+```
+
+### **group\_query**
+
+*string*
+
+SQL query executed to determine the group of the connecting client.
+The query must return a single string value (the group name). The client
+username is passed as `$1`.
+
+`group_query "SELECT grp FROM user_groups WHERE usename=$1"`
+
+### **group\_query\_user**
+
+*string*
+
+Username used to connect to the database when executing `group_query`.
+
+`group_query_user "monitor"`
+
+### **group\_query\_db**
+
+*string*
+
+Database used when executing `group_query`.
+
+`group_query_db "postgres"`
+
+---
+
+## Deprecated parameters
+
+The following per-route parameters are accepted for backwards compatibility
+but are **ignored** — a deprecation warning is emitted in the log.
+
+| Parameter | Notes |
+|---|---|
+| `catchup_checks` | Removed. Use `catchup_timeout` instead. |
+| `ldap_pool_size` | Removed. |
+| `ldap_pool_timeout` | Removed. |
+| `ldap_pool_ttl` | Removed. |
 
 ---
 

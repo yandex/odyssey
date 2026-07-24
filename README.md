@@ -65,6 +65,8 @@ To build you will need in ubuntu distros:
 * cmake >= 3.12.4
 * gcc >= 4.6
 * openssl
+* flex
+* bison
 
 Optional dependencies:
 
@@ -73,7 +75,13 @@ Optional dependencies:
 And for fedora-based distros:
 
 * openssl-devel
+* flex
+* bison
 * systemd-devel (optional, for systemd notify)
+
+> **Note (since 1.5.3):** the config parser is now generated from a Flex/Bison
+> grammar at build time. `flex` and `bison` must be installed before running
+> cmake.
 
 For Mac-OS you will need:
 * brew install argp-standalone

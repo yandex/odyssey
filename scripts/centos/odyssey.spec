@@ -12,6 +12,8 @@ BuildRequires:	cmake
 BuildRequires: openssl-devel
 BuildRequires: zlib-devel
 BuildRequires: gcc
+BuildRequires: flex
+BuildRequires: bison
 
 %description
 Advanced multi-threaded PostgreSQL connection pooler and request router
