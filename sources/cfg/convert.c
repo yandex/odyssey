@@ -1705,6 +1705,7 @@ to_return:
 		od_shared_pool_t *sp =
 			od_container_of(i, od_shared_pool_t, link);
 		od_list_unlink(&sp->link);
+		od_list_init(&sp->link);
 		od_shared_pool_unref(sp);
 	}
 
