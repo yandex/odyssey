@@ -1,7 +1,7 @@
 ARG version=8
 FROM oraclelinux:${version}
 
-RUN dnf install -y make gcc cmake git openssl-devel systemd-devel 
+RUN dnf install -y make gcc cmake git openssl-devel systemd-devel bison flex
 
 COPY . /build_dir
 WORKDIR /build_dir

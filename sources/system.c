@@ -35,7 +35,7 @@
 #include <sighandler.h>
 #include <setproctitle.h>
 #include <worker_pool.h>
-#include <config_reader.h>
+#include <cfg_import.h>
 #include <tls.h>
 #include <memory.h>
 #include <od_error.h>
@@ -465,7 +465,6 @@ void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
-	od_extension_t *extensions = system->global->extensions;
 	od_hba_t *hba = system->global->hba;
 	od_list_t *i;
 
@@ -478,9 +477,6 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_stop_watchdogs(&router->rules);
 	od_rules_cleanup(&router->rules);
 
-	od_error_t error;
-	od_error_init(&error);
-
 	od_config_t config;
 	od_config_init(&config);
 
@@ -491,12 +487,9 @@ void od_system_config_reload(od_system_t *system)
 	od_hba_rules_init(&hba_rules);
 
 	int rc;
-	rc = od_config_reader_import(&config, &rules, &error, extensions,
-				     system->global, &hba_rules,
-				     instance->config_file);
+	rc = od_cfg_import(&instance->logger, &config, &rules, system->global,
+			   &hba_rules, instance->config_file);
 	if (rc == -1) {
-		od_error(&instance->logger, "config", NULL, NULL, "%s",
-			 error.error);
 		od_rules_unlock(&router->rules);
 		od_config_free(&config);
 		od_rules_free(&rules);

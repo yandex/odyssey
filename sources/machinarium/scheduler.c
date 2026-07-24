@@ -69,7 +69,7 @@ void mm_scheduler_free(mm_scheduler_t *scheduler)
 	}
 }
 
-void mm_scheduler_run(mm_scheduler_t *scheduler, mm_coroutine_cache_t *cache)
+void mm_scheduler_run(mm_scheduler_t *scheduler)
 {
 	while (scheduler->count_ready > 0) {
 		mm_coroutine_t *coroutine;
@@ -78,7 +78,8 @@ void mm_scheduler_run(mm_scheduler_t *scheduler, mm_coroutine_cache_t *cache)
 		mm_scheduler_set(&mm_self->scheduler, coroutine, MM_CACTIVE);
 		mm_scheduler_call(&mm_self->scheduler, coroutine);
 		if (coroutine->state == MM_CFREE) {
-			mm_coroutine_cache_push(cache, coroutine);
+			mm_coroutine_cache_push(coroutine->origin_cache,
+						coroutine);
 		}
 	}
 }

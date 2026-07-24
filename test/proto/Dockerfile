@@ -19,6 +19,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     clang \
     libsystemd-dev \
     postgresql-client postgresql-client-common postgresql-contrib \
+    bison flex \
     libpthread-stubs0-dev libclang-rt-dev
 
 FROM ody-build-env AS ody-builder

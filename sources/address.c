@@ -15,8 +15,8 @@
 
 #include <address.h>
 #include <od_memory.h>
-#include <config_reader.h>
 #include <misc.h>
+#include <util.h>
 
 od_address_range_t od_address_range_create_default(void)
 {
@@ -270,18 +270,6 @@ bool od_address_validate(const od_address_range_t *address_range,
 	return false;
 }
 
-int od_address_hostname_validate(od_config_reader_t *reader, char *hostname)
-{
-	int reti =
-		regexec(&reader->rfc952_hostname_regex, hostname, 0, NULL, 0);
-
-	if (reti == 0) {
-		return 0;
-	}
-
-	return 1;
-}
-
 static inline int od_address_parse_host(char *host, od_address_t *address)
 {
 	address->host = od_strdup(host);
@@ -417,7 +405,7 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-size_t od_config_reader_get_endpoints_count(const char *buff, int len)
+static size_t od_config_reader_get_endpoints_count(const char *buff, int len)
 {
 	size_t count = 1;
 	for (int i = 0; i < len; ++i) {

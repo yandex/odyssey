@@ -30,6 +30,8 @@ endif
 ifeq ($(OS), Darwin)
 	CONCURRENCY:=$(shell sysctl -n hw.logicalcpu)
 	CMAKE_FLAGS += -DOPENSSL_ROOT_DIR=$(shell brew --prefix openssl@3 2>/dev/null) -DCMAKE_PREFIX_PATH=$(shell brew --prefix 2>/dev/null)
+	CMAKE_FLAGS += -DBISON_EXECUTABLE=$(shell brew --prefix bison 2>/dev/null)/bin/bison
+	CMAKE_FLAGS += -DFLEX_EXECUTABLE=$(shell FLEX_BREW=$(shell brew --prefix flex 2>/dev/null)/bin/flex; if [ -x "$$FLEX_BREW" ]; then echo "$$FLEX_BREW"; else which flex; fi)
 endif
 
 ifeq ($(OS), Darwin)

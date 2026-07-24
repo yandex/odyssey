@@ -76,6 +76,6 @@ jobs:
     - name: Install dependencies
       run: |
         brew update
-        brew install openssl@3 openldap argp-standalone
+        brew install openssl@3 openldap argp-standalone bison flex
     - name: Build and run unit tests
       run: make ci-build-check-macos

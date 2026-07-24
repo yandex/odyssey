@@ -20,6 +20,9 @@ else()
     message(WARNING "VERSION file not found, using 'unknown'")
 endif()
 
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+
 find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
     execute_process(

@@ -25,7 +25,7 @@ __thread mm_machine_t *mm_self = NULL;
 static int mm_idle_cb(mm_idle_t *handle)
 {
 	(void)handle;
-	mm_scheduler_run(&mm_self->scheduler, &mm_self->coroutine_cache);
+	mm_scheduler_run(&mm_self->scheduler);
 	return mm_scheduler_online(&mm_self->scheduler);
 }
 
@@ -34,7 +34,8 @@ static inline void machine_instance_free(mm_machine_t *machine)
 	/* todo: check active timers and other allocated
 	 *       resources */
 	mm_msgcache_free(&machine->msg_cache);
-	mm_coroutine_cache_free(&machine->coroutine_cache);
+	mm_coroutine_cache_free(&machine->system_coroutine_cache);
+	mm_coroutine_cache_free(&machine->general_coroutine_cache);
 	mm_eventmgr_free(&machine->event_mgr, &machine->loop);
 	mm_signalmgr_free(&machine->signal_mgr, &machine->loop);
 	mm_loop_shutdown(&machine->loop);
@@ -80,7 +81,8 @@ static void *machine_main(void *arg)
 
 	/* create main coroutine */
 	int64_t id;
-	id = machine_coroutine_create(machine->main, machine->main_arg);
+	id = machine_coroutine_create_system(machine->main, machine->main_arg,
+					     machine->name);
 	(void)id;
 
 	/* run main loop */
@@ -150,7 +152,13 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	mm_msgcache_set_gc_watermark(&machine->msg_cache,
 				     machinarium.config.msg_cache_gc_size);
 
-	mm_coroutine_cache_init(&machine->coroutine_cache,
+	mm_coroutine_cache_init(&machine->system_coroutine_cache,
+				machinarium.config.system_stack_size *
+					machinarium.config.page_size,
+				machinarium.config.page_size,
+				machinarium.config.coroutine_cache_size);
+
+	mm_coroutine_cache_init(&machine->general_coroutine_cache,
 				machinarium.config.stack_size *
 					machinarium.config.page_size,
 				machinarium.config.page_size,
@@ -270,17 +278,33 @@ void machine_set_global_dtor(void (*dtor)(void *gl))
 	mm_self->global_dtor = dtor;
 }
 
+enum {
+	MM_CORO_SYSTEM = 1 << 0,
+};
+
 static inline mm_coroutine_t *
-mm_coroutine_create_internal(machine_coroutine_t function, void *arg)
+mm_coroutine_create_internal(machine_coroutine_t function, void *arg,
+			     const char *name, int flags)
 {
 	mm_errno_set(0);
+
+	mm_coroutine_cache_t *cache;
+	if (flags & MM_CORO_SYSTEM) {
+		cache = &mm_self->system_coroutine_cache;
+	} else {
+		cache = &mm_self->general_coroutine_cache;
+	}
+
 	mm_coroutine_t *coroutine;
-	coroutine = mm_coroutine_cache_pop(&mm_self->coroutine_cache);
+	coroutine = mm_coroutine_cache_pop(cache);
 	if (coroutine == NULL) {
 		mm_errno_set(ENOMEM);
 		return NULL;
 	}
 	mm_scheduler_new(&mm_self->scheduler, coroutine, function, arg);
+
+	mm_coroutine_set_name(coroutine, name);
+
 	return coroutine;
 }
 
@@ -288,7 +312,7 @@ MACHINE_API int64_t machine_coroutine_create(machine_coroutine_t function,
 					     void *arg)
 {
 	mm_coroutine_t *coroutine;
-	coroutine = mm_coroutine_create_internal(function, arg);
+	coroutine = mm_coroutine_create_internal(function, arg, NULL, 0);
 	if (coroutine == NULL) {
 		return -1;
 	}
@@ -300,12 +324,23 @@ MACHINE_API int64_t machine_coroutine_create_named(machine_coroutine_t function,
 						   void *arg, const char *name)
 {
 	mm_coroutine_t *coroutine;
-	coroutine = mm_coroutine_create_internal(function, arg);
+	coroutine = mm_coroutine_create_internal(function, arg, name, 0);
 	if (coroutine == NULL) {
 		return -1;
 	}
 
-	mm_coroutine_set_name(coroutine, name);
+	return coroutine->id;
+}
+
+MACHINE_API int64_t machine_coroutine_create_system(
+	machine_coroutine_t function, void *arg, const char *name)
+{
+	mm_coroutine_t *coroutine;
+	coroutine = mm_coroutine_create_internal(function, arg, name,
+						 MM_CORO_SYSTEM);
+	if (coroutine == NULL) {
+		return -1;
+	}
 
 	return coroutine->id;
 }
@@ -412,8 +447,22 @@ machine_stat(uint64_t *coroutine_count, uint64_t *coroutine_cache_count,
 	     uint64_t *msg_allocated, uint64_t *msg_cache_count,
 	     uint64_t *msg_cache_gc_count, uint64_t *msg_cache_size)
 {
-	mm_coroutine_cache_stat(&mm_self->coroutine_cache, coroutine_count,
-				coroutine_cache_count);
+	uint64_t general_coroutine_count = 0;
+	uint64_t general_coroutine_cache_count = 0;
+	uint64_t system_coroutine_count = 0;
+	uint64_t system_coroutine_cache_count = 0;
+
+	mm_coroutine_cache_stat(&mm_self->general_coroutine_cache,
+				&general_coroutine_count,
+				&general_coroutine_cache_count);
+
+	mm_coroutine_cache_stat(&mm_self->system_coroutine_cache,
+				&system_coroutine_count,
+				&system_coroutine_cache_count);
+
+	*coroutine_count = general_coroutine_count + system_coroutine_count;
+	*coroutine_cache_count =
+		general_coroutine_cache_count + system_coroutine_cache_count;
 
 	mm_msgcache_stat(&mm_self->msg_cache, msg_allocated, msg_cache_gc_count,
 			 msg_cache_count, msg_cache_size);

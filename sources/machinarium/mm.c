@@ -10,6 +10,7 @@
 #include <machinarium/tls.h>
 
 static int machinarium_stack_size = 0;
+static int machinarium_system_stack_size = 0;
 static int machinarium_pool_size = 0;
 static int machinarium_coroutine_cache_size = 0;
 static int machinarium_msg_cache_gc_size = 0;
@@ -25,6 +26,11 @@ static inline size_t machinarium_page_size(void)
 MACHINE_API void machinarium_set_stack_size(int size)
 {
 	machinarium_stack_size = size;
+}
+
+MACHINE_API void machinarium_set_system_stack_size(int size)
+{
+	machinarium_system_stack_size = size;
 }
 
 MACHINE_API void machinarium_set_pool_size(int size)
@@ -57,6 +63,10 @@ MACHINE_API int machinarium_init(void)
 		machinarium_stack_size = 4;
 	}
 
+	if (machinarium_system_stack_size <= 0) {
+		machinarium_system_stack_size = machinarium_stack_size;
+	}
+
 	if (machinarium_pool_size == 0) {
 		machinarium_pool_size = 1;
 	}
@@ -67,6 +77,7 @@ MACHINE_API int machinarium_init(void)
 
 	machinarium.config.page_size = machinarium_page_size();
 	machinarium.config.stack_size = machinarium_stack_size;
+	machinarium.config.system_stack_size = machinarium_system_stack_size;
 	machinarium.config.pool_size = machinarium_pool_size;
 	machinarium.config.coroutine_cache_size =
 		machinarium_coroutine_cache_size;

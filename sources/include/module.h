@@ -25,12 +25,6 @@ typedef int (*client_auth_attempt_cb_t)(od_client_t *c);
 typedef int (*client_auth_complete_cb_t)(od_client_t *c, int rc);
 typedef int (*client_disconnect_cb_t)(od_client_t *c, od_frontend_status_t s);
 
-/* config */
-typedef int (*config_rule_init_cb_t)(od_rule_t *rule, od_config_reader_t *cr,
-				     od_token_t *token);
-
-typedef int (*config_module_init_db_t)(od_config_reader_t *cr);
-
 /* reload */
 typedef od_retcode_t (*od_config_reload_cb_t)(od_list_t *added,
 					      od_list_t *deleted);
@@ -55,9 +49,6 @@ struct od_module {
 	client_auth_attempt_cb_t auth_attempt_cb;
 	client_auth_complete_cb_t auth_complete_cb;
 	client_disconnect_cb_t disconnect_cb;
-
-	config_rule_init_cb_t config_rule_init_cb;
-	config_module_init_db_t config_module_init_db;
 
 	od_config_reload_cb_t od_config_reload_cb;
 	od_auth_cleartext_cb_t od_auth_cleartext_cb;
