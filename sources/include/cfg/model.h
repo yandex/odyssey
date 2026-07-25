@@ -126,6 +126,7 @@ typedef struct od_cfg_balancing_method {
 	od_cfg_location_t location;
 
 	char *name;
+	od_cfg_bool_field_t az_aware;
 } od_cfg_balancing_method_t;
 
 typedef struct od_cfg_balancing {

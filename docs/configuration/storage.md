@@ -105,7 +105,29 @@ Balancing method name. Defines how Odyssey picks among the storage endpoints.
 
 ```plain
 balancing {
-    method "round-robin" {
+    method "roundrobin" {
+    }
+}
+```
+
+#### **az\_aware**
+*yes|no*
+
+Controls whether the balancing method takes the instance's availability zone
+into account when selecting endpoints. Defaults to `yes`.
+
+When `az_aware yes` (the default), Odyssey prefers endpoints located in the
+same availability zone as the instance (as configured by `availability_zone`
+in the [global section](../configuration/global.md)). Endpoints in other zones
+are used only when no same-AZ endpoints are available.
+
+Set to `no` to disable AZ-aware selection and treat all endpoints equally
+regardless of their availability zone.
+
+```plain
+balancing {
+    method "roundrobin" {
+        az_aware no
     }
 }
 ```
@@ -118,7 +140,7 @@ when a balancing decision is made. Defaults to `no`.
 
 ```plain
 balancing {
-    method "round-robin" {}
+    method "roundrobin" {}
     show_notice_messages yes
 }
 ```

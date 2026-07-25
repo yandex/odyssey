@@ -49,6 +49,7 @@ void od_storage_balancing_init(od_storage_balancing_t *b)
 	memset(b, 0, sizeof(od_storage_balancing_t));
 
 	b->method.type = OD_BALANCING_METHOD_UNDEF;
+	b->method.az_aware = 1;
 	atomic_init(&b->method.roundrobin.counter, 0);
 
 	b->debug_notice = 0;
@@ -147,7 +148,7 @@ static size_t roundrobin(od_storage_balancing_t *b, od_rule_storage_t *storage,
 	for (size_t i = 0; i < count; ++i) {
 		od_storage_endpoint_t *e = out[i];
 
-		if (!in_same_az(instance, e)) {
+		if (b->method.az_aware && !in_same_az(instance, e)) {
 			++nglobal;
 			continue;
 		}
@@ -182,9 +183,16 @@ static int addr_filter(void *arg, const od_multi_pool_key_t *key)
 	return od_address_cmp(&key->address, &endp->address) == 0;
 }
 
+typedef struct {
+	od_route_t *route;
+	od_storage_balancing_t *b;
+} leastconn_arg_t;
+
 static int conncount_cmp(void *arg, const void *a, const void *b)
 {
-	od_route_t *route = arg;
+	leastconn_arg_t *arg_ = (leastconn_arg_t *)arg;
+	od_route_t *route = arg_->route;
+	od_storage_balancing_t *balancing = arg_->b;
 	od_instance_t *instance = od_global_get_instance();
 
 	const od_storage_endpoint_t *f = (const od_storage_endpoint_t *)a;
@@ -194,8 +202,8 @@ static int conncount_cmp(void *arg, const void *a, const void *b)
 		return 0;
 	}
 
-	int f_az = in_same_az(instance, f);
-	int s_az = in_same_az(instance, s);
+	int f_az = !balancing->method.az_aware || in_same_az(instance, f);
+	int s_az = !balancing->method.az_aware || in_same_az(instance, s);
 
 	if (f_az != s_az) {
 		/* let az-local hosts be the first */
@@ -235,7 +243,11 @@ static size_t leastconn(od_storage_balancing_t *b, od_route_t *route,
 	 */
 	od_route_lock(route);
 
-	od_insertion_sort_p((void **)out, count, conncount_cmp, route);
+	leastconn_arg_t sarg;
+	sarg.route = route;
+	sarg.b = b;
+
+	od_insertion_sort_p((void **)out, count, conncount_cmp, &sarg);
 
 	od_route_unlock(route);
 

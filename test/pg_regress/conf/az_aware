@@ -1,0 +1,124 @@
+daemonize yes
+
+log_format "%p %t %l [%i %s] (%c) %m\n"
+
+log_to_stdout no
+
+log_syslog no
+log_syslog_ident "odyssey"
+log_syslog_facility "daemon"
+
+log_debug no
+log_config no
+log_session no
+log_query no
+log_stats no
+log_file "/tmp/odyssey.log"
+stats_interval 60
+
+workers 1
+resolvers 1
+
+readahead 4096
+
+cache_coroutine 0
+
+coroutine_stack_size 16
+
+nodelay yes
+
+keepalive 15
+keepalive_keep_interval 75
+keepalive_probes 9
+
+keepalive_usr_timeout 0
+
+virtual_processing yes
+
+availability_zone "az1"
+
+listen {
+	host "*"
+	port 6432
+	backlog 128
+	compression yes
+	tls "disable"
+}
+
+/*
+ * Three hosts: localhost:5432 is in az1 (same as the Odyssey instance),
+ * localhost:5433 and localhost:5434 are in az2.
+ *
+ * With az_aware yes (default): round-robin only within az1 -> always 5432.
+ * With az_aware no:            round-robin across all three hosts.
+ */
+
+storage "rr-az-aware" {
+	type "remote"
+	host "localhost:5432:az1,localhost:5433:az2,localhost:5434:az2"
+	endpoints_status_poll_interval 5000
+	balancing {
+		method "roundrobin" {
+			az_aware yes
+		}
+		show_notice_messages yes
+	}
+}
+
+storage "rr-az-unaware" {
+	type "remote"
+	host "localhost:5432:az1,localhost:5433:az2,localhost:5434:az2"
+	endpoints_status_poll_interval 5000
+	balancing {
+		method "roundrobin" {
+			az_aware no
+		}
+		show_notice_messages yes
+	}
+}
+
+database "postgres" {
+	user "az-aware-user" {
+		authentication "none"
+		storage "rr-az-aware"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+	}
+
+	user "az-unaware-user" {
+		authentication "none"
+		storage "rr-az-unaware"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+	}
+
+	user "postgres" {
+		authentication "none"
+		storage "rr-az-aware"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		client_show_id no
+	}
+}
+
+storage "local" {
+	type "local"
+}
+
+database "console" {
+	user default {
+		authentication "none"
+		role "admin"
+		pool "session"
+		storage "local"
+	}
+}
+
+bindwith_reuseport yes

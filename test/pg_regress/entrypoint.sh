@@ -80,3 +80,5 @@ do_test broken_conn 6432 tuser
 do_test balancer 6432 postgres
 
 do_test tsa 6432 postgres
+
+do_test az_aware 6432 postgres
