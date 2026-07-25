@@ -54,6 +54,12 @@ int od_reset(od_server_t *server)
 		goto drop;
 	}
 
+	if (server->xproto_mode) {
+		od_log(&instance->logger, "reset", server->client, server,
+		       "server left in extended-query pipeline, closing and drop connection");
+		goto drop;
+	}
+
 	/* support route rollback off */
 	if (!route->rule->pool->rollback) {
 		if (server->is_transaction) {
@@ -117,22 +123,6 @@ int od_reset(od_server_t *server)
 			goto drop;
 		}
 	}
-
-	/* Request one more sync point here.
-	* In `od_server_synchronized` we
-	* count number of sync/query msg send to connection
-	* and number of RFQ received, if this numbers are equal,  
-	* we decide server connection as sync. However, this might be 
-	* not true, if client-server relay advanced some extended proto
-	* msgs without sync. To safely execute discard queries, we need to
-	* advadance sync point first.
-	*/
-
-#ifdef FIX_ME_PLEASE
-	if (od_backend_request_sync_point(server) == NOT_OK_RESPONSE) {
-		goto error;
-	}
-#endif
 
 	od_debug(&instance->logger, "reset", server->client, server,
 		 "synchronized");
