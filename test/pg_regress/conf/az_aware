@@ -45,14 +45,6 @@ listen {
 	tls "disable"
 }
 
-/*
- * Three hosts: localhost:5432 is in az1 (same as the Odyssey instance),
- * localhost:5433 and localhost:5434 are in az2.
- *
- * With az_aware yes (default): round-robin only within az1 -> always 5432.
- * With az_aware no:            round-robin across all three hosts.
- */
-
 storage "rr-az-aware" {
 	type "remote"
 	host "localhost:5432:az1,localhost:5433:az2,localhost:5434:az2"
