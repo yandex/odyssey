@@ -32,6 +32,8 @@ struct od_global {
 	mm_wait_list_t *resume_waiters;
 
 	mm_sem_t cancel_sem;
+
+	mm_sem_t routing_sem;
 };
 
 od_global_t *od_global_create(od_instance_t *instance, od_system_t *system,
@@ -92,3 +94,7 @@ int od_global_is_in_soft_oom(od_global_t *global, uint64_t *used_memory);
 
 void od_global_read_host_utilization(od_global_t *global, float *cpu,
 				     float *mem);
+
+int od_routing_slot_acquire(od_global_t *global, uint32_t timeout_ms);
+
+void od_routing_slot_release(od_global_t *global);

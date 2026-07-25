@@ -2711,7 +2711,7 @@ void od_frontend(void *arg)
 			 "failed to transfer client io");
 		od_io_close(&client->io);
 		od_client_free(client);
-		od_atomic_u32_dec(&router->clients_routing);
+		od_routing_slot_release(global);
 		return;
 	}
 
@@ -2724,7 +2724,7 @@ void od_frontend(void *arg)
 			"too many tcp connections (global client_max %d)",
 			instance->config.client_max);
 		od_frontend_close(client);
-		od_atomic_u32_dec(&router->clients_routing);
+		od_routing_slot_release(global);
 		return;
 	}
 
@@ -2732,7 +2732,7 @@ void od_frontend(void *arg)
 	rc = od_frontend_startup(client);
 	if (rc == -1) {
 		od_frontend_close(client);
-		od_atomic_u32_dec(&router->clients_routing);
+		od_routing_slot_release(global);
 		return;
 	}
 
@@ -2741,7 +2741,7 @@ void od_frontend(void *arg)
 		od_debug(&instance->logger, "startup", client, NULL,
 			 "cancel request");
 
-		od_atomic_u32_dec(&router->clients_routing);
+		od_routing_slot_release(global);
 
 		uint32_t queue_timeout =
 			instance->config.cancel_queue_timeout_ms >= 0 ?
@@ -2804,7 +2804,7 @@ void od_frontend(void *arg)
 	router_status = od_router_route(router, client);
 
 	/* routing is over */
-	od_atomic_u32_dec(&router->clients_routing);
+	od_routing_slot_release(global);
 
 	if (od_likely(router_status == OD_ROUTER_OK)) {
 		od_route_t *route = client->route;
