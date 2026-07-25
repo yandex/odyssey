@@ -18,6 +18,9 @@ typedef struct {
 	od_cfg_location_t location;
 } od_cfg_seen_t;
 
+void od_cfg_seen_set(od_cfg_seen_t *seen, od_cfg_location_t location);
+void od_cfg_seen_free(od_cfg_seen_t *seen);
+
 typedef struct {
 	int value;
 	od_cfg_seen_t seen;
