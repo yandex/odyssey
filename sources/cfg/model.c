@@ -485,8 +485,38 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 
 static void od_cfg_string_field_free(od_cfg_string_field_t *field)
 {
+	od_cfg_seen_free(&field->seen);
 	od_free(field->value);
 	field->value = NULL;
+}
+
+static void od_cfg_int_field_free(od_cfg_int_field_t *field)
+{
+	od_cfg_seen_free(&field->seen);
+}
+
+static void od_cfg_bool_field_free(od_cfg_bool_field_t *field)
+{
+	od_cfg_seen_free(&field->seen);
+}
+
+static void od_cfg_u64_field_free(od_cfg_u64_field_t *field)
+{
+	od_cfg_seen_free(&field->seen);
+}
+
+void od_cfg_seen_set(od_cfg_seen_t *seen, od_cfg_location_t location)
+{
+	seen->is_set = 1;
+	seen->location = location;
+	seen->location.filename =
+		location.filename ? od_strdup(location.filename) : NULL;
+}
+
+void od_cfg_seen_free(od_cfg_seen_t *seen)
+{
+	od_free((char *)seen->location.filename);
+	seen->location.filename = NULL;
 }
 
 static void od_cfg_listen_free(od_cfg_listen_t *listen)
@@ -496,13 +526,16 @@ static void od_cfg_listen_free(od_cfg_listen_t *listen)
 	}
 
 	od_cfg_string_field_free(&listen->host);
-
+	od_cfg_int_field_free(&listen->port);
 	od_cfg_string_field_free(&listen->target_session_attrs);
+	od_cfg_int_field_free(&listen->client_login_timeout);
+	od_cfg_int_field_free(&listen->backlog);
 	od_cfg_string_field_free(&listen->tls);
 	od_cfg_string_field_free(&listen->tls_ca_file);
 	od_cfg_string_field_free(&listen->tls_key_file);
 	od_cfg_string_field_free(&listen->tls_cert_file);
 	od_cfg_string_field_free(&listen->tls_protocols);
+	od_cfg_int_field_free(&listen->catchup_timeout);
 
 	od_free(listen);
 }
@@ -523,12 +556,19 @@ static void od_cfg_storage_free(od_cfg_storage_t *storage)
 
 	od_cfg_string_field_free(&storage->type);
 	od_cfg_string_field_free(&storage->host);
+	od_cfg_int_field_free(&storage->port);
 	od_cfg_string_field_free(&storage->tls);
 	od_cfg_string_field_free(&storage->tls_ca_file);
 	od_cfg_string_field_free(&storage->tls_key_file);
 	od_cfg_string_field_free(&storage->tls_cert_file);
 	od_cfg_string_field_free(&storage->tls_protocols);
+	od_cfg_int_field_free(&storage->server_max_routing);
+	od_cfg_int_field_free(&storage->endpoints_status_poll_interval_ms);
 
+	od_cfg_seen_free(&storage->balancing.seen);
+	od_cfg_bool_field_free(&storage->balancing.show_notice_messages);
+	od_cfg_seen_free(&storage->balancing.method.seen);
+	od_cfg_bool_field_free(&storage->balancing.method.az_aware);
 	od_free(storage->balancing.method.name);
 
 	od_free(storage);
@@ -541,6 +581,7 @@ static void od_cfg_shared_pool_free(od_cfg_shared_pool_t *pool)
 	}
 
 	od_free(pool->name);
+	od_cfg_int_field_free(&pool->pool_size);
 	od_free(pool);
 }
 
@@ -553,6 +594,7 @@ static void od_cfg_ldap_endpoint_free(od_cfg_ldap_endpoint_t *endpoint)
 	od_free(endpoint->name);
 
 	od_cfg_string_field_free(&endpoint->ldapserver);
+	od_cfg_u64_field_free(&endpoint->ldapport);
 	od_cfg_string_field_free(&endpoint->ldapprefix);
 	od_cfg_string_field_free(&endpoint->ldapsuffix);
 	od_cfg_string_field_free(&endpoint->ldapsearchattribute);
@@ -608,32 +650,66 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 
 	od_cfg_string_field_free(&user->authentication);
 	od_cfg_string_field_free(&user->auth_module);
-
+	od_cfg_bool_field_free(&user->enable_mdb_iamproxy_auth);
 	od_cfg_string_field_free(&user->mdb_iamproxy_socket_path);
 	od_cfg_string_field_free(&user->auth_pam_service);
 	od_cfg_string_field_free(&user->target_session_attrs);
 	od_cfg_string_field_free(&user->auth_query);
 	od_cfg_string_field_free(&user->auth_query_db);
 	od_cfg_string_field_free(&user->auth_query_user);
+	od_cfg_bool_field_free(&user->password_passthrough);
 	od_cfg_string_field_free(&user->password);
 	od_cfg_string_field_free(&user->role);
+	od_cfg_int_field_free(&user->client_max);
+	od_cfg_bool_field_free(&user->client_fwd_error);
+	od_cfg_bool_field_free(&user->client_show_id);
+	od_cfg_bool_field_free(&user->reserve_session_server_connection);
 	od_cfg_string_field_free(&user->quantiles);
+	od_cfg_bool_field_free(&user->application_name_add_host);
+	od_cfg_bool_field_free(&user->server_drop_on_backend_plan_error);
+	od_cfg_u64_field_free(&user->server_lifetime);
+	od_cfg_int_field_free(&user->ldap_pool_size);
+	od_cfg_int_field_free(&user->ldap_pool_timeout);
+	od_cfg_int_field_free(&user->ldap_pool_ttl);
+	od_cfg_bool_field_free(&user->maintain_params);
 	od_cfg_string_field_free(&user->pool);
 	od_cfg_string_field_free(&user->pool_routing);
+	od_cfg_int_field_free(&user->min_pool_size);
+	od_cfg_int_field_free(&user->pool_size);
+	od_cfg_int_field_free(&user->pool_timeout);
+	od_cfg_int_field_free(&user->pool_ttl);
+	od_cfg_bool_field_free(&user->pool_discard);
+	od_cfg_bool_field_free(&user->pool_smart_discard);
 	od_cfg_string_field_free(&user->pool_discard_query);
+	od_cfg_bool_field_free(&user->pool_cancel);
+	od_cfg_bool_field_free(&user->pool_rollback);
+	od_cfg_u64_field_free(&user->pool_reset_timeout_ms);
+	od_cfg_bool_field_free(&user->pool_reserve_prepared_statement);
+	od_cfg_bool_field_free(&user->pool_pin_on_listen);
+	od_cfg_bool_field_free(&user->pool_attach_check);
+	od_cfg_bool_field_free(&user->pool_acquire_fail_fast);
+	od_cfg_u64_field_free(&user->pool_notice_after_waiting_ms);
+	od_cfg_u64_field_free(&user->pool_client_idle_timeout);
+	od_cfg_u64_field_free(&user->pool_idle_in_transaction_timeout);
 	od_cfg_string_field_free(&user->shared_pool);
 	od_cfg_string_field_free(&user->storage);
 	od_cfg_string_field_free(&user->storage_database);
 	od_cfg_string_field_free(&user->storage_user);
 	od_cfg_string_field_free(&user->storage_password);
+	od_cfg_bool_field_free(&user->log_debug);
+	od_cfg_bool_field_free(&user->log_query);
 	od_cfg_string_field_free(&user->ldap_endpoint_name);
 	od_cfg_string_field_free(&user->ldap_storage_credentials_attr);
 	od_cfg_string_field_free(&user->watchdog_lag_query);
+	od_cfg_int_field_free(&user->watchdog_lag_interval);
+	od_cfg_int_field_free(&user->catchup_timeout);
 	od_cfg_string_field_free(&user->group_query);
 	od_cfg_string_field_free(&user->group_query_user);
 	od_cfg_string_field_free(&user->group_query_db);
 
+	od_cfg_seen_free(&user->pgoptions.seen);
 	od_cfg_string_kvp_list_free(&user->pgoptions);
+	od_cfg_seen_free(&user->backend_startup_options.seen);
 	od_cfg_string_kvp_list_free(&user->backend_startup_options);
 
 	od_free(user);
@@ -662,6 +738,28 @@ static void od_cfg_database_free(od_cfg_database_t *db)
 
 void od_cfg_model_free(od_cfg_model_t *model)
 {
+	/* global bool fields */
+	od_cfg_bool_field_free(&model->global.daemonize);
+	od_cfg_bool_field_free(&model->global.sequential_routing);
+	od_cfg_bool_field_free(&model->global.enable_online_restart);
+	od_cfg_bool_field_free(&model->global.virtual_processing);
+	od_cfg_bool_field_free(&model->global.bindwith_reuseport);
+	od_cfg_bool_field_free(&model->global.enable_host_watcher);
+	od_cfg_bool_field_free(&model->global.log_debug);
+	od_cfg_bool_field_free(&model->global.log_to_stdout);
+	od_cfg_bool_field_free(&model->global.log_config);
+	od_cfg_bool_field_free(&model->global.log_session);
+	od_cfg_bool_field_free(&model->global.log_query);
+	od_cfg_bool_field_free(&model->global.log_stats);
+	od_cfg_bool_field_free(&model->global.log_async);
+	od_cfg_bool_field_free(&model->global.log_syslog);
+	od_cfg_bool_field_free(&model->global.smart_search_path_enquoting);
+	od_cfg_bool_field_free(&model->global.nodelay);
+	od_cfg_bool_field_free(&model->global.disable_nolinger);
+	od_cfg_bool_field_free(&model->global.log_general_stats_prom);
+	od_cfg_bool_field_free(&model->global.log_route_stats_prom);
+
+	/* global string fields */
 	od_cfg_string_field_free(&model->global.pid_file);
 	od_cfg_string_field_free(&model->global.unix_socket_dir);
 	od_cfg_string_field_free(&model->global.unix_socket_mode);
@@ -675,13 +773,46 @@ void od_cfg_model_free(od_cfg_model_t *model)
 	od_cfg_string_field_free(&model->global.cpu_affinity);
 	od_cfg_string_field_free(&model->global.hba_file);
 
-	if (model->soft_oom.seen.is_set) {
-		od_cfg_string_field_free(&model->soft_oom.process);
+	/* global int fields */
+	od_cfg_int_field_free(&model->global.priority);
+	od_cfg_int_field_free(&model->global.graceful_shutdown_timeout_ms);
+	od_cfg_int_field_free(&model->global.log_queue_depth);
+	od_cfg_int_field_free(&model->global.stats_interval);
+	od_cfg_int_field_free(&model->global.client_max);
+	od_cfg_int_field_free(&model->global.client_max_routing);
+	od_cfg_int_field_free(&model->global.server_login_retry);
+	od_cfg_int_field_free(&model->global.readahead);
+	od_cfg_int_field_free(&model->global.keepalive);
+	od_cfg_int_field_free(&model->global.keepalive_keep_interval);
+	od_cfg_int_field_free(&model->global.keepalive_probes);
+	od_cfg_int_field_free(&model->global.keepalive_usr_timeout);
+	od_cfg_int_field_free(&model->global.max_sigterms_to_die);
+	od_cfg_int_field_free(&model->global.backend_connect_timeout_ms);
+	od_cfg_int_field_free(&model->global.cancel_timeout_ms);
+	od_cfg_int_field_free(&model->global.cancel_queue_timeout_ms);
+	od_cfg_int_field_free(&model->global.cancel_max_inflight);
+	od_cfg_int_field_free(&model->global.resolvers);
+	od_cfg_int_field_free(&model->global.dns_cache_ttl);
+	od_cfg_int_field_free(&model->global.cache_msg_gc_size);
+	od_cfg_int_field_free(&model->global.cache_coroutine);
+	od_cfg_int_field_free(&model->global.coroutine_stack_size);
+	od_cfg_int_field_free(&model->global.system_coroutine_stack_size);
+	od_cfg_int_field_free(&model->global.promhttp_server_port);
+	od_cfg_int_field_free(&model->global.group_checker_interval);
+	od_cfg_int_field_free(&model->global.workers);
 
-		if (model->soft_oom.drop.seen.is_set) {
-			od_cfg_string_field_free(&model->soft_oom.drop.signal);
-		}
-	}
+	od_cfg_seen_free(&model->conn_drop_options.seen);
+	od_cfg_bool_field_free(&model->conn_drop_options.drop_enabled);
+	od_cfg_int_field_free(&model->conn_drop_options.rate);
+	od_cfg_int_field_free(&model->conn_drop_options.interval_ms);
+
+	od_cfg_seen_free(&model->soft_oom.seen);
+	od_cfg_u64_field_free(&model->soft_oom.limit);
+	od_cfg_string_field_free(&model->soft_oom.process);
+	od_cfg_int_field_free(&model->soft_oom.check_interval_ms);
+	od_cfg_seen_free(&model->soft_oom.drop.seen);
+	od_cfg_string_field_free(&model->soft_oom.drop.signal);
+	od_cfg_int_field_free(&model->soft_oom.drop.max_rate);
 
 	for (size_t i = 0; i < model->databases_count; ++i) {
 		od_cfg_database_free(model->databases[i]);
@@ -1071,8 +1202,7 @@ int od_cfg_set_bool(od_cfg_diag_list_t *diags, od_cfg_bool_field_t *field,
 	}
 
 	field->value = value ? 1 : 0;
-	field->seen.is_set = 1;
-	field->seen.location = location;
+	od_cfg_seen_set(&field->seen, location);
 	return 0;
 }
 
@@ -1086,8 +1216,7 @@ int od_cfg_set_int(od_cfg_diag_list_t *diags, od_cfg_int_field_t *field,
 	}
 
 	field->value = value;
-	field->seen.is_set = 1;
-	field->seen.location = location;
+	od_cfg_seen_set(&field->seen, location);
 	return 0;
 }
 
@@ -1146,8 +1275,7 @@ int od_cfg_set_u64(od_cfg_diag_list_t *diags, od_cfg_u64_field_t *field,
 	}
 
 	field->value = value;
-	field->seen.is_set = 1;
-	field->seen.location = location;
+	od_cfg_seen_set(&field->seen, location);
 	return 0;
 }
 
@@ -1497,8 +1625,7 @@ int od_cfg_set_string(od_cfg_diag_list_t *diags, od_cfg_string_field_t *field,
 	}
 
 	field->value = value;
-	field->seen.is_set = 1;
-	field->seen.location = location;
+	od_cfg_seen_set(&field->seen, location);
 	return 0;
 }
 

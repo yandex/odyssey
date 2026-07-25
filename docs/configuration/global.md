@@ -32,7 +32,7 @@ for all Odyssey rules.
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
 | `readahead`                                | int (bytes)      | one page    | SIGHUP  | Per-connection read buffer                            |
-| `cache_coroutine`                          | int              | `256`       | restart | Coroutines cache size                                  |
+| `cache_coroutine`                          | int              | `1024`      | restart | Coroutines cache size                                  |
 | `nodelay`                                  | int (bool)       | `yes`       | SIGHUP  | Enable TCP\_NODELAY                                   |
 | `disable_nolinger`                         | int (bool)       | `yes`       | SIGHUP  | Do no set tcp linger to 0 for client connections                  |
 | `keepalive`                                | int (sec)        | `15`        | SIGHUP  | TCP keepalive; 0 disables                             |
@@ -40,7 +40,7 @@ for all Odyssey rules.
 | `keepalive_probes`                         | int              | `3`         | SIGHUP  | Probes before killing conn                            |
 | `keepalive_usr_timeout`                    | int (ms)         | `0`         | SIGHUP  | 0 = use system default (`TCP_USER_TIMEOUT`)           |
 | `backend_connect_timeout_ms`               | int (ms)         | `30000`     | SIGHUP  | Backend connection timeout                            |
-| `coroutine_stack_size`                     | int (pages)      | `4`         | restart | Coroutine stack size (client/worker coroutines)       |
+| `coroutine_stack_size`                     | int (pages)      | `16`        | restart | Coroutine stack size (client/worker coroutines); values below 16 are not recommended |
 | `system_coroutine_stack_size`              | int (pages)      | `32`        | restart | Coroutine stack size for internal system coroutines   |
 | `client_max`                               | int              | `0`         | SIGHUP  | Max client connections (0/unset = no global limit)    |
 | `client_max_routing`                       | int              | `0`         | SIGHUP  | 0/unset → auto (typically `64 * workers`)             |
@@ -321,12 +321,14 @@ Rounded up to whole page numbers.
 *integer*
 
 Set pool size of free coroutines cache. It is a good idea to set
-this value to a sum of max clients plus server connections. Please note, that
-each coroutine consumes around 16KB of memory.
+this value to a sum of max clients plus server connections. Note that
+each coroutine reserves `(coroutine_stack_size + 1) * page_size` of virtual address space
+(e.g. 68 KB with the default 16-page stack on a 4 KB page system), but physical pages
+are only faulted in as the stack actually grows, so RSS is typically much lower.
 
 Set to zero, to disable coroutine cache.
 
-`cache_coroutine 128`
+`cache_coroutine 1024`
 
 ## **nodelay**
 *yes|no*
@@ -389,12 +391,19 @@ Timeout for connection to backend (postgres). Default value is 30000 (30 secs)
 
 Coroutine stack size for client and worker coroutines.
 
-Set coroutine stack size in pages. In some rare cases
-it might be necessary to make stack size bigger (like that using the Odyssey with LDAP auth required `coroutine_stack_size 16`). Actual stack will be
-allocated as `(coroutine_stack_size + 1_guard_page) * page_size`.
-Guard page is used to track stack overflows. Stack by default is set to 16KB.
+Set coroutine stack size in pages. Actual stack is allocated as
+`(coroutine_stack_size + 1_guard_page) * page_size`. The guard page
+is protected (`PROT_NONE`) and catches stack overflows. It is purely
+virtual — backed by `mmap(MAP_ANONYMOUS)` with no physical pages
+allocated, so it contributes nothing to RSS.
 
-`coroutine_stack_size 4`
+**Values below 16 pages (64 KB on a 4 KB page system) are not recommended.**
+A stack that is too small can cause silent stack overflows or crashes in
+scenarios involving TLS handshakes, LDAP authentication, config reload, or
+deep library call chains. Odyssey will emit a warning at startup if
+`coroutine_stack_size` is set below 16.
+
+`coroutine_stack_size 16`
 
 ## **system\_coroutine\_stack\_size**
 *integer*
@@ -413,6 +422,8 @@ from `coroutine_stack_size` avoids inflating memory usage for the large number
 of client coroutines just to accommodate the rare system operations.
 
 Actual stack is allocated as `(system_coroutine_stack_size + 1_guard_page) * page_size`.
+The guard page is purely virtual (`mmap(MAP_ANONYMOUS)` + `mprotect(PROT_NONE)`) and
+contributes nothing to RSS.
 
 `system_coroutine_stack_size 32`
 

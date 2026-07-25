@@ -2065,8 +2065,7 @@ balancing_section:
 				YYERROR;
 			}
 
-			b->seen.is_set = 1;
-			b->seen.location = @1;
+			od_cfg_seen_set(&b->seen, @1);
 			b->location = @1;
 
 			ctx->current_balancing = b;
@@ -2109,8 +2108,7 @@ balancing_method_section:
 				YYERROR;
 			}
 
-			m->seen.is_set = 1;
-			m->seen.location = @1;
+			od_cfg_seen_set(&m->seen, @1);
 			m->location = @1;
 
 			m->name = $2;
@@ -2303,8 +2301,7 @@ conn_drop_options_section:
 				YYERROR;
 			}
 
-			opts->seen.is_set = 1;
-			opts->seen.location = @1;
+			od_cfg_seen_set(&opts->seen, @1);
 			opts->location = @1;
 
 			ctx->current_conn_drop_options = opts;
@@ -2326,8 +2323,7 @@ soft_oom_section:
 				YYERROR;
 			}
 
-			soom->seen.is_set = 1;
-			soom->seen.location = @1;
+			od_cfg_seen_set(&soom->seen, @1);
 			soom->location = @1;
 
 			ctx->current_soft_oom = soom;
@@ -2389,8 +2385,7 @@ soft_oom_drop:
 				YYERROR;
 			}
 
-			drop->seen.is_set = 1;
-			drop->seen.location = @1;
+			od_cfg_seen_set(&drop->seen, @1);
 			drop->location = @1;
 
 			ctx->current_soft_oom_drop = drop;
