@@ -892,7 +892,7 @@ func txWorker(ctx context.Context, stopCh <-chan struct{}, cfg Config, id int, g
 
 var errElephantDropped = errors.New("elephant dropped mid-stream")
 
-func elephantWorker(ctx context.Context, stopCh <-chan struct{}, cfg Config, id int, gauges *Gauges, events chan<- Event, wg *sync.WaitGroup) {
+func elephantWorker(ctx context.Context, stopCh <-chan struct{}, stopDeadline time.Time, cfg Config, id int, gauges *Gauges, events chan<- Event, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano() + int64(id)*3000 + 3))
@@ -921,10 +921,28 @@ func elephantWorker(ctx context.Context, stopCh <-chan struct{}, cfg Config, id 
 			return
 		}
 
+		// Don't start a new stream if there isn't enough time left before the
+		// test ends for it to complete within the query timeout. Without this
+		// guard the worker can start a ~20 s stream in the last seconds of the
+		// test and then sit blocked until the 60 s context deadline fires,
+		// causing a spurious timeout failure — especially visible under ASAN
+		// where Odyssey runs slower.
+		timeLeft := time.Until(stopDeadline)
+		if timeLeft < cfg.ElephantQueryTimeout {
+			return
+		}
+
 		gauges.ElephantActive.Add(1)
 		start := time.Now()
 
-		streamCtx, cancel := context.WithTimeout(ctx, cfg.ElephantQueryTimeout)
+		// Cap the stream context to the remaining test time so that even if
+		// the timer fires mid-stream we exit cleanly instead of hanging until
+		// the full ElephantQueryTimeout expires.
+		streamTimeout := cfg.ElephantQueryTimeout
+		if timeLeft < streamTimeout {
+			streamTimeout = timeLeft
+		}
+		streamCtx, cancel := context.WithTimeout(ctx, streamTimeout)
 		dropThisRun := r.Float64() < cfg.ElephantDropProb
 		dropAt := 0
 		if cfg.ElephantChunks > 0 {
@@ -1182,6 +1200,7 @@ func main() {
 		}
 	}()
 
+	stopDeadline := time.Now().Add(cfg.Duration)
 	stopCh := make(chan struct{})
 	go func() {
 		t := time.NewTimer(cfg.Duration)
@@ -1216,7 +1235,7 @@ func main() {
 	}
 	for i := 0; i < cfg.ElephantClients; i++ {
 		wg.Add(1)
-		go elephantWorker(runCtx, stopCh, cfg, i, gauges, events, &wg)
+		go elephantWorker(runCtx, stopCh, stopDeadline, cfg, i, gauges, events, &wg)
 	}
 
 	wg.Wait()
