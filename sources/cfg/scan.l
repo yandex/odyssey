@@ -48,30 +48,12 @@ od_cfg_unescape_string(od_cfg_parse_ctx_t *ctx,
 
 	size_t j = 0;
 	for (size_t i = 0; i < len; i++) {
-		if (s[i] != '\\') {
-			out[j++] = s[i];
+		if (s[i] == '\\' && i + 1 < len && s[i + 1] == '"') {
+			out[j++] = '"';
+			i++;
 			continue;
 		}
-
-		if (i + 1 >= len) {
-			od_cfg_diag_error(ctx->diags, loc, "unterminated escape sequence");
-			od_free(out);
-			return NULL;
-		}
-
-		char c = s[++i];
-		switch (c) {
-		case '\\': out[j++] = '\\'; break;
-		case '"':  out[j++] = '"';  break;
-		case 'n':  out[j++] = '\n'; break;
-		case 'r':  out[j++] = '\r'; break;
-		case 't':  out[j++] = '\t'; break;
-		default:
-			od_cfg_diag_error(ctx->diags, loc,
-							  "unknown escape sequence '\\%c'", c);
-			od_free(out);
-			return NULL;
-		}
+		out[j++] = s[i];
 	}
 
 	out[j] = 0;
@@ -156,7 +138,7 @@ SIZE_SUFFIX  [kK][bB]?|[mM][bB]?|[gG][bB]?|[bB]
 				}
 
 
-\"([^\\\"]|\\.)*\" {
+\"([^\"]|\\\")*\" {
 					size_t len = (size_t)yyleng - 2;
 
 					char *copy = od_cfg_unescape_string(yyextra,
