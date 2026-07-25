@@ -19,7 +19,6 @@ struct od_router {
 	od_route_pool_t route_pool;
 	/* clients */
 	od_atomic_u32_t clients;
-	od_atomic_u32_t clients_routing;
 	/* servers */
 	od_atomic_u32_t servers_routing;
 	/* error logging */

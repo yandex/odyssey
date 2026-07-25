@@ -14,6 +14,7 @@
 void mm_sem_init(mm_sem_t *sem, uint64_t value)
 {
 	atomic_init(&sem->value, value);
+	sem->initial_value = value;
 	mm_wait_list_init(&sem->notifier, &sem->value);
 }
 

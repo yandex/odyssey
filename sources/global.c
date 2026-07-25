@@ -107,3 +107,13 @@ void od_global_read_host_utilization(od_global_t *global, float *cpu,
 
 	od_host_watcher_read(&global->host_watcher, cpu, mem);
 }
+
+int od_routing_slot_acquire(od_global_t *global, uint32_t timeout_ms)
+{
+	return mm_sem_timedwait(&global->routing_sem, timeout_ms);
+}
+
+void od_routing_slot_release(od_global_t *global)
+{
+	mm_sem_post(&global->routing_sem);
+}

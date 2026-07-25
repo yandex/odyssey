@@ -30,6 +30,7 @@
 #include <dns.h>
 #include <hba_rule.h>
 #include <hba.h>
+#include <frontend.h>
 #include <server.h>
 #include <hba_rule.h>
 #include <sighandler.h>
@@ -54,7 +55,6 @@ static inline void od_system_server(void *arg)
 {
 	od_system_server_t *server = arg;
 	od_instance_t *instance = server->global->instance;
-	od_router_t *router = server->global->router;
 
 	/*
 	 * now we are ready to accept connections on this instance
@@ -71,7 +71,7 @@ static inline void od_system_server(void *arg)
 		mm_io_t *client_io;
 		int rc;
 		rc = mm_io_accept(server->io, &client_io,
-				  server->config->backlog, 0,
+				  server->config->backlog, 0 /* attach */,
 				  30 * 1000 /* 30 sec */);
 		if (rc == -1) {
 			int errno_ = machine_errno();
@@ -144,24 +144,37 @@ static inline void od_system_server(void *arg)
 		/* create new client event and pass it to worker pool */
 		machine_msg_t *msg;
 		msg = machine_msg_create(sizeof(od_client_t *));
+		if (msg == NULL) {
+			od_error(&instance->logger, "server", NULL, NULL,
+				 "failed to allocate client message");
+			od_io_close(&client->io);
+			od_client_free(client);
+			continue;
+		}
 		machine_msg_set_type(msg, OD_MSG_CLIENT_NEW);
 		memcpy(machine_msg_data(msg), &client, sizeof(od_client_t *));
 
-		od_worker_pool_t *worker_pool = server->global->worker_pool;
-		od_atomic_u32_inc(&router->clients_routing);
-		od_worker_pool_feed(worker_pool, msg);
-		bool warning_emitted = false;
-		while (od_atomic_u32_of(&router->clients_routing) >=
-		       (uint32_t)instance->config.client_max_routing) {
-			if (!warning_emitted) {
-				/* TODO: AB: Use WARNING here, it's not an error */
-				od_error(&instance->logger,
-					 "client_max_routing", client, NULL,
-					 "client is waiting in routing queue");
-				warning_emitted = true;
-			}
-			machine_sleep(1);
+		od_global_t *global = server->global;
+		rc = od_routing_slot_acquire(global,
+					     od_client_login_timeout(client));
+		if (rc == -1) {
+			od_error(
+				&instance->logger, "client_max_routing", client,
+				NULL,
+				"routing slot wait timed out, connection rejected (high TLS handshakes rate?)");
+			/*
+			 * we can send FATAL with detailed description here
+			 * but it will not work with SSL, and will be dispayed as
+			 * 'server sent an error response during SSL exchange', so
+			 * let it be more clear 'server closed the connection unexpectedly'
+			 */
+			machine_msg_free(msg);
+			od_io_close(&client->io);
+			od_client_free(client);
+			continue;
 		}
+		od_worker_pool_t *worker_pool = server->global->worker_pool;
+		od_worker_pool_feed(worker_pool, msg);
 	}
 
 	mm_eventfd_remove_peer_to(&server->shutdown_efd, server->io);
@@ -631,6 +644,8 @@ static inline void od_system(void *arg)
 			(uint64_t)instance->config.cancel_max_inflight :
 			2 * (uint64_t)instance->config.workers;
 	mm_sem_init(&global->cancel_sem, max_inflight);
+	mm_sem_init(&global->routing_sem,
+		    (uint64_t)instance->config.client_max_routing);
 
 	/* start cron coroutine */
 	od_cron_t *cron = system->global->cron;
@@ -714,6 +729,7 @@ static inline void od_system(void *arg)
 	od_logger_wait_finish(&instance->logger);
 
 	mm_sem_destroy(&global->cancel_sem);
+	mm_sem_destroy(&global->routing_sem);
 
 	od_instance_free(instance);
 	od_global_destroy(global);

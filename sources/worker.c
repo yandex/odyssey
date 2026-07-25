@@ -20,7 +20,6 @@
 #include <instance.h>
 #include <msg.h>
 #include <frontend.h>
-#include <router.h>
 
 #ifdef PROM_FOUND
 #include <cron.h>
@@ -85,7 +84,6 @@ static inline void od_worker(void *arg)
 {
 	od_worker_t *worker = arg;
 	od_instance_t *instance = worker->global->instance;
-	od_router_t *router = worker->global->router;
 
 	setup_affinity(instance, worker->id);
 
@@ -139,7 +137,7 @@ static inline void od_worker(void *arg)
 					 NULL, "failed to create coroutine");
 				od_io_close(&client->io);
 				od_client_free(client);
-				od_atomic_u32_dec(&router->clients_routing);
+				od_routing_slot_release(worker->global);
 				break;
 			}
 			client->coroutine_id = coroutine_id;
