@@ -49,6 +49,7 @@ typedef struct {
 typedef struct {
 	struct {
 		od_balancing_method_t type;
+		int az_aware;
 		union {
 			od_method_roundroubin_t roundrobin;
 			od_method_weighted_t weighted;

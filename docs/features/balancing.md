@@ -34,6 +34,7 @@ Host is selected randomly, but with next priorities:
 
 0. **Localhost**. Localhost endpoints will be tried first.
 1. **Availability zone**. If `availability_zone` is set in [global section](../configuration/global.md), the endpoints with equals az will be tried second.
+   This behaviour is enabled by default and can be turned off per balancing method with [`az_aware no`](../configuration/storage.md#az_aware).
 2. **Target session attributes**. Works if [TSA](tsa.md) is specified in some way.
 Endpoints with equals target session attributes will be tried third.
 

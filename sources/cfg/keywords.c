@@ -195,6 +195,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "watchdog", WATCHDOG },
 	{ "group", GROUP },
 	{ "include", INCLUDE },
+	{ "az_aware", AZ_AWARE },
 
 	{ NULL, 0 }
 };

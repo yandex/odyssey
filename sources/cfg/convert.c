@@ -1116,6 +1116,8 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 			}
 
 			storage->balancing.method.type = method;
+			COPY_BOOL(cfg->balancing.method.az_aware,
+				  storage->balancing.method.az_aware);
 		}
 
 		COPY_BOOL(cfg->balancing.show_notice_messages,

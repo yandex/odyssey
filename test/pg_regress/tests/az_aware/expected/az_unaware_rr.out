@@ -1,0 +1,43 @@
+\connect 'host=localhost port=6432 user=az-unaware-user dbname=postgres'
+select 1;
+NOTICE:  select host tcp://localhost:5433
+ ?column? 
+----------
+        1
+(1 row)
+
+select 2;
+NOTICE:  select host tcp://localhost:5434
+ ?column? 
+----------
+        2
+(1 row)
+
+select 3;
+NOTICE:  select host tcp://localhost:5432
+ ?column? 
+----------
+        3
+(1 row)
+
+select 4;
+NOTICE:  select host tcp://localhost:5433
+ ?column? 
+----------
+        4
+(1 row)
+
+select 5;
+NOTICE:  select host tcp://localhost:5434
+ ?column? 
+----------
+        5
+(1 row)
+
+select 6;
+NOTICE:  select host tcp://localhost:5432
+ ?column? 
+----------
+        6
+(1 row)
+

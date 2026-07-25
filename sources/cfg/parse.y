@@ -256,6 +256,7 @@
 %token GROUP_QUERY_DB "group_query_db"
 %token GROUP "group"
 %token INCLUDE "include"
+%token AZ_AWARE "az_aware"
 
 %type <boolean> bool_value
 %type <str> string_value
@@ -2125,6 +2126,18 @@ balancing_method_section:
 
 balancing_method_items:
 	  %empty
+	| balancing_method_items balancing_method_item
+	;
+
+balancing_method_item:
+	  AZ_AWARE bool_value
+		{
+			od_cfg_set_bool(ctx->diags,
+							&ctx->current_balancing_method->az_aware,
+							$2,
+							@1,
+							"az_aware");
+		}
 	;
 
 listen_section:
