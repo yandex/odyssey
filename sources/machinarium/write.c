@@ -32,9 +32,11 @@ MACHINE_API ssize_t machine_write_raw(mm_io_t *obj, const void *buf,
 }
 
 MACHINE_API ssize_t machine_writev_raw(mm_io_t *io, const struct iovec *iov,
-				       int iovcnt)
+				       int iovcnt, size_t *processed)
 {
 	mm_errno_set(0);
+	if (processed)
+		*processed = 0;
 
 	int iov_to_write = iovcnt;
 	if (iov_to_write > IOV_MAX) {
@@ -44,12 +46,12 @@ MACHINE_API ssize_t machine_writev_raw(mm_io_t *io, const struct iovec *iov,
 	ssize_t rc;
 #ifdef MM_BUILD_COMPRESSION
 	if (mm_compression_is_active(io)) {
-		size_t processed = 0;
-		rc = mm_compression_writev(io, iovec, iov_to_write, &processed);
-		/* processed > 0 in case of error return code, but consumed input */
-		if (processed > 0) {
-			mm_iov_advance(iov, processed);
-		}
+		/* mm_compression_writev reports consumed input bytes via
+		 * *processed on partial-progress errors (rc <= 0); on
+		 * success it returns the number of consumed input bytes
+		 * as rc, leaving *processed untouched. This matches the
+		 * contract of machine_write_raw() / mm_zpq_write(). */
+		rc = mm_compression_writev(io, iov, iov_to_write, processed);
 	} else if (mm_tls_is_active(io))
 #else
 	if (mm_tls_is_active(io))
