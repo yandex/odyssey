@@ -444,6 +444,65 @@ void od_frontend_attach_init_candidates(
 	      candidate_cmp_desc);
 }
 
+/*
+ * returns 1 when a new backend connection attempt should be deferred
+ *
+ * the logic gradually reduces allowed parallelism as the pool fills:
+ * at 0 connections — full max_routing parallelism
+ * at pool_size/2 connections — only 1 parallel attempt allowed
+ */
+static inline int od_ramp_rate_exceeded(int connections_in_pool, int pool_size,
+					int currently_routing, int max_routing)
+{
+	if (pool_size == 0) {
+		return currently_routing >= max_routing;
+	}
+	max_routing =
+		max_routing * (pool_size - connections_in_pool * 2) / pool_size;
+	if (max_routing <= 0) {
+		max_routing = 1;
+	}
+	return currently_routing >= max_routing;
+}
+
+static inline void od_ramp_rate_done(od_rule_storage_t *stor)
+{
+	atomic_fetch_sub(&stor->servers_routing, 1);
+	mm_wait_list_notify(&stor->servers_routing_waiters);
+}
+
+static inline void od_ramp_rate_wait(od_rule_storage_t *storage,
+				     od_multi_pool_element_t *pool_element,
+				     int pool_size)
+{
+	int max_routing = (int)storage->server_max_routing;
+	while (1) {
+		uint64_t current = atomic_load(&storage->servers_routing);
+
+		/*
+		 * pool_element->pool.count_active/idle are read without the
+		 * route lock here. this is intentional: od_ramp_rate_exceeded
+		 * uses connections_in_pool only as a soft hint to gradually
+		 * reduce parallelism — a slightly stale value is harmless
+		 * The hard pool-size limit is enforced under the lock in
+		 * od_route_server_pool_can_add_locked inside the router
+		 */
+		if (od_ramp_rate_exceeded(
+			    od_server_pool_total(&pool_element->pool),
+			    pool_size, (int)current, max_routing)) {
+			mm_wait_list_compare_wait(
+				&storage->servers_routing_waiters, NULL,
+				current, 1000);
+			continue;
+		}
+
+		if (atomic_compare_exchange_weak(&storage->servers_routing,
+						 &current, current + 1)) {
+			break;
+		}
+	}
+}
+
 static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 	od_client_t *client, char *context, kiwi_params_t *route_params,
 	od_storage_endpoint_t *endpoint, od_target_session_attrs_t tsa,
@@ -506,13 +565,20 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 		/* connect to server, if necessary */
 		if (od_backend_not_connected(server)) {
 			int rc;
-			od_atomic_u32_inc(&router->servers_routing);
+			od_multi_pool_element_t *pool_element =
+				server->pool_element;
+			int pool_size = route->rule->pool->size;
+			if (od_route_has_shared_pool(route)) {
+				pool_size = route->shared_pool->pool_size;
+			}
+
+			od_ramp_rate_wait(storage, pool_element, pool_size);
 
 			assert(client->config_listen != NULL);
 			rc = od_backend_connect(server, context, route_params,
 						client);
 
-			od_atomic_u32_dec(&router->servers_routing);
+			od_ramp_rate_done(storage);
 			if (rc == NOT_OK_RESPONSE) {
 				/* In case of 'too many connections' error, retry attach attempt by
 				* waiting for a idle server connection for pool_timeout ms

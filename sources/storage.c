@@ -161,6 +161,9 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 	}
 
 	atomic_init(&storage->refs, 1);
+	atomic_init(&storage->servers_routing, 0);
+	mm_wait_list_init(&storage->servers_routing_waiters,
+			  &storage->servers_routing);
 
 	storage->endpoints_status_poll_interval_ms = 1000;
 	od_storage_balancing_init(&storage->balancing);
@@ -206,6 +209,7 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 	}
 
 	od_storage_balancing_destroy(&storage->balancing);
+	mm_wait_list_destroy(&storage->servers_routing_waiters);
 
 	od_free(storage);
 }
