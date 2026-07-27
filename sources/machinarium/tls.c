@@ -791,16 +791,26 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 int mm_tls_write(mm_io_t *io, const char *buf, int size)
 {
 	mm_tls_error_reset(io);
+
+	io->want = 0;
+
 	int rc;
 	rc = SSL_write(io->tls_ssl, buf, size);
 	if (rc > 0) {
 		return rc;
 	}
 	int error = SSL_get_error(io->tls_ssl, rc);
-	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
+	if (error == SSL_ERROR_WANT_READ) {
+		io->want |= MM_IO_WANT_READ;
 		errno = EAGAIN;
 		return -1;
 	}
+	if (error == SSL_ERROR_WANT_WRITE) {
+		io->want |= MM_IO_WANT_WRITE;
+		errno = EAGAIN;
+		return -1;
+	}
+
 	mm_tls_error(io, rc, "SSL_write()");
 	return -1;
 }
@@ -830,16 +840,25 @@ int mm_tls_writev(mm_io_t *io, const struct iovec *iov, int n)
 	static MM_THREAD_LOCAL char buffer[OPENSSL_MAX_PARTIAL_BLOCK_SIZE];
 	mm_iovncpy(buffer, iov, size, n);
 
+	io->want = 0;
+
 	int rc;
 	rc = SSL_write(io->tls_ssl, buffer, size);
 	if (rc > 0) {
 		return rc;
 	}
 	int error = SSL_get_error(io->tls_ssl, rc);
-	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
+	if (error == SSL_ERROR_WANT_READ) {
+		io->want |= MM_IO_WANT_READ;
 		errno = EAGAIN;
 		return -1;
 	}
+	if (error == SSL_ERROR_WANT_WRITE) {
+		io->want |= MM_IO_WANT_WRITE;
+		errno = EAGAIN;
+		return -1;
+	}
+
 	mm_tls_error(io, rc, "SSL_write()");
 	return -1;
 }
@@ -916,16 +935,26 @@ int mm_tls_read_pending(mm_io_t *io)
 int mm_tls_read(mm_io_t *io, char *buf, int size)
 {
 	mm_tls_error_reset(io);
+
+	io->want = 0;
+
 	int rc;
 	rc = SSL_read(io->tls_ssl, buf, size);
 	if (rc > 0) {
 		return rc;
 	}
 	int error = SSL_get_error(io->tls_ssl, rc);
-	if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
+	if (error == SSL_ERROR_WANT_READ) {
+		io->want |= MM_IO_WANT_READ;
 		errno = EAGAIN;
 		return -1;
 	}
+	if (error == SSL_ERROR_WANT_WRITE) {
+		io->want |= MM_IO_WANT_WRITE;
+		errno = EAGAIN;
+		return -1;
+	}
+
 	if (error == SSL_ERROR_ZERO_RETURN) {
 		return 0;
 	}

@@ -18,6 +18,7 @@
 static void mm_io_on_read_cb(mm_fd_t *handle)
 {
 	mm_io_t *io = handle->on_read_arg;
+	io->read_ready = 1;
 	mm_cond_signal(&io->cond);
 }
 
@@ -480,8 +481,10 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 	}
 
 	if (rc > 0) {
+		/* do not set read_ready to 0 - there can be more bytes in socket */
 		return rc;
 	}
+	io->read_ready = 0;
 	if (rc < 0) {
 		int errno_ = errno;
 		mm_errno_set(errno_);
@@ -489,7 +492,7 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 			return -1;
 		}
 	}
-	/* error of eof */
+	/* error or eof */
 	io->connected = 0;
 	return rc;
 }
@@ -497,7 +500,9 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 int mm_io_read_pending(mm_io_t *io)
 {
 	if (mm_tls_is_active(io)) {
-		return mm_tls_read_pending(io);
+		if (mm_tls_read_pending(io)) {
+			return 1;
+		}
 	}
 
 	return mm_socket_read_pending(io->fd);
@@ -695,4 +700,19 @@ int mm_io_shutdown(mm_io_t *io)
 	}
 
 	return MM_OK_RETCODE;
+}
+
+int mm_io_want_read(mm_io_t *io)
+{
+	return io->want & MM_IO_WANT_READ;
+}
+
+int mm_io_want_write(mm_io_t *io)
+{
+	return io->want & MM_IO_WANT_WRITE;
+}
+
+int mm_io_read_ready(mm_io_t *io)
+{
+	return io->read_ready;
 }

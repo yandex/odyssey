@@ -578,7 +578,7 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 			if (n != -1) {
 				size_t unused;
 				if (od_io_write_raw(&client->io, buf, n,
-						    &unused, 1000) != 0) {
+						    &unused, 1000, 0) != 0) {
 					return OD_ECLIENT_WRITE;
 				}
 			}
@@ -2104,7 +2104,7 @@ static void od_frontend_replication_pipe(void *arg_)
 
 		size_t written;
 		rc = od_io_write_raw(dst, rvec.iov_base, rvec.iov_len, &written,
-				     1000);
+				     1000, 0);
 		errno_ = machine_errno();
 		od_readahead_read_commit(readahead, written);
 		if (rc < 0 && errno_ != EAGAIN && errno_ != ETIMEDOUT) {
@@ -2306,7 +2306,7 @@ static od_frontend_status_t process_server_async(od_client_t *client,
 			return OD_OK;
 		}
 
-		assert(err != EINPROGRESS);
+		assert(err != ENOBUFS);
 
 		/* disconnect or other error */
 		return OD_ESERVER_READ;
@@ -2491,8 +2491,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
-
 	od_server_t *server = client->server;
+	char ra_desc[256];
 
 	if (od_frontend_status_is_err(status)) {
 		od_error_logger_store_err(l, status);
@@ -2628,6 +2628,37 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			od_router_close(router, client);
 		}
 		break;
+	case OD_ECLIENT_READAHEAD_FULL: {
+		od_readahead_describe(&client->io.readahead, ra_desc,
+				      sizeof(ra_desc));
+		od_error(&instance->logger, context, client, server,
+			 "client readahead buffer full during write: %s",
+			 ra_desc);
+		/* no sending FATAL to client - it's write might already stuck */
+		od_frontend_on_client_disconnect(status, client, context,
+						 1 /* force server close */);
+		break;
+	}
+
+	case OD_ESERVER_READAHEAD_FULL: {
+		od_readahead_describe(&server->io.readahead, ra_desc,
+				      sizeof(ra_desc));
+		od_error(&instance->logger, context, client, server,
+			 "server readahead buffer full during write: %s, "
+			 "server %s%.*s",
+			 ra_desc, server->id.id_prefix,
+			 (int)sizeof(server->id.id), server->id.id);
+		od_frontend_fatal(
+			client, KIWI_CONNECTION_FAILURE,
+			"remote server %s%.*s: readahead buffer full, "
+			"cannot resolve write deadlock",
+			server->id.id_prefix, (int)sizeof(server->id.id),
+			server->id.id);
+		od_frontend_on_client_disconnect(status, client, context,
+						 1 /* force server close */);
+		break;
+	}
+
 	case OD_ESERVER_READ:
 	case OD_ESERVER_WRITE:
 		/* close client connection and close server

@@ -494,9 +494,12 @@ static od_frontend_status_t process_readahead(char *ctx, stream_t *stream,
 	if (total_processed > 0 && !is_service) {
 		size_t unused;
 		int rc = od_io_write_raw(&client->io, rvec.iov_base,
-					 total_processed, &unused, timeout_ms);
+					 total_processed, &unused, timeout_ms,
+					 OD_IO_WRITE_DUPLEX);
 		if (rc != 0) {
-			status = OD_ECLIENT_WRITE;
+			status = mm_errno_get() == ENOBUFS ?
+					 OD_ECLIENT_READAHEAD_FULL :
+					 OD_ECLIENT_WRITE;
 		}
 	}
 
@@ -799,7 +802,8 @@ copy_process_readahead(char *ctx, copy_stream_t *stream, od_client_t *client,
 	if (total_processed > 0) {
 		size_t unused;
 		int rc = od_io_write_raw(&server->io, rvec.iov_base,
-					 total_processed, &unused, timeout_ms);
+					 total_processed, &unused, timeout_ms,
+					 0);
 		assert((rc == 0 && (total_processed == unused)) ||
 		       ((total_processed != unused) && rc != 0));
 		if (rc != 0) {
