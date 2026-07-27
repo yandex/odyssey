@@ -1972,6 +1972,12 @@ static od_frontend_status_t client_process_message(od_client_t *client,
 		return status;
 	}
 
+	if (client->server != NULL && client->server->oom) {
+		od_gerror("main", client, client->server,
+			  "drop connection due to OOM error");
+		return OD_ESERVER_OOM;
+	}
+
 	status = process_possible_detach(client);
 
 	return status;
@@ -2524,6 +2530,14 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		if (client->server) {
 			od_router_close(router, client);
 		}
+		break;
+
+	case OD_ESERVER_OOM:
+		od_frontend_fatal(
+			client, KIWI_OUT_OF_MEMORY,
+			"OOMed server connection was forcibly dropped");
+		od_frontend_on_client_disconnect(status, client, context,
+						 1 /* force server close */);
 		break;
 
 	case OD_EATTACH:
