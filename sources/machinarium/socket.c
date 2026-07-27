@@ -318,13 +318,13 @@ int mm_socket_read(int fd, void *buf, int size)
 
 int mm_socket_read_pending(int fd)
 {
-	int rc;
-	rc = ioctl(fd, FIONREAD, &rc);
+	int nbytes;
+	int rc = ioctl(fd, FIONREAD, &nbytes);
 	if (rc == -1) {
 		return -1;
 	}
 
-	return rc > 0;
+	return nbytes > 0;
 }
 
 int mm_socket_getsockname(int fd, struct sockaddr *sa, socklen_t *salen)
