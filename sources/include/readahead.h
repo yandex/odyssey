@@ -81,3 +81,6 @@ static inline void od_readahead_write_commit(od_readahead_t *readahead,
 {
 	mm_virtual_rbuf_write_commit(readahead->buf, count);
 }
+
+void od_readahead_describe(od_readahead_t *readahead, char *buf,
+			   size_t buf_size);
