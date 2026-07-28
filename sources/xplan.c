@@ -37,9 +37,9 @@ static int msg_is_begin_query(machine_msg_t *msg)
 	char *data = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
 
-	return size == sizeof(od_relay_deffered_begin_bytes) &&
-	       memcmp(data, od_relay_deffered_begin_bytes,
-		      sizeof(od_relay_deffered_begin_bytes)) == 0;
+	return size == sizeof(od_relay_deferred_begin_bytes) &&
+	       memcmp(data, od_relay_deferred_begin_bytes,
+		      sizeof(od_relay_deferred_begin_bytes)) == 0;
 }
 
 static const char *plan_entry_type_str(od_xplan_entry_type_t type)
@@ -57,8 +57,8 @@ static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 		return "OD_XPLAN_VIRTUAL_CLOSE_COMPLETE";
 	case OD_XPLAN_VIRTUAL_PARSE_COMPLETE:
 		return "OD_XPLAN_VIRTUAL_PARSE_COMPLETE";
-	case OD_XPLAN_DEFFERED_BEGIN:
-		return "OD_XPLAN_DEFFERED_BEGIN";
+	case OD_XPLAN_DEFERRED_BEGIN:
+		return "OD_XPLAN_DEFERRED_BEGIN";
 	default:
 		abort();
 	}
@@ -83,7 +83,7 @@ static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 		}
 		abort();
 		break;
-	case OD_XPLAN_DEFFERED_BEGIN:
+	case OD_XPLAN_DEFERRED_BEGIN:
 		return entry->clmsg;
 	case OD_XPLAN_VIRTUAL_ERROR_RESPONSE:
 	case OD_XPLAN_VIRTUAL_PARSE_COMPLETE:
@@ -277,11 +277,11 @@ static void entry_init_virtual_close_complete(od_xplan_entry_t *e,
 			    NULL);
 }
 
-static void entry_init_deffered_begin(od_xplan_entry_t *e, machine_msg_t *begin)
+static void entry_init_deferred_begin(od_xplan_entry_t *e, machine_msg_t *begin)
 {
 	assert(msg_is_begin_query(begin));
 
-	entry_init_internal(e, OD_XPLAN_DEFFERED_BEGIN, begin, NULL, NULL,
+	entry_init_internal(e, OD_XPLAN_DEFERRED_BEGIN, begin, NULL, NULL,
 			    OD_XPLAN_DELTA_NONE, NULL, NULL);
 }
 
@@ -402,10 +402,10 @@ xplan_append_virtual_close_complete(od_xplan_t *xp, const char *client_pstmt,
 }
 
 static inline od_frontend_status_t
-xplan_append_deffered_begin(od_xplan_t *xp, machine_msg_t *begin)
+xplan_append_deferred_begin(od_xplan_t *xp, machine_msg_t *begin)
 {
 	od_xplan_entry_t e;
-	entry_init_deffered_begin(&e, begin);
+	entry_init_deferred_begin(&e, begin);
 
 	int rc = xplan_append(xp, &e);
 	if (rc != 0) {
@@ -810,11 +810,11 @@ static od_frontend_status_t plan_sync(od_relay_t *relay, od_xplan_t *xp,
 }
 
 static od_frontend_status_t
-plan_deffered_begin(od_relay_t *relay, od_xplan_t *xp, od_xbuf_msg_t *m)
+plan_deferred_begin(od_relay_t *relay, od_xplan_t *xp, od_xbuf_msg_t *m)
 {
 	(void)relay;
 
-	return xplan_append_deffered_begin(xp, m->msg);
+	return xplan_append_deferred_begin(xp, m->msg);
 }
 
 static od_frontend_status_t plan_simple(od_xplan_t *xp, od_relay_t *relay)
@@ -830,8 +830,8 @@ static od_frontend_status_t plan_simple(od_xplan_t *xp, od_relay_t *relay)
 		od_frontend_status_t status;
 
 		if (i == 0 && msg_is_begin_query(m->msg)) {
-			/* deffered begin plan entry is always at the beggining */
-			status = xplan_append_deffered_begin(xp, m->msg);
+			/* deferred begin plan entry is always at the beggining */
+			status = xplan_append_deferred_begin(xp, m->msg);
 		} else {
 			status = xplan_append_fwd_no_delta(xp, m->msg, NULL);
 		}
@@ -866,10 +866,10 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 		case KIWI_FE_QUERY:
 			if (od_unlikely(i != 0 ||
 					!msg_is_begin_query(m->msg))) {
-				/* deffered begin must always be at the begginig of the plan */
+				/* deferred begin must always be at the begginig of the plan */
 				abort();
 			}
-			status = plan_deffered_begin(relay, xp, m);
+			status = plan_deferred_begin(relay, xp, m);
 			break;
 
 		case KIWI_FE_PARSE:
@@ -1136,7 +1136,7 @@ static od_frontend_status_t run_parse_shadow(od_xplan_entry_t *ps,
 	return status;
 }
 
-static od_frontend_status_t run_deffered_begin(od_xplan_entry_t *ps,
+static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 					       od_client_t *client,
 					       od_server_t *server,
 					       uint32_t timeout_ms)
@@ -1419,8 +1419,8 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		}
 
 		switch (entry->type) {
-		case OD_XPLAN_DEFFERED_BEGIN:
-			status = run_deffered_begin(entry, client, server,
+		case OD_XPLAN_DEFERRED_BEGIN:
+			status = run_deferred_begin(entry, client, server,
 						    timeout_ms);
 			break;
 		case OD_XPLAN_PARSE:

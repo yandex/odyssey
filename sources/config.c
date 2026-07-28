@@ -48,6 +48,8 @@ void od_config_init(od_config_t *config)
 	config->graceful_die_on_errors = 0;
 	config->unix_socket_mode = NULL;
 
+	config->virtual_transaction = 1;
+
 	config->log_syslog = 0;
 	config->log_syslog_ident = NULL;
 	config->log_syslog_facility = NULL;

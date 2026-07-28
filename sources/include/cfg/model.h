@@ -46,6 +46,7 @@ typedef struct od_cfg_global {
 	od_cfg_bool_field_t sequential_routing;
 	od_cfg_bool_field_t enable_online_restart;
 	od_cfg_bool_field_t virtual_processing;
+	od_cfg_bool_field_t virtual_transaction;
 	od_cfg_bool_field_t bindwith_reuseport;
 	od_cfg_bool_field_t enable_host_watcher;
 	od_cfg_bool_field_t log_debug;

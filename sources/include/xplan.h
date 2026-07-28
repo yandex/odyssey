@@ -92,9 +92,9 @@ typedef enum {
 	OD_XPLAN_VIRTUAL_ERROR_RESPONSE,
 
 	/*
-	 * deffered simple query begin
+	 * deferred simple query begin
 	 */
-	OD_XPLAN_DEFFERED_BEGIN,
+	OD_XPLAN_DEFERRED_BEGIN,
 } od_xplan_entry_type_t;
 
 typedef struct {

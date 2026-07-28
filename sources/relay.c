@@ -502,6 +502,11 @@ try_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
 
 	switch (keyword->id) {
 	case OD_QUERY_PROCESSING_BEGIN:
+		need_process = instance->config.virtual_transaction;
+		if (!need_process) {
+			return OD_OK;
+		}
+
 		return process_vbegin(client, &parser);
 	case OD_QUERY_PROCESSING_DEALLOCATE:
 		/* DEALLOCATE name must be processed virtually */
@@ -722,7 +727,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	return status;
 }
 
-uint8_t od_relay_deffered_begin_bytes[12] = { 'Q', 0,	0,   0,	  11,  'B',
+uint8_t od_relay_deferred_begin_bytes[12] = { 'Q', 0,	0,   0,	  11,  'B',
 					      'E', 'G', 'I', 'N', ';', 0 };
 
 static int relay_append(od_relay_t *relay, machine_msg_t *msg)
@@ -730,8 +735,8 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 	od_client_t *client = relay->client;
 
 	if (client->pending_begin) {
-		size_t len = sizeof(od_relay_deffered_begin_bytes);
-		if (xbuf_append_raw(&relay->xbuf, od_relay_deffered_begin_bytes,
+		size_t len = sizeof(od_relay_deferred_begin_bytes);
+		if (xbuf_append_raw(&relay->xbuf, od_relay_deferred_begin_bytes,
 				    len)) {
 			return -1;
 		}
