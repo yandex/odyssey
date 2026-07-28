@@ -127,6 +127,7 @@ struct od_config {
 	int cancel_max_inflight;
 
 	int virtual_processing; /* enables some cases for full-virtual query processing */
+	int virtual_transaction;
 
 	char availability_zone[OD_MAX_AVAILABILITY_ZONE_LENGTH];
 

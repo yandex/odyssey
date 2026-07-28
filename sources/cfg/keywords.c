@@ -196,6 +196,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "group", GROUP },
 	{ "include", INCLUDE },
 	{ "az_aware", AZ_AWARE },
+	{ "virtual_transaction", VIRTUAL_TRANSACTION },
 
 	{ NULL, 0 }
 };

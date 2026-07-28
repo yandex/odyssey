@@ -64,6 +64,7 @@ for all Odyssey rules.
 | `cancel_timeout_ms`                        | int (ms)         | `1000`      | SIGHUP  | Timeout for cancel request to backend                             |
 | `cancel_queue_timeout_ms`                  | int (ms)         | `-1` (none) | SIGHUP  | Timeout for queued cancel requests; -1 = no timeout               |
 | `cancel_max_inflight`                      | int              | `-1` (none) | SIGHUP  | Max concurrent in-flight cancel requests; -1 = unlimited          |
+| `virtual_transaction`                           | int (bool)       | `yes`       | restart  | Enable virtual transaction features    |
 | `dns_cache_ttl`                            | int (ms)         | `30000`     | SIGHUP  | TTL for DNS cache entries                                         |
 | `cache_msg_gc_size`                        | int              | `0`         | SIGHUP  | Message GC cache size; 0 = disabled                               |
 | `graceful_die_on_errors`                   | int (bool)       | `no`        | runtime | **Deprecated.** Use SIGUSR2 signal directly instead               |
@@ -683,6 +684,33 @@ message objects). Larger values reduce allocator pressure under high
 message rates. Default: 0 (disabled).
 
 `cache_msg_gc_size 100`
+
+## **virtual\_transaction**
+*yes|no*
+
+Enable virtual transaction features. For now it is:
+- deferred `BEGIN` execution
+
+When deferred `BEGIN` execution enabled (the default), Odyssey intercepts a bare `BEGIN` (or `BEGIN;`)
+query from the client and responds with a synthetic `CommandComplete BEGIN` /
+`ReadyForQuery` immediately — without acquiring a backend connection or
+forwarding the statement to PostgreSQL. The actual `BEGIN` is sent to the
+backend only when the client issues the first real query inside the
+transaction, just before that query is forwarded.
+
+This optimization reduces the number of round-trips to PostgreSQL during
+connection establishment and lowers backend pressure in workloads that
+open many short-lived transactions.
+
+Set to `no` to disable this behaviour and forward every `BEGIN` to the
+backend immediately. This may be useful when exact transaction semantics
+are required (e.g. when `BEGIN` is accompanied by options such as
+`BEGIN ISOLATION LEVEL SERIALIZABLE`) — in such cases the client query is
+already forwarded as-is, so the deferred path is not taken anyway.
+
+Default: `yes`.
+
+`virtual_transaction yes`
 
 ---
 

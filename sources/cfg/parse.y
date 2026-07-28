@@ -257,6 +257,7 @@
 %token GROUP "group"
 %token INCLUDE "include"
 %token AZ_AWARE "az_aware"
+%token VIRTUAL_TRANSACTION "virtual_transaction"
 
 %type <boolean> bool_value
 %type <str> string_value
@@ -309,6 +310,14 @@ top_item:
 							$2,
 							@1,
 							"virtual_processing");
+		}
+	| VIRTUAL_TRANSACTION bool_value
+		{
+			od_cfg_set_bool(ctx->diags,
+							&ctx->model->global.virtual_transaction,
+							$2,
+							@1,
+							"virtual_transaction");
 		}
 	| GRACEFUL_DIE_ON_ERRORS bool_value
 		{

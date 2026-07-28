@@ -417,6 +417,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_BOOL(cfg->enable_online_restart,
 		  config->enable_online_restart_feature);
 	COPY_BOOL(cfg->virtual_processing, config->virtual_processing);
+	COPY_BOOL(cfg->virtual_transaction, config->virtual_transaction);
 	COPY_BOOL(cfg->bindwith_reuseport, config->bindwith_reuseport);
 	COPY_BOOL(cfg->enable_host_watcher, config->host_watcher_enabled);
 	COPY_BOOL(cfg->log_debug, config->log_debug);
