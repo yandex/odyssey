@@ -51,7 +51,7 @@ The Go-based exporter scrapes `SHOW POOLS_EXTENDED;` and `SHOW DATABASES;` and n
 | `odyssey_route_pool_mode_info` | `user`, `database`, `mode` | Gauge | `1` for the active pool mode (`session`, `transaction`, `statement`). |
 | `odyssey_route_bytes_received_total` | `user`, `database` | Counter | Bytes received from clients on the route. |
 | `odyssey_route_bytes_sent_total` | `user`, `database` | Counter | Bytes sent to PostgreSQL backends. |
-| `odyssey_route_tcp_connections_total` | `user`, `database` | Counter | TCP connections opened toward the backend. |
+| `odyssey_route_tcp_connections_total` | `user`, `database` | Counter | Client TCP connections opened toward the route. |
 | `odyssey_route_query_duration_seconds` | `user`, `database`, `quantile` | Gauge | Query latency quantiles (available when the `quantiles` rule option is set). |
 | `odyssey_route_transaction_duration_seconds` | `user`, `database`, `quantile` | Gauge | Transaction latency quantiles. |
 
