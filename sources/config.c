@@ -423,6 +423,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->max_sigterms_to_die);
 	od_log(logger, "config", NULL, NULL, "virtual_processing      %s",
 	       od_config_yes_no(config->virtual_processing));
+	od_log(logger, "config", NULL, NULL, "virtual_transaction     %s",
+	       od_config_yes_no(config->virtual_transaction));
 	od_log(logger, "config", NULL, NULL, "smart_search_path_enquoting %s",
 	       od_config_yes_no(config->smart_search_path_enquoting));
 	if (config->availability_zone[0]) {
