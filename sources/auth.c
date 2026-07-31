@@ -1031,7 +1031,8 @@ static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)
 		 "requested SASL authentication");
 
 	if (!route->rule->storage_password && !route->rule->password &&
-	    (client == NULL || client->password.password == NULL) &&
+	    (client == NULL ||
+	     (!client->scram_key_valid && client->password.password == NULL)) &&
 	    client->received_password.password == NULL) {
 		od_error(&instance->logger, "auth", NULL, server,
 			 "password required for route '%s.%s'",
@@ -1094,14 +1095,14 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 
 	if (route->rule->storage_password) {
 		password = route->rule->storage_password;
+	} else if (route->rule->password) {
+		password = route->rule->password;
 	} else if (client != NULL && client->scram_key_valid) {
 		server->scram_state.use_passthrough_keys = 1;
 		memcpy(server->scram_state.client_key, client->scram_client_key,
 		       OD_SCRAM_MAX_KEY_LEN);
 		memcpy(server->scram_state.server_key, client->scram_server_key,
 		       OD_SCRAM_MAX_KEY_LEN);
-	} else if (route->rule->password) {
-		password = route->rule->password;
 	} else if (client->received_password.password) {
 		password = client->received_password.password;
 	} else {
