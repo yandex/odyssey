@@ -21,6 +21,8 @@ local  scram_db  postgres                  trust
 host   scram_db  postgres    127.0.0.1/32  trust
 local  scram_db  scram_user                scram-sha-256
 host   scram_db  scram_user  127.0.0.1/32  scram-sha-256
+local  scram_db  frontend_and_backend_auth_scram_password scram-sha-256
+host   scram_db  frontend_and_backend_auth_scram_password 127.0.0.1/32 scram-sha-256
 EOF
 
 cat >> /var/lib/postgresql/18/main/pg_hba.conf <<-EOF
@@ -74,6 +76,13 @@ psql -h localhost -p 5432 -U postgres -c "set password_encryption TO 'md5'; crea
 
 # Create users
 psql -h localhost -p 5432 -U postgres -c "set password_encryption = 'scram-sha-256'; create user scram_user password 'scram_user_password';" -d scram_db >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
+psql -h localhost -p 5432 -U postgres -c "set password_encryption = 'scram-sha-256'; create user frontend_and_backend_auth_scram_password password 'scram_user_password';" -d scram_db >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
     cat "$SETUP_LOG"
     cat "$PG_LOG"
