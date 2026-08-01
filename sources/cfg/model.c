@@ -508,15 +508,12 @@ static void od_cfg_u64_field_free(od_cfg_u64_field_t *field)
 void od_cfg_seen_set(od_cfg_seen_t *seen, od_cfg_location_t location)
 {
 	seen->is_set = 1;
-	seen->location = location;
-	seen->location.filename =
-		location.filename ? od_strdup(location.filename) : NULL;
+	seen->location = od_cfg_location_copy(location);
 }
 
 void od_cfg_seen_free(od_cfg_seen_t *seen)
 {
-	od_free((char *)seen->location.filename);
-	seen->location.filename = NULL;
+	od_cfg_location_free(&seen->location);
 }
 
 static void od_cfg_listen_free(od_cfg_listen_t *listen)
@@ -536,6 +533,8 @@ static void od_cfg_listen_free(od_cfg_listen_t *listen)
 	od_cfg_string_field_free(&listen->tls_cert_file);
 	od_cfg_string_field_free(&listen->tls_protocols);
 	od_cfg_int_field_free(&listen->catchup_timeout);
+
+	od_cfg_location_free(&listen->location);
 
 	od_free(listen);
 }
@@ -566,10 +565,15 @@ static void od_cfg_storage_free(od_cfg_storage_t *storage)
 	od_cfg_int_field_free(&storage->endpoints_status_poll_interval_ms);
 
 	od_cfg_seen_free(&storage->balancing.seen);
+	od_cfg_location_free(&storage->balancing.location);
 	od_cfg_bool_field_free(&storage->balancing.show_notice_messages);
 	od_cfg_seen_free(&storage->balancing.method.seen);
+	od_cfg_location_free(&storage->balancing.method.location);
 	od_cfg_bool_field_free(&storage->balancing.method.az_aware);
 	od_free(storage->balancing.method.name);
+
+	od_cfg_location_free(&storage->location);
+	od_cfg_location_free(&storage->name_location);
 
 	od_free(storage);
 }
@@ -582,6 +586,8 @@ static void od_cfg_shared_pool_free(od_cfg_shared_pool_t *pool)
 
 	od_free(pool->name);
 	od_cfg_int_field_free(&pool->pool_size);
+	od_cfg_location_free(&pool->location);
+	od_cfg_location_free(&pool->name_location);
 	od_free(pool);
 }
 
@@ -605,6 +611,9 @@ static void od_cfg_ldap_endpoint_free(od_cfg_ldap_endpoint_t *endpoint)
 	od_cfg_string_field_free(&endpoint->ldapbindpasswd);
 	od_cfg_string_field_free(&endpoint->ldapsearchfilter);
 
+	od_cfg_location_free(&endpoint->location);
+	od_cfg_location_free(&endpoint->name_location);
+
 	od_free(endpoint);
 }
 
@@ -612,6 +621,9 @@ static void od_cfg_string_kvp_free(od_cfg_string_kvp_t *kvp)
 {
 	od_free(kvp->key);
 	od_free(kvp->value);
+	od_cfg_location_free(&kvp->location);
+	od_cfg_location_free(&kvp->key_location);
+	od_cfg_location_free(&kvp->value_location);
 }
 
 static void od_cfg_string_kvp_list_free(od_cfg_string_kvp_list_t *l)
@@ -634,6 +646,9 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 
 	for (size_t i = 0; i < user->auth_common_names_count; ++i) {
 		od_free(user->auth_common_names[i]->name);
+		od_cfg_location_free(&user->auth_common_names[i]->location);
+		od_cfg_location_free(
+			&user->auth_common_names[i]->name_location);
 		od_free(user->auth_common_names[i]);
 	}
 	od_free(user->auth_common_names);
@@ -644,6 +659,10 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 						  ->ldap_storage_username);
 		od_cfg_string_field_free(&user->ldap_storage_credentials[i]
 						  ->ldap_storage_password);
+		od_cfg_location_free(
+			&user->ldap_storage_credentials[i]->location);
+		od_cfg_location_free(
+			&user->ldap_storage_credentials[i]->name_location);
 		od_free(user->ldap_storage_credentials[i]);
 	}
 	od_free(user->ldap_storage_credentials);
@@ -708,9 +727,16 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 	od_cfg_string_field_free(&user->group_query_db);
 
 	od_cfg_seen_free(&user->pgoptions.seen);
+	od_cfg_location_free(&user->pgoptions.location);
 	od_cfg_string_kvp_list_free(&user->pgoptions);
 	od_cfg_seen_free(&user->backend_startup_options.seen);
+	od_cfg_location_free(&user->backend_startup_options.location);
 	od_cfg_string_kvp_list_free(&user->backend_startup_options);
+
+	od_cfg_location_free(&user->location);
+	od_cfg_location_free(&user->name_location);
+	od_cfg_location_free(&user->address_range_location);
+	od_cfg_location_free(&user->conn_type_location);
 
 	od_free(user);
 }
@@ -732,6 +758,9 @@ static void od_cfg_database_free(od_cfg_database_t *db)
 	od_free(db->groups);
 
 	od_free(db->name);
+
+	od_cfg_location_free(&db->location);
+	od_cfg_location_free(&db->name_location);
 
 	od_free(db);
 }
@@ -802,15 +831,18 @@ void od_cfg_model_free(od_cfg_model_t *model)
 	od_cfg_int_field_free(&model->global.workers);
 
 	od_cfg_seen_free(&model->conn_drop_options.seen);
+	od_cfg_location_free(&model->conn_drop_options.location);
 	od_cfg_bool_field_free(&model->conn_drop_options.drop_enabled);
 	od_cfg_int_field_free(&model->conn_drop_options.rate);
 	od_cfg_int_field_free(&model->conn_drop_options.interval_ms);
 
 	od_cfg_seen_free(&model->soft_oom.seen);
+	od_cfg_location_free(&model->soft_oom.location);
 	od_cfg_u64_field_free(&model->soft_oom.limit);
 	od_cfg_string_field_free(&model->soft_oom.process);
 	od_cfg_int_field_free(&model->soft_oom.check_interval_ms);
 	od_cfg_seen_free(&model->soft_oom.drop.seen);
+	od_cfg_location_free(&model->soft_oom.drop.location);
 	od_cfg_string_field_free(&model->soft_oom.drop.signal);
 	od_cfg_int_field_free(&model->soft_oom.drop.max_rate);
 
@@ -839,6 +871,8 @@ void od_cfg_model_free(od_cfg_model_t *model)
 	}
 	od_free(model->ldap_endpoints);
 
+	od_cfg_location_free(&model->location);
+
 	memset(model, 0, sizeof(*model));
 }
 
@@ -851,7 +885,7 @@ od_cfg_route_t *od_cfg_storage_add_watchdog(od_cfg_storage_t *s,
 	}
 	memset(s->watchdog, 0, sizeof(*s->watchdog));
 
-	s->watchdog->location = loc;
+	s->watchdog->location = od_cfg_location_copy(loc);
 
 	return s->watchdog;
 }
@@ -881,7 +915,7 @@ od_cfg_listen_t *od_cfg_model_add_listen(od_cfg_model_t *model,
 	}
 	memset(listen, 0, sizeof(*listen));
 
-	listen->location = location;
+	listen->location = od_cfg_location_copy(location);
 
 	model->listens[model->listens_count++] = listen;
 	return listen;
@@ -915,13 +949,13 @@ od_cfg_string_kvp_list_add(od_cfg_string_kvp_list_t *list,
 	}
 	memset(kvp, 0, sizeof(*kvp));
 
-	kvp->location = location;
+	kvp->location = od_cfg_location_copy(location);
 
 	kvp->key = key;
-	kvp->key_location = key_location;
+	kvp->key_location = od_cfg_location_copy(key_location);
 
 	kvp->value = value;
-	kvp->value_location = value_location;
+	kvp->value_location = od_cfg_location_copy(value_location);
 
 	list->pairs[list->pairs_count++] = kvp;
 	return kvp;
@@ -956,9 +990,9 @@ od_cfg_user_route_add_ldap_creds(od_cfg_route_t *r, od_cfg_location_t location,
 	}
 	memset(c, 0, sizeof(*c));
 
-	c->location = location;
+	c->location = od_cfg_location_copy(location);
 	c->name = name;
-	c->name_location = location;
+	c->name_location = od_cfg_location_copy(location);
 
 	r->ldap_storage_credentials[r->ldap_storage_credentials_count++] = c;
 	return c;
@@ -992,8 +1026,8 @@ od_cfg_rule_auth_common_name_t *od_cfg_user_route_add_auth_common_name(
 	memset(cn, 0, sizeof(*cn));
 
 	cn->name = name;
-	cn->location = location;
-	cn->name_location = name_location;
+	cn->location = od_cfg_location_copy(location);
+	cn->name_location = od_cfg_location_copy(name_location);
 	cn->is_default = is_default;
 
 	r->auth_common_names[r->auth_common_names_count++] = cn;
@@ -1037,15 +1071,16 @@ od_cfg_route_t *od_cfg_database_add_user(
 	memset(user, 0, sizeof(*user));
 
 	user->name = name;
-	user->name_location = name_location;
+	user->name_location = od_cfg_location_copy(name_location);
 	user->is_default = is_default;
-	user->location = location;
+	user->location = od_cfg_location_copy(location);
 
 	user->address_range = addr_range;
-	user->address_range_location = addr_range_location;
+	user->address_range_location =
+		od_cfg_location_copy(addr_range_location);
 
 	user->conn_type = conn_type;
-	user->conn_type_location = conn_type_location;
+	user->conn_type_location = od_cfg_location_copy(conn_type_location);
 
 	db->users[db->users_count++] = user;
 	return user;
@@ -1080,14 +1115,15 @@ od_cfg_route_t *od_cfg_database_add_group(od_cfg_database_t *db, char *name,
 	memset(group, 0, sizeof(*group));
 
 	group->name = name;
-	group->name_location = name_location;
-	group->location = location;
+	group->name_location = od_cfg_location_copy(name_location);
+	group->location = od_cfg_location_copy(location);
 
 	group->address_range = addr_range;
-	group->address_range_location = addr_range_location;
+	group->address_range_location =
+		od_cfg_location_copy(addr_range_location);
 
 	group->conn_type = conn_type;
-	group->conn_type_location = conn_type_location;
+	group->conn_type_location = od_cfg_location_copy(conn_type_location);
 
 	db->groups[db->groups_count++] = group;
 	return group;
@@ -1130,10 +1166,10 @@ od_cfg_database_t *od_cfg_model_add_database(od_cfg_model_t *model, char *name,
 	}
 	memset(database, 0, sizeof(*database));
 
-	database->location = location;
+	database->location = od_cfg_location_copy(location);
 	database->name = name;
 	database->is_default = is_default;
-	database->name_location = name_location;
+	database->name_location = od_cfg_location_copy(name_location);
 
 	model->databases[model->databases_count++] = database;
 	return database;
@@ -1165,9 +1201,9 @@ od_cfg_storage_t *od_cfg_model_add_storage(od_cfg_model_t *model, char *name,
 	}
 	memset(storage, 0, sizeof(*storage));
 
-	storage->location = location;
+	storage->location = od_cfg_location_copy(location);
 	storage->name = name;
-	storage->name_location = name_location;
+	storage->name_location = od_cfg_location_copy(name_location);
 
 	model->storages[model->storages_count++] = storage;
 	return storage;
@@ -1656,9 +1692,9 @@ od_cfg_model_add_shared_pool(od_cfg_model_t *model, char *name,
 	}
 
 	memset(pool, 0, sizeof(*pool));
-	pool->location = location;
+	pool->location = od_cfg_location_copy(location);
 	pool->name = name;
-	pool->name_location = name_location;
+	pool->name_location = od_cfg_location_copy(name_location);
 
 	model->shared_pools[model->shared_pools_count++] = pool;
 	return pool;
@@ -1693,9 +1729,9 @@ od_cfg_model_add_ldap_endpoint(od_cfg_model_t *model, char *name,
 
 	memset(endpoint, 0, sizeof(*endpoint));
 
-	endpoint->location = location;
+	endpoint->location = od_cfg_location_copy(location);
 	endpoint->name = name;
-	endpoint->name_location = name_location;
+	endpoint->name_location = od_cfg_location_copy(name_location);
 
 	model->ldap_endpoints[model->ldap_endpoints_count++] = endpoint;
 	return endpoint;
