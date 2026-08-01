@@ -468,10 +468,11 @@ KIWI_API static inline int kiwi_be_read_close(char *data, uint32_t size,
 	return 0;
 }
 
-KIWI_API static inline int kiwi_be_read_bind_stmt_name(char *data,
-						       uint32_t size,
-						       char **name,
-						       uint32_t *name_len)
+KIWI_API static inline int kiwi_be_read_bind_names(char *data, uint32_t size,
+						   char **portal_name,
+						   uint32_t *portal_name_len,
+						   char **stmt_name,
+						   uint32_t *stmt_name_len)
 {
 	kiwi_header_t *header = (kiwi_header_t *)data;
 	uint32_t len;
@@ -483,21 +484,30 @@ KIWI_API static inline int kiwi_be_read_bind_stmt_name(char *data,
 		return -1;
 	}
 
-	/* destination portal */
 	uint32_t pos_size = len;
 	char *pos = kiwi_header_data(header);
+
+	/* destination portal */
+	char *p = pos;
 	rc = kiwi_readsz(&pos, &pos_size);
 	if (kiwi_unlikely(rc == -1)) {
 		return -1;
+	}
+	if (portal_name) {
+		*portal_name = p;
+		*portal_name_len = pos - p;
 	}
 
 	/* source prepared statement */
-	*name = pos;
+	char *s = pos;
 	rc = kiwi_readsz(&pos, &pos_size);
 	if (kiwi_unlikely(rc == -1)) {
 		return -1;
 	}
-	*name_len = pos - *name;
+	if (stmt_name) {
+		*stmt_name = s;
+		*stmt_name_len = pos - s;
+	}
 
 	return 0;
 }

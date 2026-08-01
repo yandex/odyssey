@@ -46,13 +46,47 @@ typedef enum {
 	 * remove all pstmts from both client and server hashmaps
 	 * in case of Execute(DISCARD ALL)
 	 */
-	OD_XPLAN_DELTA_REMOVE_ALL
+	OD_XPLAN_DELTA_REMOVE_ALL,
+
+	/*
+	 * remove all pstmts from client hashmap only
+	 * in case of Execute(DEALLOCATE ALL) - virtualized, not sent to server
+	 */
+	OD_XPLAN_DELTA_REMOVE_CLIENT_ALL,
+
+	/*
+	 * add portal -> pstmt mapping on client
+	 * on Bind (destination portal name)
+	 */
+	OD_XPLAN_DELTA_ADD_PORTAL,
+
+	/*
+	 * remove portal -> pstmt mapping on client
+	 * on Close Portal or after Execute of DISCARD/DEALLOCATE
+	 */
+	OD_XPLAN_DELTA_REMOVE_PORTAL,
+
+	/*
+	 * remove a single pstmt by name from client map
+	 * on Execute(DEALLOCATE name)
+	 */
+	OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME
 } od_xplan_delta_type_t;
 
 typedef struct {
 	od_xplan_delta_type_t type;
+	/*
+	 * client_pstmt name. normally points into the original client msg
+	 * (owned by xbuf), EXCEPT for OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME
+	 * where it is an owned NUL-terminated copy (freed in plan_entry_destroy).
+	 */
 	const char *client_pstmt;
 	const od_pstmt_t *pstmt;
+	/*
+	 * portal name for ADD_PORTAL / REMOVE_PORTAL deltas
+	 * points to the original client msg (owned by xbuf)
+	 */
+	const char *portal_name;
 } od_xplan_delta_t;
 
 typedef enum {
@@ -92,6 +126,12 @@ typedef enum {
 	OD_XPLAN_VIRTUAL_ERROR_RESPONSE,
 
 	/*
+	 * virtual CommandComplete for Execute of DEALLOCATE
+	 * that is virtualized (not sent to server)
+	 */
+	OD_XPLAN_VIRTUAL_COMMAND_COMPLETE,
+
+	/*
 	 * deferred simple query begin
 	 */
 	OD_XPLAN_DEFERRED_BEGIN,
@@ -129,10 +169,20 @@ typedef struct {
 	 * note:
 	 * no ParseComplete msg here - it is always const seq of bytes
 	 * no CloseComplete msg here - it is always const seq of bytes
+	 * no CommandComplete msg here - it is always const seq of bytes
+	 *                                (handled by vcc_data, vcc_len)
 	 *
 	 * can be NULL, owned by xplan
 	 */
 	machine_msg_t *vresp;
+
+	/*
+	 * pre-built CommandComplete wire bytes for
+	 * OD_XPLAN_VIRTUAL_COMMAND_COMPLETE. points to a static array,
+	 * not owned. NULL for all other entry types.
+	 */
+	const uint8_t *vcc_data;
+	size_t vcc_len;
 } od_xplan_entry_t;
 
 struct od_xplan {

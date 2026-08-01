@@ -1037,8 +1037,8 @@ static inline int send_waiting_finished_notice(od_client_t *client,
 {
 	char msg[64];
 	char buf[64];
-	od_snprintf(msg, sizeof(msg), "waiting took %lu ms%s", time_spent,
-		    timeout ? ", timeout" : "");
+	od_snprintf(msg, sizeof(msg), "waiting took %" PRIu64 " ms%s",
+		    time_spent, timeout ? ", timeout" : "");
 	int n = kiwi_be_format_notice(buf, sizeof(buf), 'M', msg);
 	size_t unused;
 	return od_io_write_raw(&client->io, buf, n, &unused, 1000, 0);

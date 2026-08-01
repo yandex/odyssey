@@ -158,6 +158,92 @@ void od_client_pstmts_clear(od_client_t *client)
 }
 
 /*
+ * client portal hash map
+ * "portal_name" -> *od_pstmt_t
+ *
+ * portals are created by Bind (destination portal name) and destroyed by
+ * Close Portal, transaction end, or DISCARD ALL / DEALLOCATE ALL.
+ *
+ * the value is a non-owning pointer into the global pstmt map. the pointer
+ * is stable because the global map is append-only (od_pstmt_create_or_get
+ * never removes entries; the map is freed on instance shutdown).
+ */
+
+mm_hashmap_t *od_client_portal_hashmap_create(void)
+{
+	return mm_hashmap_create(
+		50 /* XXX: big enough? */,
+		1 /* nlocks = 1, no fully-concurrent access */, sizeof(char *),
+		sizeof(od_pstmt_t *), str_ptr_cmp, murmur_str_ptr, str_ptr_dtor,
+		NULL /* no need to free the pointer from global table */,
+		str_ptr_copy);
+}
+
+void od_client_portal_hashmap_free(mm_hashmap_t *hm)
+{
+	mm_hashmap_free(hm);
+}
+
+od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name)
+{
+	mm_hashmap_keylock_t klock;
+	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
+				     0 /* do not create */);
+	(void)rc;
+
+	if (klock.found) {
+		od_pstmt_t *ps = *(od_pstmt_t **)mm_hashmap_kvp_val(
+			client->portals, klock.kvp);
+		mm_hashmap_unlock_key(client->portals, &klock);
+		return ps;
+	}
+
+	return NULL;
+}
+
+int od_client_add_portal(od_client_t *client, const char *portal_name,
+			 const od_pstmt_t *pstmt)
+{
+	mm_hashmap_keylock_t klock;
+	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
+				     1 /* do create */);
+	if (rc == -1) {
+		return rc;
+	}
+
+	/*
+	 * upsert: the unnamed portal "" is silently overwritten on every Bind.
+	 * for named portals PG requires an explicit Close before re-Bind, but
+	 * the server enforces that -- we just store the mapping here.
+	 */
+	void *val = mm_hashmap_kvp_val(client->portals, klock.kvp);
+	memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
+
+	mm_hashmap_unlock_key(client->portals, &klock);
+
+	return 0;
+}
+
+int od_client_remove_portal(od_client_t *client, const char *portal_name)
+{
+	mm_hashmap_keylock_t klock;
+	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
+				     0 /* do not create */);
+	(void)rc;
+
+	if (klock.kvp != NULL) {
+		mm_hashmap_remove(client->portals, &klock);
+	}
+
+	return 0;
+}
+
+void od_client_portals_clear(od_client_t *client)
+{
+	mm_hashmap_clear(client->portals);
+}
+
+/*
  * server hashmap
  * "odyssey_pstmt_0" -> *od_prepared_stmt_t
  */

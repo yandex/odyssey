@@ -75,6 +75,62 @@ void test_pstmt_client_hashmap(void)
 	od_client_free(client);
 }
 
+static void test_portal_client_hashmap(void)
+{
+	od_client_t *client = od_client_allocate();
+	client->portals = od_client_portal_hashmap_create();
+	test(client->portals != NULL);
+
+	od_pstmt_t pstmt;
+	memset(&pstmt, 0, sizeof(pstmt));
+
+	od_pstmt_t pstmt2;
+	memset(&pstmt2, 0, sizeof(pstmt2));
+
+	/* unnamed portal works */
+	test(od_client_get_portal(client, "") == NULL);
+	test(od_client_add_portal(client, "", &pstmt) == 0);
+	test(od_client_get_portal(client, "") == &pstmt);
+
+	/* portals are always upserted (we are trying our best of tracking) */
+	test(od_client_add_portal(client, "", &pstmt2) == 0);
+	test(od_client_get_portal(client, "") == &pstmt2);
+
+	test(od_client_remove_portal(client, "") == 0);
+	test(od_client_get_portal(client, "") == NULL);
+
+	/* named portals */
+	test(od_client_get_portal(client, "portal_0") == NULL);
+
+	test(od_client_add_portal(client, "portal_0", &pstmt) == 0);
+	test(od_client_get_portal(client, "portal_0") == &pstmt);
+
+	/* re-binding the same portal replaces the pstmt */
+	test(od_client_add_portal(client, "portal_0", &pstmt2) == 0);
+	test(od_client_get_portal(client, "portal_0") == &pstmt2);
+
+	test(od_client_add_portal(client, "portal_1", &pstmt) == 0);
+	test(od_client_get_portal(client, "portal_1") == &pstmt);
+
+	/* remove non-existent is a no-op */
+	test(od_client_remove_portal(client, "nope") == 0);
+	test(od_client_get_portal(client, "portal_0") == &pstmt2);
+	test(od_client_get_portal(client, "portal_1") == &pstmt);
+
+	test(od_client_remove_portal(client, "portal_0") == 0);
+	test(od_client_get_portal(client, "portal_0") == NULL);
+	test(od_client_get_portal(client, "portal_1") == &pstmt);
+
+	od_client_portals_clear(client);
+	test(od_client_get_portal(client, "portal_1") == NULL);
+
+	/* dangling entry survives until free */
+	test(od_client_add_portal(client, "dangling", &pstmt) == 0);
+	test(od_client_get_portal(client, "dangling") == &pstmt);
+
+	od_client_free(client);
+}
+
 static void test_pstmt_server_hashmap(void)
 {
 	od_server_t *server = od_server_allocate(1);
@@ -149,6 +205,7 @@ static void test_impl(void *a)
 	(void)a;
 
 	test_pstmt_client_hashmap();
+	test_portal_client_hashmap();
 	test_pstmt_server_hashmap();
 	test_pstmt_global();
 }
