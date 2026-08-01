@@ -44,7 +44,7 @@ void od_cfg_diag_list_free(od_cfg_diag_list_t *diags)
 	}
 
 	for (size_t i = 0; i < diags->count; i++) {
-		od_free((char *)diags->items[i].location.filename);
+		od_cfg_location_free(&diags->items[i].location);
 		od_free(diags->items[i].message);
 		od_free(diags->items[i].hint);
 	}
@@ -77,9 +77,7 @@ static void od_cfg_diag_addv(od_cfg_diag_list_t *diags,
 	od_cfg_diag_t *diag = &diags->items[diags->count++];
 
 	diag->level = level;
-	diag->location = location;
-	diag->location.filename =
-		location.filename ? od_strdup(location.filename) : NULL;
+	diag->location = od_cfg_location_copy(location);
 	diag->message = od_cfg_vformat(fmt, args);
 	diag->hint = NULL;
 }

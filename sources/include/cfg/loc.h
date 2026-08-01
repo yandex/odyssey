@@ -8,6 +8,8 @@
 
 #include <stddef.h>
 
+#include <od_memory.h>
+
 typedef struct {
 	const char *filename;
 
@@ -35,4 +37,16 @@ static inline od_cfg_location_t od_cfg_location_empty(const char *filename)
 	loc.last_offset = 0;
 
 	return loc;
+}
+
+static inline od_cfg_location_t od_cfg_location_copy(od_cfg_location_t loc)
+{
+	loc.filename = loc.filename ? od_strdup(loc.filename) : NULL;
+	return loc;
+}
+
+static inline void od_cfg_location_free(od_cfg_location_t *loc)
+{
+	od_free((char *)loc->filename);
+	loc->filename = NULL;
 }

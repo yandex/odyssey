@@ -269,7 +269,7 @@
 %%
 
 config:
-	{ ctx->model->location = @$; }
+	{ ctx->model->location = od_cfg_location_copy(@$); }
 	top_items
 	;
 
@@ -2075,7 +2075,7 @@ balancing_section:
 			}
 
 			od_cfg_seen_set(&b->seen, @1);
-			b->location = @1;
+			b->location = od_cfg_location_copy(@1);
 
 			ctx->current_balancing = b;
 		}
@@ -2118,7 +2118,7 @@ balancing_method_section:
 			}
 
 			od_cfg_seen_set(&m->seen, @1);
-			m->location = @1;
+			m->location = od_cfg_location_copy(@1);
 
 			m->name = $2;
 			$2 = NULL;
@@ -2311,7 +2311,7 @@ conn_drop_options_section:
 			}
 
 			od_cfg_seen_set(&opts->seen, @1);
-			opts->location = @1;
+			opts->location = od_cfg_location_copy(@1);
 
 			ctx->current_conn_drop_options = opts;
 		}
@@ -2333,7 +2333,7 @@ soft_oom_section:
 			}
 
 			od_cfg_seen_set(&soom->seen, @1);
-			soom->location = @1;
+			soom->location = od_cfg_location_copy(@1);
 
 			ctx->current_soft_oom = soom;
 		}
@@ -2395,7 +2395,7 @@ soft_oom_drop:
 			}
 
 			od_cfg_seen_set(&drop->seen, @1);
-			drop->location = @1;
+			drop->location = od_cfg_location_copy(@1);
 
 			ctx->current_soft_oom_drop = drop;
 		}
