@@ -280,6 +280,120 @@ def mm_get_context_registers_for_coroutine_x64(coroutine: gdb.Value):
     }
 
 
+def mm_get_context_registers_for_coroutine_aarch64(coroutine: gdb.Value):
+    context = coroutine[MM_COROUTINE_CONTEXT_FIELD_NAME]
+    raw_sp = context[MM_CONTEXT_SP_FIELD_NAME]
+
+    # There is the stack (raw_sp) 'inside' mm_context_switch.
+    # See context_swap_aarch64.S: registers are saved in pairs with
+    # stp Xn, Xm, [sp, #-16]! (pre-decrement). The stack is LIFO,
+    # so the LAST pair pushed (x29, x30) ends up at the LOWEST address.
+    #
+    # low addr |   x29 (fp)            <- raw_sp
+    #          |   x30 (lr)            <- desired pc
+    #          |   x27
+    #          |   x28
+    #          |   x25
+    #          |   x26
+    #          |   x23
+    #          |   x24
+    #          |   x21
+    #          |   x22
+    #          |   x19
+    #          |   x20
+    #          |   x17
+    #          |   x18
+    #          |   x8
+    #          |   x16
+    # high addr|   [frame of the coro] <- desired sp
+
+    reg_ptr = raw_sp
+    x29 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x30 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x27 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x28 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x25 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x26 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x23 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x24 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x21 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x22 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x19 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x20 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x17 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x18 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x8 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    x16 = gdb.parse_and_eval(f'(uint64_t*)({reg_ptr})').dereference()
+
+    reg_ptr += 1
+    sp = reg_ptr
+
+    return {
+        'sp': sp,
+
+        'pc': x30,
+
+        'x8': x8,
+        'x16': x16,
+        'x17': x17,
+        'x18': x18,
+        'x19': x19,
+        'x20': x20,
+        'x21': x21,
+        'x22': x22,
+        'x23': x23,
+        'x24': x24,
+        'x25': x25,
+        'x26': x26,
+        'x27': x27,
+        'x28': x28,
+        'x29': x29,
+        'x30': x30,
+    }
+
+
+def mm_get_context_registers_for_coroutine(coroutine: gdb.Value):
+    platform = gdb_get_current_platform()
+
+    if platform == 'i386:x86-64':
+        return mm_get_context_registers_for_coroutine_x64(coroutine)
+
+    if platform and platform.startswith('aarch64'):
+        return mm_get_context_registers_for_coroutine_aarch64(coroutine)
+
+    raise gdb.error(f'unsupported platform: {platform}')
+
+
 class MMFrameId:
     def __init__(self, sp: gdb.Value, pc: gdb.Value):
         self.sp = sp
@@ -299,8 +413,10 @@ class MMContextSelector(gdb.unwinder.Unwinder):
         if self.registers is None:
             return None
 
-        unwind_info = pending_frame.create_unwind_info(
-            MMFrameId(self.registers['rsp'], self.registers['rip']))
+        sp = self.registers.get('rsp', self.registers.get('sp'))
+        pc = self.registers.get('rip', self.registers.get('pc'))
+
+        unwind_info = pending_frame.create_unwind_info(MMFrameId(sp, pc))
         for reg in self.registers:
             unwind_info.add_saved_register(reg, self.registers[reg])
 
@@ -501,7 +617,7 @@ Example:
         # Therefore, we should use a frame filter to skip the first frame.
         try:
             with mm_first_frame_skip.enabled_filter():
-                regs = mm_get_context_registers_for_coroutine_x64(coroutine)
+                regs = mm_get_context_registers_for_coroutine(coroutine)
                 mm_context_selector.target_to(regs)
                 gdb.invalidate_cached_frames()
                 gdb.execute(gdbcmd)
@@ -509,11 +625,10 @@ Example:
             gdb.invalidate_cached_frames()
 
     def invoke(self, args, is_tty):
-        if gdb_get_current_platform() != 'i386:x86-64':
-            # To perform such things in other platforms
-            # mm_get_pc_and_sp_for_coroutine_x64 should be rewritten for desired platform
+        platform = gdb_get_current_platform()
+        if platform != 'i386:x86-64' and not (platform and platform.startswith('aarch64')):
             gdb.write(
-                f"!!! Warning: current platform is not supported for this command !!!\n"
+                f"!!! Warning: current platform ({platform}) is not supported for this command !!!\n"
             )
 
         with gdb_thread_restore():
