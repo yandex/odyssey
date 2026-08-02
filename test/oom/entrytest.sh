@@ -1,12 +1,16 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 until pg_isready -h primary -p 5432 -U postgres -d postgres; do
   echo "Wait for primary..."
-  sleep 1
+  sleep 0.1
 done
 
+until pg_isready -h odyssey -p 6432 -U postgres -d postgres; do
+  echo "Wait for odyssey..."
+  sleep 0.1
+done
 
 psql 'host=odyssey port=6432 user=postgres dbname=postgres' -c 'select 1' || {
     echo "error: failed to make query"
@@ -27,7 +31,7 @@ echo "select repeat('a',1024*1024*50)" > /tmp/load.txt
 
 for ((c=START_CLIENTS; c<=MAX_CLIENTS; c+=STEP))
 do
-  output=$(pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -c $c -j $c -t $DURATION -f /tmp/load.txt -C 2>&1 || true)
+  output=$(pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -c $c -j $c -t $DURATION --progress 1 -f /tmp/load.txt -C 2>&1)
   if echo "$output" | grep -q "soft out of memory" ; then
     echo "OK: Soft oom found!"
     exit 0
