@@ -95,6 +95,9 @@ static inline int od_concat_prefer_right(char *out, size_t max,
 static inline char *od_strdup_from_buf(const char *source, size_t size)
 {
 	char *str = od_malloc(size + 1);
+	if (str == NULL) {
+		return NULL;
+	}
 	memcpy(str, source, size);
 	str[size] = '\0';
 	return str;

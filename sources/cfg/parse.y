@@ -17,6 +17,34 @@
 #define YYINITDEPTH 32
 #define YYMAXDEPTH 200
 #define YYSTACK_USE_ALLOCA 0
+
+/*
+ * default YYLLOC_DEFAULT only copies first/last line and column,
+ * leaving our custom `filename` and `first_offset`/`last_offset` fields
+ * uninitialized.  This propagates filename and offsets from the first
+ * RHS symbol so that `od_cfg_location_copy(@N)` never dereferences
+ * garbage (notably for empty mid-rule actions and non-terminals)
+ */
+#define YYLLOC_DEFAULT(Current, Rhs, N)                                  \
+	do {                                                             \
+		if (N) {                                                 \
+			(Current).first_line   = (Rhs)[1].first_line;   \
+			(Current).first_column = (Rhs)[1].first_column; \
+			(Current).last_line    = (Rhs)[N].last_line;     \
+			(Current).last_column  = (Rhs)[N].last_column;   \
+			(Current).first_offset = (Rhs)[1].first_offset; \
+			(Current).last_offset  = (Rhs)[N].last_offset;   \
+			(Current).filename     = (Rhs)[1].filename;     \
+		} else {                                                 \
+			(Current).first_line   = (Current).last_line =   \
+				(Rhs)[0].last_line;                      \
+			(Current).first_column = (Current).last_column = \
+				(Rhs)[0].last_column;                    \
+			(Current).first_offset = (Current).last_offset = \
+				(Rhs)[0].last_offset;                    \
+			(Current).filename     = (Rhs)[0].filename;     \
+		}                                                        \
+	} while (0)
 }
 
 %code requires {
@@ -269,7 +297,22 @@
 %%
 
 config:
-	{ ctx->model->location = od_cfg_location_copy(@$); }
+	{
+		/*
+		 * @$ is unset for this empty mid-rule action, so use the
+		 * parser context filename directly.  Make an owning copy
+		 * since od_cfg_model_free() will od_cfg_location_free() it.
+		 *
+		 * only set it once (top-level config): included files share
+		 * the same model and would otherwise leak the previous
+		 * strdup by overwriting model->location
+		 */
+		if (ctx->include_depth == 0) {
+			od_cfg_location_t loc =
+				od_cfg_location_empty(ctx->filename);
+			ctx->model->location = od_cfg_location_copy(loc);
+		}
+	}
 	top_items
 	;
 
