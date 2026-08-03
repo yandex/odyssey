@@ -27,11 +27,18 @@ echo "select repeat('a',1024*1024*50)" > /tmp/load.txt
 
 for ((c=START_CLIENTS; c<=MAX_CLIENTS; c+=STEP))
 do
-  output=$(pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -c $c -j $c -t $DURATION -f /tmp/load.txt -C 2>&1 || true)
-  if echo "$output" | grep -q "soft out of memory" ; then
-    echo "OK: Soft oom found!"
-    exit 0
-  fi
+    pgbench 'host=odyssey port=6432 user=postgres dbname=postgres' -c $c -j $c -T $DURATION --progress 1 -f /tmp/load.txt -C >/tmp/pgbench.out 2>&1 || {
+    echo "error: failed to run pgbench"
+    output=$(cat /tmp/pgbench.out)
+    echo "$output"
+    if echo "$output" | grep -q "soft out of memory" ; then
+      echo "OK: Soft oom found!"
+      exit 0
+    fi
+    exit 1
+  }
+  output=$(cat /tmp/pgbench.out)
+  echo "$output"
 done
 
 echo "ERROR: Soft oom not found"
