@@ -21,6 +21,7 @@ typedef enum {
 	OD_QUERY_PROCESSING_PREPARE,
 	OD_QUERY_PROCESSING_ALL,
 	OD_QUERY_PROCESSING_BEGIN,
+	OD_QUERY_PROCESSING_DISCARD,
 } od_query_processing_keywords_t;
 
 extern od_keyword_t od_query_process_keywords[];
@@ -37,3 +38,9 @@ int od_parse_deallocate(const char *query, size_t query_len, const char **name,
 /* same as above, but for cases of parsing after reading DEALLOCATE on some parser */
 int od_parse_deallocate_parser(od_parser_t *parser, const char **name,
 			       size_t *name_len);
+
+/*
+ * Check whether query is DISCARD ALL (case-insensitive).
+ * Returns 1 if DISCARD ALL, 0 otherwise.
+ */
+int od_parse_discard_all(const char *query, size_t query_len);

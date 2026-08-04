@@ -1531,16 +1531,23 @@ static inline od_retcode_t od_frontend_log_bind(od_instance_t *instance,
 						od_client_t *client, char *ctx,
 						char *data, int size)
 {
-	uint32_t name_len;
-	char *name;
+	char *portal_name;
+	uint32_t portal_name_len;
+	char *stmt_name;
+	uint32_t stmt_name_len;
 	int rc;
-	rc = kiwi_be_read_bind_stmt_name(data, size, &name, &name_len);
+	rc = kiwi_be_read_bind_names(data, size, &portal_name, &portal_name_len,
+				     &stmt_name, &stmt_name_len);
 	if (rc == -1) {
 		return NOT_OK_RESPONSE;
 	}
 
-	od_log(&instance->logger, ctx, client, client->server, "bind %.*s",
-	       name_len, name);
+	/*
+	 * kiwi_be_read_bind_names returns lengths including the NUL
+	 */
+	od_log(&instance->logger, ctx, client, client->server,
+	       "bind stmt '%.*s' to portal '%.*s'", (int)(stmt_name_len - 1),
+	       stmt_name, (int)(portal_name_len - 1), portal_name);
 	return OK_RESPONSE;
 }
 

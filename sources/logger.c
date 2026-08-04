@@ -377,8 +377,10 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 				break;
 			/* thread id */
 			case 'T':
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "0x%llx", pthread_self());
+				len = od_snprintf(
+					dst_pos, dst_end - dst_pos,
+					"0x%" PRIx64,
+					(uint64_t)(uintptr_t)pthread_self());
 				dst_pos += len;
 				break;
 			/* client id */
@@ -829,7 +831,8 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 					logger->pid->pid_sz, add_comma);
 
 	memset(tmp_buf, 0, sizeof(tmp_buf));
-	od_snprintf(tmp_buf, sizeof(tmp_buf), "0x%llx", pthread_self());
+	od_snprintf(tmp_buf, sizeof(tmp_buf), "0x%" PRIx64,
+		    (uint64_t)(uintptr_t)pthread_self());
 	dst = od_logger_json_add_string(dst, dst_end, "tid", tmp_buf,
 					add_comma);
 

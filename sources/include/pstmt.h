@@ -60,6 +60,16 @@ int od_client_remove_pstmt(od_client_t *client, const char *name);
 od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name);
 void od_client_pstmts_clear(od_client_t *client);
 
+/* "portal_name" -> *od_pstmt_t (portal tracking, extended protocol) */
+mm_hashmap_t *od_client_portal_hashmap_create(void);
+void od_client_portal_hashmap_free(mm_hashmap_t *hm);
+
+int od_client_add_portal(od_client_t *client, const char *portal_name,
+			 const od_pstmt_t *pstmt);
+od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name);
+int od_client_remove_portal(od_client_t *client, const char *portal_name);
+void od_client_portals_clear(od_client_t *client);
+
 /* "odyssey_pstmt_0" -> *od_pstmt_t */
 mm_hashmap_t *od_server_pstmt_hashmap_create(void);
 void od_server_pstmt_hashmap_free(mm_hashmap_t *hm);

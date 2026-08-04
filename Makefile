@@ -55,7 +55,7 @@ local_run:
 	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF)
 
 console_run: 
-	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF) --console --log_to_stdout --verbose
+	$(BUILD_TEST_DIR)/sources/odyssey $(DEV_CONF) --console --log_to_stdout # --verbose
 
 check-format:
 	docker build -f docker/format/Dockerfile --tag=odyssey/clang-format-runner .

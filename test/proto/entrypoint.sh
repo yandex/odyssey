@@ -24,8 +24,7 @@ do_test() {
   POSTGRES_DB=postgres \
   POSTGRES_USER="$user" \
   /usr/bin/proto.test \
-      -test.v \
-      -test.skip 'TestDeallocatePrepareRemovesPstmtsByXproto|TestDeallocateRemovesPstmtsByXproto'
+      -test.v
 }
 
 do_test suser

@@ -22,6 +22,7 @@ od_keyword_t od_query_process_keywords[] = {
 	od_keyword("prepare", OD_QUERY_PROCESSING_PREPARE),
 	od_keyword("all", OD_QUERY_PROCESSING_ALL),
 	od_keyword("begin", OD_QUERY_PROCESSING_BEGIN),
+	od_keyword("discard", OD_QUERY_PROCESSING_DISCARD),
 	{ 0, 0, 0 }
 };
 
@@ -125,4 +126,41 @@ int od_parse_deallocate(const char *query, size_t query_len, const char **name,
 	}
 
 	return -1;
+}
+
+int od_parse_discard_all(const char *query, size_t query_len)
+{
+	od_parser_t parser;
+	od_parser_init_queries_mode(&parser, query, query_len);
+
+	od_token_t token;
+	int rc = od_parser_next(&parser, &token);
+	if (rc != OD_PARSER_KEYWORD) {
+		return 0;
+	}
+
+	od_keyword_t *keyword =
+		od_keyword_match(od_query_process_keywords, &token);
+	if (keyword == NULL || keyword->id != OD_QUERY_PROCESSING_DISCARD) {
+		return 0;
+	}
+
+	rc = od_parser_next(&parser, &token);
+	if (rc != OD_PARSER_KEYWORD) {
+		return 0;
+	}
+
+	keyword = od_keyword_match(od_query_process_keywords, &token);
+	if (keyword == NULL || keyword->id != OD_QUERY_PROCESSING_ALL) {
+		return 0;
+	}
+
+	/* ensure nothing meaningful follows: EOF or ';' */
+	rc = od_parser_next(&parser, &token);
+	if (rc != OD_PARSER_EOF &&
+	    !(rc == OD_PARSER_SYMBOL && token.value.num == ';')) {
+		return 0;
+	}
+
+	return 1;
 }
