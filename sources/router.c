@@ -30,6 +30,7 @@ void od_router_init(od_router_t *router, od_global_t *global)
 	od_list_init(&router->servers);
 	od_route_pool_init(&router->route_pool);
 	router->clients = 0;
+	router->servers_routing = 0;
 
 	router->global = global;
 
@@ -815,13 +816,43 @@ void od_router_unroute(od_router_t *router, od_client_t *client)
 	od_route_unlock(route);
 }
 
+bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
+				       int currently_routing, int max_routing)
+{
+	if (pool_size == 0) {
+		return currently_routing >= max_routing;
+	}
+	/*
+	 * This routine controls ramping of server connections.
+	 * When we have a lot of server connections we try to avoid opening new
+	 * in parallel. Meanwhile when we have no server connections we go at
+	 * maximum configured parallelism.
+	 *
+	 * This equation means that we gradually reduce parallelism until we reach
+	 * half of possible connections in the pool.
+	 */
+	max_routing =
+		max_routing * (pool_size - connections_in_pool * 2) / pool_size;
+	if (max_routing <= 0) {
+		max_routing = 1;
+	}
+	return currently_routing >= max_routing;
+}
+
+#define MAX_BUZYLOOP_RETRY 10
+
 static inline od_router_status_t
-od_router_try_create_new_server(od_client_t *client,
+od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 				od_storage_endpoint_t *endpoint,
 				od_server_t **out_server)
 {
 	od_server_t *server = NULL;
 	od_route_t *route = client->route;
+	od_rule_pool_t *rule_pool = route->rule->pool;
+	int pool_size = rule_pool->size;
+	if (od_route_has_shared_pool(route)) {
+		pool_size = route->shared_pool->pool_size;
+	}
 
 	od_multi_pool_element_t *pool_element =
 		od_route_get_server_pool_element_locked(route,
@@ -840,6 +871,38 @@ od_router_try_create_new_server(od_client_t *client,
 		/* can't add new connection - wait for some released */
 		od_route_unlock(route);
 		return OD_ROUTER_NEED_WAIT;
+	}
+
+	uint32_t max_routing =
+		(uint32_t)route->rule->storage->server_max_routing;
+
+	int busyloop_sleep = 0;
+	int busyloop_retry = 0;
+	while (od_should_not_spun_connection_yet(
+		od_route_server_pool_total(route, pool_element), pool_size,
+		(int)od_atomic_u32_of(&router->servers_routing),
+		(int)max_routing)) {
+		/* concurrent server connection in progress. */
+		od_route_unlock(route);
+		machine_sleep(busyloop_sleep);
+		busyloop_retry++;
+		/* TODO: support this opt in configure file */
+		if (busyloop_retry > MAX_BUZYLOOP_RETRY) {
+			busyloop_sleep = 1;
+		}
+		od_route_lock(route);
+
+		/* if the idle server was created while busyloop - lets use it */
+		int rc = od_route_server_pool_next_idle_locked(route, endpoint,
+							       &server);
+		if (rc != OD_ROUTER_OK) {
+			od_route_unlock(route);
+			return rc;
+		}
+		if (server != NULL) {
+			*out_server = server;
+			return OD_ROUTER_OK;
+		}
 	}
 
 	/* create new server object */
@@ -874,8 +937,8 @@ od_router_try_create_new_server(od_client_t *client,
 }
 
 static inline od_router_status_t
-od_router_try_attach(od_client_t *client, bool wait_for_idle,
-		     od_storage_endpoint_t *endpoint)
+od_router_try_attach(od_router_t *router, od_client_t *client,
+		     bool wait_for_idle, od_storage_endpoint_t *endpoint)
 {
 	od_server_t *server;
 	od_route_t *route = client->route;
@@ -921,7 +984,7 @@ od_router_try_attach(od_client_t *client, bool wait_for_idle,
 		}
 
 		od_router_status_t st = od_router_try_create_new_server(
-			client, endpoint, &server);
+			router, client, endpoint, &server);
 		if (st != OD_ROUTER_OK) {
 			/*
 			 * od_router_try_create_new_server keeps lock held if everything ok
@@ -986,8 +1049,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    od_storage_endpoint_t *endpoint,
 				    int immediate)
 {
-	(void)router;
-
 	od_route_t *route;
 	od_router_status_t rc;
 	uint64_t end_time_ms;
@@ -1016,7 +1077,8 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	while (now_ms < end_time_ms) {
 		uint64_t version = od_route_pools_version(route);
 
-		rc = od_router_try_attach(client, wait_for_idle, endpoint);
+		rc = od_router_try_attach(router, client, wait_for_idle,
+					  endpoint);
 		if (rc != OD_ROUTER_NEED_WAIT) {
 			/* ok or some other error */
 			status = rc;

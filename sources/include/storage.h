@@ -6,10 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <stdatomic.h>
-
 #include <machinarium/spinlock.h>
-#include <machinarium/wait_list.h>
 
 #include <kiwi/kiwi.h>
 
@@ -92,14 +89,6 @@ struct od_rule_storage {
 	int port; /* default port */
 
 	int server_max_routing;
-	/*
-	 * TODO: this should ideally be per-endpoint (od_storage_endpoint_t)
-	 * rather than per-storage, so that different physical hosts within the
-	 * same storage do not share the ramp-rate budget
-	 */
-	atomic_uint_fast64_t servers_routing;
-	mm_wait_list_t servers_routing_waiters;
-
 	od_storage_watchdog_t *watchdog;
 
 	od_list_t link;
