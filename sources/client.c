@@ -50,6 +50,7 @@ void od_client_init(od_client_t *client)
 	od_list_init(&client->link);
 
 	client->prep_stmt_ids = NULL;
+	client->portals = NULL;
 	client->last_catchup_lag = 0;
 
 	od_atomic_u64_set(&client->killed, 0);
@@ -83,6 +84,9 @@ void od_client_free(od_client_t *client)
 	kiwi_password_free(&client->received_password);
 	if (client->prep_stmt_ids) {
 		od_client_pstmt_hashmap_free(client->prep_stmt_ids);
+	}
+	if (client->portals) {
+		od_client_portal_hashmap_free(client->portals);
 	}
 	if (client->external_id) {
 		od_free(client->external_id);

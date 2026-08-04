@@ -18,6 +18,7 @@
 #include <backend.h>
 #include <types.h>
 #include <server.h>
+#include <pstmt.h>
 #include <instance.h>
 #include <global.h>
 #include <route.h>
@@ -138,6 +139,12 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 		/* no active transaction */
 		server->is_transaction = 0;
 		server->is_error_tx = 0;
+		/*
+		 * PG destroys all portals at transaction end
+		 */
+		if (server->client != NULL && server->client->portals != NULL) {
+			od_client_portals_clear(server->client);
+		}
 	} else if (status == 'T') {
 		/* active transaction */
 		server->is_transaction = 1;

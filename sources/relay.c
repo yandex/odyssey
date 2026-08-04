@@ -375,6 +375,7 @@ static od_frontend_status_t process_vdeallocate(od_client_t *client,
 		od_debug(&instance->logger, "main", client, server,
 			 "DEALLOCATE ALL detected, remove from client hashmap");
 		od_client_pstmts_clear(client);
+		od_client_portals_clear(client);
 
 		command = "DEALLOCATE ALL";
 		break;
@@ -562,11 +563,12 @@ static void process_discard(od_client_t *client, od_server_t *server,
 		return;
 	}
 
-	if (query_len >= 7 && strncmp(query, "DISCARD", 7) == 0) {
+	if (od_parse_discard_all(query, query_len > 0 ? query_len - 1 : 0)) {
 		od_debug(&instance->logger, "main", client, server,
-			 "discard detected, invalidate caches");
+			 "DISCARD ALL detected, invalidate caches");
 
 		od_client_pstmts_clear(client);
+		od_client_portals_clear(client);
 		if (server != NULL) {
 			od_server_pstmts_clear(server);
 		}
@@ -811,10 +813,13 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 
 	/*
 	 * in vanilla PG, executing simple query removes the
-	 * unnamed pstmt on client
+	 * unnamed pstmt and unnamed portal on client
 	 */
 	if (relay->client->prep_stmt_ids != NULL) {
 		od_client_remove_pstmt(relay->client, "");
+	}
+	if (relay->client->portals != NULL) {
+		od_client_remove_portal(relay->client, "");
 	}
 
 	return status;

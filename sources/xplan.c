@@ -59,6 +59,8 @@ static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 		return "OD_XPLAN_VIRTUAL_PARSE_COMPLETE";
 	case OD_XPLAN_DEFFERED_BEGIN:
 		return "OD_XPLAN_DEFFERED_BEGIN";
+	case OD_XPLAN_VIRTUAL_COMMAND_COMPLETE:
+		return "OD_XPLAN_VIRTUAL_COMMAND_COMPLETE";
 	default:
 		abort();
 	}
@@ -88,6 +90,7 @@ static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 	case OD_XPLAN_VIRTUAL_ERROR_RESPONSE:
 	case OD_XPLAN_VIRTUAL_PARSE_COMPLETE:
 	case OD_XPLAN_VIRTUAL_CLOSE_COMPLETE:
+	case OD_XPLAN_VIRTUAL_COMMAND_COMPLETE:
 		return NULL;
 	default:
 		abort();
@@ -109,6 +112,14 @@ static const char *plan_delta_type_str(od_xplan_delta_type_t type)
 		return "OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY";
 	case OD_XPLAN_DELTA_REMOVE_ALL:
 		return "OD_XPLAN_DELTA_REMOVE_ALL";
+	case OD_XPLAN_DELTA_REMOVE_CLIENT_ALL:
+		return "OD_XPLAN_DELTA_REMOVE_CLIENT_ALL";
+	case OD_XPLAN_DELTA_ADD_PORTAL:
+		return "OD_XPLAN_DELTA_ADD_PORTAL";
+	case OD_XPLAN_DELTA_REMOVE_PORTAL:
+		return "OD_XPLAN_DELTA_REMOVE_PORTAL";
+	case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME:
+		return "OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME";
 	default:
 		abort();
 	}
@@ -123,8 +134,13 @@ static int plan_delta_description(od_xplan_delta_t *delta, char *out,
 	pos += od_snprintf(pos, end - pos,
 			   "type=%s, client_pstmt='%s', pstmt=%s",
 			   plan_delta_type_str(delta->type),
-			   delta->client_pstmt,
+			   delta->client_pstmt ? delta->client_pstmt : "(null)",
 			   delta->pstmt ? delta->pstmt->name : "(null)");
+
+	if (delta->portal_name) {
+		pos += od_snprintf(pos, end - pos, ", portal='%s'",
+				   delta->portal_name);
+	}
 
 	return pos - out;
 }
@@ -189,9 +205,16 @@ static void plan_entry_destroy(void *a)
 
 	/*
 	 * no need to destroy delta:
-	 * - client name points to original msg
-	 * - pstmt points to global hashmap
+	 * - client name points into clmsg (owned by xbuf)
+	 * - pstmt points to the global hashmap
+	 *
+	 * exception: for OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME the
+	 * client_pstmt is an owned NUL-terminated copy (see plan_execute),
+	 * free it here
 	 */
+	if (entry->delta.type == OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME) {
+		od_free((void *)entry->delta.client_pstmt);
+	}
 
 	memset(entry, 0, sizeof(od_xplan_entry_t));
 }
@@ -201,7 +224,8 @@ static void entry_init_internal(od_xplan_entry_t *e, od_xplan_entry_type_t type,
 				machine_msg_t *vresp,
 				od_xplan_delta_type_t delta_type,
 				const char *client_pstmt,
-				const od_pstmt_t *pstmt)
+				const od_pstmt_t *pstmt,
+				const char *portal_name)
 {
 	memset(e, 0, sizeof(od_xplan_entry_t));
 
@@ -213,6 +237,7 @@ static void entry_init_internal(od_xplan_entry_t *e, od_xplan_entry_type_t type,
 	e->delta.type = delta_type;
 	e->delta.client_pstmt = client_pstmt;
 	e->delta.pstmt = pstmt;
+	e->delta.portal_name = portal_name;
 }
 
 static void entry_init_fwd(od_xplan_entry_t *e, machine_msg_t *original,
@@ -221,7 +246,7 @@ static void entry_init_fwd(od_xplan_entry_t *e, machine_msg_t *original,
 			   const char *client_pstmt, const od_pstmt_t *pstmt)
 {
 	entry_init_internal(e, OD_XPLAN_FORWARD, original, rewritten, NULL,
-			    delta_type, client_pstmt, pstmt);
+			    delta_type, client_pstmt, pstmt, NULL);
 }
 
 static void entry_init_fwd_no_delta(od_xplan_entry_t *e,
@@ -236,7 +261,7 @@ static void entry_init_parse(od_xplan_entry_t *e, const char *client_pstmt,
 			     machine_msg_t *rewritten)
 {
 	entry_init_internal(e, OD_XPLAN_PARSE, original, rewritten, NULL,
-			    OD_XPLAN_DELTA_ADD_BOTH, client_pstmt, pstmt);
+			    OD_XPLAN_DELTA_ADD_BOTH, client_pstmt, pstmt, NULL);
 }
 
 static void entry_init_parse_shadow(od_xplan_entry_t *e,
@@ -245,7 +270,8 @@ static void entry_init_parse_shadow(od_xplan_entry_t *e,
 				    machine_msg_t *inserted_parse)
 {
 	entry_init_internal(e, OD_XPLAN_PARSE_SHADOW, original, inserted_parse,
-			    NULL, OD_XPLAN_DELTA_ADD_SERVER_ONLY, NULL, pstmt);
+			    NULL, OD_XPLAN_DELTA_ADD_SERVER_ONLY, NULL, pstmt,
+			    NULL);
 }
 
 static void entry_init_virtual_error_response(od_xplan_entry_t *e,
@@ -253,7 +279,7 @@ static void entry_init_virtual_error_response(od_xplan_entry_t *e,
 					      machine_msg_t *msg)
 {
 	entry_init_internal(e, OD_XPLAN_VIRTUAL_ERROR_RESPONSE, original, NULL,
-			    msg, OD_XPLAN_DELTA_NONE, NULL, NULL);
+			    msg, OD_XPLAN_DELTA_NONE, NULL, NULL, NULL);
 }
 
 static void entry_init_virtual_parse_complete(od_xplan_entry_t *e,
@@ -263,8 +289,8 @@ static void entry_init_virtual_parse_complete(od_xplan_entry_t *e,
 {
 	entry_init_internal(e, OD_XPLAN_VIRTUAL_PARSE_COMPLETE, original, NULL,
 			    NULL /* no virtual msg - const seq of bytes */,
-			    OD_XPLAN_DELTA_ADD_CLIENT_ONLY, client_pstmt,
-			    pstmt);
+			    OD_XPLAN_DELTA_ADD_CLIENT_ONLY, client_pstmt, pstmt,
+			    NULL);
 }
 
 static void entry_init_virtual_close_complete(od_xplan_entry_t *e,
@@ -274,7 +300,7 @@ static void entry_init_virtual_close_complete(od_xplan_entry_t *e,
 	entry_init_internal(e, OD_XPLAN_VIRTUAL_CLOSE_COMPLETE, original, NULL,
 			    NULL /* no virtual msg - const seq of bytes */,
 			    OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY, client_pstmt,
-			    NULL);
+			    NULL, NULL);
 }
 
 static void entry_init_deffered_begin(od_xplan_entry_t *e, machine_msg_t *begin)
@@ -282,7 +308,44 @@ static void entry_init_deffered_begin(od_xplan_entry_t *e, machine_msg_t *begin)
 	od_assert(msg_is_begin_query(begin));
 
 	entry_init_internal(e, OD_XPLAN_DEFFERED_BEGIN, begin, NULL, NULL,
-			    OD_XPLAN_DELTA_NONE, NULL, NULL);
+			    OD_XPLAN_DELTA_NONE, NULL, NULL, NULL);
+}
+
+/*
+ * Forward (e.g. Bind) that also adds a portal -> pstmt mapping on client.
+ */
+static void entry_init_fwd_portal(od_xplan_entry_t *e, machine_msg_t *original,
+				  machine_msg_t *rewritten,
+				  const char *portal_name,
+				  const od_pstmt_t *pstmt)
+{
+	entry_init_internal(e, OD_XPLAN_FORWARD, original, rewritten, NULL,
+			    OD_XPLAN_DELTA_ADD_PORTAL, NULL, pstmt,
+			    portal_name);
+}
+
+/*
+ * Virtual CommandComplete for a virtualized Execute (DEALLOCATE).
+ * Combines multiple deltas:
+ * - REMOVE_CLIENT_ALL for DEALLOCATE ALL
+ * - REMOVE_CLIENT_ONLY_BY_NAME for DEALLOCATE name
+ *
+ * DISCARD ALL is NOT virtualized (forwarded to server), so it never
+ * goes through this path.
+ *
+ * vcc_data/vcc_len is a pre-built CommandComplete wire packet,
+ * points to a static array, not owned.
+ */
+static void entry_init_virtual_command_complete(
+	od_xplan_entry_t *e, machine_msg_t *original,
+	od_xplan_delta_type_t delta_type, const char *client_pstmt,
+	const char *portal_name, const uint8_t *vcc_data, size_t vcc_len)
+{
+	entry_init_internal(e, OD_XPLAN_VIRTUAL_COMMAND_COMPLETE, original,
+			    NULL, NULL, delta_type, client_pstmt, NULL,
+			    portal_name);
+	e->vcc_data = vcc_data;
+	e->vcc_len = vcc_len;
 }
 
 static int xplan_append(od_xplan_t *xp, const od_xplan_entry_t *e)
@@ -415,6 +478,40 @@ xplan_append_deffered_begin(od_xplan_t *xp, machine_msg_t *begin)
 	return OD_OK;
 }
 
+static inline od_frontend_status_t
+xplan_append_fwd_portal(od_xplan_t *xp, machine_msg_t *original,
+			machine_msg_t *rewritten, const char *portal_name,
+			const od_pstmt_t *pstmt)
+{
+	od_xplan_entry_t e;
+	entry_init_fwd_portal(&e, original, rewritten, portal_name, pstmt);
+
+	int rc = xplan_append(xp, &e);
+	if (rc != 0) {
+		return OD_EOOM;
+	}
+
+	return OD_OK;
+}
+
+static inline od_frontend_status_t xplan_append_virtual_command_complete(
+	od_xplan_t *xp, machine_msg_t *original,
+	od_xplan_delta_type_t delta_type, const char *client_pstmt,
+	const char *portal_name, const uint8_t *vcc_data, size_t vcc_len)
+{
+	od_xplan_entry_t e;
+	entry_init_virtual_command_complete(&e, original, delta_type,
+					    client_pstmt, portal_name, vcc_data,
+					    vcc_len);
+
+	int rc = xplan_append(xp, &e);
+	if (rc != 0) {
+		return OD_EOOM;
+	}
+
+	return OD_OK;
+}
+
 void od_xplan_init(od_xplan_t *xp)
 {
 	memset(xp, 0, sizeof(od_xplan_t));
@@ -452,6 +549,8 @@ static const od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp,
 		switch (delta->type) {
 		case OD_XPLAN_DELTA_ADD_SERVER_ONLY:
 		case OD_XPLAN_DELTA_NONE:
+		case OD_XPLAN_DELTA_ADD_PORTAL:
+		case OD_XPLAN_DELTA_REMOVE_PORTAL:
 			/* non-client pstmts op */
 			break;
 
@@ -471,7 +570,15 @@ static const od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp,
 			}
 			break;
 
+		case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME:
+			if (strcmp(pstmt_name, delta->client_pstmt) == 0) {
+				/* found removing of the pstmt */
+				return NULL;
+			}
+			break;
+
 		case OD_XPLAN_DELTA_REMOVE_ALL:
+		case OD_XPLAN_DELTA_REMOVE_CLIENT_ALL:
 			/* all pstmts was removed, including this */
 			return NULL;
 
@@ -481,6 +588,57 @@ static const od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp,
 	}
 
 	return od_client_get_pstmt(client, pstmt_name);
+}
+
+static const od_pstmt_t *plan_client_get_portal(od_xplan_t *xp,
+						od_client_t *client,
+						const char *portal_name)
+{
+	/*
+	 * searching from newest state to oldest,
+	 * this means to search from tail to head of the plan deltas
+	 * and then on commited portals hashmap
+	 */
+
+	for (int i = (int)mm_vector_size(&xp->entries) - 1; i >= 0; --i) {
+		od_xplan_entry_t *e = mm_vector_get(&xp->entries, (size_t)i);
+		od_xplan_delta_t *delta = &e->delta;
+
+		switch (delta->type) {
+		case OD_XPLAN_DELTA_ADD_SERVER_ONLY:
+		case OD_XPLAN_DELTA_NONE:
+		case OD_XPLAN_DELTA_ADD_BOTH:
+		case OD_XPLAN_DELTA_ADD_CLIENT_ONLY:
+		case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY:
+		case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME:
+			/* non-portal op */
+			break;
+
+		case OD_XPLAN_DELTA_ADD_PORTAL:
+			if (strcmp(portal_name, delta->portal_name) == 0) {
+				/* found portal -> pstmt mapping */
+				return delta->pstmt;
+			}
+			break;
+
+		case OD_XPLAN_DELTA_REMOVE_PORTAL:
+			if (strcmp(portal_name, delta->portal_name) == 0) {
+				/* found removing of the portal */
+				return NULL;
+			}
+			break;
+
+		case OD_XPLAN_DELTA_REMOVE_ALL:
+		case OD_XPLAN_DELTA_REMOVE_CLIENT_ALL:
+			/* all portals was removed, including this */
+			return NULL;
+
+		default:
+			abort();
+		}
+	}
+
+	return od_client_get_portal(client, portal_name);
 }
 
 static int plan_client_pstmt_exists(od_xplan_t *xp, od_client_t *client,
@@ -506,6 +664,10 @@ static int plan_server_has_pstmt(od_xplan_t *xp, od_server_t *server,
 		case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY:
 		case OD_XPLAN_DELTA_ADD_CLIENT_ONLY:
 		case OD_XPLAN_DELTA_NONE:
+		case OD_XPLAN_DELTA_ADD_PORTAL:
+		case OD_XPLAN_DELTA_REMOVE_PORTAL:
+		case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME:
+		case OD_XPLAN_DELTA_REMOVE_CLIENT_ALL:
 			/* non-server pstmts op */
 			break;
 
@@ -666,12 +828,66 @@ static od_frontend_status_t plan_close(od_relay_t *relay, od_xplan_t *xp,
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
 
-	if (type != KIWI_FE_CLOSE_PREPARED_STATEMENT) {
-		return xplan_append_fwd_no_delta(xp, msg,
-						 NULL /* no rewrite */);
+	if (type == KIWI_FE_CLOSE_PORTAL) {
+		/*
+		 * close portal: forward Close to the server (so the server
+		 * destroys its own portal) and remove the portal -> pstmt
+		 * mapping from the client. the server replies with CloseComplete
+		 * which is proxied to the client.
+		 *
+		 * srvmsg is NULL so plan_entry_backend_msg returns clmsg (the
+		 * original message owned by xbuf) - no double free on cleanup.
+		 */
+		od_xplan_entry_t e;
+		entry_init_fwd(&e, msg, NULL /* no rewrite, forward clmsg */,
+			       OD_XPLAN_DELTA_REMOVE_PORTAL, NULL, NULL);
+		e.delta.portal_name = pstmt_name;
+		int rc = xplan_append(xp, &e);
+		if (rc != 0) {
+			return OD_EOOM;
+		}
+		return OD_OK;
+	} else if (type == KIWI_FE_CLOSE_PREPARED_STATEMENT) {
+		return xplan_append_virtual_close_complete(xp, pstmt_name, msg);
 	}
 
-	return xplan_append_virtual_close_complete(xp, pstmt_name, msg);
+	/* let the pg format the correct error */
+	return xplan_append_fwd_no_delta(xp, msg, NULL /* no rewrite */);
+}
+
+/*
+ * detect whether a prepared statement is a DEALLOCATE that must be
+ * virtualized (not sent to the server) in the extended protocol path.
+ *
+ * returns:
+ *  -1  not a virtualizable query
+ *   0  DEALLOCATE name  (name stored in *name / *name_len)
+ *   1  DEALLOCATE ALL
+ *
+ * note: DISCARD ALL is NOT virtualized - it resets much more than just
+ * prepared statements (temp tables, sequences, listen/notify, session
+ * variables, advisory locks, etc) and must be executed on the server.
+ *
+ * for DEALLOCATE name, *name points into desc->data (stable, NUL-terminated).
+ */
+static int pstmt_deallocate_check(const od_pstmt_t *pstmt, const char **name,
+				  size_t *name_len)
+{
+	const od_pstmt_desc_t *desc = &pstmt->desc;
+	if (desc->len < 10) {
+		return -1;
+	}
+
+	int rc = od_parse_deallocate(desc->data, strlen(desc->data), name,
+				     name_len);
+	switch (rc) {
+	case 1:
+		return 1;
+	case 0:
+		return 0;
+	default:
+		return -1;
+	}
 }
 
 static inline machine_msg_t *rewrite_bind_msg(char *data, int size,
@@ -690,7 +906,8 @@ static inline machine_msg_t *rewrite_bind_msg(char *data, int size,
 	/* packet header */
 	memcpy(rewrite_data, data, opname_start_offset);
 	/* prefix for opname */
-	od_snprintf(rewrite_data + opname_start_offset, opnamelen, opname);
+	od_snprintf(rewrite_data + opname_start_offset, opnamelen, "%s",
+		    opname);
 	/* rest of msg */
 	memcpy(rewrite_data + opname_start_offset + opnamelen,
 	       data + opname_start_offset + operator_name_len,
@@ -707,7 +924,6 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 {
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
-	od_instance_t *instance = client->global->instance;
 
 	machine_msg_t *msg = m->msg;
 	char *data = machine_msg_data(msg);
@@ -715,9 +931,11 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 
 	uint32_t pstmt_name_len;
 	char *pstmt_name;
+	uint32_t portal_name_len;
+	char *portal_name;
 	int rc;
-	rc = kiwi_be_read_bind_stmt_name(data, size, &pstmt_name,
-					 &pstmt_name_len);
+	rc = kiwi_be_read_bind_names(data, size, &portal_name, &portal_name_len,
+				     &pstmt_name, &pstmt_name_len);
 	if (rc == -1) {
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
@@ -730,34 +948,6 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 		}
 
 		return xplan_append_virtual_error_response(xp, msg, vresp);
-	}
-
-	int remove_all = 0;
-
-	/* XXX: we must plan discard on Execute, not on Bind */
-	const od_pstmt_desc_t *desc = &pstmt->desc;
-	if (desc->len >= 7) {
-		if (strncmp(desc->data, "DISCARD", 7) == 0) {
-			od_debug(&instance->logger, "rewrite bind", client,
-				 server, "discard detected, invalidate caches");
-			remove_all = 1;
-		} else {
-			size_t name_len;
-			const char *name = NULL;
-			int rc = od_parse_deallocate(desc->data,
-						     strlen(desc->data), &name,
-						     &name_len);
-			switch (rc) {
-			case 1:
-				remove_all = 1;
-				break;
-			case 0:
-				/* TODO: support DEALLOCATE name */
-				break;
-			default:
-				break;
-			}
-		}
 	}
 
 	int pstmt_start_offset = kiwi_be_bind_opname_offset(data, size);
@@ -777,20 +967,126 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 		return OD_EOOM;
 	}
 
-	if (!remove_all) {
-		return xplan_append_fwd_no_delta(xp, msg, bmsg);
-	}
-
-	return xplan_append_fwd(xp, msg, bmsg, OD_XPLAN_DELTA_REMOVE_ALL,
-				pstmt_name, pstmt);
+	/*
+	 * forward the Bind and add portal -> pstmt mapping on client.
+	 */
+	return xplan_append_fwd_portal(xp, msg, bmsg, portal_name, pstmt);
 }
 
 static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 					 od_xbuf_msg_t *m)
 {
-	(void)relay;
+	static const uint8_t cc_deallocate[] = { 'C', 0,   0,	0,   15,  'D',
+						 'E', 'A', 'L', 'L', 'O', 'C',
+						 'A', 'T', 'E', 0 };
 
-	return xplan_append_fwd_no_delta(xp, m->msg, NULL /* no rewrite */);
+	static const uint8_t cc_deallocate_all[] = { 'C', 0,   0,   0,	 19,
+						     'D', 'E', 'A', 'L', 'L',
+						     'O', 'C', 'A', 'T', 'E',
+						     ' ', 'A', 'L', 'L', 0 };
+
+	od_client_t *client = relay->client;
+	od_server_t *server = client->server;
+	od_instance_t *instance = client->global->instance;
+
+	machine_msg_t *msg = m->msg;
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	uint32_t portal_name_len;
+	char *portal_name;
+	int rc = kiwi_be_read_execute(data, size, &portal_name,
+				      &portal_name_len);
+	if (rc == -1) {
+		return OD_ECLIENT_PROTOCOL_ERROR;
+	}
+
+	const od_pstmt_t *pstmt =
+		plan_client_get_portal(xp, client, portal_name);
+	if (pstmt == NULL) {
+		/*
+		 * portal not found - just forward, let the server
+		 * produce the appropriate ErrorResponse
+		 */
+		return xplan_append_fwd_no_delta(xp, msg,
+						 NULL /* no rewrite */);
+	}
+
+	/*
+	 * detect DEALLOCATE ALL / DEALLOCATE name in the prepared statement
+	 * text and virtualize the Execute:
+	 * - do not send Execute to the server
+	 * - synthesize a virtual CommandComplete
+	 * - apply the appropriate delta to keep client state in sync
+	 *
+	 * this fixes the long-standing issue where DEALLOCATE was detected at
+	 * Bind time (too early) and DEALLOCATE name was a no-op.
+	 *
+	 * note: we only clear the CLIENT hashmap (not server), matching the
+	 * simple-protocol process_vdeallocate behavior. the server still
+	 * holds its odyssey_pstmt_N entries (they are reused on next Bind).
+	 *
+	 * DISCARD ALL is NOT virtualized: it resets much more than just
+	 * prepared statements (temp tables, sequences, listen/notify,
+	 * session variables, advisory locks) and must run on the server.
+	 * it is forwarded and REMOVE_ALL delta clears both hashmaps after
+	 * the server replies (matching simple-protocol process_discard).
+	 */
+	const od_pstmt_desc_t *desc = &pstmt->desc;
+	if (od_parse_discard_all(desc->data, strlen(desc->data))) {
+		od_debug(&instance->logger, "rewrite execute", client, server,
+			 "DISCARD ALL detected via portal, invalidate caches");
+		return xplan_append_fwd(xp, msg, NULL,
+					OD_XPLAN_DELTA_REMOVE_ALL, NULL, pstmt);
+	}
+
+	size_t dealloc_name_len;
+	const char *dealloc_name = NULL;
+	int vrc =
+		pstmt_deallocate_check(pstmt, &dealloc_name, &dealloc_name_len);
+	switch (vrc) {
+	case 1: /* DEALLOCATE ALL */
+		od_debug(
+			&instance->logger, "rewrite execute", client, server,
+			"DEALLOCATE ALL detected via portal, invalidate client caches");
+		return xplan_append_virtual_command_complete(
+			xp, msg, OD_XPLAN_DELTA_REMOVE_CLIENT_ALL, NULL, NULL,
+			cc_deallocate_all, sizeof(cc_deallocate_all));
+	case 0: { /* DEALLOCATE name */
+		od_debug(&instance->logger, "rewrite execute", client, server,
+			 "DEALLOCATE '%.*s' detected via portal",
+			 (int)dealloc_name_len, dealloc_name);
+		/*
+		 * TODO: PG returns ERROR 26000 if the statement does not
+		 * exist; we always report success, same as
+		 * process_vdeallocate() in the simple path.
+		 *
+		 * od_parse_deallocate returns a pointer into pstmt->desc.data
+		 * (not NUL-terminated). The client_pstmt delta field is passed
+		 * to hashmap operations (strcmp/strlen) which require a
+		 * NUL-terminated string, so make an owned copy. It is freed in
+		 * plan_entry_destroy.
+		 */
+		char *dealloc_name_z =
+			od_strdup_from_buf(dealloc_name, dealloc_name_len);
+		if (dealloc_name_z == NULL) {
+			return OD_EOOM;
+		}
+		od_frontend_status_t st = xplan_append_virtual_command_complete(
+			xp, msg, OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME,
+			dealloc_name_z, NULL, cc_deallocate,
+			sizeof(cc_deallocate));
+		if (st != OD_OK) {
+			od_free(dealloc_name_z);
+		}
+		return st;
+	}
+	default:
+		/* not a special query - forward normally */
+		break;
+	}
+
+	return xplan_append_fwd_no_delta(xp, msg, NULL /* no rewrite */);
 }
 
 static od_frontend_status_t plan_flush(od_relay_t *relay, od_xplan_t *xp,
@@ -993,9 +1289,23 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 	case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY:
 		od_client_remove_pstmt(client, delta->client_pstmt);
 		break;
+	case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME:
+		od_client_remove_pstmt(client, delta->client_pstmt);
+		break;
+	case OD_XPLAN_DELTA_ADD_PORTAL:
+		od_client_add_portal(client, delta->portal_name, delta->pstmt);
+		break;
+	case OD_XPLAN_DELTA_REMOVE_PORTAL:
+		od_client_remove_portal(client, delta->portal_name);
+		break;
 	case OD_XPLAN_DELTA_REMOVE_ALL:
 		od_client_pstmts_clear(client);
+		od_client_portals_clear(client);
 		od_server_pstmts_clear(server);
+		break;
+	case OD_XPLAN_DELTA_REMOVE_CLIENT_ALL:
+		od_client_pstmts_clear(client);
+		od_client_portals_clear(client);
 		break;
 
 	case OD_XPLAN_DELTA_ADD_BOTH:
@@ -1082,6 +1392,22 @@ static od_frontend_status_t run_virtual_close_complete(od_xplan_entry_t *cc,
 	size_t unused;
 	int rc = od_io_write_raw(&client->io, bytes, sizeof(bytes), &unused,
 				 timeout_ms, 0);
+	if (rc != 0) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	return OD_OK;
+}
+
+static od_frontend_status_t run_virtual_command_complete(od_xplan_entry_t *cc,
+							 od_client_t *client,
+							 uint32_t timeout_ms)
+{
+	assert(cc->vcc_data != NULL && cc->vcc_len > 0);
+
+	size_t unused;
+	int rc = od_io_write_raw(&client->io, cc->vcc_data, cc->vcc_len,
+				 &unused, timeout_ms, 0);
 	if (rc != 0) {
 		return OD_ECLIENT_WRITE;
 	}
@@ -1442,6 +1768,10 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		case OD_XPLAN_VIRTUAL_CLOSE_COMPLETE:
 			status = run_virtual_close_complete(entry, client,
 							    timeout_ms);
+			break;
+		case OD_XPLAN_VIRTUAL_COMMAND_COMPLETE:
+			status = run_virtual_command_complete(entry, client,
+							      timeout_ms);
 			break;
 		case OD_XPLAN_FORWARD:
 			/* fallthrough */

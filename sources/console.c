@@ -181,8 +181,7 @@ od_console_show_frontend_stats_err_add(machine_msg_t *stream,
 		char data[64];
 		int data_len;
 		/* error_type */
-		data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
-				       total_count);
+		data_len = od_snprintf(data, sizeof(data), "%zu", total_count);
 
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc != OK_RESPONSE) {
@@ -221,7 +220,7 @@ od_console_show_router_stats_err_add(machine_msg_t *stream,
 		/* error_type */
 		char data[64];
 		int data_len;
-		data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+		data_len = od_snprintf(data, sizeof(data), "%zu",
 				       od_err_logger_get_aggr_errors_count(
 					       err_logger,
 					       od_router_status_errs[i]));
@@ -399,8 +398,7 @@ static inline int od_console_show_errors_per_route_cb(od_route_t *route,
 
 		char data[64];
 		int data_len;
-		data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
-				       total_count);
+		data_len = od_snprintf(data, sizeof(data), "%zu", total_count);
 
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc != OK_RESPONSE) {
@@ -451,8 +449,7 @@ static inline int od_console_show_errors_per_route_cb(od_route_t *route,
 
 		char data[64];
 		int data_len;
-		data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
-				       total_count);
+		data_len = od_snprintf(data, sizeof(data), "%zu", total_count);
 
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc != OK_RESPONSE) {
@@ -690,31 +687,31 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		goto error;
 	}
 	/* sv_used */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
 	/* sv_tested */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
 	/* sv_login */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
 	/* maxwait */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
 	/* maxwait_us */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
@@ -865,7 +862,7 @@ static inline int od_console_show_databases_add_cb(od_route_t *route,
 	}
 
 	/* reserve_pool */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
@@ -904,14 +901,14 @@ static inline int od_console_show_databases_add_cb(od_route_t *route,
 	}
 
 	/* paused */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
 
 	/* disabled */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, 0UL);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
@@ -1751,13 +1748,14 @@ static inline int od_console_show_clients_callback(od_client_t *client,
 		return NOT_OK_RESPONSE;
 	}
 	/* ptr */
-	data_len = od_snprintf(data, sizeof(data), "%p", client);
+	data_len = od_snprintf(data, sizeof(data), "%p", (void *)client);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 	/* coro */
-	data_len = od_snprintf(data, sizeof(data), "%lu", client->coroutine_id);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+			       client->coroutine_id);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
