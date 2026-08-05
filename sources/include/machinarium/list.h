@@ -53,6 +53,11 @@ static inline mm_list_t *mm_list_pop_back(mm_list_t *list)
 	return pop;
 }
 
+static inline int mm_list_empty(mm_list_t *list)
+{
+	return list->next == list && list->prev == list;
+}
+
 #define mm_list_foreach(H, I) for (I = (H)->next; I != H; I = (I)->next)
 
 #define mm_list_foreach_safe(H, I, N) \

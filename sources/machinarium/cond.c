@@ -69,9 +69,6 @@ static inline void signal_impl(mm_cond_t *cond, mm_scheduler_t *sched,
 {
 	history[depth++] = cond;
 
-	cond->pending = propagated ? MM_COND_PENDING_PROPAGATED :
-				     MM_COND_PENDING_DIRECT;
-
 	if (cond->propagate) {
 		if (!already_signalled(cond->propagate, history, depth, max)) {
 			signal_impl(cond->propagate, sched, 1 /* propagated */,
@@ -89,6 +86,11 @@ static inline void signal_impl(mm_cond_t *cond, mm_scheduler_t *sched,
 	}
 }
 
+void mm_cond_propagate(mm_cond_t *src, mm_cond_t *dst)
+{
+	src->propagate = dst;
+}
+
 void mm_cond_signal(mm_cond_t *cond)
 {
 	mm_scheduler_t *sched = &mm_self->scheduler;
@@ -98,6 +100,7 @@ void mm_cond_signal(mm_cond_t *cond)
 #endif
 
 	mm_cond_t *history[32];
+	memset(history, 0, sizeof(history));
 
 	signal_impl(cond, sched, 0, history, 0,
 		    sizeof(history) / sizeof(history[0]));
@@ -111,18 +114,6 @@ int mm_cond_wait(mm_cond_t *cond, uint32_t time_ms)
 #endif
 
 	mm_errno_set(0);
-
-	int pending = cond->pending;
-	cond->pending = MM_COND_PENDING_NONE;
-
-	if (pending) {
-#ifndef NDEBUG
-		cond->owner = NULL;
-#endif
-		return (pending == MM_COND_PENDING_PROPAGATED) ?
-			       MM_COND_WAIT_OK_PROPAGATED :
-			       MM_COND_WAIT_OK;
-	}
 
 	mm_cond_awaiter_t awaiter;
 	memset(&awaiter, 0, sizeof(mm_cond_awaiter_t));
