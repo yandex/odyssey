@@ -50,7 +50,6 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     postgresql-client postgresql-client-common postgresql-contrib \
     python3 \
     curl \
-    libunwind-dev \
     graphviz ghostscript
 
 ENV JEMALLOC_PATH=/jeamalloc-build

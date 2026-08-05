@@ -68,24 +68,26 @@ struct od_route {
 
 static inline int od_route_has_shared_pool(od_route_t *route)
 {
-	assert((route->shared_pool != NULL) == (route->exclusive_pool == NULL));
+	od_assert((route->shared_pool != NULL) ==
+		  (route->exclusive_pool == NULL));
 	return route->shared_pool != NULL;
 }
 
 static inline int od_route_has_exclusive_pool(od_route_t *route)
 {
-	assert((route->exclusive_pool != NULL) == (route->shared_pool == NULL));
+	od_assert((route->exclusive_pool != NULL) ==
+		  (route->shared_pool == NULL));
 	return route->exclusive_pool != NULL;
 }
 
 static inline od_multi_pool_t *od_route_server_pools(od_route_t *route)
 {
 	if (od_route_has_exclusive_pool(route)) {
-		assert(route->shared_pool == NULL);
+		od_assert(route->shared_pool == NULL);
 		return route->exclusive_pool;
 	}
 
-	assert(route->exclusive_pool == NULL);
+	od_assert(route->exclusive_pool == NULL);
 	return route->shared_pool->mpool;
 }
 

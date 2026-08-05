@@ -122,6 +122,7 @@ extern void od_logger_write(od_logger_t *, od_logger_level_t, char *, void *,
 	__attribute__((format(printf, 6, 0)));
 
 void od_logger_wait_finish(od_logger_t *);
+void od_logger_flush(od_logger_t *);
 
 static inline void od_log(od_logger_t *logger, char *context, void *client,
 			  void *server, char *fmt, ...)

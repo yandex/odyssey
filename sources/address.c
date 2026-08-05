@@ -517,8 +517,8 @@ void od_address_destroy(od_address_t *addr)
 static inline int od_address_unix_cmp(const od_address_t *a,
 				      const od_address_t *b)
 {
-	assert(a->type == OD_ADDRESS_TYPE_UNIX);
-	assert(b->type == OD_ADDRESS_TYPE_UNIX);
+	od_assert(a->type == OD_ADDRESS_TYPE_UNIX);
+	od_assert(b->type == OD_ADDRESS_TYPE_UNIX);
 
 	return strcmp(a->host, b->host);
 }
@@ -526,8 +526,8 @@ static inline int od_address_unix_cmp(const od_address_t *a,
 static inline int od_address_tcp_cmp(const od_address_t *a,
 				     const od_address_t *b)
 {
-	assert(a->type == OD_ADDRESS_TYPE_TCP);
-	assert(b->type == OD_ADDRESS_TYPE_TCP);
+	od_assert(a->type == OD_ADDRESS_TYPE_TCP);
+	od_assert(b->type == OD_ADDRESS_TYPE_TCP);
 
 	if (a->port != b->port) {
 		return a->port - b->port;

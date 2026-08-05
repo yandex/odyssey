@@ -42,8 +42,8 @@
 
 static inline void od_frontend_close(od_client_t *client)
 {
-	assert(client->route == NULL);
-	assert(client->server == NULL);
+	od_assert(client->route == NULL);
+	od_assert(client->server == NULL);
 
 	od_router_t *router = client->global->router;
 	od_atomic_u32_dec(&router->clients);
@@ -110,8 +110,8 @@ int od_frontend_fatal_detailed(od_client_t *client, const char *code,
 static inline int od_frontend_error_fwd(od_client_t *client)
 {
 	od_server_t *server = client->server;
-	assert(server != NULL);
-	assert(server->error_connect != NULL);
+	od_assert(server != NULL);
+	od_assert(server->error_connect != NULL);
 	kiwi_fe_error_t error;
 	int rc;
 	rc = kiwi_fe_read_error(machine_msg_data(server->error_connect),
@@ -143,7 +143,7 @@ static inline bool
 od_frontend_error_is_too_many_connections(od_client_t *client)
 {
 	od_server_t *server = client->server;
-	assert(server != NULL);
+	od_assert(server != NULL);
 	if (server->error_connect == NULL) {
 		return false;
 	}
@@ -501,14 +501,14 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 			 client->id.id, server->id.id_prefix,
 			 (int)sizeof(server->id.id), server->id.id);
 
-		assert(od_server_synchronized(server));
+		od_assert(od_server_synchronized(server));
 
 		/* connect to server, if necessary */
 		if (od_backend_not_connected(server)) {
 			int rc;
 			od_atomic_u32_inc(&router->servers_routing);
 
-			assert(client->config_listen != NULL);
+			od_assert(client->config_listen != NULL);
 			rc = od_backend_connect(server, context, route_params,
 						client);
 
@@ -1099,7 +1099,7 @@ static inline bool od_eject_conn_with_timeout(od_client_t *client,
 					      od_server_t *server,
 					      uint64_t timeout)
 {
-	assert(server != NULL);
+	od_assert(server != NULL);
 
 	if (client->time_last_active + timeout < machine_time_us()) {
 		return true;
@@ -1324,7 +1324,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 		machine_msg_t *msg = NULL;
 		for (;;) {
 			/* local server is always null */
-			assert(client->server == NULL);
+			od_assert(client->server == NULL);
 			status = od_process_connection_drop(client);
 			if (status != OD_OK) {
 				/* Odyssey is in a state of completion, we done
@@ -1337,7 +1337,7 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 
 			if (machine_timedout()) {
 				/* retry wait to recheck exit condition */
-				assert(msg == NULL);
+				od_assert(msg == NULL);
 				continue;
 			}
 
@@ -1636,7 +1636,7 @@ od_frontend_check_replica_catchup(od_instance_t *instance, od_client_t *client)
 {
 	od_route_t *route = client->route;
 
-	assert(route);
+	od_assert(route);
 
 	uint32_t catchup_timeout = get_effective_catchup_timeout(client);
 
@@ -1738,7 +1738,7 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 	machine_msg_t *xflush = NULL;
-	assert(route != NULL);
+	od_assert(route != NULL);
 
 	char *data = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
@@ -1998,7 +1998,7 @@ static od_frontend_status_t client_read_header(od_client_t *client,
 			if (err == EAGAIN) {
 				/* interrupted by event on server io */
 				od_server_t *server = client->server;
-				assert(server != NULL);
+				od_assert(server != NULL);
 				int ev = od_io_last_event(&server->io);
 				if (ev & MM_R || ev & MM_ERR || ev & MM_CLOSE) {
 					return OD_ASYNC_MSG_AVAILABLE;
@@ -2142,7 +2142,7 @@ static od_frontend_status_t replication_impl(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 
-	assert(client->server != NULL);
+	od_assert(client->server != NULL);
 
 	od_server_t *server = client->server;
 
@@ -2227,7 +2227,7 @@ static od_frontend_status_t od_frontend_remote_replication(od_client_t *client)
 		       "replication connection");
 	}
 
-	assert(client->server == NULL);
+	od_assert(client->server == NULL);
 
 	if (client->server == NULL) {
 		status = od_frontend_attach_and_deploy(client, "main");
@@ -2313,7 +2313,7 @@ static od_frontend_status_t process_server_async(od_client_t *client,
 			return OD_OK;
 		}
 
-		assert(err != ENOBUFS);
+		od_assert(err != ENOBUFS);
 
 		/* disconnect or other error */
 		return OD_ESERVER_READ;
@@ -2534,15 +2534,15 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		break;
 
 	case OD_EATTACH:
-		assert(server == NULL);
-		assert(client->route != NULL);
+		od_assert(server == NULL);
+		od_assert(client->route != NULL);
 		od_frontend_fatal(client, KIWI_CONNECTION_FAILURE,
 				  "failed to get remote server connection");
 		break;
 
 	case OD_EATTACH_TOO_MANY_CONNECTIONS:
-		assert(server == NULL);
-		assert(client->route != NULL);
+		od_assert(server == NULL);
+		od_assert(client->route != NULL);
 		od_frontend_fatal(
 			client, KIWI_TOO_MANY_CONNECTIONS,
 			"too many active clients for user (pool_size for "
@@ -2555,8 +2555,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		break;
 
 	case OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH:
-		assert(server == NULL);
-		assert(client->route != NULL);
+		od_assert(server == NULL);
+		od_assert(client->route != NULL);
 
 		od_target_session_attrs_t attrs = od_tsa_get_effective(client);
 
@@ -2939,7 +2939,7 @@ void od_frontend(void *arg)
 				"invalid value for parameter \"replication\"");
 			break;
 		default:
-			assert(0);
+			od_assert(0);
 			break;
 		}
 

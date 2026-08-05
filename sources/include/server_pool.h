@@ -105,7 +105,7 @@ OD_SERVER_POOL_SET_DECLARE(pg, od_server_t)
 			target = &pool->active;                     \
 			break;                                      \
 		case OD_SERVER_UNDEF:                               \
-			assert(0);                                  \
+			od_assert(0);                               \
 			break;                                      \
 		}                                                   \
 		if (target_count == 0)                              \
@@ -131,7 +131,7 @@ static inline od_server_t *od_server_pool_foreach(od_server_pool_t *pool,
 		target = &pool->active;
 		break;
 	case OD_SERVER_UNDEF:
-		assert(0);
+		od_assert(0);
 		break;
 	}
 	od_server_t *server;

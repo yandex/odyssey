@@ -96,9 +96,9 @@ void od_server_cancel_end(od_server_t *server)
 
 void od_server_attach_client(od_server_t *server, od_client_t *client)
 {
-	assert(server->client == NULL);
-	assert(client->server == NULL);
-	assert(server->state != OD_SERVER_ACTIVE);
+	od_assert(server->client == NULL);
+	od_assert(client->server == NULL);
+	od_assert(server->state != OD_SERVER_ACTIVE);
 
 	server->client = client;
 	client->server = server;
@@ -112,9 +112,9 @@ void od_server_detach_client(od_server_t *server)
 {
 	od_client_t *client = server->client;
 
-	assert(client != NULL);
-	assert(server->state == OD_SERVER_ACTIVE);
-	assert(server == client->server);
+	od_assert(client != NULL);
+	od_assert(server->state == OD_SERVER_ACTIVE);
+	od_assert(server == client->server);
 
 	server->client_pinned = 0;
 

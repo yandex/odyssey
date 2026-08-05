@@ -31,9 +31,9 @@
 
 void od_backend_close(od_server_t *server)
 {
-	assert(server->route == NULL);
-	assert(server->io.io == NULL);
-	assert(server->tls == NULL);
+	od_assert(server->route == NULL);
+	od_assert(server->io.io == NULL);
+	od_assert(server->tls == NULL);
 	server->is_transaction = 0;
 	server->idle_time = 0;
 	kiwi_key_init(&server->key);
@@ -53,7 +53,7 @@ static inline int od_backend_terminate(od_server_t *server)
 
 void od_backend_close_connection(od_server_t *server)
 {
-	assert(server != NULL);
+	od_assert(server != NULL);
 	/* failed to connect to endpoint, so notring to do */
 	if (od_backend_not_connected(server)) {
 		return;
@@ -240,7 +240,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 
 	/* update request count and sync state */
 	od_server_sync_request(server, 1);
-	assert(server->client);
+	od_assert(server->client);
 
 	for (;;) {
 		msg = od_read(&server->io, UINT32_MAX, OD_READ_BE);
@@ -370,8 +370,8 @@ int od_backend_connect_to(od_server_t *server, char *context,
 			  const od_address_t *address, od_tls_opts_t *tlsopts)
 {
 	od_instance_t *instance = server->global->instance;
-	assert(server->io.io == NULL);
-	assert(address != NULL);
+	od_assert(server->io.io == NULL);
+	od_assert(address != NULL);
 
 	/* create io handle */
 	mm_io_t *io;
@@ -456,7 +456,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 					 address->host, address->port);
 				return NOT_OK_RESPONSE;
 			}
-			assert(ai != NULL);
+			od_assert(ai != NULL);
 			saddr = ai->ai_addr;
 		}
 		/* connected */
@@ -797,7 +797,7 @@ int od_backend_connect(od_server_t *server, char *context,
 		       kiwi_params_t *route_params, od_client_t *client)
 {
 	od_route_t *route = server->route;
-	assert(route != NULL);
+	od_assert(route != NULL);
 
 	od_rule_storage_t *storage;
 	storage = route->rule->storage;
@@ -935,7 +935,7 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 
 	/* update server sync state */
 	od_server_sync_request(server, 1);
-	assert(server->client);
+	od_assert(server->client);
 	return OK_RESPONSE;
 }
 

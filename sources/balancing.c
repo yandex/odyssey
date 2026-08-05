@@ -123,7 +123,7 @@ static size_t roundrobin(od_storage_balancing_t *b, od_rule_storage_t *storage,
 	 * [ h4+, h1+, h5-, h6-, h2-, h3- ]
 	 */
 
-	assert(storage->endpoints_count > 1);
+	od_assert(storage->endpoints_count > 1);
 
 	od_instance_t *instance = od_global_get_instance();
 
