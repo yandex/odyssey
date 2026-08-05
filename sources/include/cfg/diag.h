@@ -8,6 +8,7 @@
 
 #include <stddef.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #include <cfg/loc.h>
 
@@ -37,6 +38,11 @@ void od_cfg_diag_dumpf(FILE *file, const od_cfg_diag_list_t *diags);
 void od_cfg_diag_error(od_cfg_diag_list_t *diags, od_cfg_location_t location,
 		       const char *fmt, ...)
 	__attribute__((format(printf, 3, 4)));
+
+void od_cfg_diag_error_with_hint(od_cfg_diag_list_t *diags,
+				 od_cfg_location_t location, const char *hint,
+				 const char *fmt, ...)
+	__attribute__((format(printf, 4, 5)));
 
 void od_cfg_diag_warning(od_cfg_diag_list_t *diags, od_cfg_location_t location,
 			 const char *fmt, ...)

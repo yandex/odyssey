@@ -72,6 +72,7 @@
 	#include <cfg/ctx.h>
 	#include <cfg/model.h>
 	#include <cfg/reader.h>
+	#include <cfg/keywords.h>
 	#include <sysv.h>
 
 	int yylex(YYSTYPE *yylval, YYLTYPE *yylloc, yyscan_t scanner);
@@ -83,7 +84,34 @@
 	{
 		(void)scanner;
 
-		od_cfg_diag_error(ctx->diags, *loc, "%s", msg);
+		const char *hint = NULL;
+		char hint_buf[256];
+
+		if (ctx->last_unknown_ident != NULL &&
+		    strstr(msg, "IDENT") != NULL) {
+			size_t ilen = strlen(ctx->last_unknown_ident);
+			const char *sugg = od_cfg_keyword_suggest(
+				ctx->last_unknown_ident, ilen, 2);
+			if (sugg != NULL) {
+				snprintf(hint_buf, sizeof(hint_buf),
+					 "unknown directive '%s'; did you mean '%s'?",
+					 ctx->last_unknown_ident, sugg);
+				hint = hint_buf;
+			} else {
+				snprintf(hint_buf, sizeof(hint_buf),
+					 "unknown directive '%s'",
+					 ctx->last_unknown_ident);
+				hint = hint_buf;
+			}
+		}
+
+		if (hint != NULL) {
+			od_cfg_diag_error_with_hint(ctx->diags, *loc, hint,
+						    "%s", msg);
+		}
+		else {
+			od_cfg_diag_error(ctx->diags, *loc, "%s", msg);
+		}
 	}
 }
 

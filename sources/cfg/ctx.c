@@ -6,6 +6,7 @@
 
 #include <odyssey.h>
 
+#include <od_memory.h>
 #include <cfg/ctx.h>
 
 void od_cfg_parse_ctx_init(od_cfg_parse_ctx_t *ctx, const char *filename,
@@ -27,5 +28,7 @@ void od_cfg_parse_ctx_init(od_cfg_parse_ctx_t *ctx, const char *filename,
 
 void od_cfg_parse_ctx_free(od_cfg_parse_ctx_t *ctx)
 {
+	od_free(ctx->last_unknown_ident);
+	ctx->last_unknown_ident = NULL;
 	memset(ctx, 0, sizeof(*ctx));
 }
