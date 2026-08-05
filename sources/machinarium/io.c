@@ -447,8 +447,6 @@ int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 
 ssize_t mm_io_write(mm_io_t *io, const void *buf, size_t size)
 {
-	mm_scheduler_register_io();
-
 	mm_errno_set(0);
 	ssize_t rc;
 	if (mm_tls_is_active(io)) {
@@ -470,8 +468,6 @@ ssize_t mm_io_write(mm_io_t *io, const void *buf, size_t size)
 
 ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 {
-	mm_scheduler_register_io();
-
 	mm_errno_set(0);
 	ssize_t rc;
 	if (mm_tls_is_active(io)) {
@@ -613,27 +609,31 @@ void mm_io_set_deadline(mm_io_t *io, uint32_t timeout_ms)
 	io->deadline_ms = deadline_ms;
 }
 
-int mm_io_wait_deadline(mm_io_t *io)
+static uint32_t mm_io_deadline_left_ms(mm_io_t *io)
 {
 	assert(io->deadline_ms > 0);
 
 	uint64_t now_ms = machine_time_ms();
 	if (now_ms >= io->deadline_ms) {
+		return 0;
+	}
+
+	if (io->deadline_ms != UINT64_MAX) {
+		if (io->deadline_ms - now_ms >= UINT32_MAX) {
+			return UINT32_MAX;
+		}
+		return (uint32_t)(io->deadline_ms - now_ms);
+	}
+	return UINT32_MAX;
+}
+
+int mm_io_wait_deadline(mm_io_t *io)
+{
+	uint32_t left_ms = mm_io_deadline_left_ms(io);
+	if (left_ms == 0) {
 		mm_errno_set(ETIMEDOUT);
 		return MM_COND_WAIT_FAIL;
 	}
-
-	uint32_t left_ms;
-	if (io->deadline_ms != UINT64_MAX) {
-		if (io->deadline_ms - now_ms >= UINT32_MAX) {
-			left_ms = UINT32_MAX;
-		} else {
-			left_ms = (uint32_t)(io->deadline_ms - now_ms);
-		}
-	} else {
-		left_ms = UINT32_MAX;
-	}
-
 	return mm_io_wait(io, left_ms);
 }
 
