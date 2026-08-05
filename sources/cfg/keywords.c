@@ -212,3 +212,80 @@ int od_cfg_keyword_lookup(const char *str, size_t len)
 
 	return 0;
 }
+
+static int levenshtein(const char *a, size_t alen, const char *b, size_t blen)
+{
+	if (alen == 0) {
+		return (int)blen;
+	}
+	if (blen == 0) {
+		return (int)alen;
+	}
+
+	size_t n = alen + 1;
+	size_t m = blen + 1;
+
+	int *prev = od_malloc(sizeof(int) * m);
+	int *curr = od_malloc(sizeof(int) * m);
+	if (prev == NULL || curr == NULL) {
+		od_free(prev);
+		od_free(curr);
+		return (int)((alen > blen) ? alen : blen);
+	}
+
+	for (size_t j = 0; j < m; j++) {
+		prev[j] = (int)j;
+	}
+
+	for (size_t i = 1; i < n; i++) {
+		curr[0] = (int)i;
+		for (size_t j = 1; j < m; j++) {
+			int cost = (a[i - 1] == b[j - 1]) ? 0 : 1;
+			int del = prev[j] + 1;
+			int ins = curr[j - 1] + 1;
+			int sub = prev[j - 1] + cost;
+			int min = del < ins ? del : ins;
+			if (sub < min) {
+				min = sub;
+			}
+			curr[j] = min;
+		}
+
+		int *tmp = prev;
+		prev = curr;
+		curr = tmp;
+	}
+
+	int result = prev[blen];
+	od_free(prev);
+	od_free(curr);
+	return result;
+}
+
+const char *od_cfg_keyword_suggest(const char *str, size_t len,
+				   int max_distance)
+{
+	const char *best = NULL;
+	int best_dist = max_distance + 1;
+
+	for (size_t i = 0; keywords[i].name != NULL; i++) {
+		size_t klen = strlen(keywords[i].name);
+		if (klen > len) {
+			if (klen - len > (size_t)max_distance) {
+				continue;
+			}
+		} else {
+			if (len - klen > (size_t)max_distance) {
+				continue;
+			}
+		}
+
+		int d = levenshtein(str, len, keywords[i].name, klen);
+		if (d < best_dist) {
+			best_dist = d;
+			best = keywords[i].name;
+		}
+	}
+
+	return best;
+}

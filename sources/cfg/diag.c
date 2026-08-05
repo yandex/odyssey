@@ -91,6 +91,21 @@ void od_cfg_diag_error(od_cfg_diag_list_t *diags, od_cfg_location_t location,
 	va_end(args);
 }
 
+void od_cfg_diag_error_with_hint(od_cfg_diag_list_t *diags,
+				 od_cfg_location_t location, const char *hint,
+				 const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	od_cfg_diag_addv(diags, OD_CFG_DIAG_ERROR, location, fmt, args);
+	va_end(args);
+
+	if (hint != NULL && diags->count > 0) {
+		od_cfg_diag_t *diag = &diags->items[diags->count - 1];
+		diag->hint = od_strdup(hint);
+	}
+}
+
 void od_cfg_diag_warning(od_cfg_diag_list_t *diags, od_cfg_location_t location,
 			 const char *fmt, ...)
 {

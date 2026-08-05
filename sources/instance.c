@@ -61,6 +61,10 @@ int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
 				 fname, d->location.first_line,
 				 d->location.first_column, d->message);
 		}
+		if (d->hint != NULL) {
+			od_error(logger, "config", NULL, NULL, "  hint: %s",
+				 d->hint);
+		}
 	}
 
 	if (rc != 0 || od_cfg_diag_has_errors(&diags)) {
@@ -89,6 +93,10 @@ int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
 			od_error(logger, "config", NULL, NULL, "%s:%d:%d: %s",
 				 fname, d->location.first_line,
 				 d->location.first_column, d->message);
+		}
+		if (d->hint != NULL) {
+			od_error(logger, "config", NULL, NULL, "  hint: %s",
+				 d->hint);
 		}
 	}
 

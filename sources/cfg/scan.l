@@ -156,14 +156,26 @@ SIZE_SUFFIX  [kK][bB]?|[mM][bB]?|[gG][bB]?|[bB]
 
 {IDENT}         {
 					int tok = od_cfg_keyword_lookup(yytext, (size_t)yyleng);
-					if (tok != 0)
+					if (tok != 0) {
 						return tok;
+					}
 
 					char *copy = od_cfg_lex_strdup(yyextra, yytext,
 												   (size_t)yyleng);
 					if (copy == NULL) {
 						od_cfg_diag_error(yyextra->diags, *yylloc,
 										  "out of memory");
+						return ERROR_TOKEN;
+					}
+
+					od_free(yyextra->last_unknown_ident);
+					yyextra->last_unknown_ident =
+						od_cfg_lex_strdup(yyextra, yytext,
+								  (size_t)yyleng);
+					if (yyextra->last_unknown_ident == NULL) {
+						od_cfg_diag_error(yyextra->diags, *yylloc,
+								  "out of memory");
+						od_free(copy);
 						return ERROR_TOKEN;
 					}
 
