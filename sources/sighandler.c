@@ -276,7 +276,7 @@ void od_system_signal_handler(void *arg)
 			machine_msg_free(msg);
 			continue;
 		default:
-			assert(0);
+			od_assert(0);
 		};
 
 		int sig = *(int *)machine_msg_data(msg);

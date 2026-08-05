@@ -272,7 +272,7 @@ static void do_group_check_poll_connected(od_instance_t *instance,
 	od_list_t *i, *s;
 	od_server_t *server = client->server;
 
-	assert(server != NULL);
+	od_assert(server != NULL);
 
 	int rc = od_backend_query_send(server, "group_checker",
 				       group->group_query, NULL,
@@ -745,7 +745,7 @@ void od_rules_ref(od_rule_t *rule)
 void od_rules_unref(od_rule_t *rule)
 {
 	int64_t r = atomic_fetch_sub(&rule->refs, 1);
-	assert(r >= 1);
+	od_assert(r >= 1);
 	if (r == 1) {
 		od_rules_rule_free_now(rule);
 	}

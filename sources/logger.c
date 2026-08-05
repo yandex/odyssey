@@ -704,6 +704,18 @@ void od_logger_shutdown(od_logger_t *logger)
 	mm_wait_list_notify(&logger->notifier);
 }
 
+void od_logger_flush(od_logger_t *logger)
+{
+	if (!logger->async) {
+		return;
+	}
+
+	static od_logger_slot_t *slot_buf[IOV_MAX];
+	static struct iovec iovecs[IOV_MAX];
+
+	process_log_queue(logger, slot_buf, iovecs, IOV_MAX);
+}
+
 void od_logger_wait_finish(od_logger_t *logger)
 {
 	if (!logger->async) {

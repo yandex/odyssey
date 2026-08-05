@@ -39,8 +39,8 @@ typedef uint32_t char32_t;
 
 typedef size_t Size;
 
-#define Assert(p) assert(p)
-#define AssertMacro(p) ((void)assert(p))
+#define Assert(p) od_assert(p)
+#define AssertMacro(p) ((void)od_assert(p))
 
 #define lengthof(array) (sizeof(array) / sizeof((array)[0]))
 

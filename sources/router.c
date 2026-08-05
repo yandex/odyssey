@@ -99,8 +99,8 @@ static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
 	od_list_foreach (obsolete_rules, i) {
 		od_rule_key_t *obsolete_rule;
 		obsolete_rule = od_container_of(i, od_rule_key_t, link);
-		assert(rule);
-		assert(obsolete_rule);
+		od_assert(rule);
+		od_assert(obsolete_rule);
 		if (strcmp(rule->user_name, obsolete_rule->usr_name) == 0 &&
 		    strcmp(rule->db_name, obsolete_rule->db_name) == 0 &&
 		    od_address_range_equals(&rule->address_range,
@@ -364,7 +364,7 @@ od_router_create_connected_server(od_route_t *route,
 	const od_address_t *address = od_server_pool_address(server);
 
 	server->endpoint = od_storage_find_endpoint(storage, address);
-	assert(server->endpoint != NULL);
+	od_assert(server->endpoint != NULL);
 
 	/* connect is long operation, so release lock, which was taken by the caller */
 	od_route_unlock(route);
@@ -605,7 +605,7 @@ static inline int od_router_gc_cb(od_route_t *route, void **argv)
 	}
 
 	/* remove route from route pool */
-	assert(pool->count > 0);
+	od_assert(pool->count > 0);
 	pool->count--;
 	od_list_unlink(&route->link);
 
@@ -658,8 +658,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	}
 
 	/* match route */
-	assert(startup->database.value_len);
-	assert(startup->user.value_len);
+	od_assert(startup->database.value_len);
+	od_assert(startup->user.value_len);
 
 	od_router_lock(router);
 
@@ -807,8 +807,8 @@ void od_router_unroute(od_router_t *router, od_client_t *client)
 {
 	(void)router;
 	/* detach client from route */
-	assert(client->route);
-	assert(client->server == NULL);
+	od_assert(client->route);
+	od_assert(client->server == NULL);
 
 	od_route_t *route = client->route;
 	od_route_lock(route);
@@ -995,12 +995,12 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 		}
 	}
 
-	assert(server != NULL);
+	od_assert(server != NULL);
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_ACTIVE);
 	od_server_attach_client(server, client);
 
-	assert(od_server_synchronized(server));
+	od_assert(od_server_synchronized(server));
 
 	/*
 	* XXX: this logic breaks some external solutions that use
@@ -1055,7 +1055,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	uint64_t end_time_ms;
 
 	route = client->route;
-	assert(route != NULL);
+	od_assert(route != NULL);
 
 	uint64_t now_ms = machine_time_ms();
 	if (route->rule->pool->timeout <= 0) {
@@ -1151,7 +1151,7 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 {
 	(void)router;
 	od_route_t *route = client->route;
-	assert(route != NULL);
+	od_assert(route != NULL);
 
 	od_instance_t *instance = client->global->instance;
 
@@ -1159,8 +1159,8 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	od_server_t *server = client->server;
 	od_server_t *to_close = NULL;
 
-	assert(server != NULL);
-	assert(od_server_synchronized(server));
+	od_assert(server != NULL);
+	od_assert(od_server_synchronized(server));
 	od_io_detach(&server->io);
 
 	od_route_lock(route);
@@ -1201,7 +1201,7 @@ void od_router_close(od_router_t *router, od_client_t *client)
 {
 	(void)router;
 	od_route_t *route = client->route;
-	assert(route != NULL);
+	od_assert(route != NULL);
 
 	od_server_t *server = client->server;
 
@@ -1218,7 +1218,7 @@ void od_router_close(od_router_t *router, od_client_t *client)
 
 	od_route_unlock(route);
 
-	assert(server->io.io == NULL);
+	od_assert(server->io.io == NULL);
 	od_server_free(server);
 }
 

@@ -140,7 +140,7 @@ int od_reset(od_server_t *server)
 			if (rc == NOT_OK_RESPONSE) {
 				goto error;
 			}
-			assert(!server->is_transaction);
+			od_assert(!server->is_transaction);
 		}
 	}
 

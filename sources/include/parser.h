@@ -94,7 +94,7 @@ static inline void od_parser_init_queries_mode(od_parser_t *parser,
 
 static inline void od_parser_push(od_parser_t *parser, od_token_t *token)
 {
-	assert(parser->backlog_count < 4);
+	od_assert(parser->backlog_count < 4);
 	parser->backlog[parser->backlog_count] = *token;
 	parser->backlog_count++;
 }

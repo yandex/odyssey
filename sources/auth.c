@@ -850,7 +850,7 @@ int od_auth_frontend(od_client_t *client)
 	case OD_RULE_AUTH_NONE:
 		break;
 	default:
-		assert(0);
+		od_assert(0);
 		break;
 	}
 
@@ -874,7 +874,7 @@ static inline int od_auth_backend_cleartext(od_server_t *server,
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
-	assert(route != NULL);
+	od_assert(route != NULL);
 
 	od_debug(&instance->logger, "auth", NULL, server,
 		 "requested clear-text authentication");
@@ -931,7 +931,7 @@ static inline int od_auth_backend_md5(od_server_t *server, char salt[4],
 {
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
-	assert(route != NULL);
+	od_assert(route != NULL);
 
 	od_debug(&instance->logger, "auth", NULL, server,
 		 "requested md5 authentication");
@@ -1014,7 +1014,7 @@ static inline int od_auth_backend_sasl(od_server_t *server, od_client_t *client)
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 
-	assert(route != NULL);
+	od_assert(route != NULL);
 
 	/* free possible stale state from previous unlucky auth */
 	od_scram_state_free(&server->scram_state);
@@ -1070,7 +1070,7 @@ static inline int od_auth_backend_sasl_continue(od_server_t *server,
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 
-	assert(route != NULL);
+	od_assert(route != NULL);
 
 	if (server->scram_state.client_nonce == NULL) {
 		od_error(&instance->logger, "auth", NULL, server,
@@ -1150,7 +1150,7 @@ static inline int od_auth_backend_sasl_final(od_server_t *server,
 {
 	od_instance_t *instance = server->global->instance;
 
-	assert(server->route);
+	od_assert(server->route);
 
 	if (server->scram_state.server_first_message == NULL) {
 		od_error(
@@ -1179,7 +1179,7 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 		    od_client_t *client)
 {
 	od_instance_t *instance = server->global->instance;
-	assert(*(char *)machine_msg_data(msg) == KIWI_BE_AUTHENTICATION);
+	od_assert(*(char *)machine_msg_data(msg) == KIWI_BE_AUTHENTICATION);
 
 	uint32_t auth_type;
 	char salt[4];

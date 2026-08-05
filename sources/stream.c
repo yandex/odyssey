@@ -266,7 +266,7 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 		 */
 		break;
 	case KIWI_BE_COPY_DONE:
-		assert(server->copy_mode);
+		od_assert(server->copy_mode);
 		server->copy_mode = 0;
 		break;
 	case KIWI_BE_COPY_BOTH_RESPONSE:
@@ -320,7 +320,7 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 
 	if (is_response(type)) {
 		if (stream->stop.type == STOP_BY_NRESPONSES) {
-			assert(stream->stop.nresponse > 0);
+			od_assert(stream->stop.nresponse > 0);
 			--stream->stop.nresponse;
 		}
 
@@ -761,7 +761,7 @@ copy_process_readahead(char *ctx, copy_stream_t *stream, od_client_t *client,
 		size_t processed = 0;
 		status = copy_stream_eat(stream, ctx, client, pos, left,
 					 &processed);
-		assert(processed <= left);
+		od_assert(processed <= left);
 		total_processed += processed;
 		pos += processed;
 		left -= processed;
@@ -775,12 +775,12 @@ copy_process_readahead(char *ctx, copy_stream_t *stream, od_client_t *client,
 			 * header - otherwise there is some unread packet that was
 			 * processed in previous iteration
 			 */
-			assert(processed == 0);
+			od_assert(processed == 0);
 			break;
 		}
 
 		if (status != OD_OK) {
-			assert(processed == 0);
+			od_assert(processed == 0);
 			break;
 		}
 
@@ -795,15 +795,15 @@ copy_process_readahead(char *ctx, copy_stream_t *stream, od_client_t *client,
 		}
 	}
 
-	assert(total_processed <= rvec.iov_len);
+	od_assert(total_processed <= rvec.iov_len);
 
 	if (total_processed > 0) {
 		size_t unused;
 		int rc = od_io_write_raw(&server->io, rvec.iov_base,
 					 total_processed, &unused, timeout_ms,
 					 0);
-		assert((rc == 0 && (total_processed == unused)) ||
-		       ((total_processed != unused) && rc != 0));
+		od_assert((rc == 0 && (total_processed == unused)) ||
+			  ((total_processed != unused) && rc != 0));
 		if (rc != 0) {
 			status = OD_ESERVER_WRITE;
 		}
@@ -883,8 +883,8 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 			continue;
 		}
 
-		assert(od_readahead_unread(&client->io.readahead) <
-		       (int)sizeof(kiwi_header_t));
+		od_assert(od_readahead_unread(&client->io.readahead) <
+			  (int)sizeof(kiwi_header_t));
 
 		rc = od_io_read_some(&client->io, timeout_ms);
 		if (rc == -1) {

@@ -36,8 +36,8 @@ static inline int pool_next_idle_exclusive_locked(od_route_t *route,
 						  const od_address_t *address,
 						  od_server_t **server)
 {
-	assert(route->exclusive_pool != NULL);
-	assert(route->shared_pool == NULL);
+	od_assert(route->exclusive_pool != NULL);
+	od_assert(route->shared_pool == NULL);
 
 	od_multi_pool_element_t *pool_element =
 		od_route_get_server_pool_element_locked(route, address);
@@ -54,8 +54,8 @@ static inline int pool_next_idle_shared_locked(od_route_t *route,
 					       od_storage_endpoint_t *endpoint,
 					       od_server_t **server)
 {
-	assert(route->exclusive_pool == NULL);
-	assert(route->shared_pool != NULL);
+	od_assert(route->exclusive_pool == NULL);
+	od_assert(route->shared_pool != NULL);
 
 	od_multi_pool_element_t *pool_element =
 		od_route_get_server_pool_element_locked(route,
@@ -80,7 +80,7 @@ static inline int pool_next_idle_shared_locked(od_route_t *route,
 		return OD_ROUTER_OK;
 	}
 
-	assert((*server)->pool_element != pool_element);
+	od_assert((*server)->pool_element != pool_element);
 
 	/*
 	 * the server can be replaced

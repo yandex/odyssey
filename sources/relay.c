@@ -542,11 +542,11 @@ static od_frontend_status_t process_possible_attach(handler_t handler,
 		if (status != OD_OK) {
 			return status;
 		}
-		assert(client->server != NULL);
+		od_assert(client->server != NULL);
 
 		/* to process the message, server was acquired, try again */
 		status = handler(relay, msg, timeout_ms);
-		assert(status != OD_ATTACH);
+		od_assert(status != OD_ATTACH);
 	}
 
 	return status;
@@ -709,7 +709,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		 * server is awaiting CopyData from client - stream it
 		 */
 		machine_msg_t *add = od_relay_get_copy_additional(relay);
-		assert(add == NULL);
+		od_assert(add == NULL);
 		status = od_stream_copy_to_server("main", client, server, add,
 						  timeout_ms);
 	}

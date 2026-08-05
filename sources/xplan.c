@@ -279,7 +279,7 @@ static void entry_init_virtual_close_complete(od_xplan_entry_t *e,
 
 static void entry_init_deffered_begin(od_xplan_entry_t *e, machine_msg_t *begin)
 {
-	assert(msg_is_begin_query(begin));
+	od_assert(msg_is_begin_query(begin));
 
 	entry_init_internal(e, OD_XPLAN_DEFFERED_BEGIN, begin, NULL, NULL,
 			    OD_XPLAN_DELTA_NONE, NULL, NULL);
@@ -936,7 +936,7 @@ od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay)
 	od_server_t *server = client->server;
 	od_relay_xbuf_t *xbuf = &relay->xbuf;
 
-	assert(mm_vector_size(&xbuf->msgs) > 0);
+	od_assert(mm_vector_size(&xbuf->msgs) > 0);
 
 	if (server->xproto_err) {
 		/*
@@ -947,8 +947,8 @@ od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay)
 		 */
 
 		od_xbuf_msg_t *last = mm_vector_back(&xbuf->msgs);
-		assert(msg_fe_type(last->msg) == KIWI_FE_FLUSH ||
-		       msg_fe_type(last->msg) == KIWI_FE_SYNC);
+		od_assert(msg_fe_type(last->msg) == KIWI_FE_FLUSH ||
+			  msg_fe_type(last->msg) == KIWI_FE_SYNC);
 
 		return xplan_append_fwd_no_delta(xp, last->msg, NULL);
 	}
@@ -1058,7 +1058,7 @@ static od_frontend_status_t run_virtual_parse_complete(od_xplan_entry_t *pc,
 	(void)pc;
 
 	static const uint8_t bytes[] = { KIWI_BE_PARSE_COMPLETE, 0, 0, 0, 4 };
-	assert(sizeof(bytes) == 5);
+	od_assert(sizeof(bytes) == 5);
 
 	size_t unused;
 	int rc = od_io_write_raw(&client->io, bytes, sizeof(bytes), &unused,
@@ -1077,7 +1077,7 @@ static od_frontend_status_t run_virtual_close_complete(od_xplan_entry_t *cc,
 	(void)cc;
 
 	static const uint8_t bytes[] = { KIWI_BE_CLOSE_COMPLETE, 0, 0, 0, 4 };
-	assert(sizeof(bytes) == 5);
+	od_assert(sizeof(bytes) == 5);
 
 	size_t unused;
 	int rc = od_io_write_raw(&client->io, bytes, sizeof(bytes), &unused,
@@ -1260,14 +1260,14 @@ static od_frontend_status_t
 run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 		  od_client_t *client, od_server_t *server, uint32_t timeout_ms)
 {
-	assert(end > begin);
+	od_assert(end > begin);
 
 	int has_sync = 0;
 
 #ifndef NDEBUG
 	for (size_t i = begin; i < end; ++i) {
 		od_xplan_entry_t *e = mm_vector_get(&xp->entries, i);
-		assert(e->type == OD_XPLAN_FORWARD);
+		od_assert(e->type == OD_XPLAN_FORWARD);
 	}
 #endif
 
@@ -1389,7 +1389,7 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	server->xproto_mode = 1;
 
 	size_t count = mm_vector_size(&xp->entries);
-	assert(count > 0);
+	od_assert(count > 0);
 
 	int forward_begin = -1;
 
@@ -1578,7 +1578,7 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 	od_instance_t *instance = client->global->instance;
 
 	size_t count = mm_vector_size(&xp->entries);
-	assert(count > 0);
+	od_assert(count > 0);
 
 	size_t niovecs = count;
 	struct iovec *iovecs = od_malloc(sizeof(struct iovec) * niovecs);

@@ -95,7 +95,7 @@ static inline od_client_t *od_client_pool_next(od_client_pool_t *pool,
 		target_count = pool->count_pending;
 		break;
 	case OD_CLIENT_UNDEF:
-		assert(0);
+		od_assert(0);
 		break;
 	}
 	if (target_count == 0) {
@@ -123,7 +123,7 @@ static inline od_client_t *od_client_pool_foreach(od_client_pool_t *pool,
 		target = &pool->pending;
 		break;
 	case OD_CLIENT_UNDEF:
-		assert(0);
+		od_assert(0);
 		break;
 	}
 	od_client_t *client;

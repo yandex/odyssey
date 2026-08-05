@@ -177,7 +177,7 @@ static inline void od_worker(void *arg)
 			run = false;
 			break;
 		default:
-			assert(0);
+			od_assert(0);
 			break;
 		}
 
