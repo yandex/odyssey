@@ -23,12 +23,6 @@ enum {
 	MM_COND_WAIT_OK_PROPAGATED = 1
 };
 
-enum {
-	MM_COND_PENDING_NONE = 0,
-	MM_COND_PENDING_DIRECT = 1,
-	MM_COND_PENDING_PROPAGATED = 2
-};
-
 typedef struct {
 	mm_list_t link;
 	mm_call_t call;
@@ -46,7 +40,6 @@ typedef struct {
 struct mm_cond {
 	mm_list_t awaiters;
 	mm_cond_t *propagate;
-	int pending;
 
 #ifndef NDEBUG
 	/*
@@ -59,7 +52,6 @@ struct mm_cond {
 static inline void mm_cond_init(mm_cond_t *cond)
 {
 	cond->propagate = NULL;
-	cond->pending = MM_COND_PENDING_NONE;
 	mm_list_init(&cond->awaiters);
 
 #ifndef NDEBUG
@@ -69,10 +61,7 @@ static inline void mm_cond_init(mm_cond_t *cond)
 
 void mm_cond_signal(mm_cond_t *cond);
 
-static inline void mm_cond_propagate(mm_cond_t *src, mm_cond_t *dst)
-{
-	src->propagate = dst;
-}
+void mm_cond_propagate(mm_cond_t *src, mm_cond_t *dst);
 
 /*
  * spirious wakeups are possible
