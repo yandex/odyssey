@@ -46,7 +46,7 @@ void mm_context_swap(mm_context_t *current, mm_context_t *new)
 }
 #endif
 
-static void mm_context_runner(void)
+void mm_context_runner(void)
 {
 	/* save argument */
 	volatile mm_runner_t runner_arg = runner;

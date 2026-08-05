@@ -75,6 +75,7 @@ set(od_src
     daemon.c
     pid.c
     logger.c
+    od_assert.c
     pool.c
     rules.c
     config.c

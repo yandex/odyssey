@@ -100,7 +100,7 @@ static inline int od_console_show_stats_add(machine_msg_t *stream,
 					    char *database, int database_len,
 					    od_stat_t *total, od_stat_t *avg)
 {
-	assert(stream);
+	od_assert(stream);
 	int offset;
 	machine_msg_t *msg;
 	msg = kiwi_be_write_data_row(stream, &offset);
@@ -155,7 +155,7 @@ static inline od_retcode_t
 od_console_show_frontend_stats_err_add(machine_msg_t *stream,
 				       od_route_pool_t *route_pool)
 {
-	assert(stream);
+	od_assert(stream);
 
 	for (size_t i = 0; i < OD_FRONTEND_STATUS_ERRORS_TYPES_COUNT; ++i) {
 		int offset;
@@ -196,7 +196,7 @@ static inline int
 od_console_show_router_stats_err_add(machine_msg_t *stream,
 				     od_error_logger_t *err_logger)
 {
-	assert(stream);
+	od_assert(stream);
 
 	for (size_t i = 0; i < OD_ROUTER_STATUS_ERRORS_TYPES_COUNT; ++i) {
 		int offset;
@@ -259,7 +259,7 @@ static int od_console_show_err_router_stats_cb(od_error_logger_t *l,
 
 static inline int od_console_show_help(machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 
 	char *message =
 		"\n"
@@ -280,7 +280,7 @@ static inline int od_console_show_help(machine_msg_t *stream)
 static inline int od_console_show_stats(od_client_t *client,
 					machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 	od_cron_t *cron = client->global->cron;
 
@@ -313,7 +313,7 @@ static inline int od_console_show_stats(od_client_t *client,
 static inline od_retcode_t od_console_show_errors(od_client_t *client,
 						  machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	void *argv[] = { stream };
@@ -347,7 +347,7 @@ static inline int od_console_show_errors_per_route_cb(od_route_t *route,
 						      void **argv)
 {
 	machine_msg_t *stream = argv[0];
-	assert(stream);
+	od_assert(stream);
 
 	if (!route || !route->extra_logging_enabled) {
 		return OK_RESPONSE;
@@ -463,7 +463,7 @@ static inline int od_console_show_errors_per_route_cb(od_route_t *route,
 static inline od_retcode_t
 od_console_show_errors_per_route(od_client_t *client, machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	void *argv[] = { stream };
@@ -481,7 +481,7 @@ od_console_show_errors_per_route(od_client_t *client, machine_msg_t *stream)
 
 static inline int od_console_show_version(machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 
 	if (kiwi_be_write_row_descriptionf(stream, "s", "version") == NULL) {
 		return NOT_OK_RESPONSE;
@@ -518,7 +518,7 @@ static inline int od_console_show_version(machine_msg_t *stream)
 
 static inline int od_console_show_version_extended(machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 
 	if (kiwi_be_write_row_descriptionf(
 		    stream, "sssss", "version", "build_type", "compiler",
@@ -924,7 +924,7 @@ error:
 static inline int od_console_show_databases(od_client_t *client,
 					    machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -949,7 +949,7 @@ static inline int od_console_show_databases(od_client_t *client,
 static inline int od_console_show_pools(od_client_t *client,
 					machine_msg_t *stream, bool extended)
 {
-	assert(stream);
+	od_assert(stream);
 	int rc;
 	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
@@ -1418,7 +1418,7 @@ static inline int od_console_show_server_prep_stmts_cb(od_route_t *route,
 static inline int od_console_show_servers(od_client_t *client,
 					  machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -1440,7 +1440,7 @@ static inline int od_console_show_servers(od_client_t *client,
 static inline int od_console_show_fds(od_client_t *client,
 				      machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -1459,7 +1459,7 @@ static inline int od_console_show_fds(od_client_t *client,
 static inline int od_console_show_server_prep_stmts(od_client_t *client,
 						    machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -1796,7 +1796,7 @@ static inline od_retcode_t od_console_show_clients_cb(od_route_t *route,
 static inline int od_console_show_clients(od_client_t *client,
 					  machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -1859,7 +1859,7 @@ static inline int od_console_show_lists_cb(od_route_t *route, void **argv)
 static inline int od_console_show_lists(od_client_t *client,
 					machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	/* Gather router information.
@@ -2020,7 +2020,7 @@ static inline int od_console_show_tls_options(od_tls_opts_t *tls_opts,
 static inline int od_console_show_listen(od_client_t *client,
 					 machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -2080,7 +2080,7 @@ static inline int od_console_show_listen(od_client_t *client,
 static inline int od_console_show_storages(od_client_t *client,
 					   machine_msg_t *stream)
 {
-	assert(stream);
+	od_assert(stream);
 	od_router_t *router = client->global->router;
 
 	machine_msg_t *msg;
@@ -2163,7 +2163,7 @@ error:
 static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 				  od_parser_t *parser)
 {
-	assert(stream);
+	od_assert(stream);
 	od_token_t token;
 	int rc;
 	rc = od_parser_next(parser, &token);
@@ -2308,7 +2308,7 @@ static inline int od_console_add_module(od_client_t *client,
 					machine_msg_t *stream,
 					od_parser_t *parser)
 {
-	assert(stream);
+	od_assert(stream);
 	od_token_t token;
 	int rc;
 	rc = od_parser_next(parser, &token);
@@ -2345,7 +2345,7 @@ static inline int od_console_unload_module(od_client_t *client,
 					   machine_msg_t *stream,
 					   od_parser_t *parser)
 {
-	assert(stream);
+	od_assert(stream);
 	od_token_t token;
 	int rc;
 	rc = od_parser_next(parser, &token);
@@ -2381,7 +2381,7 @@ static inline int od_console_unload_module(od_client_t *client,
 static inline int od_console_create(od_client_t *client, machine_msg_t *stream,
 				    od_parser_t *parser)
 {
-	assert(stream);
+	od_assert(stream);
 	od_token_t token;
 	int rc;
 	rc = od_parser_next(parser, &token);
@@ -2433,7 +2433,7 @@ static inline od_retcode_t od_console_drop_servers(od_client_t *client,
 						   od_parser_t *parser)
 {
 	(void)client;
-	assert(stream);
+	od_assert(stream);
 
 	od_token_t token;
 	int rc;
@@ -2455,7 +2455,7 @@ static inline od_retcode_t od_console_drop_servers(od_client_t *client,
 static inline od_retcode_t
 od_console_drop(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
 {
-	assert(stream);
+	od_assert(stream);
 	od_token_t token;
 	int rc;
 	rc = od_parser_next(parser, &token);

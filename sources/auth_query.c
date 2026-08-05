@@ -156,7 +156,7 @@ static int do_auth_query(od_instance_t *instance, od_client_t *client,
 			 kiwi_password_t *password)
 {
 	od_server_t *server = client->server;
-	assert(server != NULL);
+	od_assert(server != NULL);
 
 	machine_msg_t *msg =
 		od_query_do(server, "auth_query", query, user, 500);
@@ -298,8 +298,8 @@ int od_auth_query(od_client_t *client, char *peer)
 	od_route_t *route = client->route;
 	od_rule_t *rule = client->rule;
 
-	assert(route != NULL);
-	assert(rule->auth_query != NULL);
+	od_assert(route != NULL);
+	od_assert(rule->auth_query != NULL);
 
 	od_route_lock(route);
 

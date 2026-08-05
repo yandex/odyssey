@@ -11,6 +11,7 @@
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <od_assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <limits.h>
