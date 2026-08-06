@@ -7,6 +7,12 @@ set -ex
 /tests/npgsql_compat/NpgsqlOdysseyScram.Console || {
 	echo "ERROR: npgsql-compat tests failed"
 
+	for i in /asan-output*; do
+		cat $i || true
+	done
+
+	sleep 1
+
 	cat /var/log/odyssey.log
 	echo "
 
@@ -17,6 +23,12 @@ set -ex
 }
 
 ody-stop || {
+	for i in /asan-output*; do
+		cat $i || true
+	done
+
+	sleep 1
+
 	cat /var/log/odyssey.log
 	echo "
 
