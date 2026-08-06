@@ -325,15 +325,6 @@ static int parse_hba_file(const char *path, od_hba_rules_t *hba_rules,
 				}
 				od_free(addr_tok);
 				/* field 4: auth method */
-				if (ntok < 5) {
-					od_cfg_diag_error(
-						diags, rule_loc,
-						"%s:%d: missing auth method",
-						path, line_no);
-					od_hba_rule_free(rule);
-					rc = -1;
-					break;
-				}
 				auth_str = tok[4];
 			} else {
 				/* separate address + mask: field 3 = addr, field 4 = mask, field 5 = auth */
