@@ -607,6 +607,10 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 {
 	(void)rules;
 
+#ifdef LDAP_FOUND
+	od_ldap_storage_credentials_t *lsc = NULL;
+#endif
+
 	COPY_STR(cfg->authentication, rule->auth, diags);
 
 	for (size_t i = 0; i < cfg->auth_common_names_count; ++i) {
@@ -798,8 +802,7 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 			cfg->ldap_storage_credentials[i];
 
 #ifdef LDAP_FOUND
-		od_ldap_storage_credentials_t *lsc =
-			od_ldap_storage_credentials_alloc();
+		lsc = od_ldap_storage_credentials_alloc();
 		if (lsc == NULL) {
 			od_cfg_diag_error(diags, c->location,
 					  "can't allocate LDAP storage cred");
@@ -854,6 +857,7 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 
 		od_rule_ldap_storage_credentials_add(rule, lsc);
 		od_ldap_storage_credentials_free(lsc);
+		lsc = NULL;
 #else
 		ldap_not_supported(diags, c->location);
 		goto error;
@@ -934,6 +938,11 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	return 0;
 
 error:
+#ifdef LDAP_FOUND
+	if (lsc != NULL) {
+		od_ldap_storage_credentials_free(lsc);
+	}
+#endif
 	return -1;
 }
 
@@ -1482,6 +1491,7 @@ static int convert_group_route(const od_cfg_database_t *db,
 		od_cfg_diag_error(diags, gcfg->location,
 				  "can't allocate group strings for '%s.%s'",
 				  db->name, gcfg->name);
+		od_group_free(group);
 		return -1;
 	}
 
