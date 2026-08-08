@@ -10,15 +10,13 @@
 
 #include <kiwi/kiwi.h>
 
+#include <types.h>
 #include <tls_config.h>
 #include <balancing.h>
 #include <list.h>
 #include <pool.h>
 #include <od_memory.h>
 #include <address.h>
-
-typedef struct od_rule_storage od_rule_storage_t;
-typedef struct od_storage_watchdog od_storage_watchdog_t;
 
 /* Storage Watchdog */
 typedef enum {
@@ -70,6 +68,8 @@ struct od_storage_endpoint {
 	od_address_t address;
 
 	od_storage_endpoint_status_t status;
+
+	struct od_rule_storage *storage;
 };
 
 int od_storage_parse_endpoints(const char *host_str,
@@ -101,9 +101,6 @@ struct od_rule_storage {
 
 /* storage API */
 od_rule_storage_t *od_rules_storage_allocate(void);
-
-/* TODO: remove */
-od_rule_storage_t *od_rules_storage_copy(od_rule_storage_t *);
 
 od_rule_storage_t *od_rules_storage_ref(od_rule_storage_t *s);
 

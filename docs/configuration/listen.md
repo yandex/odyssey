@@ -129,6 +129,30 @@ host is primary or not.
 Prevent client stall during routing for more that client_login_timeout milliseconds.
 Defaults to 15000.
 
+## **storage**
+*string* (repeatable)
+
+Specifies a fallback storage for this listen endpoint. Multiple `storage`
+entries can be listed; Odyssey tries them in order until a connection
+succeeds. This enables per-listen storage failover independent of the
+storage configured on the matching `database`/`user` rule.
+
+```
+listen {
+    host "*"
+    port 6432
+    storage "primary"
+    storage "standby"
+}
+```
+
+Storages referenced here must be defined with a top-level `storage` section.
+All storages listed in one `listen` block must have the same `type`
+(`remote` or `local`) as the storage of the rule that matches the client;
+storages with a mismatched type are silently skipped. This ensures the
+main dispatch (local vs. remote protocol) and shutdown/pause policies
+remain consistent regardless of which fallback storage is used.
+
 ## example
 
 ```
@@ -141,5 +165,7 @@ listen {
     tls_key_file "/etc/odyssey/ssl/server.key"
     tls_ca_file "/etc/odyssey/ssl/allCAs.pem"
     tls_protocols "tlsv1.2"
+    storage "primary"
+    storage "standby"
 }
 ```

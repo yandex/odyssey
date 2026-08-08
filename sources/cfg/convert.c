@@ -1018,6 +1018,62 @@ static int convert_listen(convert_ctx_t *ctx, const od_cfg_listen_t *cfg)
 
 	/* no compression field */
 
+	listen->storage_count = cfg->storages_count;
+	if (listen->storage_count > 0) {
+		listen->storage_names =
+			od_malloc(sizeof(char *) * listen->storage_count);
+		if (listen->storage_names == NULL) {
+			od_cfg_diag_error(diags, cfg->location,
+					  "can't allocate storage names");
+			goto error;
+		}
+		memset(listen->storage_names, 0,
+		       sizeof(char *) * listen->storage_count);
+
+		for (size_t i = 0; i < listen->storage_count; ++i) {
+			/* validate that the storage exists */
+			int found = 0;
+			od_list_t *li;
+			od_list_foreach (&ctx->rules->storages, li) {
+				od_rule_storage_t *storage = od_container_of(
+					li, od_rule_storage_t, link);
+				if (strcmp(storage->name,
+					   cfg->storages[i]->name) == 0) {
+					found = 1;
+					break;
+				}
+			}
+
+			if (!found) {
+				for (size_t j = 0; j < i; ++j) {
+					od_free(listen->storage_names[j]);
+				}
+				od_free(listen->storage_names);
+				listen->storage_names = NULL;
+				listen->storage_count = 0;
+				od_cfg_diag_error(diags, cfg->location,
+						  "unknown storage '%s'",
+						  cfg->storages[i]->name);
+				goto error;
+			}
+
+			listen->storage_names[i] =
+				od_strdup(cfg->storages[i]->name);
+			if (listen->storage_names[i] == NULL) {
+				for (size_t j = 0; j < i; ++j) {
+					od_free(listen->storage_names[j]);
+				}
+				od_free(listen->storage_names);
+				listen->storage_names = NULL;
+				listen->storage_count = 0;
+				od_cfg_diag_error(
+					diags, cfg->location,
+					"can't allocate storage name");
+				goto error;
+			}
+		}
+	}
+
 	return 0;
 
 error:
@@ -1094,6 +1150,7 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 		}
 
 		for (size_t i = 0; i < storage->endpoints_count; ++i) {
+			storage->endpoints[i].storage = storage;
 			od_storage_endpoint_status_init(
 				&storage->endpoints[i].status);
 		}

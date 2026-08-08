@@ -516,6 +516,43 @@ void od_cfg_seen_free(od_cfg_seen_t *seen)
 	od_cfg_location_free(&seen->location);
 }
 
+od_cfg_listen_storage_t *od_cfg_listen_add_storage(od_cfg_listen_t *listen,
+						   od_cfg_location_t location,
+						   const char *name)
+{
+	if (listen->storages_count >= listen->storages_capacity) {
+		size_t new_capacity = listen->storages_capacity == 0 ?
+					      16 :
+					      listen->storages_capacity * 2;
+		od_cfg_listen_storage_t **tmp = od_realloc(
+			listen->storages,
+			sizeof(od_cfg_listen_storage_t *) * new_capacity);
+		if (tmp == NULL) {
+			return NULL;
+		}
+		listen->storages = tmp;
+		listen->storages_capacity = new_capacity;
+	}
+
+	od_cfg_listen_storage_t *storage =
+		od_malloc(sizeof(od_cfg_listen_storage_t));
+	if (storage == NULL) {
+		return NULL;
+	}
+
+	char *copy = od_strdup(name);
+	if (copy == NULL) {
+		od_free(storage);
+		return NULL;
+	}
+
+	storage->location = od_cfg_location_copy(location);
+	storage->name = copy;
+	listen->storages[listen->storages_count++] = storage;
+
+	return storage;
+}
+
 static void od_cfg_listen_free(od_cfg_listen_t *listen)
 {
 	if (listen == NULL) {
@@ -533,6 +570,13 @@ static void od_cfg_listen_free(od_cfg_listen_t *listen)
 	od_cfg_string_field_free(&listen->tls_cert_file);
 	od_cfg_string_field_free(&listen->tls_protocols);
 	od_cfg_int_field_free(&listen->catchup_timeout);
+
+	for (size_t i = 0; i < listen->storages_count; ++i) {
+		od_cfg_location_free(&listen->storages[i]->location);
+		od_free(listen->storages[i]->name);
+		od_free(listen->storages[i]);
+	}
+	od_free(listen->storages);
 
 	od_cfg_location_free(&listen->location);
 

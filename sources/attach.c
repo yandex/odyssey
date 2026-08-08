@@ -42,7 +42,9 @@ od_attach_extended_endpoint(od_instance_t *instance, char *context,
 		 (int)sizeof(server->id.id), server->id.id);
 
 	if (od_backend_not_connected(server)) {
-		int rc = od_backend_connect(server, context, NULL, client);
+		od_rule_storage_t *storage = client->rule->storage;
+		int rc = od_backend_connect(server, context, NULL, client,
+					    storage);
 		if (rc == NOT_OK_RESPONSE) {
 			od_router_close(router, client);
 			od_storage_endpoint_status_set_dead(&endpoint->status);

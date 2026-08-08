@@ -469,11 +469,19 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 			/* server host */
 			case 'H':
 				if (client && client->route) {
-					od_route_t *route_ref = client->route;
+					od_rule_storage_t *storage =
+						client->route->rule->storage;
+					if (client->server != NULL &&
+					    client->server->endpoint != NULL) {
+						storage =
+							client->server->endpoint
+								->storage;
+					}
 					len = od_snprintf(
 						dst_pos, dst_end - dst_pos,
 						"%s",
-						route_ref->rule->storage->host);
+						storage ? storage->host :
+							  "none");
 					dst_pos += len;
 					break;
 				}
@@ -949,10 +957,15 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 
 		if (client->route && client->route->rule &&
 		    client->route->rule->storage) {
+			od_rule_storage_t *storage =
+				client->route->rule->storage;
+			if (client->server != NULL &&
+			    client->server->endpoint != NULL) {
+				storage = client->server->endpoint->storage;
+			}
 			dst = od_logger_json_add_string(
 				dst, dst_end, "server_host",
-				client->route->rule->storage->host,
-				client_comma);
+				storage ? storage->host : "none", client_comma);
 		}
 
 		/* Close client object */

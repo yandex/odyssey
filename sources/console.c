@@ -1213,7 +1213,7 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 	}
 	/* tls */
 	data_len = od_snprintf(data, sizeof(data), "%s",
-			       route->rule->storage->tls_opts->tls);
+			       server->endpoint->storage->tls_opts->tls);
 	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
