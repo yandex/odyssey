@@ -81,6 +81,20 @@ Write information about currently allocated pools for every database.user
 
 `show pools`
 
+The client counters distinguish three different client states, which is easy to get wrong:
+
+| Column | Meaning |
+| --- | --- |
+| `cl_active` | Clients currently attached to a backend connection |
+| `cl_waiting` | Clients holding a route but not attached to a backend, i.e. idle between transactions. This is **not** a sign of pool pressure |
+| `cl_queue` | Clients blocked waiting for a backend connection to become free. A non-zero value means the pool is exhausted |
+| `maxwait` | Whole seconds the longest-queued client has been waiting so far, `0` when nothing is queued |
+| `maxwait_us` | Sub-second remainder of `maxwait`, in microseconds |
+
+A client that starts to queue moves out of `cl_waiting` into `cl_queue`, so `cl_waiting`
+can drop exactly when the pool becomes saturated. Use `cl_queue` and `maxwait` to detect
+pool exhaustion.
+
 ### show pools_extended
 
 Write even more information about currently allocated pools for every database.user
