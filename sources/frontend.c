@@ -1861,10 +1861,18 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 			od_relay_process_fcall(&client->relay, msg, timeout_ms);
 		break;
 	case KIWI_FE_FLUSH:
+		if (instance->config.log_query || route->rule->log_query) {
+			od_log(&instance->logger, "flush", client,
+			       client->server, "flush");
+		}
 		status = od_relay_process_xflush(&client->relay, msg,
 						 timeout_ms);
 		break;
 	case KIWI_FE_SYNC:
+		if (instance->config.log_query || route->rule->log_query) {
+			od_log(&instance->logger, "sync", client,
+			       client->server, "sync");
+		}
 		status =
 			od_relay_process_xsync(&client->relay, msg, timeout_ms);
 		break;

@@ -495,6 +495,12 @@ static void od_cfg_int_field_free(od_cfg_int_field_t *field)
 	od_cfg_seen_free(&field->seen);
 }
 
+static void
+od_cfg_query_parsing_mode_free(od_cfg_query_parsing_mode_field_t *field)
+{
+	od_cfg_seen_free(&field->seen);
+}
+
 static void od_cfg_bool_field_free(od_cfg_bool_field_t *field)
 {
 	od_cfg_seen_free(&field->seen);
@@ -889,6 +895,10 @@ void od_cfg_model_free(od_cfg_model_t *model)
 	od_cfg_location_free(&model->soft_oom.drop.location);
 	od_cfg_string_field_free(&model->soft_oom.drop.signal);
 	od_cfg_int_field_free(&model->soft_oom.drop.max_rate);
+
+	od_cfg_query_parsing_mode_free(&model->query_parsing.mode);
+	od_cfg_u64_field_free(&model->query_parsing.mem_limit);
+	od_cfg_seen_free(&model->query_parsing.seen);
 
 	for (size_t i = 0; i < model->databases_count; ++i) {
 		od_cfg_database_free(model->databases[i]);
@@ -1701,6 +1711,22 @@ int od_cfg_set_string(od_cfg_diag_list_t *diags, od_cfg_string_field_t *field,
 	if (od_cfg_check_duplicate(diags, &field->seen, location, field_name) !=
 	    0) {
 		od_free(value);
+		return -1;
+	}
+
+	field->value = value;
+	od_cfg_seen_set(&field->seen, location);
+	return 0;
+}
+
+int od_cfg_set_query_parsing_mode(od_cfg_diag_list_t *diags,
+				  od_cfg_query_parsing_mode_field_t *field,
+				  od_cfg_query_parsing_mode_type_t value,
+				  od_cfg_location_t location,
+				  const char *field_name)
+{
+	if (od_cfg_check_duplicate(diags, &field->seen, location, field_name) !=
+	    0) {
 		return -1;
 	}
 

@@ -43,6 +43,7 @@ typedef struct od_cfg_parse_ctx {
 	od_cfg_route_t *current_group;
 	od_cfg_string_kvp_list_t *current_kvp_list;
 	od_cfg_ldap_storage_credentials_t *current_ldap_creds;
+	od_cfg_query_parsing_t *current_query_parsing;
 
 	/*
 	 * last identifier that the lexer couldn't match to any keyword

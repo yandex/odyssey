@@ -1392,6 +1392,39 @@ error:
 	return -1;
 }
 
+static int convert_query_parsing(convert_ctx_t *ctx,
+				 const od_cfg_query_parsing_t *cfg)
+{
+	if (!cfg->seen.is_set) {
+		return 0;
+	}
+
+	od_config_t *config = ctx->config;
+	od_cfg_diag_list_t *diags = ctx->diags;
+	od_config_query_parsing_t *qp = &config->query_parsing;
+
+	COPY_U64(cfg->mem_limit, qp->mem_limit_bytes);
+
+	if (cfg->mode.seen.is_set) {
+		switch (cfg->mode.value) {
+		case OD_CFG_QUERY_PARSING_MODE_DISABLED:
+			qp->mode = OD_CONFIG_QUERY_PARSING_MODE_DISABLED;
+			break;
+		case OD_CFG_QUERY_PARSING_MODE_MINIMAL:
+			qp->mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
+			break;
+		case OD_CFG_QUERY_PARSING_MODE_FULL:
+			od_cfg_diag_error(diags, cfg->mode.seen.location,
+					  "full mode is not supported now");
+			return -1;
+		default:
+			od_assert(0);
+		}
+	}
+
+	return 0;
+}
+
 static int parse_address_range(const od_cfg_route_t *rcfg,
 			       const regex_t *hostname_re,
 			       od_address_range_t *out,
@@ -1733,6 +1766,11 @@ int od_cfg_convert_model(const od_cfg_model_t *model, od_config_t *config,
 	}
 
 	rc = convert_soft_oom(&ctx, &model->soft_oom);
+	if (rc != 0) {
+		goto to_return;
+	}
+
+	rc = convert_query_parsing(&ctx, &model->query_parsing);
 	if (rc != 0) {
 		goto to_return;
 	}
