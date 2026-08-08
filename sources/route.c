@@ -101,6 +101,7 @@ static inline int pool_next_idle_shared_locked(od_route_t *route,
 	new_server->route = route;
 	new_server->pool_element = pool_element;
 	new_server->endpoint = endpoint;
+	od_rules_storage_ref(endpoint->storage);
 
 	od_backend_close_connection(*server);
 	od_server_set_pool_state(*server, OD_SERVER_UNDEF);

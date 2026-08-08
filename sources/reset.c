@@ -95,7 +95,7 @@ int od_reset(od_server_t *server)
 		 * then cancel will do nothing, so it is ok to send
 		 * cancel unconditionally
 		 */
-		int rc = od_cancel(server->global, route->rule->storage,
+		int rc = od_cancel(server->global, server->endpoint->storage,
 				   od_server_pool_address(server), &server->key,
 				   &server->id);
 		if (rc == NOT_OK_RESPONSE) {

@@ -105,6 +105,11 @@ typedef struct od_cfg_global {
 
 } od_cfg_global_t;
 
+typedef struct od_cfg_listen_storage {
+	char *name;
+	od_cfg_location_t location;
+} od_cfg_listen_storage_t;
+
 typedef struct od_cfg_listen {
 	od_cfg_location_t location;
 
@@ -123,7 +128,14 @@ typedef struct od_cfg_listen {
 
 	od_cfg_int_field_t catchup_timeout;
 
+	od_cfg_listen_storage_t **storages;
+	size_t storages_count;
+	size_t storages_capacity;
 } od_cfg_listen_t;
+
+od_cfg_listen_storage_t *od_cfg_listen_add_storage(od_cfg_listen_t *listen,
+						   od_cfg_location_t location,
+						   const char *name);
 
 typedef struct od_cfg_balancing_method {
 	od_cfg_seen_t seen;

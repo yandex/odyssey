@@ -219,12 +219,10 @@ static int conncount_cmp(void *arg, const void *a, const void *b)
 }
 
 static size_t leastconn(od_storage_balancing_t *b, od_route_t *route,
-			od_storage_endpoint_t **out, size_t max,
-			od_balancing_filter_fn filter, void *arg)
+			od_rule_storage_t *storage, od_storage_endpoint_t **out,
+			size_t max, od_balancing_filter_fn filter, void *arg)
 {
 	(void)b;
-
-	od_rule_storage_t *storage = route->rule->storage;
 
 	size_t count = 0;
 	for (size_t i = 0; i < storage->endpoints_count && count < max; ++i) {
@@ -299,13 +297,12 @@ static size_t responsetime(od_storage_balancing_t *b, od_route_t *route,
 	abort();
 }
 
-size_t od_storage_balancing_select(od_storage_balancing_t *b, od_route_t *route,
+size_t od_storage_balancing_select(od_storage_balancing_t *b,
+				   od_rule_storage_t *storage,
+				   od_route_t *route,
 				   od_storage_endpoint_t **out, size_t max,
 				   od_balancing_filter_fn filter, void *arg)
 {
-	od_rule_t *rule = route->rule;
-	od_rule_storage_t *storage = rule->storage;
-
 	if (max == 0 || storage->endpoints_count == 0) {
 		return 0;
 	}
@@ -320,7 +317,7 @@ size_t od_storage_balancing_select(od_storage_balancing_t *b, od_route_t *route,
 	case OD_BALANCING_METHOD_ROUNDROBIN:
 		return roundrobin(b, storage, out, max, filter, arg);
 	case OD_BALANCING_METHOD_LEASTCONN:
-		return leastconn(b, route, out, max, filter, arg);
+		return leastconn(b, route, storage, out, max, filter, arg);
 	case OD_BALANCING_METHOD_WEIGHTED:
 		return weighted(b, route, out, max, filter, arg);
 	case OD_BALANCING_METHOD_WEIGHTED_LEASTCONN:

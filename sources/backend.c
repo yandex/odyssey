@@ -737,7 +737,8 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 	return OK_RESPONSE;
 }
 
-od_tsa_check_result_t od_backend_check_tsa(od_storage_endpoint_t *endpoint,
+od_tsa_check_result_t od_backend_check_tsa(od_rule_storage_t *storage,
+					   od_storage_endpoint_t *endpoint,
 					   char *context, od_server_t *server,
 					   od_client_t *client,
 					   od_target_session_attrs_t attrs)
@@ -748,7 +749,6 @@ od_tsa_check_result_t od_backend_check_tsa(od_storage_endpoint_t *endpoint,
 
 	od_global_t *global = server->global;
 	od_instance_t *instance = global->instance;
-	od_rule_storage_t *storage = client->rule->storage;
 
 	if (od_storage_endpoint_status_is_outdated(
 		    &endpoint->status,
@@ -794,13 +794,10 @@ static inline int od_backend_connect_on_server_address(
 }
 
 int od_backend_connect(od_server_t *server, char *context,
-		       kiwi_params_t *route_params, od_client_t *client)
+		       kiwi_params_t *route_params, od_client_t *client,
+		       od_rule_storage_t *storage)
 {
-	od_route_t *route = server->route;
-	od_assert(route != NULL);
-
-	od_rule_storage_t *storage;
-	storage = route->rule->storage;
+	od_assert(server->route != NULL);
 
 	return od_backend_connect_on_server_address(storage, server, context,
 						    route_params, client);

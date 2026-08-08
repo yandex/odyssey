@@ -9,8 +9,8 @@
 #include <tls_config.h>
 #include <list.h>
 #include <tsa.h>
-#include <affinity.h>
 #include <types.h>
+#include <affinity.h>
 #include <logger.h>
 #include <common_const.h>
 
@@ -33,6 +33,9 @@ struct od_config_listen {
 
 	od_target_session_attrs_t target_session_attrs;
 	int catchup_timeout;
+
+	char **storage_names;
+	size_t storage_count;
 };
 
 struct od_config_conn_drop_options {

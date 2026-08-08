@@ -208,6 +208,12 @@ static void od_config_listen_free(od_config_listen_t *config)
 	if (config->tls_opts) {
 		od_tls_opts_free(config->tls_opts);
 	}
+
+	for (size_t i = 0; i < config->storage_count; ++i) {
+		od_free(config->storage_names[i]);
+	}
+	od_free(config->storage_names);
+
 	od_free(config);
 }
 
@@ -521,6 +527,11 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 			od_log(logger, "config", NULL, NULL,
 			       "  tls_protocols %s",
 			       listen->tls_opts->tls_protocols);
+		}
+
+		for (size_t i = 0; i < listen->storage_count; ++i) {
+			od_log(logger, "config", NULL, NULL,
+			       "  storage       %s", listen->storage_names[i]);
 		}
 	}
 }

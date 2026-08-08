@@ -12,7 +12,8 @@
 #include <tsa.h>
 #include <tls_config.h>
 
-int od_backend_connect(od_server_t *, char *, kiwi_params_t *, od_client_t *);
+int od_backend_connect(od_server_t *, char *, kiwi_params_t *, od_client_t *,
+		       od_rule_storage_t *);
 
 typedef enum {
 	OD_TSA_CHECK_OK,
@@ -20,7 +21,8 @@ typedef enum {
 	OD_TSA_CHECK_BACKEND_ERROR,
 } od_tsa_check_result_t;
 
-od_tsa_check_result_t od_backend_check_tsa(od_storage_endpoint_t *, char *,
+od_tsa_check_result_t od_backend_check_tsa(od_rule_storage_t *,
+					   od_storage_endpoint_t *, char *,
 					   od_server_t *, od_client_t *,
 					   od_target_session_attrs_t);
 

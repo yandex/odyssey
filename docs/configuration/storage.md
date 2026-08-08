@@ -228,6 +228,12 @@ watchdog {
 }
 ```
 
+## Using storages in `listen` blocks
+
+A `listen` block can reference one or more storages by name to enable
+per-listen storage failover. See the [`storage` option in the listen
+section](listen.md#storage) for details.
+
 ## example
 
 ```

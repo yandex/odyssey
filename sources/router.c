@@ -265,7 +265,6 @@ static inline int od_router_server_expired(od_server_t *server,
 static inline int od_router_expire_server_tick_cb(od_server_t *server,
 						  void **argv)
 {
-	od_route_t *route = server->route;
 	od_list_t *expire_list = argv[0];
 	int *count = argv[1];
 	uint64_t *now_us = argv[2];
@@ -283,7 +282,7 @@ static inline int od_router_expire_server_tick_cb(od_server_t *server,
 		 * Do not expire more servers than we are allowed to connect at one time
 		 * This avoids need to re-launch lot of connections together
 		 */
-		if (*count > route->rule->storage->server_max_routing) {
+		if (*count > server->endpoint->storage->server_max_routing) {
 			return 0;
 		}
 	} /* else remove server because we are forced to */
@@ -364,6 +363,7 @@ od_router_create_connected_server(od_route_t *route,
 
 	server->endpoint = od_storage_find_endpoint(storage, address);
 	od_assert(server->endpoint != NULL);
+	od_rules_storage_ref(server->endpoint->storage);
 
 	/* connect is long operation, so release lock, which was taken by the caller */
 	od_route_unlock(route);
@@ -873,8 +873,7 @@ od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 		return OD_ROUTER_NEED_WAIT;
 	}
 
-	uint32_t max_routing =
-		(uint32_t)route->rule->storage->server_max_routing;
+	uint32_t max_routing = (uint32_t)endpoint->storage->server_max_routing;
 
 	int busyloop_sleep = 0;
 	int busyloop_retry = 0;
@@ -917,6 +916,7 @@ od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 	server->route = route;
 	server->pool_element = pool_element;
 	server->endpoint = endpoint;
+	od_rules_storage_ref(endpoint->storage);
 
 	od_route_lock(route);
 
@@ -1240,7 +1240,8 @@ static inline int od_router_cancel_cb(od_route_t *route, void **argv)
 		od_router_cancel_t *cancel = argv[1];
 		cancel->id = server->id;
 		cancel->key = server->key;
-		cancel->storage = od_rules_storage_ref(route->rule->storage);
+		cancel->storage =
+			od_rules_storage_ref(server->endpoint->storage);
 		cancel->address = od_server_pool_address(server);
 		cancel->server = server;
 		od_server_cancel_begin(server);

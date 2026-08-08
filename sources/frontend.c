@@ -447,12 +447,11 @@ void od_frontend_attach_init_candidates(
 static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 	od_client_t *client, char *context, kiwi_params_t *route_params,
 	od_storage_endpoint_t *endpoint, od_target_session_attrs_t tsa,
-	int immediate, int is_deploy)
+	int immediate, int is_deploy, od_rule_storage_t *storage)
 {
 	od_instance_t *instance = client->global->instance;
 	od_router_t *router = client->global->router;
 	od_route_t *route = client->route;
-	od_rule_storage_t *storage = route->rule->storage;
 
 	char addr[256];
 
@@ -510,7 +509,7 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 
 			od_assert(client->config_listen != NULL);
 			rc = od_backend_connect(server, context, route_params,
-						client);
+						client, storage);
 
 			od_atomic_u32_dec(&router->servers_routing);
 			if (rc == NOT_OK_RESPONSE) {
@@ -545,7 +544,7 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 		}
 
 		od_tsa_check_result_t trc = od_backend_check_tsa(
-			endpoint, context, server, client, tsa);
+			storage, endpoint, context, server, client, tsa);
 		if (trc != OD_TSA_CHECK_OK) {
 			od_address_to_str(&endpoint->address, addr,
 					  sizeof(addr) - 1);
@@ -677,7 +676,8 @@ static int host_filter(od_storage_endpoint_t *endpoint, void *a)
 static od_frontend_status_t
 attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 		od_storage_endpoint_t **endpoints, size_t count,
-		od_target_session_attrs_t tsa, int fail_fast, int is_deploy)
+		od_target_session_attrs_t tsa, int fail_fast, int is_deploy,
+		od_rule_storage_t *storage)
 {
 	od_instance_t *instance = client->global->instance;
 	od_frontend_status_t status = OD_EATTACH;
@@ -708,7 +708,7 @@ attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 		status = od_frontend_attach_to_endpoint(client, context,
 							route_params, endpoint,
 							tsa, fail_fast,
-							is_deploy);
+							is_deploy, storage);
 
 		if (status == OD_OK) {
 			return status;
@@ -765,12 +765,13 @@ static size_t prefer_standby_reorder(od_storage_endpoint_t **endpoints,
 	return ro_count;
 }
 
-static od_frontend_status_t attach_impl(od_client_t *client, char *context,
-					kiwi_params_t *route_params,
-					int is_deploy)
+static od_frontend_status_t attach_with_storage(od_client_t *client,
+						char *context,
+						kiwi_params_t *route_params,
+						od_rule_storage_t *storage,
+						int is_deploy)
 {
 	od_route_t *route = client->route;
-	od_rule_storage_t *storage = route->rule->storage;
 
 	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
 	uint32_t lag_timeout = get_effective_catchup_timeout(client);
@@ -783,7 +784,7 @@ static od_frontend_status_t attach_impl(od_client_t *client, char *context,
 	od_storage_endpoint_t *endpoints[OD_STORAGE_MAX_ENDPOINTS];
 	size_t count;
 	count = od_storage_balancing_select(
-		&storage->balancing, route, endpoints,
+		&storage->balancing, storage, route, endpoints,
 		sizeof(endpoints) / sizeof(endpoints[0]), host_filter, &arg);
 
 	if (tsa == OD_TARGET_SESSION_ATTRS_PREFER_STANDBY && count > 1) {
@@ -797,8 +798,9 @@ static od_frontend_status_t attach_impl(od_client_t *client, char *context,
 
 	od_frontend_status_t status = OD_EATTACH;
 
-	status = attach_to_first(client, context, route_params, endpoints,
-				 count, tsa, acquire_fail_fast, is_deploy);
+	status =
+		attach_to_first(client, context, route_params, endpoints, count,
+				tsa, acquire_fail_fast, is_deploy, storage);
 	if (status != OD_OK) {
 		/*
 		 * attach failed
@@ -811,11 +813,78 @@ static od_frontend_status_t attach_impl(od_client_t *client, char *context,
 			status = attach_to_first(
 				client, context, route_params, endpoints, count,
 				tsa, 0 /* wait for connection from pool */,
-				is_deploy);
+				is_deploy, storage);
 		}
 	}
 
 	return status;
+}
+
+static od_frontend_status_t attach_impl(od_client_t *client, char *context,
+					kiwi_params_t *route_params,
+					int is_deploy)
+{
+	od_instance_t *instance = client->global->instance;
+	od_config_listen_t *listen = client->config_listen;
+
+	if (listen != NULL && listen->storage_count > 0) {
+		od_router_t *router = client->global->router;
+		od_frontend_status_t status = OD_EATTACH;
+
+		for (size_t i = 0; i < listen->storage_count; ++i) {
+			const char *name = listen->storage_names[i];
+
+			od_rules_lock(&router->rules);
+			od_rule_storage_t *storage =
+				od_rules_storage_match(&router->rules, name);
+			if (storage != NULL) {
+				od_rules_storage_ref(storage);
+			}
+			od_rules_unlock(&router->rules);
+
+			if (storage == NULL) {
+				od_error(&instance->logger, context, client,
+					 NULL,
+					 "storage '%s' not found, skipping",
+					 name);
+				continue;
+			}
+
+			if (storage->storage_type !=
+			    client->route->rule->storage->storage_type) {
+				od_debug(
+					&instance->logger, context, client,
+					NULL,
+					"storage '%s' has mismatched storage_type, skipping",
+					name);
+				od_rules_storage_free(storage);
+				continue;
+			}
+
+			od_debug(&instance->logger, context, client, NULL,
+				 "trying storage '%s' (%zu/%zu)", name, i + 1,
+				 listen->storage_count);
+
+			status = attach_with_storage(client, context,
+						     route_params, storage,
+						     is_deploy);
+
+			od_rules_storage_free(storage);
+
+			if (status == OD_OK) {
+				return OD_OK;
+			}
+
+			od_debug(&instance->logger, context, client, NULL,
+				 "storage '%s' failed with status: %s", name,
+				 od_frontend_status_to_str(status));
+		}
+
+		return status;
+	}
+
+	return attach_with_storage(client, context, route_params,
+				   client->route->rule->storage, is_deploy);
 }
 
 od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,

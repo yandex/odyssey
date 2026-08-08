@@ -1895,6 +1895,7 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 
 		od_storage_endpoint_t *endpoint = &storage->endpoints[0];
 
+		endpoint->storage = storage;
 		od_storage_endpoint_status_init(&endpoint->status);
 		od_address_init(&endpoint->address);
 

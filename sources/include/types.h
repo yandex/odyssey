@@ -45,3 +45,5 @@ typedef struct od_rule od_rule_t;
 typedef struct od_rules od_rules_t;
 typedef struct od_storage_endpoint od_storage_endpoint_t;
 typedef struct od_thread_pool od_thread_pool_t;
+typedef struct od_rule_storage od_rule_storage_t;
+typedef struct od_storage_watchdog od_storage_watchdog_t;

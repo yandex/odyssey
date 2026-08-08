@@ -2347,6 +2347,17 @@ listen_item:
 										@1,
 										"compression");
 		}
+	| STORAGE string_value
+		{
+			od_cfg_listen_storage_t *s = od_cfg_listen_add_storage(ctx->current_listen, @1, $2);
+			od_free($2);
+			$2 = NULL;
+			if (s == NULL) {
+				od_cfg_diag_error(ctx->diags, @1,
+								  "failed to allocate storage");
+				YYERROR;
+			}
+		}
 	;
 
 shared_pool_section:
