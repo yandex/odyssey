@@ -40,13 +40,14 @@ od_target_session_attrs_t od_tsa_get_effective(od_client_t *client)
 		if (strncmp(hint_var->value, "read-only",
 			    hint_var->value_len) == 0) {
 			effective_tsa = OD_TARGET_SESSION_ATTRS_RO;
-		}
-		if (strncmp(hint_var->value, "read-write",
-			    hint_var->value_len) == 0) {
+		} else if (strncmp(hint_var->value, "read-write",
+				   hint_var->value_len) == 0) {
 			effective_tsa = OD_TARGET_SESSION_ATTRS_RW;
-		}
-
-		if (strncmp(hint_var->value, "any", hint_var->value_len) == 0) {
+		} else if (strncmp(hint_var->value, "prefer-standby",
+				   hint_var->value_len) == 0) {
+			effective_tsa = OD_TARGET_SESSION_ATTRS_PREFER_STANDBY;
+		} else if (strncmp(hint_var->value, "any",
+				   hint_var->value_len) == 0) {
 			effective_tsa = OD_TARGET_SESSION_ATTRS_ANY;
 		}
 	}

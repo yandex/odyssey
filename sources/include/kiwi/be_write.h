@@ -357,6 +357,21 @@ KIWI_API static inline machine_msg_t *kiwi_be_write_ready(machine_msg_t *msg,
 	return msg;
 }
 
+KIWI_API static inline int kiwi_be_format_ready(char *out, size_t max,
+						uint8_t status)
+{
+	if (5 > max) {
+		return -1;
+	}
+
+	char *pos = out;
+	kiwi_write8(&pos, KIWI_BE_READY_FOR_QUERY);
+	kiwi_write32(&pos, sizeof(uint32_t) + sizeof(uint8_t));
+	kiwi_write8(&pos, status);
+
+	return pos - out;
+}
+
 KIWI_API static inline int kiwi_be_write_complete(machine_msg_t *msg,
 						  char *message, int len)
 {
@@ -399,6 +414,24 @@ kiwi_be_write_command_complete(machine_msg_t *msg, const char *message)
 	kiwi_write32(&pos, sizeof(uint32_t) + len);
 	kiwi_write(&pos, message, len);
 	return msg;
+}
+
+KIWI_API static inline int
+kiwi_be_format_command_complete(char *out, size_t max, const char *command)
+{
+	int len = strlen(command) + 1;
+	size_t size = sizeof(kiwi_header_t) + len;
+
+	if (size > max) {
+		return -1;
+	}
+
+	char *pos = out;
+	kiwi_write8(&pos, KIWI_BE_COMMAND_COMPLETE);
+	kiwi_write32(&pos, sizeof(uint32_t) + len);
+	kiwi_write(&pos, command, len);
+
+	return pos - out;
 }
 
 KIWI_API static inline machine_msg_t *
@@ -536,6 +569,34 @@ KIWI_API static inline int kiwi_be_format_notice(char *out, size_t max,
 	kiwi_write8(&pos, 0 /* last msg in this Notice */);
 
 	return pos - out;
+}
+
+KIWI_API static inline machine_msg_t *
+kiwi_be_write_notice(machine_msg_t *msg, char type, const char *text)
+{
+	char notice[] = "NOTICE\0s";
+	int tlen = strlen(text);
+	size_t size =
+		sizeof(kiwi_header_t) + 1 + sizeof(notice) + 1 + tlen + 1 + 1;
+
+	int offset = 0;
+	if (msg) {
+		offset = machine_msg_size(msg);
+	}
+	msg = machine_msg_create_or_advance(msg, size);
+	if (kiwi_unlikely(msg == NULL)) {
+		return NULL;
+	}
+	char *pos;
+	pos = (char *)machine_msg_data(msg) + offset;
+	kiwi_write8(&pos, KIWI_BE_NOTICE_RESPONSE);
+	kiwi_write32(&pos, size - 1);
+	kiwi_write8(&pos, 'S');
+	kiwi_write(&pos, notice, sizeof(notice));
+	kiwi_write8(&pos, type);
+	kiwi_write(&pos, text, tlen + 1);
+	kiwi_write8(&pos, 0 /* last msg in this Notice */);
+	return msg;
 }
 
 KIWI_API static inline machine_msg_t *

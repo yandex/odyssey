@@ -219,6 +219,23 @@ typedef struct od_cfg_soft_oom {
 	od_cfg_soft_oom_drop_t drop;
 } od_cfg_soft_oom_t;
 
+typedef enum {
+	OD_CFG_QUERY_PARSING_MODE_DISABLED,
+	OD_CFG_QUERY_PARSING_MODE_MINIMAL,
+	OD_CFG_QUERY_PARSING_MODE_FULL
+} od_cfg_query_parsing_mode_type_t;
+
+typedef struct od_cfg_query_parsing_mode {
+	od_cfg_seen_t seen;
+	od_cfg_query_parsing_mode_type_t value;
+} od_cfg_query_parsing_mode_field_t;
+
+typedef struct od_cfg_query_parsing {
+	od_cfg_seen_t seen;
+	od_cfg_query_parsing_mode_field_t mode;
+	od_cfg_u64_field_t mem_limit;
+} od_cfg_query_parsing_t;
+
 typedef struct od_cfg_ldap_endpoint {
 	od_cfg_location_t location;
 
@@ -420,6 +437,8 @@ typedef struct {
 
 	od_cfg_soft_oom_t soft_oom;
 
+	od_cfg_query_parsing_t query_parsing;
+
 	od_cfg_listen_t **listens;
 	size_t listens_count;
 	size_t listens_capacity;
@@ -494,3 +513,9 @@ int od_cfg_set_u64(od_cfg_diag_list_t *diags, od_cfg_u64_field_t *field,
 int od_cfg_set_string(od_cfg_diag_list_t *diags, od_cfg_string_field_t *field,
 		      char *value, od_cfg_location_t location,
 		      const char *field_name);
+
+int od_cfg_set_query_parsing_mode(od_cfg_diag_list_t *diags,
+				  od_cfg_query_parsing_mode_field_t *field,
+				  od_cfg_query_parsing_mode_type_t value,
+				  od_cfg_location_t location,
+				  const char *field_name);

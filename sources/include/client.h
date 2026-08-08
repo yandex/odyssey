@@ -30,6 +30,10 @@ typedef enum {
 
 #define OD_CLIENT_MAX_PEERLEN 128
 
+typedef struct {
+	int is_discard_all;
+} od_client_query_ctx_t;
+
 struct od_client {
 	od_client_state_t state;
 	od_pool_client_type_t type;
@@ -93,6 +97,8 @@ struct od_client {
 	uint8_t scram_client_key[OD_SCRAM_MAX_KEY_LEN];
 	uint8_t scram_server_key[OD_SCRAM_MAX_KEY_LEN];
 	int scram_key_valid;
+
+	od_client_query_ctx_t query_ctx;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)

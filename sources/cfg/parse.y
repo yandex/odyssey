@@ -314,6 +314,12 @@
 %token INCLUDE "include"
 %token AZ_AWARE "az_aware"
 %token VIRTUAL_TRANSACTION "virtual_transaction"
+%token QUERY_PARSING "query_parsing"
+%token MODE "mode"
+%token DISABLED "disabled"
+%token MINIMAL "minimal"
+%token FULL "full"
+%token MEM_LIMIT "mem_limit"
 
 %type <boolean> bool_value
 %type <str> string_value
@@ -892,6 +898,7 @@ top_item:
 	| shared_pool_section
 	| conn_drop_options_section
 	| soft_oom_section
+	| query_parsing_section
 	| INCLUDE STRING
 		{
 			int rc = od_cfg_parse_file_depth($2, ctx->model,
@@ -2400,6 +2407,69 @@ conn_drop_options_section:
 	  '{' conn_drop_options_items '}'
 		{
 			ctx->current_conn_drop_options = NULL;
+		}
+	;
+
+query_parsing_section:
+	QUERY_PARSING
+		{
+			od_cfg_query_parsing_t *opts = &ctx->model->query_parsing;
+
+			if (opts->seen.is_set) {
+				od_cfg_diag_error(ctx->diags, @1,
+								  "query_parsing is redefined");
+				YYERROR;
+			}
+
+			od_cfg_seen_set(&opts->seen, @1);
+
+			ctx->current_query_parsing = opts;
+		}
+		'{' query_parsing_items '}'
+		{
+			ctx->current_query_parsing = NULL;
+		}
+
+query_parsing_items:
+	 %empty
+	| query_parsing_items query_parsing_item
+	;
+
+query_parsing_item:
+	  MODE DISABLED
+		{
+			od_cfg_set_query_parsing_mode(ctx->diags,
+										  &ctx->current_query_parsing->mode,
+										  OD_CFG_QUERY_PARSING_MODE_DISABLED,
+										  @1,
+										  "mode");
+		}
+	| MODE MINIMAL
+		{
+			od_cfg_set_query_parsing_mode(ctx->diags,
+										  &ctx->current_query_parsing->mode,
+										  OD_CFG_QUERY_PARSING_MODE_MINIMAL,
+										  @1,
+										  "mode");
+		}
+	| MODE FULL
+		{
+			od_cfg_diag_error(ctx->diags, @1,
+							  "full mode of query parsing is not supported now");
+			YYERROR;
+		}
+	| MEM_LIMIT size_value
+		{
+			if ($2 < 0) {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "mem_limit must be non-negative");
+			} else {
+				od_cfg_set_u64(ctx->diags,
+						   &ctx->current_query_parsing->mem_limit,
+						   $2,
+						   @1,
+						   "mem_limit");
+			}
 		}
 	;
 
