@@ -143,3 +143,21 @@ static inline int od_client_pool_total(od_client_pool_t *pool)
 {
 	return pool->count_active + pool->count_queue + pool->count_pending;
 }
+
+/* age of the longest-queued client, 0 if none; queue head is the oldest */
+static inline uint64_t od_client_pool_max_queue_time_us(od_client_pool_t *pool,
+							uint64_t now_us)
+{
+	if (pool->count_queue == 0) {
+		return 0;
+	}
+
+	od_client_t *oldest =
+		od_container_of(pool->queue.next, od_client_t, link_pool);
+
+	if (now_us <= oldest->time_queue_start) {
+		return 0;
+	}
+
+	return now_us - oldest->time_queue_start;
+}
