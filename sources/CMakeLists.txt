@@ -285,11 +285,11 @@ endif()
 
 message(STATUS "od_libraries:   ${od_libraries}")
 
-target_link_libraries(${od_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)
+target_link_libraries(${od_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
 if(EXISTS "/etc/alpine-release")
     target_link_libraries(${od_binary} argp)
-elseif(APPLE)
-    target_link_libraries(${od_binary} ${ARGP_LIBRARY})
+elseif(NOT APPLE)
+    target_link_libraries(${od_binary} m)
 endif()
 
 if (BUILD_COMPRESSION)
@@ -419,12 +419,12 @@ endif()
 
 target_include_directories(${od_test_binary} PRIVATE ${CONFIG_GEN_DIR})
 
-target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT} m)
+target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
 
 if(EXISTS "/etc/alpine-release")
     target_link_libraries(${od_test_binary} argp)
-elseif(APPLE)
-    target_link_libraries(${od_test_binary} ${ARGP_LIBRARY})
+elseif(NOT APPLE)
+    target_link_libraries(${od_test_binary} m)
 endif()
 
 if (BUILD_COMPRESSION)
