@@ -58,6 +58,17 @@ struct od_config_soft_oom {
 	od_config_soft_oom_drop_t drop;
 };
 
+typedef enum {
+	OD_CONFIG_QUERY_PARSING_MODE_DISABLED,
+	OD_CONFIG_QUERY_PARSING_MODE_MINIMAL,
+	OD_CONFIG_QUERY_PARSING_MODE_FULL,
+} od_config_query_parsing_mode_t;
+
+typedef struct {
+	od_config_query_parsing_mode_t mode;
+	size_t mem_limit_bytes;
+} od_config_query_parsing_t;
+
 struct od_config {
 	int daemonize;
 	int priority;
@@ -139,6 +150,8 @@ struct od_config {
 	int host_watcher_enabled;
 
 	od_config_soft_oom_t soft_oom;
+
+	od_config_query_parsing_t query_parsing;
 
 	int smart_search_path_enquoting;
 

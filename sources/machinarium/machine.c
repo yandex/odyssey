@@ -103,6 +103,11 @@ static void *machine_main(void *arg)
 
 	free_tls_container(machine->server_tls_ctx);
 
+	for (size_t i = 0; i < machine->natexit; ++i) {
+		mm_machine_atexit_entry_t *e = &machine->atexit[i];
+		e->fptr(e->arg);
+	}
+
 	mm_wait_flag_set(machine->join_flag);
 
 	atomic_store(&machine->online, 0);
@@ -127,6 +132,8 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	machine->client_tls_ctx = NULL;
 	machine->name = NULL;
 	machine->global_dtor = NULL;
+	machine->natexit = 0;
+	memset(machine->atexit, 0, sizeof(machine->atexit));
 #ifdef MM_MEM_PROF
 	machine->allocated_bytes = 0;
 	machine->freed_bytes = 0;
@@ -466,4 +473,17 @@ machine_stat(uint64_t *coroutine_count, uint64_t *coroutine_cache_count,
 
 	mm_msgcache_stat(&mm_self->msg_cache, msg_allocated, msg_cache_gc_count,
 			 msg_cache_count, msg_cache_size);
+}
+
+void mm_machine_atexit(void (*fun)(void *), void *arg)
+{
+	mm_machine_t *s = mm_self;
+	if (s->natexit == MM_MACHINE_MAX_ATEXIT) {
+		abort();
+	}
+
+	mm_machine_atexit_entry_t *e = &s->atexit[s->natexit++];
+
+	e->fptr = fun;
+	e->arg = arg;
 }

@@ -188,6 +188,7 @@ BISON_TARGET(cfg_parser
     cfg/parse.y
     ${CONFIG_GEN_DIR}/parse.tab.c
     DEFINES_FILE ${CONFIG_GEN_DIR}/parse.tab.h
+    COMPILE_FLAGS "-Werror -Wall"
 )
 FLEX_TARGET(cfg_scanner
     cfg/scan.l
@@ -196,6 +197,33 @@ FLEX_TARGET(cfg_scanner
 )
 ADD_FLEX_BISON_DEPENDENCY(cfg_scanner cfg_parser)
 list(APPEND od_src ${FLEX_cfg_scanner_OUTPUTS} ${BISON_cfg_parser_OUTPUTS})
+
+set(SQL_MINIMAL_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/sql/minimal)
+file(MAKE_DIRECTORY ${SQL_MINIMAL_GEN_DIR})
+
+BISON_TARGET(sql_parser
+    sql/minimal/parse.y
+    ${SQL_MINIMAL_GEN_DIR}/parse.tab.c
+    DEFINES_FILE ${SQL_MINIMAL_GEN_DIR}/parse.tab.h
+    COMPILE_FLAGS "-Werror -Wall"
+)
+FLEX_TARGET(sql_scanner
+    sql/minimal/scan.l
+    ${SQL_MINIMAL_GEN_DIR}/scan.c
+    COMPILE_FLAGS "--header-file=${SQL_MINIMAL_GEN_DIR}/scan.h"
+)
+ADD_FLEX_BISON_DEPENDENCY(sql_scanner sql_parser)
+set_source_files_properties(${FLEX_sql_scanner_OUTPUTS} PROPERTIES
+    COMPILE_FLAGS "-Wno-unused-function"
+)
+list(APPEND od_src
+    ${FLEX_sql_scanner_OUTPUTS}
+    ${BISON_sql_parser_OUTPUTS}
+    sql/minimal/ast.c
+    sql/minimal/ctx.c
+    sql/minimal/keywords.c
+    sql/minimal/parser.c
+)
 
 if (USE_TCMALLOC)
     find_library(TCMALLOC_STATIC_LIB
@@ -272,7 +300,7 @@ include_directories("${PROJECT_BINARY_DIR}/sources/include")
 add_executable(${od_binary} ${od_src} main.c)
 add_dependencies(${od_binary} build_libs)
 
-target_include_directories(${od_binary} PRIVATE ${CONFIG_GEN_DIR})
+target_include_directories(${od_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR})
 
 if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_binary} PROPERTY COMPILE_OPTIONS "-pthread")
@@ -398,7 +426,8 @@ set(od_test_src
     tests/odyssey/test_query_processing.c
     tests/odyssey/test_duration_parse.c
     tests/odyssey/test_thread_pool.c
-    tests/odyssey/test_linear_alloc.c)
+    tests/odyssey/test_linear_alloc.c
+    tests/odyssey/test_sql_parser.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")
@@ -417,7 +446,7 @@ if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_test_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
 endif()
 
-target_include_directories(${od_test_binary} PRIVATE ${CONFIG_GEN_DIR})
+target_include_directories(${od_test_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR})
 
 target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
 

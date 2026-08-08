@@ -27,6 +27,8 @@
 #include <xplan.h>
 #include <pstmt.h>
 #include <misc.h>
+#include <worker.h>
+#include <sql/minimal/parser.h>
 
 /*
  * relay - client messages handling subsystem
@@ -114,52 +116,18 @@ void od_relay_destroy(od_relay_t *relay)
 	xbuf_destroy(&relay->xbuf);
 }
 
-static od_frontend_status_t process_virtual_set(od_client_t *client,
-						od_parser_t *parser)
+static od_frontend_status_t
+process_virtual_set(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
 {
-	od_token_t token;
-	od_keyword_t *keyword;
 	const char *option_value;
-	int option_value_len;
-	int rc;
+	size_t option_value_len;
 	od_server_t *server;
 	od_instance_t *instance = client->global->instance;
 
 	server = client->server;
 
-	/* need to read exact odyssey parameter here */
-	rc = od_parser_next(parser, &token);
-	if (rc != OD_PARSER_SYMBOL || token.value.num != '.') {
-		return OD_OK;
-	}
-
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_KEYWORD:
-		keyword = od_keyword_match(od_query_process_keywords, &token);
-		if (keyword == NULL ||
-		    keyword->id != OD_QUERY_PROCESSING_LTSA) {
-			/* some other option, skip */
-			return OD_OK;
-		}
-		break;
-	default:
-		return OD_OK;
-	}
-
-	rc = od_parser_next(parser, &token);
-	if (rc != OD_PARSER_SYMBOL || token.value.num != '=') {
-		return OD_OK;
-	}
-
-	rc = od_parser_next(parser, &token);
-
-	if (rc != OD_PARSER_STRING) {
-		return OD_OK;
-	}
-
-	option_value = token.value.string.pointer;
-	option_value_len = token.value.string.size;
+	option_value = stmt->value;
+	option_value_len = strlen(option_value);
 
 	/* for now, very straightforward logic, as there is only one supported param */
 	if (strncasecmp(option_value, "read-only", option_value_len) == 0) {
@@ -181,7 +149,7 @@ static od_frontend_status_t process_virtual_set(od_client_t *client,
 	}
 
 	od_debug(&instance->logger, "virtual processing", client, server,
-		 "parsed tsa hint %.*s", option_value_len, option_value);
+		 "parsed tsa hint %.*s", (int)option_value_len, option_value);
 
 	machine_msg_t *msg = kiwi_be_write_command_complete(NULL, "SET");
 	if (msg == NULL) {
@@ -205,58 +173,13 @@ static od_frontend_status_t process_virtual_set(od_client_t *client,
 	return OD_SKIP;
 }
 
-static od_frontend_status_t process_set_appname(od_client_t *client,
-						od_parser_t *parser)
+static od_frontend_status_t
+process_set_appname(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
 {
 	int rc;
-	od_token_t token;
-
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	/* set application_name to ... */
-	case OD_PARSER_KEYWORD: {
-		od_keyword_t *keyword =
-			od_keyword_match(od_query_process_keywords, &token);
-		if (keyword == NULL || keyword->id != OD_QUERY_PROCESSING_LTO) {
-			goto error;
-		}
-		break;
-	}
-
-	/* set application_name = ... */
-	case OD_PARSER_SYMBOL:
-		if (token.value.num != '=') {
-			goto error;
-		}
-		break;
-
-	default:
-		goto error;
-	}
-
-	/* read original appname */
-	rc = od_parser_next(parser, &token);
-	if (rc != OD_PARSER_STRING) {
-		goto error;
-	}
-
 	char original_appname[64];
-	size_t len =
-		(size_t)token.value.string.size > sizeof(original_appname) ?
-			sizeof(original_appname) :
-			(size_t)token.value.string.size;
-	strncpy(original_appname, token.value.string.pointer, len);
-
-	/* query should end with ; */
-	rc = od_parser_next(parser, &token);
-	if (rc != OD_PARSER_SYMBOL || token.value.num != ';') {
-		goto error;
-	}
-
-	rc = od_parser_next(parser, &token);
-	if (rc != OD_PARSER_EOF) {
-		goto error;
-	}
+	size_t len = od_min(strlen(stmt->value), sizeof(original_appname));
+	snprintf(original_appname, sizeof(original_appname), "%s", stmt->value);
 
 	char peer_name[KIWI_MAX_VAR_SIZE];
 	rc = od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0);
@@ -266,10 +189,6 @@ static od_frontend_status_t process_set_appname(od_client_t *client,
 			  mm_errno_get(), strerror(mm_errno_get()));
 		goto error;
 	}
-
-	/*
-	 * done parsing - need to replace the message
-	 */
 
 	if (client->server == NULL) {
 		/* we will write to server - need to attach if not yet */
@@ -314,83 +233,48 @@ error:
 }
 
 static od_frontend_status_t process_vset(od_client_t *client,
-					 od_parser_t *parser)
+					 const od_sql_minimal_set_stmt_t *stmt)
 {
 	od_instance_t *instance = od_global_get_instance();
-	int rc;
-	od_token_t token;
-	od_keyword_t *keyword;
 
-	/* need to read attribute name that are setting */
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_KEYWORD:
-		keyword = od_keyword_match(od_query_process_keywords, &token);
-		if (keyword == NULL) {
-			/* some other option, skip */
-			return OD_OK;
+	if (strcmp(stmt->key, "application_name") == 0) {
+		if (client->rule->application_name_add_host) {
+			return process_set_appname(client, stmt);
 		}
+	}
 
-		if (keyword->id == OD_QUERY_PROCESSING_LAPPNAME) {
-			/* this is set application_name ... query */
-			if (client->rule->application_name_add_host) {
-				return process_set_appname(client, parser);
-			}
+	if (strcmp(stmt->key, "__odyssey__.target_session_attr") == 0) {
+		if (instance->config.virtual_processing) {
+			return process_virtual_set(client, stmt);
 		}
-
-		if (keyword->id == OD_QUERY_PROCESSING_LODYSSEY) {
-			/*
-			* this is odyssey-specific virtual values set like
-			* set odyssey.target_session_attr = 'read-only';
-			*/
-			if (instance->config.virtual_processing) {
-				int retstatus =
-					process_virtual_set(client, parser);
-				if (retstatus != OD_OK) {
-					return retstatus;
-				}
-			}
-		}
-		break;
-	default:
-		return OD_OK;
 	}
 
 	return OD_OK;
 }
 
-static od_frontend_status_t process_vdeallocate(od_client_t *client,
-						od_parser_t *parser)
+static od_frontend_status_t
+process_vdeallocate(od_client_t *client,
+		    const od_sql_minimal_deallocate_stmt_t *deallocate)
 {
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 	const char *command = NULL;
-	char deallocate_name[128 /* NAMEDATALEN is 64 */] = { '\0' };
 
-	const char *name;
-	size_t name_len;
-	int rc = od_parse_deallocate_parser(parser, &name, &name_len);
-	switch (rc) {
-	case 1:
+	if (deallocate->is_all) {
 		od_debug(&instance->logger, "main", client, server,
 			 "DEALLOCATE ALL detected, remove from client hashmap");
 		od_client_pstmts_clear(client);
 		od_client_portals_clear(client);
 
 		command = "DEALLOCATE ALL";
-		break;
-	case 0:
-		strncpy(deallocate_name, name,
-			od_min(name_len, sizeof(deallocate_name)));
+	} else {
+		od_assert(deallocate->name != NULL);
 		od_debug(&instance->logger, "main", client, server,
 			 "DEALLOCATE '%s' detected, remove from client hashmap",
-			 deallocate_name);
-		od_client_remove_pstmt(client, deallocate_name);
+			 deallocate->name);
+		od_client_remove_pstmt(client, deallocate->name);
 
 		command = "DEALLOCATE";
-		break;
-	default:
-		return OD_OK;
 	}
 
 	machine_msg_t *msg = kiwi_be_write_command_complete(NULL, command);
@@ -415,39 +299,10 @@ static od_frontend_status_t process_vdeallocate(od_client_t *client,
 	return OD_SKIP;
 }
 
-static od_frontend_status_t process_vbegin(od_client_t *client,
-					   od_parser_t *parser)
+static od_frontend_status_t
+process_vbegin(od_client_t *client, const od_sql_minimal_begin_stmt_t *stmt)
 {
-	/*
-	 * do expect BEGIN; or BEGIN
-	 */
-	int rc;
-	od_token_t token;
-
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_SYMBOL:
-		/* BEGIN; */
-		if (token.value.num != ';') {
-			/* some other option, pg will handle it */
-			return OD_OK;
-		}
-
-		/* must meet the EOF now */
-		rc = od_parser_next(parser, &token);
-		if (rc != OD_PARSER_EOF) {
-			/* some other option, pg will handle it */
-			return OD_OK;
-		}
-
-		/* fallthrough */
-	case OD_PARSER_EOF:
-		/* BEGIN */
-		break;
-	default:
-		/* some other option, pg will handle it */
-		return OD_OK;
-	}
+	(void)stmt;
 
 	od_server_t *server = client->server;
 	int in_tx = (server != NULL && server->is_transaction);
@@ -476,58 +331,59 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
 	return OD_SKIP;
 }
 
-static od_frontend_status_t
-try_virtual_process_query(od_client_t *client, char *query, uint32_t query_len)
+static od_frontend_status_t try_virtual_process_query(od_client_t *client,
+						      od_linear_alloc_t *arena,
+						      const char *query,
+						      uint32_t query_len)
 {
 	od_instance_t *instance = od_global_get_instance();
+	int need_process;
 
-	int rc, need_process;
-	od_parser_t parser;
-	od_parser_init_queries_mode(&parser, query,
-				    query_len - 1 /* len is zero included */);
-
-	od_token_t token;
-	rc = od_parser_next(&parser, &token);
-
-	/* all processed queries starts with show or set now */
-	if (rc != OD_PARSER_KEYWORD) {
+	if (instance->config.query_parsing.mode ==
+	    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
 		return OD_OK;
 	}
 
-	od_keyword_t *keyword;
-	keyword = od_keyword_match(od_query_process_keywords, &token);
-
-	if (keyword == NULL) {
+	od_sql_minimal_node_t *ast = od_sql_minimal_parse(
+		query, query_len - 1 /* zero included */, arena, NULL, NULL);
+	if (ast == NULL) {
 		return OD_OK;
 	}
 
-	switch (keyword->id) {
-	case OD_QUERY_PROCESSING_BEGIN:
-		need_process = instance->config.virtual_transaction;
-		if (!need_process) {
-			return OD_OK;
-		}
-
-		return process_vbegin(client, &parser);
-	case OD_QUERY_PROCESSING_DEALLOCATE:
-		/* DEALLOCATE name must be processed virtually */
-		need_process = client->rule->pool->reserve_prepared_statement;
-		if (!need_process) {
-			return OD_OK;
-		}
-
-		return process_vdeallocate(client, &parser);
-	case OD_QUERY_PROCESSING_LSET:
+	switch (ast->type) {
+	case OD_SQL_MINIMAL_NODE_TYPE_SHOW_STMT:
+		/* XXX: implement virtual show */
+		return OD_OK;
+	case OD_SQL_MINIMAL_NODE_TYPE_SET_STMT:
 		need_process = client->rule->application_name_add_host ||
 			       instance->config.virtual_processing;
 		if (!need_process) {
 			return OD_OK;
 		}
 
-		return process_vset(client, &parser);
-	case OD_QUERY_PROCESSING_LSHOW:
-	/* fallthrough */
-	/* XXX: implement virtual show */
+		return process_vset(client,
+				    (const od_sql_minimal_set_stmt_t *)ast);
+	case OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT:
+		need_process = instance->config.virtual_transaction;
+		if (!need_process) {
+			return OD_OK;
+		}
+
+		return process_vbegin(client,
+				      (const od_sql_minimal_begin_stmt_t *)ast);
+	case OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT:
+		need_process = client->rule->pool->reserve_prepared_statement;
+		if (!need_process) {
+			return OD_OK;
+		}
+
+		return process_vdeallocate(
+			client, (const od_sql_minimal_deallocate_stmt_t *)ast);
+	case OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT:
+		client->query_ctx.is_discard_all =
+			(((const od_sql_minimal_discard_stmt_t *)ast)->target ==
+			 OD_SQL_MINIMAL_DISCARD_ALL);
+		/* fallthrough */
 	default:
 		return OD_OK;
 	}
@@ -558,8 +414,7 @@ static od_frontend_status_t process_possible_attach(handler_t handler,
 	return status;
 }
 
-static void process_discard(od_client_t *client, od_server_t *server,
-			    const char *query, size_t query_len)
+static void process_discard(od_client_t *client, od_server_t *server)
 {
 	od_route_t *route = client->route;
 	od_instance_t *instance = client->global->instance;
@@ -568,7 +423,7 @@ static void process_discard(od_client_t *client, od_server_t *server,
 		return;
 	}
 
-	if (od_parse_discard_all(query, query_len > 0 ? query_len - 1 : 0)) {
+	if (client->query_ctx.is_discard_all) {
 		od_debug(&instance->logger, "main", client, server,
 			 "DISCARD ALL detected, invalidate caches");
 
@@ -660,7 +515,10 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		return OD_ESERVER_WRITE;
 	}
 
-	status = try_virtual_process_query(client, query, query_len);
+	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
+	status = try_virtual_process_query(client, arena, query, query_len);
+	od_linear_alloc_reset(arena);
+
 	if (status == OD_SKIP) {
 		/* query must not be sent to backend */
 		return OD_OK;
@@ -723,7 +581,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	if (status == OD_OK) {
 		/* process only after success query completion */
-		process_discard(client, server, query, query_len);
+		process_discard(client, server);
 	}
 
 	return status;
@@ -815,6 +673,8 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 {
 	od_frontend_status_t status = process_possible_attach(
 		process_query_impl, relay, msg, timeout_ms);
+
+	memset(&relay->client->query_ctx, 0, sizeof(relay->client->query_ctx));
 
 	/*
 	 * in vanilla PG, executing simple query removes the

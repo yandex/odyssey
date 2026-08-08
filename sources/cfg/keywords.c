@@ -197,6 +197,12 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "include", INCLUDE },
 	{ "az_aware", AZ_AWARE },
 	{ "virtual_transaction", VIRTUAL_TRANSACTION },
+	{ "query_parsing", QUERY_PARSING },
+	{ "mode", MODE },
+	{ "disabled", DISABLED },
+	{ "minimal", MINIMAL },
+	{ "full", FULL },
+	{ "mem_limit", MEM_LIMIT },
 
 	{ NULL, 0 }
 };
