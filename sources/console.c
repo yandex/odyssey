@@ -668,6 +668,13 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
+	/* cl_queue */
+	data_len = od_snprintf(data, sizeof(data), "%d",
+			       route->client_pool.count_queue);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc == NOT_OK_RESPONSE) {
+		goto error;
+	}
 	/* sv_active */
 	data_len = od_snprintf(data, sizeof(data), "%d",
 			       od_route_server_pool_count_active_locked(
@@ -704,14 +711,20 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
+	/* reported as whole seconds plus the sub-second remainder */
+	uint64_t maxwait_us = od_client_pool_max_queue_time_us(
+		&route->client_pool, machine_time_us());
+
 	/* maxwait */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+			       maxwait_us / 1000000);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
 	/* maxwait_us */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+			       maxwait_us % 1000000);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
@@ -957,11 +970,10 @@ static inline int od_console_show_pools(od_client_t *client,
 	int quantiles_count = route->rule->quantiles_count;
 
 	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(stream, "ssllllllllls", "database",
-					     "user", "cl_active", "cl_waiting",
-					     "sv_active", "sv_idle", "sv_used",
-					     "sv_tested", "sv_login", "maxwait",
-					     "maxwait_us", "pool_mode");
+	msg = kiwi_be_write_row_descriptionf(
+		stream, "sslllllllllls", "database", "user", "cl_active",
+		"cl_waiting", "cl_queue", "sv_active", "sv_idle", "sv_used",
+		"sv_tested", "sv_login", "maxwait", "maxwait_us", "pool_mode");
 	if (msg == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -1045,7 +1057,7 @@ static inline int od_console_show_pools(od_client_t *client,
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
-		const size_t rest_columns_count = 13;
+		const size_t rest_columns_count = 14;
 		for (size_t i = 0; i < rest_columns_count; ++i) {
 			rc = kiwi_be_write_data_row_add(stream, offset, NULL,
 							NULL_MSG_LEN);
