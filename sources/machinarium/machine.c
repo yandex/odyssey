@@ -424,16 +424,28 @@ MACHINE_API int machine_errno_retryable(int errno_)
 	return errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR;
 }
 
+/* See also accept(2) */
 MACHINE_API int machine_accept_errno_retryable(int errno_)
 {
-	return machine_errno_retryable(errno_) || errno_ == ENETDOWN ||
-	       errno_ == EPROTO || errno_ == ENOPROTOOPT ||
-	       errno_ == EHOSTDOWN ||
+	if (machine_errno_retryable(errno_)) {
+		return 1;
+	}
+
+	switch (errno_) {
+	case ENETDOWN:
+	case EPROTO:
+	case ENOPROTOOPT:
+	case EHOSTDOWN:
 #ifdef ENONET
-	       errno_ == ENONET ||
+	case ENONET:
 #endif
-	       errno_ == EHOSTUNREACH || errno_ == EOPNOTSUPP ||
-	       errno_ == ENETUNREACH;
+	case EHOSTUNREACH:
+	case EOPNOTSUPP:
+	case ENETUNREACH:
+		return 1;
+	default:
+		return 0;
+	}
 }
 
 MACHINE_API uint64_t machine_time_ms(void)
