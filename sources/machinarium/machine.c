@@ -428,7 +428,10 @@ MACHINE_API int machine_accept_errno_retryable(int errno_)
 {
 	return machine_errno_retryable(errno_) || errno_ == ENETDOWN ||
 	       errno_ == EPROTO || errno_ == ENOPROTOOPT ||
-	       errno_ == EHOSTDOWN || errno_ == ENONET ||
+	       errno_ == EHOSTDOWN ||
+#ifdef ENONET
+	       errno_ == ENONET ||
+#endif
 	       errno_ == EHOSTUNREACH || errno_ == EOPNOTSUPP ||
 	       errno_ == ENETUNREACH;
 }
