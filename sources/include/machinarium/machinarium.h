@@ -140,6 +140,8 @@ MACHINE_API int machine_errno(void);
 
 MACHINE_API int machine_errno_retryable(int errno_);
 
+MACHINE_API int machine_accept_errno_retryable(int errno_);
+
 MACHINE_API const char *machine_coroutine_get_name(uint64_t coroutine_id);
 
 /* condition */

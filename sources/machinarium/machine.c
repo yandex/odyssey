@@ -424,6 +424,15 @@ MACHINE_API int machine_errno_retryable(int errno_)
 	return errno_ == EAGAIN || errno_ == EWOULDBLOCK || errno_ == EINTR;
 }
 
+MACHINE_API int machine_accept_errno_retryable(int errno_)
+{
+	return machine_errno_retryable(errno_) || errno_ == ENETDOWN ||
+	       errno_ == EPROTO || errno_ == ENOPROTOOPT ||
+	       errno_ == EHOSTDOWN || errno_ == ENONET ||
+	       errno_ == EHOSTUNREACH || errno_ == EOPNOTSUPP ||
+	       errno_ == ENETUNREACH;
+}
+
 MACHINE_API uint64_t machine_time_ms(void)
 {
 	mm_clock_update(&mm_self->loop.clock);
