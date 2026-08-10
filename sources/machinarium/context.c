@@ -86,6 +86,19 @@ static inline void write_func_ptr(void **dst, void (*func)(void))
 	memcpy(dst, &func, sizeof(func));
 }
 
+#ifdef HAVE_ASAN
+__attribute__((no_sanitize("address"))) static void
+mm_context_zero_ptrs(void **dst, int count)
+{
+	for (int i = 0; i < count; i++) {
+		dst[i] = NULL;
+	}
+}
+#else
+#define mm_context_zero_ptrs(dst, count) \
+	memset((dst), 0, (count) * sizeof(void *))
+#endif
+
 static inline void **mm_context_prepare(mm_contextstack_t *stack)
 {
 	void **sp;
@@ -96,11 +109,11 @@ static inline void **mm_context_prepare(mm_contextstack_t *stack)
 	write_func_ptr(--sp, mm_context_runner);
 	/* for x86_64 we need to place return address on stack */
 	sp -= 6;
-	memset(sp, 0, sizeof(void *) * 6);
+	mm_context_zero_ptrs(sp, 6);
 #elif __aarch64__
 	/* for aarch64 we need to place return address in x30 reg */
 	sp -= 16;
-	memset(sp, 0, sizeof(void *) * 16);
+	mm_context_zero_ptrs(sp, 16);
 	/* eq to *(sp + 1) = (void *)mm_context_runner; */
 	write_func_ptr(sp + 1, mm_context_runner);
 #else
@@ -108,7 +121,7 @@ static inline void **mm_context_prepare(mm_contextstack_t *stack)
 	/* eq to *--sp = (void *)mm_context_runner; */
 	write_func_ptr(--sp, mm_context_runner);
 	sp -= 4;
-	memset(sp, 0, sizeof(void *) * 4);
+	mm_context_zero_ptrs(sp, 4);
 #endif
 	return sp;
 }
