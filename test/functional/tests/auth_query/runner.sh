@@ -9,6 +9,10 @@ timeout 25s pgbench 'host=localhost port=6432 user=auth_query_user_scram_sha_256
 	echo "ERROR: failed backend auth with correct password"
 	sleep 1
 
+	for i in /asan-output*; do
+		cat $i
+	done
+
 	cat /var/log/odyssey.log
 	echo "
 
@@ -23,6 +27,10 @@ timeout 25s pgbench 'host=localhost port=6432 user=auth_query_user_scram_sha_256
 timeout 25s pgbench 'host=localhost port=6432 user=auth_query_user_md5 dbname=auth_query_db password=passwd' -f /tests/auth_query/select.sql -T 21 --connect --no-vacuum -j2 -c2 --progress 1 || {
 	echo "ERROR: failed backend auth with correct password"
 	sleep 1
+
+	for i in /asan-output*; do
+		cat $i
+	done
 
 	cat /var/log/odyssey.log
 	echo "
