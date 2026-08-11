@@ -47,3 +47,4 @@ typedef struct od_storage_endpoint od_storage_endpoint_t;
 typedef struct od_thread_pool od_thread_pool_t;
 typedef struct od_rule_storage od_rule_storage_t;
 typedef struct od_storage_watchdog od_storage_watchdog_t;
+typedef struct od_linear_alloc od_linear_alloc_t;

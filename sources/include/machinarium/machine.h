@@ -21,6 +21,13 @@
 #include <machinarium/list.h>
 #include <machinarium/wait_flag.h>
 
+#define MM_MACHINE_MAX_ATEXIT 8
+
+typedef struct {
+	void (*fptr)(void *arg);
+	void *arg;
+} mm_machine_atexit_entry_t;
+
 typedef struct mm_machine mm_machine_t;
 
 struct mm_machine {
@@ -40,6 +47,8 @@ struct mm_machine {
 	mm_coroutine_cache_t system_coroutine_cache;
 	mm_loop_t loop;
 	mm_list_t link;
+	mm_machine_atexit_entry_t atexit[MM_MACHINE_MAX_ATEXIT];
+	size_t natexit;
 	mm_wait_flag_t *join_flag;
 	struct mm_tls_ctx *server_tls_ctx;
 	struct mm_tls_ctx *client_tls_ctx;
@@ -60,6 +69,8 @@ static inline int mm_errno_get(void)
 {
 	return mm_scheduler_current(&mm_self->scheduler)->errno_;
 }
+
+void mm_machine_atexit(void (*fun)(void *), void *arg);
 
 int machine_wait_nb(uint64_t machine_id);
 

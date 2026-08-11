@@ -11,6 +11,7 @@
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/machine.h>
 
 #include <status.h>
 #include <worker.h>
@@ -20,11 +21,15 @@
 #include <instance.h>
 #include <msg.h>
 #include <frontend.h>
+#include <alloc/linear.h>
 
 #ifdef PROM_FOUND
 #include <cron.h>
 #include <prom_metric.h>
 #endif
+
+static OD_THREAD_LOCAL uint8_t *linear_alloc_buf = NULL;
+static OD_THREAD_LOCAL od_linear_alloc_t linear_alloc;
 
 static void setup_affinity(od_instance_t *instance, int wid)
 {
@@ -103,6 +108,23 @@ static inline void od_worker(void *arg)
 	(*gl)->wid = worker->id;
 
 	bool run = true;
+
+	memset(&linear_alloc, 0, sizeof(linear_alloc));
+	if (instance->config.query_parsing.mode !=
+	    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
+		size_t sz = instance->config.query_parsing.mem_limit_bytes;
+		linear_alloc_buf = od_malloc(sz);
+		if (linear_alloc_buf == NULL) {
+			od_fatal(
+				&instance->logger, "worker_init", NULL, NULL,
+				"failed to init worker's linear allocator, errno=%d (%s)",
+				mm_errno_get(), strerror(mm_errno_get()));
+			return;
+		}
+		memset(linear_alloc_buf, 0, sz);
+		od_linear_alloc_init(&linear_alloc, linear_alloc_buf, sz);
+		mm_machine_atexit(od_free, (void *)linear_alloc_buf);
+	}
 
 	while (run) {
 		uint32_t task_wait_timout_ms = 10 * 1000;
@@ -224,6 +246,11 @@ int od_worker_start(od_worker_t *worker)
 	}
 
 	return 0;
+}
+
+od_linear_alloc_t *od_worker_get_local_linear_alloc(void)
+{
+	return &linear_alloc;
 }
 
 void od_worker_shutdown(od_worker_t *worker)

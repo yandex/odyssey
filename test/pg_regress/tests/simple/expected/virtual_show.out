@@ -4,23 +4,46 @@ SELECT 1;
         1
 (1 row)
 
-SET a.b TO 'z';
-SHOW a.b;
- a.b 
------
- z
+SHOW odyssey.target_session_attrs;
+NOTICE:  processed virtually by odyssey
+ odyssey.target_session_attrs 
+------------------------------
+ any
 (1 row)
 
 SET odyssey.target_session_attrs = "read-only";
--- should fail
+NOTICE:  processed virtually by odyssey
 SHOW odyssey.target_session_attrs;
-ERROR:  unrecognized configuration parameter "odyssey.target_session_attrs"
-/* XXX : support this syntax too */
+NOTICE:  processed virtually by odyssey
+ odyssey.target_session_attrs 
+------------------------------
+ read-only
+(1 row)
+
 SET odyssey.target_session_attrs TO 'read-write';
--- should succeed
+NOTICE:  processed virtually by odyssey
 SHOW odyssey.target_session_attrs;
+NOTICE:  processed virtually by odyssey
  odyssey.target_session_attrs 
 ------------------------------
  read-write
+(1 row)
+
+SET odyssey.target_session_attrs = "prefer-standby";
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.target_session_attrs;
+NOTICE:  processed virtually by odyssey
+ odyssey.target_session_attrs 
+------------------------------
+ prefer-standby
+(1 row)
+
+SET odyssey.target_session_attrs TO 'any';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.target_session_attrs;
+NOTICE:  processed virtually by odyssey
+ odyssey.target_session_attrs 
+------------------------------
+ any
 (1 row)
 

@@ -6,15 +6,17 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <types.h>
+
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
-typedef struct {
+struct od_linear_alloc {
 	uint8_t *buf;
 	size_t size;
 	size_t used;
-} od_linear_alloc_t;
+};
 
 static inline void od_linear_alloc_init(od_linear_alloc_t *al, uint8_t *buf,
 					size_t size)

@@ -193,7 +193,8 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 		      sizeof("_pq_.test_protocol_negotiation"));
 	/* XXX: todo - also accept aliases */
 	kiwi_var_init(&vars->vars[KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS],
-		      "target_session_attrs", sizeof("target_session_attrs"));
+		      "odyssey.target_session_attrs",
+		      sizeof("odyssey.target_session_attrs"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_ROLE], "role", sizeof("role"));
 	kiwi_var_init(
 		&vars->vars[KIWI_VAR_SPQRGUARD_PREVENT_DISTRIBUTED_TABLE_MODIFY],

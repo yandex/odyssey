@@ -1,14 +1,16 @@
 
 SELECT 1;
-SET a.b TO 'z';
-SHOW a.b;
 
-SET odyssey.target_session_attrs = "read-only";
--- should fail
 SHOW odyssey.target_session_attrs;
 
-/* XXX : support this syntax too */
-SET odyssey.target_session_attrs TO 'read-write';
+SET odyssey.target_session_attrs = "read-only";
+SHOW odyssey.target_session_attrs;
 
--- should succeed
+SET odyssey.target_session_attrs TO 'read-write';
+SHOW odyssey.target_session_attrs;
+
+SET odyssey.target_session_attrs = "prefer-standby";
+SHOW odyssey.target_session_attrs;
+
+SET odyssey.target_session_attrs TO 'any';
 SHOW odyssey.target_session_attrs;
