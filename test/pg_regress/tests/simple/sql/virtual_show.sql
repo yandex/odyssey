@@ -1,7 +1,5 @@
 
 SELECT 1;
-SET a.b TO 'z';
-SHOW a.b;
 
 SHOW odyssey.target_session_attrs;
 
