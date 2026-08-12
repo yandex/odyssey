@@ -382,11 +382,12 @@ int od_backend_connect_to(od_server_t *server, char *context,
 
 	/* set network options */
 	mm_io_set_nodelay(io, instance->config.nodelay);
-	if (instance->config.keepalive > 0) {
-		mm_io_set_keepalive(io, 1, instance->config.keepalive,
-				    instance->config.keepalive_keep_interval,
-				    instance->config.keepalive_probes,
-				    instance->config.keepalive_usr_timeout);
+	od_rule_t *rule = server->route->rule;
+	if (rule->keepalive > 0) {
+		mm_io_set_keepalive(io, 1, rule->keepalive,
+				    rule->keepalive_keep_interval,
+				    rule->keepalive_probes,
+				    rule->keepalive_usr_timeout);
 	}
 
 	int rc;

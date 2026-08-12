@@ -346,6 +346,13 @@ static void dump_user(FILE *file, const char *type, const od_cfg_route_t *user)
 	dump_string(file, "group_query_user", 2, &user->group_query_user);
 	dump_string(file, "group_query_db", 2, &user->group_query_db);
 
+	dump_int(file, "keepalive", 2, &user->keepalive);
+	dump_int(file, "keepalive_keep_interval", 2,
+		 &user->keepalive_keep_interval);
+	dump_int(file, "keepalive_probes", 2, &user->keepalive_probes);
+	dump_int(file, "keepalive_usr_timeout", 2,
+		 &user->keepalive_usr_timeout);
+
 	fprintf(file, "\t}\n");
 }
 
@@ -725,6 +732,10 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 	od_cfg_string_field_free(&user->group_query);
 	od_cfg_string_field_free(&user->group_query_user);
 	od_cfg_string_field_free(&user->group_query_db);
+	od_cfg_int_field_free(&user->keepalive);
+	od_cfg_int_field_free(&user->keepalive_keep_interval);
+	od_cfg_int_field_free(&user->keepalive_probes);
+	od_cfg_int_field_free(&user->keepalive_usr_timeout);
 
 	od_cfg_seen_free(&user->pgoptions.seen);
 	od_cfg_location_free(&user->pgoptions.location);

@@ -360,6 +360,11 @@ struct od_cfg_route {
 	od_cfg_string_field_t group_query;
 	od_cfg_string_field_t group_query_user;
 	od_cfg_string_field_t group_query_db;
+
+	od_cfg_int_field_t keepalive;
+	od_cfg_int_field_t keepalive_keep_interval;
+	od_cfg_int_field_t keepalive_probes;
+	od_cfg_int_field_t keepalive_usr_timeout;
 };
 
 od_cfg_ldap_storage_credentials_t *

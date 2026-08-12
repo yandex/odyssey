@@ -198,6 +198,10 @@ struct od_rule {
 	int quantiles_count;
 	int server_drop_on_cached_plan_error;
 	uint64_t server_lifetime_us;
+	int keepalive;
+	int keepalive_keep_interval;
+	int keepalive_probes;
+	int keepalive_usr_timeout;
 
 	od_target_session_attrs_t target_session_attrs;
 
