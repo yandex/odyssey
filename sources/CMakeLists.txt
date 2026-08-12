@@ -124,7 +124,6 @@ set(od_src
     storage.c
     server.c
     shared_pool.c
-    murmurhash.c
     address.c
     hba.c
     hba_reader.c
