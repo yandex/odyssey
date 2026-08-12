@@ -24,7 +24,7 @@
  * client sends parse "P0" with query "Q"
  * the description will be "Q" (+ param bytes)
  * client name will be "P0"
- * hash will be murmur("Q" + param bytes)
+ * hash will be xxh64("Q" + param bytes)
  * server name will be "pstmt_#" where # is global counter
  */
 
