@@ -10,6 +10,7 @@
 typedef enum {
 	OD_CONFIG_TLS_DISABLE,
 	OD_CONFIG_TLS_ALLOW,
+	OD_CONFIG_TLS_PREFER,
 	OD_CONFIG_TLS_REQUIRE,
 	OD_CONFIG_TLS_VERIFY_CA,
 	OD_CONFIG_TLS_VERIFY_FULL
@@ -22,6 +23,8 @@ static inline char *od_config_tls_to_str(od_config_tls_t tls)
 		return "disable";
 	case OD_CONFIG_TLS_ALLOW:
 		return "allow";
+	case OD_CONFIG_TLS_PREFER:
+		return "prefer";
 	case OD_CONFIG_TLS_REQUIRE:
 		return "require";
 	case OD_CONFIG_TLS_VERIFY_CA:

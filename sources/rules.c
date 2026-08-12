@@ -1965,6 +1965,10 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				   0) {
 				storage->tls_opts->tls_mode =
 					OD_CONFIG_TLS_ALLOW;
+			} else if (strcmp(storage->tls_opts->tls, "prefer") ==
+				   0) {
+				storage->tls_opts->tls_mode =
+					OD_CONFIG_TLS_PREFER;
 			} else if (strcmp(storage->tls_opts->tls, "require") ==
 				   0) {
 				storage->tls_opts->tls_mode =
