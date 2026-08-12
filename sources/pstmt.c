@@ -13,7 +13,6 @@
 #include <global.h>
 #include <client.h>
 #include <instance.h>
-#include <murmurhash.h>
 #include <util.h>
 #include <client.h>
 #include <server.h>
@@ -24,11 +23,11 @@
  * "P_0" -> *od_prepared_stmt_t
  */
 
-static mm_hash_t murmur_str_ptr(const void *data)
+static mm_hash_t xxh_str_ptr(const void *data)
 {
 	const char *ptr = *(const char **)data;
 
-	return (mm_hash_t)od_murmur_hash(ptr, strlen(ptr));
+	return mm_xxh64_hash(ptr, strlen(ptr), 0);
 }
 
 static int str_ptr_cmp(const void *k1, const void *k2)
@@ -63,8 +62,8 @@ mm_hashmap_t *od_client_pstmt_hashmap_create(void)
 	return mm_hashmap_create(
 		50 /* XXX: big enough? */,
 		1 /* nlocks = 1, no fully-concurrent access to server hashmap */,
-		sizeof(char *), sizeof(od_pstmt_t *), str_ptr_cmp,
-		murmur_str_ptr, str_ptr_dtor,
+		sizeof(char *), sizeof(od_pstmt_t *), str_ptr_cmp, xxh_str_ptr,
+		str_ptr_dtor,
 		NULL /* no need to free the pointer from global table */,
 		str_ptr_copy);
 }
@@ -174,7 +173,7 @@ mm_hashmap_t *od_client_portal_hashmap_create(void)
 	return mm_hashmap_create(
 		50 /* XXX: big enough? */,
 		1 /* nlocks = 1, no fully-concurrent access */, sizeof(char *),
-		sizeof(od_pstmt_t *), str_ptr_cmp, murmur_str_ptr, str_ptr_dtor,
+		sizeof(od_pstmt_t *), str_ptr_cmp, xxh_str_ptr, str_ptr_dtor,
 		NULL /* no need to free the pointer from global table */,
 		str_ptr_copy);
 }
@@ -248,11 +247,11 @@ void od_client_portals_clear(od_client_t *client)
  * "odyssey_pstmt_0" -> *od_prepared_stmt_t
  */
 
-static mm_hash_t murmur_str_inplace(const void *data)
+static mm_hash_t xxh_str_inplace(const void *data)
 {
 	const char *key = data;
 
-	return (mm_hash_t)od_murmur_hash(data, strlen(key));
+	return mm_xxh64_hash(data, strlen(key), 0);
 }
 
 static int str_inplace_cmp(const void *k1, const void *k2)
@@ -269,7 +268,7 @@ mm_hashmap_t *od_server_pstmt_hashmap_create(void)
 		100 /* XXX: big enough? */,
 		1 /* nlocks = 1, no fully-concurrent access to server hashmap */,
 		sizeof(od_pstmt_name_t), sizeof(od_pstmt_t *), str_inplace_cmp,
-		murmur_str_inplace, NULL /* no need to free on inplace str */,
+		xxh_str_inplace, NULL /* no need to free on inplace str */,
 		NULL /* no need to free the pointer from global table */,
 		NULL /* no key copy function */
 	);
@@ -351,11 +350,11 @@ void od_server_pstmts_clear(od_server_t *server)
  * od_pstmt_desc_t -> od_pstmt_t
  */
 
-static mm_hash_t murmur_pstmt_desc(const void *data)
+static mm_hash_t xxh_pstmt_desc(const void *data)
 {
 	const od_pstmt_desc_t *desc = data;
 
-	return (mm_hash_t)od_murmur_hash(desc->data, desc->len);
+	return mm_xxh64_hash(desc->data, desc->len, 0);
 }
 
 static int pstmt_desc_cmp(const void *k1, const void *k2)
@@ -394,7 +393,7 @@ mm_hashmap_t *od_global_pstmts_map_create(void)
 	return mm_hashmap_create(1000 /* XXX: big enough? */,
 				 1000 /* XXX: big enough? */,
 				 sizeof(od_pstmt_desc_t), sizeof(od_pstmt_t),
-				 pstmt_desc_cmp, murmur_pstmt_desc,
+				 pstmt_desc_cmp, xxh_pstmt_desc,
 				 pstmt_desc_free, NULL, pstmt_desc_copy_cb);
 }
 
