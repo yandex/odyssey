@@ -289,6 +289,10 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 				   0) {
 				listen->tls_opts->tls_mode =
 					OD_CONFIG_TLS_ALLOW;
+			} else if (strcmp(listen->tls_opts->tls, "prefer") ==
+				   0) {
+				listen->tls_opts->tls_mode =
+					OD_CONFIG_TLS_PREFER;
 			} else if (strcmp(listen->tls_opts->tls, "require") ==
 				   0) {
 				listen->tls_opts->tls_mode =

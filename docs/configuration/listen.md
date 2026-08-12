@@ -54,12 +54,18 @@ Default port value if that one is not specified in host string.
 Supported TLS modes:
 
 ```
-"disable"     - disable TLS protocol
-"allow"       - switch to TLS protocol on request
+"disable"     - disable TLS protocol, reject SSL requests
+"allow"       - TLS is optional, the client decides whether to use it
+"prefer"      - same as "allow"
 "require"     - TLS clients only
 "verify_ca"   - require valid client certificate
 "verify_full" - require valid client certificate
 ```
+
+Note that `allow` and `prefer` are client-side notions in libpq and describe the
+order in which a client tries connections. A listener does not initiate anything:
+it either accepts a plaintext connection or does not. Both modes therefore mean
+the same thing here — TLS is permitted but not enforced.
 
 ## **tls\_ca\_file**
 *string*

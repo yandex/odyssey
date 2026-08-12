@@ -40,7 +40,8 @@ Supported TLS modes:
 
 ```
 "disable"     - disable TLS protocol
-"allow"       - switch to TLS protocol on request
+"allow"       - first try a non-SSL connection; if that fails, try an SSL connection
+"prefer"      - first try an SSL connection; if that fails, try a non-SSL connection
 "require"     - TLS required
 "verify_ca"   - require valid certificate
 "verify_full" - require valid certificate

@@ -27,6 +27,7 @@ machine_tls_t *od_tls_frontend(od_config_listen_t *config)
 
 	switch (config->tls_opts->tls_mode) {
 	case OD_CONFIG_TLS_ALLOW:
+	case OD_CONFIG_TLS_PREFER:
 		machine_tls_set_verify(tls, "none");
 		break;
 	case OD_CONFIG_TLS_REQUIRE:
@@ -134,6 +135,7 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 	switch (config->tls_opts->tls_mode) {
 	case OD_CONFIG_TLS_DISABLE:
 	case OD_CONFIG_TLS_ALLOW:
+	case OD_CONFIG_TLS_PREFER:
 		break;
 	default:
 		od_log(logger, "tls", client, NULL, "required, closing");
@@ -155,6 +157,7 @@ machine_tls_t *od_tls_backend(od_tls_opts_t *opts)
 
 	switch (opts->tls_mode) {
 	case OD_CONFIG_TLS_ALLOW:
+	case OD_CONFIG_TLS_PREFER:
 		machine_tls_set_verify(tls, "none");
 		break;
 	case OD_CONFIG_TLS_REQUIRE:
@@ -237,9 +240,11 @@ int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 		break;
 	case 'N':
 		/* not supported */
-		if (opts->tls_mode == OD_CONFIG_TLS_ALLOW) {
+		if (opts->tls_mode == OD_CONFIG_TLS_ALLOW ||
+		    opts->tls_mode == OD_CONFIG_TLS_PREFER) {
 			od_debug(logger, "tls", NULL, server,
-				 "not supported, continue (allow)");
+				 "not supported, continue (%s)",
+				 od_config_tls_to_str(opts->tls_mode));
 		} else {
 			od_error(logger, "tls", NULL, server,
 				 "not supported, closing");

@@ -1515,6 +1515,7 @@ static int od_cfg_validate_listens(od_cfg_model_t *model,
 			const char *tls = l->tls.value;
 			if (strcmp(tls, "disable") != 0 &&
 			    strcmp(tls, "allow") != 0 &&
+			    strcmp(tls, "prefer") != 0 &&
 			    strcmp(tls, "require") != 0 &&
 			    strcmp(tls, "verify_ca") != 0 &&
 			    strcmp(tls, "verify_full") != 0) {
