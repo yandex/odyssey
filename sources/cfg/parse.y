@@ -1824,6 +1824,42 @@ route_item:
 		{
 			ctx->current_kvp_list = NULL;
 		}
+	| KEEPALIVE int_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_int(ctx->diags,
+						   &ur->keepalive,
+						   (uint64_t)$2,
+						   @1,
+						   "keepalive");
+		}
+	| KEEPALIVE_KEEP_INTERVAL int_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_int(ctx->diags,
+						   &ur->keepalive_keep_interval,
+						   (uint64_t)$2,
+						   @1,
+						   "keepalive_keep_interval");
+		}
+	| KEEPALIVE_PROBES int_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_int(ctx->diags,
+						   &ur->keepalive_probes,
+						   (uint64_t)$2,
+						   @1,
+						   "keepalive_probes");
+		}
+	| KEEPALIVE_USR_TIMEOUT int_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_int(ctx->diags,
+						   &ur->keepalive_usr_timeout,
+						   (uint64_t)$2,
+						   @1,
+						   "keepalive_usr_timeout");
+		}
 	;
 
 kvp_items:

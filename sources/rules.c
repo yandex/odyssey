@@ -1459,6 +1459,26 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
+	/* keepalive */
+	if (a->keepalive != b->keepalive) {
+		return 0;
+	}
+
+	/* keepalive_keep_interval */
+	if (a->keepalive_keep_interval != b->keepalive_keep_interval) {
+		return 0;
+	}
+
+	/* keepalive_probes */
+	if (a->keepalive_probes != b->keepalive_probes) {
+		return 0;
+	}
+
+	/* keepalive_usr_timeout */
+	if (a->keepalive_usr_timeout != b->keepalive_usr_timeout) {
+		return 0;
+	}
+
 	return 1;
 }
 
@@ -2585,6 +2605,19 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 				       v->value ? v->value : "");
 			}
 		}
+
+		od_log(logger, "rules", NULL, NULL,
+		       "  keepalive                         %d",
+		       rule->keepalive);
+		od_log(logger, "rules", NULL, NULL,
+		       "  keepalive_keep_interval           %d",
+		       rule->keepalive_keep_interval);
+		od_log(logger, "rules", NULL, NULL,
+		       "  keepalive_probes                  %d",
+		       rule->keepalive_probes);
+		od_log(logger, "rules", NULL, NULL,
+		       "  keepalive_usr_timeout             %d",
+		       rule->keepalive_usr_timeout);
 	}
 }
 
