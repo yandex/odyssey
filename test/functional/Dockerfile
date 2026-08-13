@@ -200,7 +200,7 @@ COPY ./test/functional/requirements.txt .
 RUN python3 -m venv /opt/tests/venv
 ENV PATH="/opt/tests/venv/bin:$PATH"
 
-RUN pip install -Ur requirements.txt
+RUN pip install -Ur requirements.txt --index-url=https://pypi-mirror.gitverse.ru/simple/
 
 COPY ./test/functional/test_functional.py .
 

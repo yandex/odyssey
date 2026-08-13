@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-set -ex
+set -e
 
 pushd /tests/tls-compat/
 
@@ -24,11 +24,30 @@ dpkg -l | grep ssl | cat
 /usr/bin/odyssey /tests/tls-compat/config.conf
 sleep 1
 
-# Check some read-only load will work with tls
-pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 20
+psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=disable' && {
+    echo "should not connect with ssl mode require"
+    exit 1
+}
+psql 'host=localhost port=9432 user=postgres dbname=postgres sslmode=disable' && {
+    echo "should not connect with ssl mode verify-ca"
+    exit 1
+}
+psql 'host=localhost port=10432 user=postgres dbname=postgres sslmode=disable' && {
+    echo "should not connect with ssl mode verify-full"
+    exit 1
+}
 
-pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 20 --connect
+# prefer and allow at listen section should accept both tls and non-tls connections
+psql 'host=localhost port=7432 user=postgres dbname=postgres sslmode=disable' || exit 1
+psql 'host=localhost port=7432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem' || exit 1
+psql 'host=localhost port=8432 user=postgres dbname=postgres sslmode=disable' || exit 1
+psql 'host=localhost port=8432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem' || exit 1
+
+# Check some read-only load will work with tls
+pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 20 || exit 1
+
+pgbench 'host=localhost port=6432 user=postgres dbname=postgres sslmode=verify-full sslrootcert=/tests/tls-compat/root.pem' -j 2 -c 10 --select-only --no-vacuum --progress 1 -T 20 --connect || exit 1
 
 sleep 1
 
-ody-stop
+ody-stop || exit 1

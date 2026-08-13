@@ -29,9 +29,16 @@ od_tsa_check_result_t od_backend_check_tsa(od_rule_storage_t *,
 int od_backend_connect_cancel(od_server_t *, od_rule_storage_t *,
 			      const od_address_t *, kiwi_key_t *);
 
+typedef enum {
+	/* obey tls_mode, i.e. plaintext for the first attempt of "allow" */
+	OD_BACKEND_TLS_DEFAULT,
+	/* negotiate TLS even if tls_mode alone would have chosen plaintext */
+	OD_BACKEND_TLS_NEGOTIATE,
+} od_backend_tls_attempt_t;
+
 /* need perform startup after this */
 int od_backend_connect_to(od_server_t *, char *, const od_address_t *,
-			  od_tls_opts_t *);
+			  od_tls_opts_t *, od_backend_tls_attempt_t);
 
 int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 		       od_client_t *client);
