@@ -318,6 +318,16 @@ static int od_frontend_startup(od_client_t *client)
 		return 0;
 	}
 
+	if (client->config_listen->tls_opts->tls_mode >=
+		    OD_CONFIG_TLS_REQUIRE &&
+	    !ssl_done) {
+		od_log(&instance->logger, "tls", client, NULL,
+		       "required, closing");
+		od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
+				  "SSL is required");
+		return -1;
+	}
+
 	if (PG_PROTOCOL_MINOR(client->startup.proto_version) >
 		    PG_PROTOCOL_MINOR(PG_PROTOCOL_LATEST) ||
 	    has_unsupported_features(client)) {

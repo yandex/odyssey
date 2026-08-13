@@ -369,7 +369,8 @@ od_router_create_connected_server(od_route_t *route,
 	od_route_unlock(route);
 
 	int rc = od_backend_connect_to(server, "idle-preallocate", address,
-				       storage->tls_opts);
+				       storage->tls_opts,
+				       OD_BACKEND_TLS_DEFAULT);
 
 	/* caller function believes the lock is held */
 	od_route_lock(route);

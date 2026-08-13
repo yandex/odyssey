@@ -1985,6 +1985,12 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				   0) {
 				storage->tls_opts->tls_mode =
 					OD_CONFIG_TLS_ALLOW;
+				od_log(logger, "rules", NULL, NULL,
+				       "storage '%s': tls \"allow\" now follows libpq sslmode=allow, "
+				       "a connection is made in plaintext and is retried with tls "
+				       "only after the server has rejected it; "
+				       "use tls \"prefer\" to always negotiate tls first",
+				       storage->name);
 			} else if (strcmp(storage->tls_opts->tls, "prefer") ==
 				   0) {
 				storage->tls_opts->tls_mode =

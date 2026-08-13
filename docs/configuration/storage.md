@@ -47,6 +47,54 @@ Supported TLS modes:
 "verify_full" - require valid certificate
 ```
 
+The modes follow the `sslmode` parameter of libpq.
+
+`allow` connects in plaintext first. A server that requires TLS refuses such a
+connection only at startup, with `no pg_hba.conf entry ... no encryption`, and
+only then does Odyssey drop the connection and retry it over TLS.
+`backend_connect_timeout_ms` applies to each attempt separately.
+
+The retry is not limited to the TLS-related error, since the error itself is not
+a reliable signal: its text is translated according to the server `lc_messages`,
+and a server that is not PostgreSQL reports the same situation differently. Like
+libpq, Odyssey retries whenever the server answered the startup packet with an
+ErrorResponse, whatever the error is; a connection that was closed or a reply
+that could not be parsed is reported as is, without a second attempt.
+
+Two exceptions are made:
+
+* `57P03` (`cannot_connect_now`), just like libpq, which considers another host
+  more promising than another encryption method
+* `53300` (`too_many_connections`), `3D000` (`invalid_catalog_name`) and `28P01`
+  (`invalid_password`) — unlike libpq. These are definite answers that TLS will
+  not change, and repeating them for every client would only double the
+  connection load on a server that is already refusing connections.
+
+Note that with `allow` the startup packet and the authentication exchange of the
+first attempt are sent in cleartext, and against a server that supports TLS but
+does not require it the connection stays unencrypted. Use `prefer` to negotiate
+TLS whenever the server supports it, or `require` to demand it.
+
+Cancel requests send no startup packet and therefore have nothing to retry on,
+so with `allow` they are always sent in plaintext. This does not make them fail:
+a server handles a cancel request before authentication and without consulting
+`pg_hba.conf`, so it accepts a plaintext one even when it otherwise allows
+`hostssl` connections only. The cancel key does travel in cleartext then, just
+as it does with the signal-safe `PQcancel()` of libpq. Use `prefer` or `require`
+if that matters.
+
+Connections preallocated for `min_pool_size` are established in plaintext as
+well, since they are connected long before they are used. Such a connection is
+retried over TLS when a client picks it up and the startup is finally
+performed.
+
+!!! warning
+    Earlier versions of Odyssey negotiated TLS first for `allow` and fell back
+    to plaintext, i.e. `allow` behaved the way `prefer` does now. Replace it
+    with `prefer` to keep that behaviour — otherwise connections that used to be
+    encrypted become plaintext. Odyssey logs a message at startup for every
+    storage that still uses `allow`.
+
 ## **tls\_ca\_file**
 *string*
 

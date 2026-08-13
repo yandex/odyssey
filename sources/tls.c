@@ -68,81 +68,60 @@ machine_tls_t *od_tls_frontend(od_config_listen_t *config)
 int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 			   od_config_listen_t *config, machine_tls_t *tls)
 {
-	if (client->startup.is_ssl_request) {
-		od_debug(logger, "tls", client, NULL, "ssl request");
+	od_debug(logger, "tls", client, NULL, "ssl request");
 
-		int rc;
-		if (config->tls_opts->tls_mode == OD_CONFIG_TLS_DISABLE) {
-			/* not supported 'N' */
-			machine_msg_t *msg;
-			msg = machine_msg_create(sizeof(uint8_t));
-			if (msg == NULL) {
-				return -1;
-			}
-			uint8_t *type = machine_msg_data(msg);
-			*type = 'N';
-			rc = od_write(&client->io, msg);
-			if (rc == -1) {
-				od_error(logger, "tls", client, NULL,
-					 "write error: %s",
-					 od_io_error(&client->io));
-				return -1;
-			}
-			od_debug(logger, "tls", client, NULL,
-				 "is disabled, ignoring");
-			return 0;
-		}
-
-		/* supported 'S' */
+	int rc;
+	if (config->tls_opts->tls_mode == OD_CONFIG_TLS_DISABLE) {
+		/* not supported 'N' */
 		machine_msg_t *msg;
 		msg = machine_msg_create(sizeof(uint8_t));
 		if (msg == NULL) {
 			return -1;
 		}
 		uint8_t *type = machine_msg_data(msg);
-		*type = 'S';
+		*type = 'N';
 		rc = od_write(&client->io, msg);
 		if (rc == -1) {
 			od_error(logger, "tls", client, NULL, "write error: %s",
 				 od_io_error(&client->io));
 			return -1;
 		}
-
-		if (od_readahead_unread(&client->io.readahead) > 0) {
-			od_error(logger, "tls", client, NULL,
-				 "extraneous data from client");
-			return -1; /* prevent possible buffer, protecting against CVE-2021-23214-like attacks */
-		}
-
-		rc = mm_io_set_tls(client->io.io, tls,
-				   config->client_login_timeout);
-		if (rc == -1) {
-			od_error(logger, "tls", client, NULL,
-				 "error: %s, login time %" PRIu64 " us",
-				 od_io_error(&client->io),
-				 machine_time_us() - client->time_accept);
-			return -1;
-		}
-		od_debug(logger, "tls", client, NULL, "ok");
+		od_debug(logger, "tls", client, NULL, "is disabled, ignoring");
 		return 0;
 	}
 
-	/* Client sends cancel request without encryption */
-	if (client->startup.is_cancel) {
-		return 0;
-	}
-
-	switch (config->tls_opts->tls_mode) {
-	case OD_CONFIG_TLS_DISABLE:
-	case OD_CONFIG_TLS_ALLOW:
-	case OD_CONFIG_TLS_PREFER:
-		break;
-	default:
-		od_log(logger, "tls", client, NULL, "required, closing");
-		od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
-				  "SSL is required");
+	/* supported 'S' */
+	machine_msg_t *msg;
+	msg = machine_msg_create(sizeof(uint8_t));
+	if (msg == NULL) {
 		return -1;
 	}
+	uint8_t *type = machine_msg_data(msg);
+	*type = 'S';
+	rc = od_write(&client->io, msg);
+	if (rc == -1) {
+		od_error(logger, "tls", client, NULL, "write error: %s",
+			 od_io_error(&client->io));
+		return -1;
+	}
+
+	if (od_readahead_unread(&client->io.readahead) > 0) {
+		od_error(logger, "tls", client, NULL,
+			 "extraneous data from client");
+		return -1; /* prevent possible buffer, protecting against CVE-2021-23214-like attacks */
+	}
+
+	rc = mm_io_set_tls(client->io.io, tls, config->client_login_timeout);
+	if (rc == -1) {
+		od_error(logger, "tls", client, NULL,
+			 "error: %s, login time %" PRIu64 " us",
+			 od_io_error(&client->io),
+			 machine_time_us() - client->time_accept);
+		return -1;
+	}
+
+	od_debug(logger, "tls", client, NULL, "ok");
+
 	return 0;
 }
 

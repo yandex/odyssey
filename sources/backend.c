@@ -162,15 +162,171 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 	return 0;
 }
 
+static inline void od_backend_reset_for_retry(od_server_t *server)
+{
+	od_backend_close_connection(server);
+
+	od_io_free(&server->io);
+	od_io_init(&server->io);
+
+	od_scram_state_free(&server->scram_state);
+	od_scram_state_init(&server->scram_state);
+
+	kiwi_key_init(&server->key);
+	kiwi_vars_init(&server->vars);
+
+	/*
+	 * do not reset client key here
+	 * 
+	 * client key can be set before real connection attempt
+	 * and if connect retry successeded, the key will be zeroed
+	 */
+
+	server->sync_request = 0;
+	server->sync_reply = 0;
+	server->is_transaction = 0;
+	server->is_error_tx = 0;
+	server->msg_broken = 0;
+	server->oom = 0;
+	server->synced_settings = false;
+	server->need_startup = 1;
+}
+
+/*
+ * libpq switches to the next encryption method only when the server has
+ * answered the startup packet with a valid ErrorResponse: see CONNECTION_FAILED
+ * in the ErrorResponse branch of CONNECTION_AWAITING_RESPONSE in PQconnectPoll.
+ * A closed connection, a garbled reply or a peer that is not a postgres server
+ * at all end the attempt right there, and ERRCODE_CANNOT_CONNECT_NOW is special
+ * cased to move on to the next host instead of changing the encryption.
+ *
+ * On top of that we skip the retry for errors that have nothing to do with
+ * encryption at all. libpq can afford repeating them, a pooler cannot: it would
+ * double the connection load on a server that is already unhappy, and it would
+ * hide the original error from the code that inspects it (see
+ * od_frontend_error_is_too_many_connections).
+ */
+static inline int od_backend_startup_error_allows_tls_retry(od_server_t *server,
+							    const char **code)
+{
+	*code = NULL;
+
+	if (server->error_connect == NULL) {
+		/* connection lost, or the peer does not talk our protocol */
+		return 0;
+	}
+
+	kiwi_fe_error_t error;
+	if (kiwi_fe_read_error(machine_msg_data(server->error_connect),
+			       machine_msg_size(server->error_connect),
+			       &error) == -1) {
+		return 0;
+	}
+
+	if (error.code == NULL) {
+		return 0;
+	}
+
+	*code = error.code;
+
+	/* as in libpq: another host may accept us, encryption is irrelevant */
+	if (strcmp(error.code, KIWI_CANNOT_CONNECT_NOW) == 0) {
+		return 0;
+	}
+
+	/*
+	 * Unlike libpq: the server gave a definite answer that TLS will not
+	 * change. Drop these lines to follow libpq to the letter.
+	 */
+	if (strcmp(error.code, KIWI_TOO_MANY_CONNECTIONS) == 0 ||
+	    strcmp(error.code, KIWI_INVALID_CATALOG_NAME) == 0 ||
+	    strcmp(error.code, KIWI_INVALID_PASSWORD) == 0) {
+		return 0;
+	}
+
+	return 1;
+}
+
+/*
+ * Perform startup, falling back to a TLS connection for the "allow" mode.
+ *
+ * With libpq sslmode=allow the plaintext attempt comes first and the whole
+ * connection is retried over TLS once it fails, since a server that requires
+ * TLS refuses the plaintext one only at startup, with an ErrorResponse.
+ */
+static int od_backend_startup_with_tls_fallback(od_server_t *server,
+						char *context,
+						od_rule_storage_t *storage,
+						kiwi_params_t *route_params,
+						od_client_t *client)
+{
+	od_instance_t *instance = server->global->instance;
+	od_tls_opts_t *tlsopts = storage->tls_opts;
+
+	int rc = od_backend_startup(server, route_params, client);
+	if (rc == OK_RESPONSE) {
+		return OK_RESPONSE;
+	}
+
+	/*
+	 * server->tls is set only once TLS has been negotiated, so the retry
+	 * below never happens more than once per connection.
+	 */
+	if (tlsopts->tls_mode != OD_CONFIG_TLS_ALLOW || server->tls != NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	/* must be checked before the reset, it frees error_connect */
+	const char *code = NULL;
+	if (!od_backend_startup_error_allows_tls_retry(server, &code)) {
+		od_debug(
+			&instance->logger, context, client, server,
+			"startup over a plaintext connection failed, not retrying with tls (allow), code=%s",
+			code ? code : "(null)");
+		return NOT_OK_RESPONSE;
+	}
+
+	od_debug(
+		&instance->logger, context, client, server,
+		"startup over a plaintext connection failed (code=%s), retrying with tls (allow)",
+		code ? code : "(null)");
+
+	/* points to server->error_connect, which can be reset at next lines */
+	code = NULL;
+
+	od_backend_reset_for_retry(server);
+
+	if (route_params != NULL) {
+		/* drop the parameters collected by the failed attempt */
+		kiwi_params_free(route_params);
+		kiwi_params_init(route_params);
+	}
+
+	rc = od_backend_connect_to(server, context,
+				   od_server_pool_address(server), tlsopts,
+				   OD_BACKEND_TLS_NEGOTIATE);
+	if (rc != OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+
+	return od_backend_startup(server, route_params, client);
+}
+
 int od_backend_startup_preallocated(od_server_t *server,
 				    kiwi_params_t *route_params,
 				    od_client_t *client)
 {
-	if (od_backend_need_startup(server)) {
-		return od_backend_startup(server, route_params, client);
+	if (!od_backend_need_startup(server)) {
+		return OK_RESPONSE;
 	}
 
-	return 0;
+	/*
+	 * A preallocated connection is connected long before it is started up,
+	 * so this is where the "allow" mode learns that the server wants TLS.
+	 */
+	return od_backend_startup_with_tls_fallback(
+		server, "startup", server->route->rule->storage, route_params,
+		client);
 }
 
 int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
@@ -366,8 +522,25 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 	return 0;
 }
 
+static inline int od_backend_tls_negotiate(od_tls_opts_t *tlsopts,
+					   od_backend_tls_attempt_t attempt)
+{
+	if (tlsopts->tls_mode == OD_CONFIG_TLS_DISABLE) {
+		return 0;
+	}
+	if (attempt == OD_BACKEND_TLS_NEGOTIATE) {
+		return 1;
+	}
+	/*
+	 * libpq sslmode=allow: try a plaintext connection first, TLS is
+	 * negotiated only after the server has refused the plaintext one.
+	 */
+	return tlsopts->tls_mode != OD_CONFIG_TLS_ALLOW;
+}
+
 int od_backend_connect_to(od_server_t *server, char *context,
-			  const od_address_t *address, od_tls_opts_t *tlsopts)
+			  const od_address_t *address, od_tls_opts_t *tlsopts,
+			  od_backend_tls_attempt_t tls_attempt)
 {
 	od_instance_t *instance = server->global->instance;
 	od_assert(server->io.io == NULL);
@@ -401,7 +574,8 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	/* set tls options */
-	if (tlsopts->tls_mode != OD_CONFIG_TLS_DISABLE) {
+	int negotiate_tls = od_backend_tls_negotiate(tlsopts, tls_attempt);
+	if (negotiate_tls) {
 		server->tls = od_tls_backend(tlsopts);
 		if (server->tls == NULL) {
 			return -1;
@@ -531,7 +705,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	/* do tls handshake */
-	if (tlsopts->tls_mode != OD_CONFIG_TLS_DISABLE) {
+	if (negotiate_tls) {
 		rc = od_tls_backend_connect(server, &instance->logger, tlsopts);
 		if (rc == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
@@ -779,13 +953,15 @@ static inline int od_backend_connect_on_server_address(
 
 	od_retcode_t rc;
 
-	rc = od_backend_connect_to(server, context, address, storage->tls_opts);
+	rc = od_backend_connect_to(server, context, address, storage->tls_opts,
+				   OD_BACKEND_TLS_DEFAULT);
 	if (rc == NOT_OK_RESPONSE) {
 		return rc;
 	}
 
 	/* send startup and do initial configuration */
-	rc = od_backend_startup(server, route_params, client);
+	rc = od_backend_startup_with_tls_fallback(server, context, storage,
+						  route_params, client);
 	if (rc == NOT_OK_RESPONSE) {
 		return rc;
 	}
@@ -821,10 +997,20 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 			(uint32_t)instance->config.cancel_timeout_ms :
 			UINT32_MAX;
 
-	/* connect to server */
+	/*
+	 * Connect to server.
+	 *
+	 * A cancel connection sends no startup packet, so the "allow" mode has
+	 * nothing to retry on and stays plaintext here. That is enough: the
+	 * postmaster handles CancelRequest before authentication and before
+	 * pg_hba.conf is consulted, so a plaintext cancel is delivered even by
+	 * a server that accepts hostssl connections only. The cancel key is
+	 * sent in cleartext then, exactly like the signal-safe PQcancel() of
+	 * libpq does it.
+	 */
 	int rc;
-	rc = od_backend_connect_to(server, "cancel", address,
-				   storage->tls_opts);
+	rc = od_backend_connect_to(server, "cancel", address, storage->tls_opts,
+				   OD_BACKEND_TLS_DEFAULT);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}

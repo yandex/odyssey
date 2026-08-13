@@ -8,6 +8,7 @@
  */
 
 typedef enum {
+	/* do not change the order */
 	OD_CONFIG_TLS_DISABLE,
 	OD_CONFIG_TLS_ALLOW,
 	OD_CONFIG_TLS_PREFER,
