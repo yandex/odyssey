@@ -2856,6 +2856,15 @@ void od_frontend(void *arg)
 			goto cleanup;
 		}
 
+		/* set network options */
+		od_rule_t *rule = route->rule;
+		if (rule->keepalive > 0) {
+			mm_io_set_keepalive(client->io.io, 1, rule->keepalive,
+					    rule->keepalive_keep_interval,
+					    rule->keepalive_probes,
+					    rule->keepalive_usr_timeout);
+		}
+
 		if (instance->config.log_session) {
 			od_log(&instance->logger, "startup", client, NULL,
 			       "route '%s.%s' to '%s.%s'",

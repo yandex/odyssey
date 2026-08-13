@@ -123,6 +123,12 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->smart_search_path_enquoting =
 		new_config->smart_search_path_enquoting;
 	current_config->disable_nolinger = new_config->disable_nolinger;
+	current_config->keepalive = new_config->keepalive;
+	current_config->keepalive_keep_interval =
+		new_config->keepalive_keep_interval;
+	current_config->keepalive_probes = new_config->keepalive_probes;
+	current_config->keepalive_usr_timeout =
+		new_config->keepalive_usr_timeout;
 	current_config->graceful_shutdown_timeout_ms =
 		new_config->graceful_shutdown_timeout_ms;
 }

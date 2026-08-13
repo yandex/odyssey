@@ -777,6 +777,10 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	}
 	COPY_BOOL(cfg->log_debug, rule->log_debug);
 	COPY_BOOL(cfg->log_query, rule->log_query);
+	COPY_INT(cfg->keepalive, rule->keepalive);
+	COPY_INT(cfg->keepalive_keep_interval, rule->keepalive_keep_interval);
+	COPY_INT(cfg->keepalive_probes, rule->keepalive_probes);
+	COPY_INT(cfg->keepalive_usr_timeout, rule->keepalive_usr_timeout);
 #ifdef LDAP_FOUND
 	COPY_STR(cfg->ldap_endpoint_name, rule->ldap_endpoint_name, diags);
 
