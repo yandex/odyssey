@@ -8,6 +8,7 @@
 
 #include <types.h>
 
+#include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -38,7 +39,7 @@ static inline void od_linear_alloc_reset(od_linear_alloc_t *al)
 
 static inline void *od_linear_alloc_alloc(od_linear_alloc_t *al, size_t size)
 {
-	size_t align = sizeof(void *);
+	size_t align = alignof(max_align_t);
 	size_t aligned = (size + align - 1) & ~(align - 1);
 
 	if (al->used + aligned > al->size) {
