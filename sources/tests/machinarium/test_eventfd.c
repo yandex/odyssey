@@ -3,7 +3,9 @@
 #include <machinarium/eventfd.h>
 #include <tests/odyssey_test.h>
 
+#include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 static void writer(void *a)
 {

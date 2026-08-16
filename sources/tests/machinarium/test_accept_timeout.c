@@ -3,6 +3,8 @@
 #include <machinarium/io.h>
 #include <tests/odyssey_test.h>
 
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 
 static void test_server(void *arg)

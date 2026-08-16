@@ -45,7 +45,7 @@ int mm_thread_join(mm_thread_t *thread)
 int mm_thread_set_name(char *name)
 {
 	int rc;
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 	rc = pthread_setname_np(pthread_self(), name);
 #else
 	rc = pthread_setname_np(name);
