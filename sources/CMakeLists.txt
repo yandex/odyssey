@@ -158,10 +158,11 @@ endif()
 
 message(STATUS "Poll backend: ${CMAKE_SYSTEM_NAME}")
 
-if (APPLE)
+if (APPLE OR ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
     find_path(ARGP_INCLUDE_DIR argp.h
         PATHS /opt/homebrew/opt/argp-standalone/include
               /usr/local/opt/argp-standalone/include
+
     )
     find_library(ARGP_LIBRARY
         NAMES argp
@@ -170,7 +171,7 @@ if (APPLE)
     )
     if (NOT ARGP_INCLUDE_DIR OR NOT ARGP_LIBRARY)
         message(FATAL_ERROR
-            "argp-standalone not found. Install it via: brew install argp-standalone")
+            "argp-standalone not found. Install it via: brew install argp-standalone (macOS) or pkg install argp-standalone (FreeBSD)")
     endif()
 
     message(STATUS "ARGP_INCLUDE_DIR: ${ARGP_INCLUDE_DIR}")
@@ -254,7 +255,7 @@ if (USE_TCMALLOC_PROFILE)
 endif()
 
 if (NOT USE_UCONTEXT)
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
         set_property(SOURCE machinarium/context_swap_x64.S PROPERTY LANGUAGE C)
         list(APPEND od_src machinarium/context_swap_x64.S)
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|i.86")

@@ -6,6 +6,7 @@
 
 #include <odyssey.h>
 
+#include <arpa/inet.h>
 #include <pthread.h>
 
 #include <machinarium/machine.h>

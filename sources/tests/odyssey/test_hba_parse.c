@@ -1,5 +1,9 @@
 #include <odyssey.h>
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <hba.h>
 #include <hba_rule.h>
 

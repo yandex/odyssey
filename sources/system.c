@@ -13,6 +13,7 @@
 #include <netdb.h>
 #include <sys/un.h>
 #include <sys/stat.h>
+#include <netinet/in.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>

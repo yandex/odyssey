@@ -4,6 +4,8 @@
 #include <tests/odyssey_test.h>
 
 #include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 
 static int client_id;
