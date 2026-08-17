@@ -12,8 +12,36 @@
 
 #include <option.h>
 
-const char *argp_program_version;
-const char *argp_program_bug_address = "<x4mmm@yandex-team.ru>";
+void od_print_version(void)
+{
+	char features[128];
+	fill_supported_features_string(features, sizeof(features));
+
+#ifdef ODYSSEY_VERSION_GIT
+	printf("%s %s (git %s) %s%s\ncompiled by %s\n", ODYSSEY_NAME,
+	       ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT, ODYSSEY_BUILD_TYPE,
+	       features, ODYSSEY_COMPILER_STRING);
+#else
+	printf("%s %s %s%s\ncompiled by %s\n", ODYSSEY_NAME,
+	       ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE, features,
+	       ODYSSEY_COMPILER_STRING);
+#endif
+}
+
+void od_print_help(const char *program)
+{
+	printf("Usage: %s [OPTION...] /path/to/odyssey.conf\n", program);
+	printf("Odyssey - scalable postgresql connection pooler\n\n");
+	printf("      --console              Do not fork on startup\n");
+	printf("      --log_to_stdout        Log to stdout\n");
+	printf("      --silent               Do not log anything\n");
+	printf("      --test                 Configuration testing\n");
+	printf("      --verbose              Log everything\n");
+	printf("  -V, --version              Print program version\n");
+	printf("  -h, --help                 Give this help list\n");
+	printf("  -?                        Same as --help\n");
+	printf("Report bugs to <x4mmm@yandex-team.ru> or <rkhapov@yandex-team.ru>.\n");
+}
 
 od_retcode_t od_apply_validate_cli_args(od_logger_t *logger, od_config_t *conf,
 					od_arguments_t *args, od_rules_t *rules)
