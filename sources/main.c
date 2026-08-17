@@ -39,6 +39,7 @@ static inline void init_tcmalloc_profile(void)
 #endif /* USE_TCMALLOC_PROFILE */
 
 extern char **environ;
+static char **previous_environ = NULL;
 
 /*
  * same preparation as in PostgreSQL (src/backend/utils/misc/ps_status.c, PS_USE_CLOBBER_ARGV).
@@ -90,6 +91,7 @@ static char **prepare_proctitle_buffer(od_instance_t *instance, int argc,
 		}
 	}
 	new_environ[i] = NULL;
+	previous_environ = environ;
 	environ = new_environ;
 
 	char **new_argv = (char **)malloc((argc + 1) * sizeof(char *));
@@ -140,6 +142,28 @@ int main(int argc, char *argv[], char *envp[])
 		rc = EXIT_FAILURE;
 	} else {
 		rc = EXIT_SUCCESS;
+	}
+
+	/* clear the allocation to make the ASAN be silent */
+	if (argv != argv_for_parse) {
+		for (char **p = argv_for_parse; *p != NULL; ++p) {
+			free(*p);
+		}
+		free(argv_for_parse);
+
+#ifdef __darwin__
+		*_NSGetArgv() = argv;
+#endif
+	}
+
+	if (previous_environ != NULL) {
+		char **allocated = environ;
+		environ = previous_environ;
+
+		for (char **p = allocated; *p != NULL; ++p) {
+			free(*p);
+		}
+		free(allocated);
 	}
 
 	return rc;
