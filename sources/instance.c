@@ -8,7 +8,6 @@
 #include <odyssey.h>
 
 #include <signal.h>
-#include <argp.h>
 
 #include <sys/resource.h>
 #include <sys/types.h>
@@ -107,7 +106,7 @@ int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
 	return (rc != 0 || has_errors) ? -1 : 0;
 }
 
-static inline void fill_supported_features_string(char *out, size_t max)
+void fill_supported_features_string(char *out, size_t max)
 {
 	char *end = out + max;
 
@@ -273,24 +272,6 @@ error:
 	return 1;
 }
 
-static inline void od_bind_version(void)
-{
-	char features[128];
-	fill_supported_features_string(features, sizeof(features));
-
-#ifdef ODYSSEY_VERSION_GIT
-	od_asprintf((char **__restrict)&argp_program_version,
-		    "%s %s (git %s) %s%s\ncompiled by %s", ODYSSEY_NAME,
-		    ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
-		    ODYSSEY_BUILD_TYPE, features, ODYSSEY_COMPILER_STRING);
-#else
-	od_asprintf((char **__restrict)&argp_program_version,
-		    "%s %s %s%s\ncompiled by %s", ODYSSEY_NAME,
-		    ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE, features,
-		    ODYSSEY_COMPILER_STRING);
-#endif
-}
-
 static inline od_retcode_t od_args_init(od_arguments_t *args,
 					od_instance_t *instance)
 {
@@ -373,9 +354,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 {
 	od_arguments_t args;
 	memset(&args, 0, sizeof(args));
-	struct argp argp;
-	od_bind_args(&argp);
-	od_bind_version();
 
 	/* odyssey accept only ONE positional arg - to path config */
 	if (od_args_init(&args, instance) != OK_RESPONSE) {
@@ -386,10 +364,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		return NOT_OK_RESPONSE;
 	}
 	/* validate command line options */
-	int argindx; /* index of first unparsed indx */
-	if (argp_parse(&argp, argc, argv, 0, &argindx, &args) != OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
+	od_parse_args(argc, argv, &args);
 
 	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
 

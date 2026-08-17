@@ -1,6 +1,8 @@
 #pragma once
 
-#include <argp.h>
+#include <getopt.h>
+#include <stdio.h>
+#include <string.h>
 
 #include <types.h>
 #include <instance.h>
@@ -8,6 +10,9 @@
 
 extern void od_usage(od_instance_t *instance, char *path);
 extern int od_config_testing(od_instance_t *instance);
+extern void od_print_version(void);
+extern void od_print_help(const char *program);
+extern void fill_supported_features_string(char *out, size_t max);
 
 typedef struct {
 	od_instance_t *instance;
@@ -24,95 +29,102 @@ typedef enum {
 	OD_OPT_VERBOSE,
 	OD_OPT_LOG_STDOUT,
 	OD_OPT_TEST,
+	OD_OPT_VERSION,
+	OD_OPT_USAGE,
 } od_cli_options;
 
-static struct argp_option options[] = {
-	{ "verbose", OD_OPT_VERBOSE, 0, OPTION_ARG_OPTIONAL, "Log everything",
-	  0 },
-	{ "silent", OD_OPT_SILENT, 0, OPTION_ARG_OPTIONAL,
-	  "Do not log anything", 0 },
-	{ "console", OD_OPT_CONSOLE, 0, OPTION_ARG_OPTIONAL,
-	  "Do not fork on startup", 0 },
-	{ "log_to_stdout", OD_OPT_LOG_STDOUT, 0, OPTION_ARG_OPTIONAL,
-	  "Log to stdout", 0 },
-	{ "test", OD_OPT_TEST, 0, OPTION_ARG_OPTIONAL, "Configuration testing",
-	  0 },
-	{ 0 }
+static const char *short_opts = "Vh?";
+
+static struct option long_opts[] = {
+	{ "verbose", no_argument, NULL, OD_OPT_VERBOSE },
+	{ "silent", no_argument, NULL, OD_OPT_SILENT },
+	{ "console", no_argument, NULL, OD_OPT_CONSOLE },
+	{ "log_to_stdout", no_argument, NULL, OD_OPT_LOG_STDOUT },
+	{ "test", no_argument, NULL, OD_OPT_TEST },
+	{ "version", no_argument, NULL, OD_OPT_VERSION },
+	{ "help", no_argument, NULL, 'h' },
+	{ "usage", no_argument, NULL, OD_OPT_USAGE },
+	{ 0, 0, 0, 0 }
 };
 
-static inline error_t parse_opt(int key, char *arg, struct argp_state *state)
+static inline void od_parse_args(int argc, char **argv, od_arguments_t *args)
 {
-	/* Get the input argument from argp_parse, which we
-     know is a pointer to our arguments structure. */
-	od_arguments_t *arguments = state->input;
-	od_instance_t *instance = arguments->instance;
+	od_instance_t *instance = args->instance;
 
-	switch (key) {
-	case 'q':
-	case 's':
-	case OD_OPT_SILENT:
-		arguments->silent = 1;
-		break;
-	case 'v':
-	case OD_OPT_VERBOSE:
-		arguments->verbose = 1;
-		break;
-	case 'h': {
-		od_usage(instance, instance->exec_path);
-	} break;
-	case OD_OPT_CONSOLE: {
-		arguments->console = 1;
-	} break;
-	case OD_OPT_LOG_STDOUT: {
-		arguments->log_stdout = 1;
-	} break;
-	case OD_OPT_TEST: {
-		arguments->test = 1;
-	} break;
-	case ARGP_KEY_ARG: {
-		if (state->arg_num >= 1) {
-			/* Too many arguments. */
+	for (;;) {
+		int opt_idx = 0;
+		int c = getopt_long(argc, argv, short_opts, long_opts,
+				    &opt_idx);
+		if (c == -1) {
+			break;
+		}
+
+		switch (c) {
+		case OD_OPT_SILENT:
+			args->silent = 1;
+			break;
+		case OD_OPT_VERBOSE:
+			args->verbose = 1;
+			break;
+		case 'h':
+			od_print_help(argv[0]);
+			exit(0);
+		case OD_OPT_VERSION:
+		case 'V':
+			od_print_version();
+			exit(0);
+		case OD_OPT_USAGE:
+			printf("Usage: %s [-?V] [--console] [--log_to_stdout] "
+			       "[--silent] [--test] [--verbose] [--help] "
+			       "[--usage] [--version] /path/to/odyssey.conf\n",
+			       argv[0]);
+			exit(0);
+		case OD_OPT_CONSOLE:
+			args->console = 1;
+			break;
+		case OD_OPT_LOG_STDOUT:
+			args->log_stdout = 1;
+			break;
+		case OD_OPT_TEST:
+			args->test = 1;
+			break;
+		case '?':
+			if (optopt == 0 && optind > 0 &&
+			    argv[optind - 1] != NULL &&
+			    strcmp(argv[optind - 1], "-?") == 0) {
+				od_print_help(argv[0]);
+				exit(0);
+			}
+			fprintf(stderr,
+				"Try `%s --help' for more information.\n",
+				argv[0]);
+			exit(1);
+		default:
 			od_usage(instance, instance->exec_path);
-			return ARGP_KEY_ERROR;
+			exit(1);
 		}
-
-		instance->config_file = od_strdup(arg);
-	} break;
-	case ARGP_KEY_END:
-		if (state->arg_num < 1) {
-			/* Not enough arguments. */
-			od_usage(instance, instance->exec_path);
-			return ARGP_KEY_ERROR;
-		}
-
-		if (arguments->test == 1) {
-			exit(od_config_testing(instance));
-		}
-
-		break;
-
-	default:
-		return ARGP_ERR_UNKNOWN;
 	}
-	return 0;
+
+	if (argc - optind > 1) {
+		/* Too many arguments. */
+		od_usage(instance, instance->exec_path);
+		exit(1);
+	}
+
+	if (argc - optind < 1) {
+		/* Not enough arguments. */
+		od_usage(instance, instance->exec_path);
+		exit(1);
+	}
+
+	instance->config_file = od_strdup(argv[optind]);
+
+	if (args->test == 1) {
+		exit(od_config_testing(instance));
+	}
 }
 
 extern od_retcode_t od_apply_validate_cli_args(od_logger_t *logger,
 					       od_config_t *conf,
 					       od_arguments_t *args,
 					       od_rules_t *rules);
-
-static inline void od_bind_args(struct argp *argp)
-{
-	/* Program documentation. */
-	static char doc[] = "Odyssey - scalable postgresql connection pooler";
-
-	/* A description of the arguments we accept. */
-	static char args_doc[] = "/path/to/odyssey.conf";
-
-	memset(argp, 0, sizeof(struct argp));
-	argp->options = options;
-	argp->parser = parse_opt;
-	argp->args_doc = args_doc;
-	argp->doc = doc;
-}

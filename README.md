@@ -84,7 +84,6 @@ And for fedora-based distros:
 > cmake.
 
 For Mac-OS you will need:
-* brew install argp-standalone
 
 ```sh
 git clone git://github.com/yandex/odyssey.git

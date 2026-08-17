@@ -158,29 +158,6 @@ endif()
 
 message(STATUS "Poll backend: ${CMAKE_SYSTEM_NAME}")
 
-if (APPLE OR ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
-    find_path(ARGP_INCLUDE_DIR argp.h
-        PATHS /opt/homebrew/opt/argp-standalone/include
-              /usr/local/opt/argp-standalone/include
-
-    )
-    find_library(ARGP_LIBRARY
-        NAMES argp
-        PATHS /opt/homebrew/opt/argp-standalone/lib
-              /usr/local/opt/argp-standalone/lib
-    )
-    if (NOT ARGP_INCLUDE_DIR OR NOT ARGP_LIBRARY)
-        message(FATAL_ERROR
-            "argp-standalone not found. Install it via: brew install argp-standalone (macOS) or pkg install argp-standalone (FreeBSD)")
-    endif()
-
-    message(STATUS "ARGP_INCLUDE_DIR: ${ARGP_INCLUDE_DIR}")
-    message(STATUS "ARGP_LIBRARY:     ${ARGP_LIBRARY}")
-
-    include_directories(${ARGP_INCLUDE_DIR})
-    set(od_libraries ${od_libraries} ${ARGP_LIBRARY})
-endif()
-
 set(CONFIG_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/cfg)
 file(MAKE_DIRECTORY ${CONFIG_GEN_DIR})
 
@@ -314,9 +291,7 @@ endif()
 message(STATUS "od_libraries:   ${od_libraries}")
 
 target_link_libraries(${od_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
-if(EXISTS "/etc/alpine-release")
-    target_link_libraries(${od_binary} argp)
-elseif(NOT APPLE)
+if(NOT APPLE)
     target_link_libraries(${od_binary} m)
 endif()
 
@@ -450,9 +425,7 @@ target_include_directories(${od_test_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MIN
 
 target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
 
-if(EXISTS "/etc/alpine-release")
-    target_link_libraries(${od_test_binary} argp)
-elseif(NOT APPLE)
+if(NOT APPLE)
     target_link_libraries(${od_test_binary} m)
 endif()
 
