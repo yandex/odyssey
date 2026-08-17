@@ -448,8 +448,8 @@ Specify Odyssey instance availability zone for host selection.
 *yes|no*
 
 Online restart feature.
-When setting to yes, restart odyssey simply with 
-running new version (old one will automatically perform graceful shutdown)
+When setting to yes, restart odyssey to new version simply with 
+SIGUSR2.
 
 `enable_online_restart no`
 
