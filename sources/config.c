@@ -451,21 +451,18 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		od_log(logger, "config", NULL, NULL,
 		       "availability_zone       %s", config->availability_zone);
 	}
-	od_log(logger, "config", NULL, NULL, "enable_host_watcher.    %d",
+	od_log(logger, "config", NULL, NULL, "enable_host_watcher:    %d",
 	       config->host_watcher_enabled);
 
-	if (config->enable_online_restart_feature) {
-		od_log(logger, "config", NULL, NULL,
-		       "online restart enabled: OK");
-	}
-	if (config->graceful_die_on_errors) {
-		od_log(logger, "config", NULL, NULL,
-		       "graceful die enabled:   OK");
-	}
-	if (config->bindwith_reuseport) {
-		od_log(logger, "config", NULL, NULL,
-		       "socket bind with:       SO_REUSEPORT");
-	}
+	od_log(logger, "config", NULL, NULL, "online restart enabled: %d",
+	       config->enable_online_restart_feature);
+
+	od_log(logger, "config", NULL, NULL, "graceful die enabled:   %d",
+	       config->graceful_die_on_errors);
+
+	od_log(logger, "config", NULL, NULL, "bindwith_reuseport:     %d",
+	       config->bindwith_reuseport);
+
 	if (config->hba_file) {
 		od_log(logger, "config", NULL, NULL,
 		       "hba_file                %s", config->hba_file);
