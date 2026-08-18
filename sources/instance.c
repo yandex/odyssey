@@ -628,7 +628,7 @@ int64_t od_instance_get_shutdown_worker_id(od_instance_t *instance)
 	return atomic_load(&instance->shutdown_worker_id);
 }
 
-mm_hashmap_t *od_instance_get_pstmts_map(od_instance_t *instance)
+od_global_pstmt_map_t *od_instance_get_pstmts_map(od_instance_t *instance)
 {
 	return instance->pstmts;
 }

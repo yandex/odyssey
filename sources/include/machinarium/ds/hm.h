@@ -19,6 +19,8 @@
 
 typedef uint64_t mm_hash_t;
 
+typedef struct mm_hashmap mm_hashmap_t;
+
 typedef int (*mm_hm_key_cmp_fn)(const void *key1, const void *key2);
 typedef mm_hash_t (*mm_hm_key_hash_fn)(const void *key);
 typedef void (*mm_hm_key_dtor_fn)(void *key);
@@ -31,7 +33,8 @@ typedef struct {
 	uint8_t keyval[];
 } mm_hashmap_kvp_t;
 
-typedef int (*mm_hm_kvp_cb_fn)(mm_hashmap_kvp_t *kvp, void **argv);
+typedef int (*mm_hm_kvp_cb_fn)(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
+			       void **argv);
 
 typedef struct {
 	/* mm_hashmap_kvp_t[] */
@@ -44,7 +47,11 @@ typedef struct {
 	int found;
 } mm_hashmap_keylock_t;
 
-typedef struct {
+typedef enum {
+	MM_HASHMAP_CREATE = 1 << 0,
+} mm_hashmap_lockkey_flags_t;
+
+struct mm_hashmap {
 	size_t keysz;
 	size_t valsz;
 
@@ -63,7 +70,7 @@ typedef struct {
 
 	size_t nlocks;
 	mm_mutex_t *locks;
-} mm_hashmap_t;
+};
 
 void *mm_hashmap_kvp_key(const mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp);
 void *mm_hashmap_kvp_val(const mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp);
@@ -83,7 +90,8 @@ void mm_hashmap_free(mm_hashmap_t *hm);
 void mm_hashmap_clear(mm_hashmap_t *hm);
 int mm_hashmap_foreach(mm_hashmap_t *hm, mm_hm_kvp_cb_fn cb, void **argv);
 int mm_hashmap_lock_key(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
-			const void *key, int create);
+			const void *key,
+			int flags /* see mm_hashmap_lockkey_flags_t */);
 void mm_hashmap_unlock_key(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock);
 void mm_hashmap_remove(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock);
 

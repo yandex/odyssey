@@ -632,7 +632,8 @@ static inline void od_system(void *arg)
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
 
-	instance->pstmts = od_global_pstmts_map_create();
+	instance->pstmts = od_global_pstmts_map_create(
+		4 * (size_t)instance->config.workers);
 	if (instance->pstmts == NULL) {
 		od_error(&instance->logger, "system", NULL, NULL,
 			 "failed to create pstmts map, errno = %d (%s)",
