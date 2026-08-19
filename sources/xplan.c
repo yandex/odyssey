@@ -216,6 +216,10 @@ static void plan_entry_destroy(void *a)
 		od_free((void *)entry->delta.client_pstmt);
 	}
 
+	if (entry->delta.pstmt != NULL) {
+		od_pstmt_unref(entry->delta.pstmt);
+	}
+
 	memset(entry, 0, sizeof(od_xplan_entry_t));
 }
 
@@ -223,8 +227,7 @@ static void entry_init_internal(od_xplan_entry_t *e, od_xplan_entry_type_t type,
 				machine_msg_t *clmsg, machine_msg_t *srvmsg,
 				machine_msg_t *vresp,
 				od_xplan_delta_type_t delta_type,
-				const char *client_pstmt,
-				const od_pstmt_t *pstmt,
+				const char *client_pstmt, od_pstmt_t *pstmt,
 				const char *portal_name)
 {
 	memset(e, 0, sizeof(od_xplan_entry_t));
@@ -238,12 +241,16 @@ static void entry_init_internal(od_xplan_entry_t *e, od_xplan_entry_type_t type,
 	e->delta.client_pstmt = client_pstmt;
 	e->delta.pstmt = pstmt;
 	e->delta.portal_name = portal_name;
+
+	if (e->delta.pstmt != NULL) {
+		od_pstmt_ref(e->delta.pstmt);
+	}
 }
 
 static void entry_init_fwd(od_xplan_entry_t *e, machine_msg_t *original,
 			   machine_msg_t *rewritten,
 			   od_xplan_delta_type_t delta_type,
-			   const char *client_pstmt, const od_pstmt_t *pstmt)
+			   const char *client_pstmt, od_pstmt_t *pstmt)
 {
 	entry_init_internal(e, OD_XPLAN_FORWARD, original, rewritten, NULL,
 			    delta_type, client_pstmt, pstmt, NULL);
@@ -257,15 +264,14 @@ static void entry_init_fwd_no_delta(od_xplan_entry_t *e,
 }
 
 static void entry_init_parse(od_xplan_entry_t *e, const char *client_pstmt,
-			     const od_pstmt_t *pstmt, machine_msg_t *original,
+			     od_pstmt_t *pstmt, machine_msg_t *original,
 			     machine_msg_t *rewritten)
 {
 	entry_init_internal(e, OD_XPLAN_PARSE, original, rewritten, NULL,
 			    OD_XPLAN_DELTA_ADD_BOTH, client_pstmt, pstmt, NULL);
 }
 
-static void entry_init_parse_shadow(od_xplan_entry_t *e,
-				    const od_pstmt_t *pstmt,
+static void entry_init_parse_shadow(od_xplan_entry_t *e, od_pstmt_t *pstmt,
 				    machine_msg_t *original,
 				    machine_msg_t *inserted_parse)
 {
@@ -284,7 +290,7 @@ static void entry_init_virtual_error_response(od_xplan_entry_t *e,
 
 static void entry_init_virtual_parse_complete(od_xplan_entry_t *e,
 					      const char *client_pstmt,
-					      const od_pstmt_t *pstmt,
+					      od_pstmt_t *pstmt,
 					      machine_msg_t *original)
 {
 	entry_init_internal(e, OD_XPLAN_VIRTUAL_PARSE_COMPLETE, original, NULL,
@@ -316,8 +322,7 @@ static void entry_init_deffered_begin(od_xplan_entry_t *e, machine_msg_t *begin)
  */
 static void entry_init_fwd_portal(od_xplan_entry_t *e, machine_msg_t *original,
 				  machine_msg_t *rewritten,
-				  const char *portal_name,
-				  const od_pstmt_t *pstmt)
+				  const char *portal_name, od_pstmt_t *pstmt)
 {
 	entry_init_internal(e, OD_XPLAN_FORWARD, original, rewritten, NULL,
 			    OD_XPLAN_DELTA_ADD_PORTAL, NULL, pstmt,
@@ -356,7 +361,7 @@ static int xplan_append(od_xplan_t *xp, const od_xplan_entry_t *e)
 static inline od_frontend_status_t
 xplan_append_fwd(od_xplan_t *xp, machine_msg_t *original,
 		 machine_msg_t *rewritten, od_xplan_delta_type_t delta_type,
-		 const char *client_pstmt, const od_pstmt_t *pstmt)
+		 const char *client_pstmt, od_pstmt_t *pstmt)
 {
 	od_xplan_entry_t e;
 	entry_init_fwd(&e, original, rewritten, delta_type, client_pstmt,
@@ -385,11 +390,9 @@ xplan_append_fwd_no_delta(od_xplan_t *xp, machine_msg_t *original,
 	return OD_OK;
 }
 
-static inline od_frontend_status_t xplan_append_parse(od_xplan_t *xp,
-						      const char *client_pstmt,
-						      const od_pstmt_t *pstmt,
-						      machine_msg_t *original,
-						      machine_msg_t *rewritten)
+static inline od_frontend_status_t
+xplan_append_parse(od_xplan_t *xp, const char *client_pstmt, od_pstmt_t *pstmt,
+		   machine_msg_t *original, machine_msg_t *rewritten)
 {
 	od_xplan_entry_t e;
 	entry_init_parse(&e, client_pstmt, pstmt, original, rewritten);
@@ -403,7 +406,7 @@ static inline od_frontend_status_t xplan_append_parse(od_xplan_t *xp,
 }
 
 static inline od_frontend_status_t
-xplan_append_parse_shadow(od_xplan_t *xp, const od_pstmt_t *pstmt,
+xplan_append_parse_shadow(od_xplan_t *xp, od_pstmt_t *pstmt,
 			  machine_msg_t *original,
 			  machine_msg_t *inserted_parse)
 {
@@ -435,8 +438,7 @@ xplan_append_virtual_error_response(od_xplan_t *xp, machine_msg_t *original,
 
 static inline od_frontend_status_t
 xplan_append_virtual_parse_complete(od_xplan_t *xp, const char *client_pstmt,
-				    const od_pstmt_t *pstmt,
-				    machine_msg_t *original)
+				    od_pstmt_t *pstmt, machine_msg_t *original)
 {
 	od_xplan_entry_t e;
 	entry_init_virtual_parse_complete(&e, client_pstmt, pstmt, original);
@@ -481,7 +483,7 @@ xplan_append_deffered_begin(od_xplan_t *xp, machine_msg_t *begin)
 static inline od_frontend_status_t
 xplan_append_fwd_portal(od_xplan_t *xp, machine_msg_t *original,
 			machine_msg_t *rewritten, const char *portal_name,
-			const od_pstmt_t *pstmt)
+			od_pstmt_t *pstmt)
 {
 	od_xplan_entry_t e;
 	entry_init_fwd_portal(&e, original, rewritten, portal_name, pstmt);
@@ -532,14 +534,16 @@ void od_xplan_clear(od_xplan_t *xp)
 	mm_vector_clear(&xp->entries);
 }
 
-static const od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp,
-					       od_client_t *client,
-					       const char *pstmt_name)
+static od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp, od_client_t *client,
+					 const char *pstmt_name)
 {
 	/*
 	 * searching from newest state to oldest,
 	 * this means to search from tail to head of the plan deltas
 	 * and then on commited pstmts hashmap
+	 *
+	 * should not ref the returned pstmt because
+	 * it is already referenced by client or some plan entry
 	 */
 
 	for (int i = (int)mm_vector_size(&xp->entries) - 1; i >= 0; --i) {
@@ -590,14 +594,16 @@ static const od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp,
 	return od_client_get_pstmt(client, pstmt_name);
 }
 
-static const od_pstmt_t *plan_client_get_portal(od_xplan_t *xp,
-						od_client_t *client,
-						const char *portal_name)
+static od_pstmt_t *plan_client_get_portal(od_xplan_t *xp, od_client_t *client,
+					  const char *portal_name)
 {
 	/*
 	 * searching from newest state to oldest,
 	 * this means to search from tail to head of the plan deltas
 	 * and then on commited portals hashmap
+	 *
+	 * should not ref the returned pstmt because
+	 * it is already referenced by client or some plan entry
 	 */
 
 	for (int i = (int)mm_vector_size(&xp->entries) - 1; i >= 0; --i) {
@@ -696,7 +702,7 @@ static int plan_server_has_pstmt(od_xplan_t *xp, od_server_t *server,
 static inline od_frontend_status_t plan_predeploy_pstmt(od_xplan_t *xp,
 							od_server_t *server,
 							machine_msg_t *clmsg,
-							const od_pstmt_t *pstmt)
+							od_pstmt_t *pstmt)
 {
 	if (plan_server_has_pstmt(xp, server, pstmt)) {
 		return OD_OK;
@@ -716,6 +722,7 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
 	od_instance_t *instance = client->global->instance;
+	od_frontend_status_t st;
 
 	machine_msg_t *msg = m->msg;
 	char *pstmt_name = od_pstmt_name_from_parse(msg);
@@ -744,23 +751,36 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		return xplan_append_virtual_error_response(xp, msg, vresp);
 	}
 
-	mm_hashmap_t *global_pstmts = od_instance_get_pstmts_map(instance);
+	od_global_pstmt_map_t *global_pstmts =
+		od_instance_get_pstmts_map(instance);
 	od_pstmt_t *pstmt = od_pstmt_create_or_get(global_pstmts, desc);
 	if (pstmt == NULL) {
 		return OD_EOOM;
 	}
+	/* we now hold the ref to pstmt */
 
 	if (plan_server_has_pstmt(xp, server, pstmt)) {
-		return xplan_append_virtual_parse_complete(xp, pstmt_name,
-							   pstmt, msg);
+		/*
+		 * note: xplan entry will hold the ref
+		 */
+		st = xplan_append_virtual_parse_complete(xp, pstmt_name, pstmt,
+							 msg);
+	} else {
+		machine_msg_t *pmsg = od_pstmt_parse_of(pstmt);
+		if (pmsg != NULL) {
+			/*
+			 * note: xplan entry will hold the ref
+			 */
+			st = xplan_append_parse(xp, pstmt_name, pstmt, msg,
+						pmsg);
+		} else {
+			st = OD_EOOM;
+		}
 	}
 
-	machine_msg_t *pmsg = od_pstmt_parse_of(pstmt);
-	if (pmsg == NULL) {
-		return OD_EOOM;
-	}
+	od_pstmt_unref(pstmt);
 
-	return xplan_append_parse(xp, pstmt_name, pstmt, msg, pmsg);
+	return st;
 }
 
 static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
@@ -788,26 +808,34 @@ static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
 						 NULL /* no rewrite */);
 	}
 
-	const od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
+	/*
+	 * note: pstmt was returned without ref holded because
+	 * it already belongs to client or some xplan entry
+	 */
+	od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
 	if (pstmt == NULL) {
 		machine_msg_t *vresp = pstmt_does_not_exists_msg(pstmt_name);
 		if (vresp == NULL) {
 			return OD_EOOM;
 		}
 
+		/* plan entry will take the additional ref to pstmt */
 		return xplan_append_virtual_error_response(xp, msg, vresp);
 	}
 
+	/* will create xplan entry with ref if needed */
 	od_frontend_status_t st = plan_predeploy_pstmt(xp, server, msg, pstmt);
 	if (st != OD_OK) {
 		return st;
 	}
 
+	/* will create copy of name for pstmt, so no ref needed */
 	machine_msg_t *dmsg = od_pstmt_describe_of(pstmt);
 	if (dmsg == NULL) {
 		return OD_EOOM;
 	}
 
+	/* additional ref to pstmt will be created */
 	return xplan_append_fwd_no_delta(xp, msg, dmsg);
 }
 
@@ -940,7 +968,8 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
 
-	const od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
+	/* no ref to pstmt: already owned by client map or some plan entry */
+	od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
 	if (pstmt == NULL) {
 		machine_msg_t *vresp = pstmt_does_not_exists_msg(pstmt_name);
 		if (vresp == NULL) {
@@ -955,6 +984,7 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
 
+	/* predeploy will create ref to pstmt if needed */
 	od_frontend_status_t st = plan_predeploy_pstmt(xp, server, msg, pstmt);
 	if (st != OD_OK) {
 		return st;
@@ -969,6 +999,8 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 
 	/*
 	 * forward the Bind and add portal -> pstmt mapping on client.
+	 *
+	 * the ref on pstmt created on plan entry
 	 */
 	return xplan_append_fwd_portal(xp, msg, bmsg, portal_name, pstmt);
 }
@@ -1001,8 +1033,11 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
 
-	const od_pstmt_t *pstmt =
-		plan_client_get_portal(xp, client, portal_name);
+	/*
+	 * no ref was created on pstmt
+	 * it is already holded by client map or some plan entry
+	 */
+	od_pstmt_t *pstmt = plan_client_get_portal(xp, client, portal_name);
 	if (pstmt == NULL) {
 		/*
 		 * portal not found - just forward, let the server
@@ -1036,8 +1071,10 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 	if (od_parse_discard_all(desc->data, strlen(desc->data))) {
 		od_debug(&instance->logger, "rewrite execute", client, server,
 			 "DISCARD ALL detected via portal, invalidate caches");
-		return xplan_append_fwd(xp, msg, NULL,
-					OD_XPLAN_DELTA_REMOVE_ALL, NULL, pstmt);
+
+		return xplan_append_fwd(
+			xp, msg, NULL, OD_XPLAN_DELTA_REMOVE_ALL, NULL,
+			NULL /* can not to pass the pstmt - it will not be used */);
 	}
 
 	size_t dealloc_name_len;

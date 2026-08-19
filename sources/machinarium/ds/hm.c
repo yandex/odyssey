@@ -258,7 +258,7 @@ int mm_hashmap_foreach(mm_hashmap_t *hm, mm_hm_kvp_cb_fn cb, void **argv)
 			mm_hashmap_kvp_t *kvp =
 				mm_container_of(i, mm_hashmap_kvp_t, link);
 
-			rc = cb(kvp, argv);
+			rc = cb(hm, kvp, argv);
 			if (rc != 0) {
 				break;
 			}
@@ -297,7 +297,7 @@ static mm_hashmap_kvp_t *kvp_find_locked(mm_hashmap_t *hm,
 }
 
 int mm_hashmap_lock_key(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
-			const void *key, int create)
+			const void *key, int flags)
 {
 	memset(klock, 0, sizeof(mm_hashmap_keylock_t));
 
@@ -319,7 +319,7 @@ int mm_hashmap_lock_key(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
 
 	mm_mutex_unlock(mu);
 
-	if (!create) {
+	if (!(flags & MM_HASHMAP_CREATE)) {
 		klock->found = 0;
 		klock->kvp = NULL;
 		return 0;
