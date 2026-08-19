@@ -109,6 +109,10 @@ int od_global_pstmts_has_pstmt(od_global_pstmt_map_t *gm,
 			       const od_pstmt_desc_t desc);
 void od_global_pstmt_try_remove(od_global_pstmt_map_t *gm, od_pstmt_t *pstmt);
 
+typedef int (*od_global_pstmt_cb)(const od_pstmt_t *pstmt, void *arg);
+void od_global_pstmt_foreach(od_global_pstmt_map_t *gm, od_global_pstmt_cb cb,
+			     void *arg);
+
 /* helpers */
 char *od_pstmt_name_from_parse(machine_msg_t *msg);
 od_pstmt_desc_t od_pstmt_desc_from_parse(machine_msg_t *msg);

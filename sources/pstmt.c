@@ -607,6 +607,36 @@ int od_global_pstmts_has_pstmt(od_global_pstmt_map_t *gm,
 	return 0;
 }
 
+static int foreach_wrapper(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp, void **argv)
+{
+	union {
+		od_global_pstmt_cb cb;
+		void *p;
+	} p;
+	void *arg;
+
+	p.p = argv[0];
+	arg = argv[1];
+
+	const od_pstmt_t *pstmt =
+		(const od_pstmt_t *)mm_hashmap_kvp_val(hm, kvp);
+
+	return p.cb(pstmt, arg);
+}
+
+void od_global_pstmt_foreach(od_global_pstmt_map_t *gm, od_global_pstmt_cb cb,
+			     void *arg)
+{
+	union {
+		od_global_pstmt_cb ccb;
+		void *argv[2];
+	} a;
+	a.ccb = cb;
+	a.argv[1] = arg;
+
+	mm_hashmap_foreach(gm->hm, foreach_wrapper, a.argv);
+}
+
 /* helpers */
 
 char *od_pstmt_name_from_parse(machine_msg_t *msg)
