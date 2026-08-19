@@ -57,6 +57,8 @@ struct od_thread_pool {
 	mm_wait_list_t notifier;
 	atomic_uint_fast64_t version;
 	atomic_uint_fast64_t stop;
+	size_t max_tasks;
+	atomic_size_t active_tasks;
 };
 
 int od_thread_pool_init(od_thread_pool_t *pool, const char *name, size_t size,
