@@ -23,8 +23,15 @@ extern void od_assert_fail(const char *expr, const char *file, int line);
 #else
 #define od_assert(expr)                                            \
 	do {                                                       \
-		if (!(expr)) {                                     \
+		if (od_unlikely(!(expr))) {                        \
 			od_assert_fail(#expr, __FILE__, __LINE__); \
 		}                                                  \
 	} while (0)
 #endif
+
+#define od_release_assert(expr)                                    \
+	do {                                                       \
+		if (od_unlikely(!(expr))) {                        \
+			od_assert_fail(#expr, __FILE__, __LINE__); \
+		}                                                  \
+	} while (0)

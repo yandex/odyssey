@@ -18,6 +18,9 @@
 #include <server.h>
 #include <pstmt.h>
 
+/* XXX: randomize seed ? */
+static const uint64_t hash_seed = 0;
+
 /*
  * client hash map
  * "P_0" -> *od_prepared_stmt_t
@@ -27,7 +30,7 @@ static mm_hash_t xxh_str_ptr(const void *data)
 {
 	const char *ptr = *(const char **)data;
 
-	return mm_xxh64_hash(ptr, strlen(ptr), 0);
+	return mm_xxh64_hash(ptr, strlen(ptr), hash_seed);
 }
 
 static int str_ptr_cmp(const void *k1, const void *k2)
@@ -61,15 +64,30 @@ mm_hashmap_t *od_client_pstmt_hashmap_create(void)
 {
 	return mm_hashmap_create(
 		50 /* XXX: big enough? */,
-		1 /* nlocks = 1, no fully-concurrent access to server hashmap */,
-		sizeof(char *), sizeof(od_pstmt_t *), str_ptr_cmp, xxh_str_ptr,
-		str_ptr_dtor,
+		1 /* nlocks = 1, no fully-concurrent access to client hashmap */,
+		sizeof(char *) /* key size */,
+		sizeof(od_pstmt_t *) /* val size */, str_ptr_cmp /* key cmp */,
+		xxh_str_ptr /* key hash */, str_ptr_dtor /* key dtor */,
 		NULL /* no need to free the pointer from global table */,
-		str_ptr_copy);
+		str_ptr_copy /* key copy */);
+}
+
+static int unref_pstmt_entry(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
+			     void **argv)
+{
+	(void)argv;
+
+	od_pstmt_t *pstmt = *(od_pstmt_t **)mm_hashmap_kvp_val(hm, kvp);
+
+	od_pstmt_unref(pstmt);
+
+	return 0;
 }
 
 void od_client_pstmt_hashmap_free(mm_hashmap_t *hm)
 {
+	mm_hashmap_foreach(hm, unref_pstmt_entry, NULL);
+
 	mm_hashmap_free(hm);
 }
 
@@ -93,11 +111,14 @@ od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name)
 }
 
 int od_client_add_pstmt(od_client_t *client, const char *name,
-			const od_pstmt_t *pstmt)
+			od_pstmt_t *pstmt)
 {
 	mm_hashmap_keylock_t klock;
+	od_pstmt_t *to_unref = NULL;
+	const int unnamed = name[0] == '\0';
+
 	int rc = mm_hashmap_lock_key(client->prep_stmt_ids, &klock, &name,
-				     1 /* do create */);
+				     MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
 		/* cant create and lock is not held */
 		return rc;
@@ -105,27 +126,35 @@ int od_client_add_pstmt(od_client_t *client, const char *name,
 
 	int ret = 0;
 
-	if (!klock.found || name[0] == '\0') {
+	void *val = mm_hashmap_kvp_val(client->prep_stmt_ids, klock.kvp);
+	if (unnamed && (*(void **)val) != NULL) {
 		/*
-		 * new element - set the value
-		 *
-		 * if already exists - rewrite value only if name is ""
-		 * (its PG specific for "" statemnt - unnamed statemnt is
-		 * rewritten every Parse, not generate ErrorResponse about
+		 * its ok to redefine "" statement
+		 * (unnamed statemnt is rewritten every Parse,
+		 * not generate ErrorResponse about
 		 * statement already exists)
+		 *
+		 * so need to not forget to unref previous pstmt
 		 */
-		void *val =
-			mm_hashmap_kvp_val(client->prep_stmt_ids, klock.kvp);
-		memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
+		to_unref = *(od_pstmt_t **)val;
+	}
 
+	if (!klock.found || unnamed) {
+		/* new or "" - save */
+		memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
+		od_pstmt_ref(pstmt);
 		ret = 0;
 	} else {
-		/* value already exists and name != "" */
+		/* already exists - skip */
 		ret = 1;
 	}
 
 	/* no real concurrent access - can unlock now and return */
 	mm_hashmap_unlock_key(client->prep_stmt_ids, &klock);
+
+	if (to_unref != NULL) {
+		od_pstmt_unref(to_unref);
+	}
 
 	return ret;
 }
@@ -143,7 +172,12 @@ int od_client_remove_pstmt(od_client_t *client, const char *name)
 	(void)rc;
 
 	if (klock.kvp != NULL) {
+		od_pstmt_t *pstmt = *(od_pstmt_t **)mm_hashmap_kvp_val(
+			client->prep_stmt_ids, klock.kvp);
 		mm_hashmap_remove(client->prep_stmt_ids, &klock);
+		if (pstmt != NULL) {
+			od_pstmt_unref(pstmt);
+		}
 	}
 
 	/* if not found - lock is not held */
@@ -153,12 +187,14 @@ int od_client_remove_pstmt(od_client_t *client, const char *name)
 
 void od_client_pstmts_clear(od_client_t *client)
 {
+	mm_hashmap_foreach(client->prep_stmt_ids, unref_pstmt_entry, NULL);
+
 	mm_hashmap_clear(client->prep_stmt_ids);
 }
 
 /*
  * client portal hash map
- * "portal_name" -> *od_pstmt_t
+ * "portal_name" -> od_pstmt_t*
  *
  * portals are created by Bind (destination portal name) and destroyed by
  * Close Portal, transaction end, or DISCARD ALL / DEALLOCATE ALL.
@@ -172,14 +208,19 @@ mm_hashmap_t *od_client_portal_hashmap_create(void)
 {
 	return mm_hashmap_create(
 		50 /* XXX: big enough? */,
-		1 /* nlocks = 1, no fully-concurrent access */, sizeof(char *),
-		sizeof(od_pstmt_t *), str_ptr_cmp, xxh_str_ptr, str_ptr_dtor,
+		1 /* nlocks = 1, no fully-concurrent access */,
+		sizeof(char *) /* key size */,
+		sizeof(od_pstmt_t *) /* value size */,
+		str_ptr_cmp /* key cmp */, xxh_str_ptr /* key hash */,
+		str_ptr_dtor /* key dtor */,
 		NULL /* no need to free the pointer from global table */,
-		str_ptr_copy);
+		str_ptr_copy /* key copy */);
 }
 
 void od_client_portal_hashmap_free(mm_hashmap_t *hm)
 {
+	mm_hashmap_foreach(hm, unref_pstmt_entry, NULL);
+
 	mm_hashmap_free(hm);
 }
 
@@ -201,24 +242,32 @@ od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name)
 }
 
 int od_client_add_portal(od_client_t *client, const char *portal_name,
-			 const od_pstmt_t *pstmt)
+			 od_pstmt_t *pstmt)
 {
 	mm_hashmap_keylock_t klock;
+	od_pstmt_t *to_unref = NULL;
+
 	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
-				     1 /* do create */);
+				     MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
 		return rc;
 	}
 
 	/*
-	 * upsert: the unnamed portal "" is silently overwritten on every Bind.
+	 * note: unnamed portal "" is silently overwritten on every Bind.
 	 * for named portals PG requires an explicit Close before re-Bind, but
-	 * the server enforces that -- we just store the mapping here.
+	 * the server will enforce that - we just store the mapping here
 	 */
-	void *val = mm_hashmap_kvp_val(client->portals, klock.kvp);
-	memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
 
+	void *val = mm_hashmap_kvp_val(client->portals, klock.kvp);
+	to_unref = *(od_pstmt_t **)(val);
+	memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
+	od_pstmt_ref(pstmt);
 	mm_hashmap_unlock_key(client->portals, &klock);
+
+	if (to_unref != NULL) {
+		od_pstmt_unref(to_unref);
+	}
 
 	return 0;
 }
@@ -231,7 +280,14 @@ int od_client_remove_portal(od_client_t *client, const char *portal_name)
 	(void)rc;
 
 	if (klock.kvp != NULL) {
+		od_pstmt_t *pstmt = *(od_pstmt_t **)mm_hashmap_kvp_val(
+			client->portals, klock.kvp);
+
 		mm_hashmap_remove(client->portals, &klock);
+
+		if (pstmt != NULL) {
+			od_pstmt_unref(pstmt);
+		}
 	}
 
 	return 0;
@@ -239,6 +295,8 @@ int od_client_remove_portal(od_client_t *client, const char *portal_name)
 
 void od_client_portals_clear(od_client_t *client)
 {
+	mm_hashmap_foreach(client->portals, unref_pstmt_entry, NULL);
+
 	mm_hashmap_clear(client->portals);
 }
 
@@ -251,7 +309,7 @@ static mm_hash_t xxh_str_inplace(const void *data)
 {
 	const char *key = data;
 
-	return mm_xxh64_hash(data, strlen(key), 0);
+	return mm_xxh64_hash(data, strlen(key), hash_seed);
 }
 
 static int str_inplace_cmp(const void *k1, const void *k2)
@@ -267,8 +325,10 @@ mm_hashmap_t *od_server_pstmt_hashmap_create(void)
 	return mm_hashmap_create(
 		100 /* XXX: big enough? */,
 		1 /* nlocks = 1, no fully-concurrent access to server hashmap */,
-		sizeof(od_pstmt_name_t), sizeof(od_pstmt_t *), str_inplace_cmp,
-		xxh_str_inplace, NULL /* no need to free on inplace str */,
+		sizeof(od_pstmt_name_t) /* key size */,
+		sizeof(od_pstmt_t *) /* value size */,
+		str_inplace_cmp /* key cmp */, xxh_str_inplace /* key hash */,
+		NULL /* no need to free on inplace str */,
 		NULL /* no need to free the pointer from global table */,
 		NULL /* no key copy function */
 	);
@@ -276,6 +336,8 @@ mm_hashmap_t *od_server_pstmt_hashmap_create(void)
 
 void od_server_pstmt_hashmap_free(mm_hashmap_t *hm)
 {
+	mm_hashmap_foreach(hm, unref_pstmt_entry, NULL);
+
 	mm_hashmap_free(hm);
 }
 
@@ -296,15 +358,21 @@ int od_server_has_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 	return 0;
 }
 
-int od_server_add_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
+int od_server_add_pstmt(od_server_t *server, od_pstmt_t *pstmt)
 {
 	mm_hashmap_keylock_t klock;
 	int rc = mm_hashmap_lock_key(server->prep_stmts, &klock, pstmt->name,
-				     1 /* do create */);
+				     MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
 		/* cant create and lock is not held */
 		return rc;
 	}
+
+	/*
+	 * note: server's pstmt has generated name like odyssey_pstmt_1337
+	 * so there is no unnamed statements at all and no possibility for unref
+	 * because no pstmts can be upserted
+	 */
 
 	int ret = 0;
 
@@ -312,7 +380,7 @@ int od_server_add_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 		/* new element - set the value */
 		void *val = mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
 		memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
-
+		od_pstmt_ref(pstmt);
 		ret = 0;
 	} else {
 		ret = 1;
@@ -332,7 +400,12 @@ int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 	(void)rc;
 
 	if (klock.found) {
+		od_pstmt_t *p = *(od_pstmt_t **)mm_hashmap_kvp_val(
+			server->prep_stmts, klock.kvp);
 		mm_hashmap_remove(server->prep_stmts, &klock);
+		if (p != NULL) {
+			od_pstmt_unref(p);
+		}
 	}
 
 	/* if not found - lock is not held */
@@ -342,19 +415,24 @@ int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 
 void od_server_pstmts_clear(od_server_t *server)
 {
+	mm_hashmap_foreach(server->prep_stmts, unref_pstmt_entry, NULL);
+
 	mm_hashmap_clear(server->prep_stmts);
 }
 
 /*
  * global map
- * od_pstmt_desc_t -> od_pstmt_t
+ *
+ * key:   od_pstmt_desc_t (inline, non-owning — desc.data points into
+ *        the value's desc.data, so the key is a "view" of the value)
+ * value: od_pstmt_t (inline, owns its own copy of desc.data)
  */
 
 static mm_hash_t xxh_pstmt_desc(const void *data)
 {
 	const od_pstmt_desc_t *desc = data;
 
-	return mm_xxh64_hash(desc->data, desc->len, 0);
+	return mm_xxh64_hash(desc->data, desc->len, hash_seed);
 }
 
 static int pstmt_desc_cmp(const void *k1, const void *k2)
@@ -369,67 +447,164 @@ static int pstmt_desc_cmp(const void *k1, const void *k2)
 	return memcmp(d1->data, d2->data, d1->len);
 }
 
-static void pstmt_desc_free(void *k)
+static void pstmt_desc_val_dtor(void *val)
 {
-	od_pstmt_desc_t *desc = k;
-	od_free(desc->data);
+	od_pstmt_t *pstmt = val;
+	od_assert(atomic_load_explicit(&pstmt->refs, memory_order_acquire) ==
+		  1);
+	od_free(pstmt->desc.data);
 }
 
-static int pstmt_desc_copy_cb(void *dest, const void *src)
+static void pstmt_init_new(od_global_pstmt_map_t *hm, od_pstmt_t *out)
 {
-	const od_pstmt_desc_t *orig = src;
-	od_pstmt_desc_t copy = od_pstmt_desc_copy(*orig);
-	if (copy.data == NULL) {
-		return 1;
+	uint64_t num = atomic_fetch_add_explicit(&hm->counter, 1,
+						 memory_order_relaxed);
+	od_release_assert(num <= OD_MAX_PSTMT_NUM);
+
+	atomic_init(&out->refs, 1);
+	out->source = hm;
+
+	od_snprintf(out->name, sizeof(od_pstmt_name_t), "%s%" PRIu64,
+		    OD_PSTMT_NAME_PREFIX, num);
+}
+
+od_global_pstmt_map_t *od_global_pstmts_map_create(size_t nlocks)
+{
+	mm_hashmap_t *hm = mm_hashmap_create(
+		10000 /* XXX: big enough? */, nlocks,
+		sizeof(od_pstmt_desc_t) /* key size */,
+		sizeof(od_pstmt_t) /* value size */,
+		pstmt_desc_cmp /* key comparator */,
+		xxh_pstmt_desc /* key hash */,
+		NULL /* key does not own desc.data */,
+		pstmt_desc_val_dtor /* value owns desc.data */,
+		NULL /* no key copy — raw memcpy, data ptr overwritten after insert */
+	);
+
+	if (hm == NULL) {
+		return NULL;
 	}
 
-	memcpy(dest, &copy, sizeof(od_pstmt_desc_t));
+	od_global_pstmt_map_t *gm = od_malloc(sizeof(od_global_pstmt_map_t));
+	if (gm == NULL) {
+		mm_hashmap_free(hm);
+		return NULL;
+	}
 
-	return 0;
+	gm->hm = hm;
+	atomic_init(&gm->counter, 0);
+
+	return gm;
 }
 
-mm_hashmap_t *od_global_pstmts_map_create(void)
+void od_global_pstmts_map_free(od_global_pstmt_map_t *hm)
 {
-	return mm_hashmap_create(1000 /* XXX: big enough? */,
-				 1000 /* XXX: big enough? */,
-				 sizeof(od_pstmt_desc_t), sizeof(od_pstmt_t),
-				 pstmt_desc_cmp, xxh_pstmt_desc,
-				 pstmt_desc_free, NULL, pstmt_desc_copy_cb);
+	mm_hashmap_free(hm->hm);
+	od_free(hm);
 }
 
-void od_global_pstmts_map_free(mm_hashmap_t *hm)
-{
-	mm_hashmap_free(hm);
-}
-
-od_pstmt_t *od_pstmt_create_or_get(mm_hashmap_t *pstmts,
+od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 				   const od_pstmt_desc_t desc)
 {
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(pstmts, &klock, &desc,
-				     1 /* create if not exists */);
+	int rc;
+	od_pstmt_desc_t *key;
+	od_pstmt_t *value;
+
+	/*
+	 * lock_key will creates a key that is binary-copy of desc
+	 *
+	 * need to remember: it does not owns desc.data
+	 */
+	rc = mm_hashmap_lock_key(pstmts->hm, &klock, &desc,
+				 MM_HASHMAP_CREATE /* create if not exists */);
 	if (rc == -1) {
 		return NULL;
 	}
 
-	void *value = mm_hashmap_kvp_val(pstmts, klock.kvp);
+	value = (od_pstmt_t *)mm_hashmap_kvp_val(pstmts->hm, klock.kvp);
+	key = (od_pstmt_desc_t *)mm_hashmap_kvp_key(pstmts->hm, klock.kvp);
 
 	if (!klock.found) {
 		/* init new prep stmt */
-		od_pstmt_t pstmt;
-		memset(&pstmt, 0, sizeof(od_pstmt_t));
-		od_pstmt_next_name(&pstmt);
+		memset(value, 0, sizeof(od_pstmt_t));
+		pstmt_init_new(pstmts, value);
 
-		/* let the value points to key */
-		pstmt.desc = *((od_pstmt_desc_t *)mm_hashmap_kvp_key(
-			pstmts, klock.kvp));
+		value->desc = od_pstmt_desc_copy(desc);
+		if (value->desc.data == NULL) {
+			mm_hashmap_remove(pstmts->hm, &klock);
+			return NULL;
+		}
 
-		memcpy(value, &pstmt, sizeof(od_pstmt_t));
+		/*
+		 * rewrite the key's data pointer to point into the value
+		 * so the key becomes a non-owning view of the value, instead of
+		 * memcpy of find key (desc)
+		 */
+		key->data = value->desc.data;
+	} else {
+		/* the key already exists and has a copy of desc.data, do nothing */
 	}
 
-	mm_hashmap_unlock_key(pstmts, &klock);
+	/* the call-side now holds the ref too */
+	od_pstmt_ref(value);
+
+	mm_hashmap_unlock_key(pstmts->hm, &klock);
 
 	return value;
+}
+
+void od_global_pstmt_try_remove(od_global_pstmt_map_t *gm, od_pstmt_t *pstmt)
+{
+	mm_hashmap_keylock_t klock;
+	int rc;
+	uint64_t refs;
+
+	rc = mm_hashmap_lock_key(gm->hm, &klock, &pstmt->desc,
+				 0 /* no create */);
+	if (rc == -1) {
+		return;
+	}
+
+	/*
+	 * every pstmt must be created from global hashmap,
+	 * so no need to check the klock.kvp != NULL
+	 */
+	od_assert(klock.kvp != NULL);
+	od_assert((od_pstmt_t *)mm_hashmap_kvp_val(gm->hm, klock.kvp) == pstmt);
+
+	/*
+	 * note: ref can be done only with the lock held (create_or_get)
+	 * or from the ref, that is already valid, so no race here
+	 */
+	refs = atomic_load_explicit(&pstmt->refs, memory_order_acquire);
+	if (refs > 1) {
+		mm_hashmap_unlock_key(gm->hm, &klock);
+	} else {
+		mm_hashmap_remove(gm->hm, &klock);
+	}
+}
+
+int od_global_pstmts_has_pstmt(od_global_pstmt_map_t *gm,
+			       const od_pstmt_desc_t desc)
+{
+	mm_hashmap_keylock_t klock;
+	int rc;
+
+	rc = mm_hashmap_lock_key(gm->hm, &klock, &desc, 0 /* do not create */);
+	if (rc == -1) {
+		return 0;
+	}
+
+	if (klock.found) {
+		/* yes, not so thread-safe check, but this function is only used in tests */
+		mm_hashmap_unlock_key(gm->hm, &klock);
+		return 1;
+	}
+
+	/* no lock held */
+
+	return 0;
 }
 
 /* helpers */
@@ -501,14 +676,4 @@ od_pstmt_desc_t od_pstmt_desc_copy(const od_pstmt_desc_t desc)
 	}
 
 	return copy;
-}
-
-void od_pstmt_next_name(od_pstmt_t *out)
-{
-	static atomic_uint_fast64_t cnt = 0;
-
-	uint64_t num = atomic_fetch_add(&cnt, 1);
-
-	od_snprintf(out->name, sizeof(od_pstmt_name_t), "%s%" PRIu64,
-		    OD_PSTMT_NAME_PREFIX, num);
 }

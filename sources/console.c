@@ -1277,7 +1277,8 @@ static inline int od_console_show_fds_server_cb(od_server_t *server,
 	return 0;
 }
 
-static inline int show_server_pstmt_cb_internal(mm_hashmap_kvp_t *kvp,
+static inline int show_server_pstmt_cb_internal(mm_hashmap_t *server_map,
+						mm_hashmap_kvp_t *kvp,
 						void **argv)
 {
 	od_server_t *server = argv[1];
@@ -1324,8 +1325,8 @@ static inline int show_server_pstmt_cb_internal(mm_hashmap_kvp_t *kvp,
 		goto error;
 	}
 
-	const od_pstmt_t *pstmt = *(
-		const od_pstmt_t **)mm_hashmap_kvp_val(server->prep_stmts, kvp);
+	const od_pstmt_t *pstmt =
+		*(const od_pstmt_t **)mm_hashmap_kvp_val_const(server_map, kvp);
 
 	/* name */
 	rc = kiwi_be_write_data_row_add(stream, offset, pstmt->name,

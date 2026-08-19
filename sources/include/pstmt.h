@@ -29,14 +29,16 @@
  */
 
 #include <machinarium/ds/hm.h>
+#include <machinarium/machinarium.h>
 
 #include <types.h>
 
 #define OD_PSTMT_NAME_PREFIX "odyssey_pstmt_"
-#define OD_PSTMT_NAME_MAX \
-	(sizeof(OD_PSTMT_NAME_PREFIX) + sizeof("18446744073709551615") + 1)
+#define OD_MAX_PSTMT_NUM (99999999999999999UL)
+#define OD_PSTMT_NAME_MAX_LEN \
+	(sizeof(OD_PSTMT_NAME_PREFIX) + 17 /* length of OD_MAX_PSTMT_NUM */)
 
-typedef char od_pstmt_name_t[OD_PSTMT_NAME_MAX];
+typedef char od_pstmt_name_t[OD_PSTMT_NAME_MAX_LEN];
 
 /* query and param bytes from Parse message */
 typedef struct {
@@ -44,9 +46,28 @@ typedef struct {
 	size_t len;
 } od_pstmt_desc_t;
 
+typedef struct {
+	mm_hashmap_t *hm;
+	atomic_uint_fast64_t counter;
+} od_global_pstmt_map_t;
+
 struct od_pstmt {
+	/* own the desc->data copy */
 	od_pstmt_desc_t desc;
 	od_pstmt_name_t name;
+
+	/*
+	 * holded by:
+	 * - client pstmts, portals
+	 * - server pstmts
+	 * - xplan entries
+	 * - global pstmts map
+	 *
+	 * after reach 1, the stmt must be deleted from global map
+	 */
+	atomic_uint_fast64_t refs;
+
+	od_global_pstmt_map_t *source;
 };
 
 /* "P_0" -> *od_pstmt_t */
@@ -54,7 +75,7 @@ mm_hashmap_t *od_client_pstmt_hashmap_create(void);
 void od_client_pstmt_hashmap_free(mm_hashmap_t *hm);
 
 int od_client_add_pstmt(od_client_t *client, const char *name,
-			const od_pstmt_t *pstmt);
+			od_pstmt_t *pstmt);
 int od_client_has_pstmt(od_client_t *client, const char *name);
 int od_client_remove_pstmt(od_client_t *client, const char *name);
 od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name);
@@ -65,7 +86,7 @@ mm_hashmap_t *od_client_portal_hashmap_create(void);
 void od_client_portal_hashmap_free(mm_hashmap_t *hm);
 
 int od_client_add_portal(od_client_t *client, const char *portal_name,
-			 const od_pstmt_t *pstmt);
+			 od_pstmt_t *pstmt);
 od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name);
 int od_client_remove_portal(od_client_t *client, const char *portal_name);
 void od_client_portals_clear(od_client_t *client);
@@ -75,17 +96,18 @@ mm_hashmap_t *od_server_pstmt_hashmap_create(void);
 void od_server_pstmt_hashmap_free(mm_hashmap_t *hm);
 
 int od_server_has_pstmt(od_server_t *server, const od_pstmt_t *pstmt);
-int od_server_add_pstmt(od_server_t *server, const od_pstmt_t *pstmt);
+int od_server_add_pstmt(od_server_t *server, od_pstmt_t *pstmt);
 int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt);
 void od_server_pstmts_clear(od_server_t *server);
 
 /* od_pstmt_desc_t -> od_pstmt_t */
-mm_hashmap_t *od_global_pstmts_map_create(void);
-void od_global_pstmts_map_free(mm_hashmap_t *hm);
-
-void od_pstmt_next_name(od_pstmt_t *out);
-
-od_pstmt_t *od_pstmt_create_or_get(mm_hashmap_t *gm, od_pstmt_desc_t desc);
+od_global_pstmt_map_t *od_global_pstmts_map_create(size_t nlocks);
+void od_global_pstmts_map_free(od_global_pstmt_map_t *hm);
+od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *gm,
+				   od_pstmt_desc_t desc);
+int od_global_pstmts_has_pstmt(od_global_pstmt_map_t *gm,
+			       const od_pstmt_desc_t desc);
+void od_global_pstmt_try_remove(od_global_pstmt_map_t *gm, od_pstmt_t *pstmt);
 
 /* helpers */
 char *od_pstmt_name_from_parse(machine_msg_t *msg);
@@ -94,3 +116,27 @@ od_pstmt_desc_t od_pstmt_desc_copy(const od_pstmt_desc_t desc);
 
 machine_msg_t *od_pstmt_parse_of(const od_pstmt_t *pstmt);
 machine_msg_t *od_pstmt_describe_of(const od_pstmt_t *pstmt);
+
+/*
+ * should be called only with
+ * - lock on global map held
+ * - or from ref that is already valid
+ */
+static inline void od_pstmt_ref(od_pstmt_t *pstmt)
+{
+	atomic_fetch_add_explicit(&pstmt->refs, 1, memory_order_relaxed);
+}
+
+static inline void od_pstmt_unref(od_pstmt_t *pstmt)
+{
+	uint64_t v = atomic_fetch_sub_explicit(&pstmt->refs, 1,
+					       memory_order_release);
+	od_assert(v > 1);
+	if (v == 2) {
+		/*
+		 * some other thread can ref this pstmt in parallel
+		 * this fact will be rechecked in remove fn
+		 */
+		od_global_pstmt_try_remove(pstmt->source, pstmt);
+	}
+}

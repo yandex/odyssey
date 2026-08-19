@@ -8,6 +8,7 @@
 
 #include <status.h>
 #include <types.h>
+#include <pstmt.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/ds/vector.h>
@@ -81,7 +82,7 @@ typedef struct {
 	 * where it is an owned NUL-terminated copy (freed in plan_entry_destroy).
 	 */
 	const char *client_pstmt;
-	const od_pstmt_t *pstmt;
+	od_pstmt_t *pstmt;
 	/*
 	 * portal name for ADD_PORTAL / REMOVE_PORTAL deltas
 	 * points to the original client msg (owned by xbuf)
