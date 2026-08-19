@@ -36,6 +36,7 @@ typedef enum {
 	OD_LSTATS,
 	OD_LSERVERS,
 	OD_LSERVER_PREP_STMTS,
+	OD_LPREPARED_STMTS,
 	OD_LCLIENTS,
 	OD_LLISTS,
 	OD_LHELP,
@@ -70,6 +71,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("stats", OD_LSTATS),
 	od_keyword("servers", OD_LSERVERS),
 	od_keyword("server_prep_stmts", OD_LSERVER_PREP_STMTS),
+	od_keyword("global_prepared_statements", OD_LPREPARED_STMTS),
 	od_keyword("clients", OD_LCLIENTS),
 	od_keyword("lists", OD_LLISTS),
 	od_keyword("set", OD_LSET),
@@ -1477,6 +1479,71 @@ static inline int od_console_show_server_prep_stmts(od_client_t *client,
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
 
+static inline int show_pstmt_cb(const od_pstmt_t *pstmt, void *arg)
+{
+	machine_msg_t *stream, *msg;
+	char data[64];
+	size_t data_len;
+	int rc, offset;
+
+	stream = arg;
+
+	msg = kiwi_be_write_data_row(stream, &offset);
+	if (msg == NULL) {
+		goto error;
+	}
+
+	/* name */
+	data_len = od_snprintf(data, sizeof(data), "%s", pstmt->name);
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc != 0) {
+		goto error;
+	}
+
+	/* description */
+	rc = kiwi_be_write_data_row_add(stream, offset, pstmt->desc.data,
+					pstmt->desc.len);
+	if (rc != 0) {
+		goto error;
+	}
+
+	/* refcount */
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+			       atomic_load_explicit(&pstmt->refs,
+						    memory_order_acquire));
+	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+	if (rc != 0) {
+		goto error;
+	}
+
+	return 0;
+
+error:
+	return 1;
+}
+
+static inline int od_console_show_prep_stmts(od_client_t *client,
+					     machine_msg_t *stream)
+{
+	od_instance_t *instance;
+	machine_msg_t *msg;
+
+	od_assert(stream);
+
+	instance = client->global->instance;
+
+	msg = kiwi_be_write_row_descriptionf(stream, "sss", "name",
+					     "definition", "refcount");
+	if (msg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	od_global_pstmt_foreach(instance->pstmts, show_pstmt_cb,
+				(void *)stream);
+
+	return kiwi_be_write_complete(stream, "SHOW", 5);
+}
+
 static inline int od_console_show_is_paused(od_client_t *client,
 					    machine_msg_t *stream)
 {
@@ -2193,6 +2260,8 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_databases(client, stream);
 	case OD_LSERVER_PREP_STMTS:
 		return od_console_show_server_prep_stmts(client, stream);
+	case OD_LPREPARED_STMTS:
+		return od_console_show_prep_stmts(client, stream);
 	case OD_LSERVERS:
 		return od_console_show_servers(client, stream);
 	case OD_LCLIENTS:
