@@ -93,6 +93,8 @@ static void tp_work(void *arg)
 				mm_wait_flag_set(task.future->wait);
 			}
 
+			atomic_fetch_sub(&pool->active_tasks, 1);
+
 			if (task.arg_dtor) {
 				task.arg_dtor(task.arg);
 			}
@@ -155,6 +157,8 @@ int od_thread_pool_init(od_thread_pool_t *pool, const char *name, size_t size,
 	atomic_init(&pool->version, 0);
 	atomic_init(&pool->stop, 0);
 	mm_wait_list_init(&pool->notifier, &pool->version);
+	pool->max_tasks = queue_size;
+	atomic_init(&pool->active_tasks, 0);
 
 	pool->workers = od_malloc(size * sizeof(od_thread_pool_worker_t));
 	if (pool->workers == NULL) {
@@ -223,17 +227,21 @@ od_future_t *od_thread_pool_submit(od_thread_pool_t *pool,
 	/* one another ref for 'user' */
 	od_future_ref(future);
 
-	if (mm_queue_push(&pool->queue, &task)) {
-		notify_one(pool);
-		return future;
+	size_t cur = atomic_load(&pool->active_tasks);
+	while(1) {
+		if(cur >= pool->max_tasks) {
+			mm_errno_set(EAGAIN);
+			od_future_unref(future);
+			od_future_unref(future);
+			return NULL;
+		}
+		if(atomic_compare_exchange_weak(&pool->active_tasks, &cur, cur + 1)) {
+			break;
+		}
 	}
-
-	/* no actual 'user' exists, so double-unref */
-	od_future_unref(future);
-	od_future_unref(future);
-
-	mm_errno_set(EAGAIN);
-	return NULL;
+	mm_queue_push(&pool->queue, &task);
+	notify_one(pool);
+	return future;
 }
 
 int od_thread_pool_wait(od_future_t *future, uint32_t timeout_ms)
