@@ -218,6 +218,27 @@ od_system_server_t *od_system_server_init(void)
 	return server;
 }
 
+static inline od_retcode_t
+od_system_server_retire_tls(od_system_server_t *server)
+{
+	if (server->tls == NULL) {
+		return OK_RESPONSE;
+	}
+
+	machine_tls_t **retired = od_realloc(
+		server->tls_retired,
+		sizeof(machine_tls_t *) * (server->tls_retired_count + 1));
+	if (retired == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	retired[server->tls_retired_count] = server->tls;
+	server->tls_retired = retired;
+	server->tls_retired_count++;
+
+	return OK_RESPONSE;
+}
+
 void od_system_server_free(od_system_server_t *server)
 {
 	mm_eventfd_destroy(&server->shutdown_efd);
@@ -225,6 +246,12 @@ void od_system_server_free(od_system_server_t *server)
 	if (server->tls) {
 		/* Free tls */
 		machine_tls_free(server->tls);
+	}
+	for (size_t i = 0; i < server->tls_retired_count; i++) {
+		machine_tls_free(server->tls_retired[i]);
+	}
+	if (server->tls_retired) {
+		od_free(server->tls_retired);
 	}
 	server->io = NULL;
 	server->tls = NULL;
@@ -440,6 +467,11 @@ static inline int od_system_listen(od_system_t *system)
 	return binded;
 }
 
+static inline char *od_config_listen_host_name(od_config_listen_t *config)
+{
+	return config->host == NULL ? "(NULL)" : config->host;
+}
+
 static inline int od_config_listen_host_cmp(char *host_listen,
 					    char *host_server)
 {
@@ -563,33 +595,63 @@ void od_system_config_reload(od_system_t *system)
 			listen_config = NULL;
 		}
 
+		char *host_name = od_config_listen_host_name(server->config);
+
 		if (listen_config == NULL) {
 			od_log(&instance->logger, "reload-config", NULL, NULL,
 			       "failed to match listen config for %s:%d",
-			       server->config->host == NULL ?
-				       "(NULL)" :
-				       server->config->host,
-			       server->config->port);
+			       host_name, server->config->port);
 		} else if (server->config->tls_opts->tls_mode !=
 			   listen_config->tls_opts->tls_mode) {
 			od_log(&instance->logger, "reload-config", NULL, NULL,
-			       "reloaded tls mode for %s:%d",
-			       server->config->host == NULL ?
-				       "(NULL)" :
-				       server->config->host,
+			       "reloaded tls mode for %s:%d", host_name,
 			       server->config->port);
 
 			server->config->tls_opts->tls_mode =
 				listen_config->tls_opts->tls_mode;
 		}
 
-		if (server->config->tls_opts->tls_mode !=
-		    OD_CONFIG_TLS_DISABLE) {
-			machine_tls_t *tls = od_tls_frontend(server->config);
-			/* TODO: support changing cert files */
-			if (tls != NULL) {
-				server->tls = tls;
-			}
+		/* build tls from the new config, so that changed cert paths apply */
+		od_config_listen_t *tls_source =
+			listen_config != NULL ? listen_config : server->config;
+
+		if (tls_source->tls_opts->tls_mode == OD_CONFIG_TLS_DISABLE) {
+			continue;
+		}
+
+		int files_changed =
+			listen_config != NULL &&
+			!od_tls_opts_files_eq(server->config->tls_opts,
+					      listen_config->tls_opts);
+
+		machine_tls_t *tls = od_tls_frontend(tls_source);
+		if (tls == NULL) {
+			od_error(
+				&instance->logger, "reload-config", NULL, NULL,
+				"failed to build tls handler for %s:%d, keeping previous certificate",
+				host_name, server->config->port);
+			continue;
+		}
+
+		/*
+		 * The replaced handle stays alive until shutdown: clients
+		 * accepted earlier still point at it.
+		 */
+		if (od_system_server_retire_tls(server) != OK_RESPONSE) {
+			machine_tls_free(tls);
+			od_error(
+				&instance->logger, "reload-config", NULL, NULL,
+				"failed to retire tls handler for %s:%d, keeping previous certificate",
+				host_name, server->config->port);
+			continue;
+		}
+
+		server->tls = tls;
+
+		if (files_changed) {
+			od_log(&instance->logger, "reload-config", NULL, NULL,
+			       "reloaded tls certificate files for %s:%d",
+			       host_name, server->config->port);
 		}
 	}
 
