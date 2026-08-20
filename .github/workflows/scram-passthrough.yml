@@ -12,6 +12,7 @@ on:
       - "modules/**"
       - "cmake/**"
       - "!docker/prom-exporter/**"
+      - "!sources/machinarium/gdb/**"
 jobs:
   scram_passthrough_tests:
     name: scram_passthrough

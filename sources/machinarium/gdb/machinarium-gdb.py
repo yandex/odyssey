@@ -38,6 +38,22 @@ MM_SCHEDULER_COUNT_ACTIVE_FIELD_NAME = "count_active"
 MM_SCHEDULER_LIST_READY_FIELD_NAME = "list_ready"
 MM_SCHEDULER_LIST_ACTIVE_FIELD_NAME = "list_active"
 
+# see hm.h
+MM_HASHMAP_TYPE_NAME = "mm_hashmap_t"
+MM_HASHMAP_KVP_TYPE_NAME = "mm_hashmap_kvp_t"
+MM_HASHMAP_BUCKET_TYPE_NAME = "mm_hashmap_bucket_t"
+MM_HASHMAP_KVP_LINK_FIELD_NAME = "link"
+MM_HASHMAP_KVP_HASH_FIELD_NAME = "hash"
+
+# see pstmt.h
+OD_PSTMT_TYPE_NAME = "od_pstmt_t"
+OD_PSTMT_DESC_TYPE_NAME = "od_pstmt_desc_t"
+OD_PSTMT_DESC_DATA_FIELD_NAME = "data"
+OD_PSTMT_DESC_LEN_FIELD_NAME = "len"
+OD_PSTMT_DESC_FIELD_NAME = "desc"
+OD_PSTMT_NAME_FIELD_NAME = "name"
+OD_PSTMT_REFS_FIELD_NAME = "refs"
+
 OD_CLIENT_SERVER_FIELD_NAME = "server"
 
 OD_SERVER_ID_FIELD_NAME = "id"
@@ -52,6 +68,19 @@ GDB_OD_SERVER_PTR_TYPE = gdb.lookup_type("od_server_t").pointer()
 
 GDB_OD_LIST_TYPE = gdb.lookup_type('od_list_t')
 GDB_OD_LIST_POINTER_TYPE = GDB_OD_LIST_TYPE.pointer()
+
+GDB_MM_HASHMAP_TYPE = gdb.lookup_type(MM_HASHMAP_TYPE_NAME)
+GDB_MM_HASHMAP_POINTER_TYPE = GDB_MM_HASHMAP_TYPE.pointer()
+GDB_MM_HASHMAP_KVP_TYPE = gdb.lookup_type(MM_HASHMAP_KVP_TYPE_NAME)
+GDB_MM_HASHMAP_KVP_POINTER_TYPE = GDB_MM_HASHMAP_KVP_TYPE.pointer()
+GDB_MM_HASHMAP_BUCKET_TYPE = gdb.lookup_type(MM_HASHMAP_BUCKET_TYPE_NAME)
+
+GDB_OD_PSTMT_TYPE = gdb.lookup_type(OD_PSTMT_TYPE_NAME)
+GDB_OD_PSTMT_POINTER_TYPE = GDB_OD_PSTMT_TYPE.pointer()
+GDB_OD_PSTMT_DESC_TYPE = gdb.lookup_type(OD_PSTMT_DESC_TYPE_NAME)
+
+GDB_UINT64_TYPE = gdb.lookup_type('uint64_t')
+GDB_SIZE_T_TYPE = gdb.lookup_type('size_t')
 
 
 def parse_int_or_none(s):
@@ -943,6 +972,248 @@ Examples:
                 gdb.write("\n")
 
 
+class ODHashmapPrint(gdb.Command):
+    """Print content of an Odyssey mm_hashmap_t. Usage:
+    od-hashmap-print <hashmap-expr> [max-entries]
+
+    The command auto-detects the key/value layout based on the hashmap
+    configuration (keysz/valsz):
+
+    - Client/server/portals maps:
+        key   = char *            (prepared statement / portal name)
+        value = od_pstmt_t *      (pointer)
+
+    - Global prepared statements map:
+        key   = od_pstmt_desc_t   { void *data; size_t len; }
+        value = od_pstmt_t        (stored inline)
+
+    Examples:
+        (gdb) od-hashmap-print client->prep_stmt_ids
+        (gdb) od-hashmap-print client->portals
+        (gdb) od-hashmap-print server->prep_stmts
+        (gdb) od-hashmap-print gm->hm
+        (gdb) od-hashmap-print gm->hm 1000
+        (gdb) od-hashmap-print 0x60351b012345
+    """
+
+    def __init__(self):
+        super(ODHashmapPrint, self).__init__(
+            "od-hashmap-print", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+
+    def _read_ptr_at(self, addr):
+        addr = int(addr)
+        return int(gdb.parse_and_eval(f'(void **){hex(addr)}').dereference())
+
+    def _read_size_t_at(self, addr):
+        addr = int(addr)
+        return int(
+            gdb.parse_and_eval(
+                f'({GDB_SIZE_T_TYPE.tag}*){hex(addr)}'
+            ).dereference()
+        )
+
+    def _read_uint64_at(self, addr):
+        addr = int(addr)
+        return int(
+            gdb.parse_and_eval(
+                f'({GDB_UINT64_TYPE.tag}*){hex(addr)}'
+            ).dereference()
+        )
+
+    def _read_cstring(self, addr):
+        try:
+            return gdb.parse_and_eval(
+                f'(char *){hex(int(addr))}'
+            ).string()
+        except gdb.error:
+            return None
+
+    def _detect_kind(self, hm_val):
+        """Detect hashmap kind based on keysz/valsz.
+
+        Returns one of: 'global', 'ptr_key_ptr_val'.
+
+        - global: key=od_pstmt_desc_t (16B), value=od_pstmt_t (inline)
+        - ptr_key_ptr_val: key=char*, value=od_pstmt_t* (both 8B)
+        """
+        keysz = int(hm_val['keysz'])
+        valsz = int(hm_val['valsz'])
+        ptr_sz = int(gdb.parse_and_eval('sizeof(void *)'))
+
+        if keysz == int(GDB_OD_PSTMT_DESC_TYPE.sizeof) and \
+                valsz == int(GDB_OD_PSTMT_TYPE.sizeof):
+            return 'global'
+
+        if keysz == ptr_sz and valsz == ptr_sz:
+            return 'ptr_key_ptr_val'
+
+        raise gdb.error(
+            f"unsupported hashmap layout: keysz={keysz} valsz={valsz} "
+            f"(ptr_sz={ptr_sz})"
+        )
+
+    def _kvp_iterate(self, hm_val):
+        """Yield (bucket_index, kvp_addr, hash) for each kvp in the hashmap.
+
+        mm_hashmap_kvp_t layout:
+            { mm_list_t link; mm_hash_t hash; uint8_t keyval[]; }
+        link is the first field, so kvp == &link.
+        """
+        link_offset = mm_get_field_offset(
+            GDB_MM_HASHMAP_KVP_TYPE, MM_HASHMAP_KVP_LINK_FIELD_NAME)
+        hash_offset = mm_get_field_offset(
+            GDB_MM_HASHMAP_KVP_TYPE, MM_HASHMAP_KVP_HASH_FIELD_NAME)
+
+        nbuckets = int(hm_val['nbuckets'])
+        buckets = hm_val['buckets']
+
+        for bi in range(nbuckets):
+            bucket = (buckets + bi).dereference()
+            head = bucket['kvps'].address  # mm_list_t sentinel
+            head_addr = int(head)
+            cur = int(head['next'])
+            while cur != 0 and cur != head_addr:
+                kvp_addr = cur - link_offset
+                hash_val = int(
+                    gdb.parse_and_eval(
+                        f'({GDB_UINT64_TYPE.tag}*){hex(kvp_addr + hash_offset)}'
+                    ).dereference()
+                )
+                yield bi, kvp_addr, hash_val
+                cur = int(
+                    gdb.parse_and_eval(
+                        f'(mm_list_t *){hex(cur)}'
+                    ).dereference()['next']
+                )
+
+    def _print_global_entry(self, idx, bi, hash_val, kvp_addr, keyoff, valoff):
+        # key: od_pstmt_desc_t { void *data; size_t len; }
+        key_addr = kvp_addr + keyoff
+        desc_data = self._read_ptr_at(key_addr)
+        desc_len = self._read_size_t_at(key_addr + int(
+            gdb.parse_and_eval('sizeof(void *)')))
+
+        # value: od_pstmt_t inline
+        val_addr = kvp_addr + valoff
+        pstmt_val = gdb.parse_and_eval(
+            f'({OD_PSTMT_TYPE_NAME} *){hex(val_addr)}'
+        ).dereference()
+
+        pstmt_name = str(pstmt_val[OD_PSTMT_NAME_FIELD_NAME].string())
+        try:
+            refs = int(pstmt_val[OD_PSTMT_REFS_FIELD_NAME])
+        except (gdb.error, KeyError):
+            refs = -1
+
+        pstmt_desc = pstmt_val[OD_PSTMT_DESC_FIELD_NAME]
+        pstmt_desc_data = int(pstmt_desc[OD_PSTMT_DESC_DATA_FIELD_NAME])
+        pstmt_desc_len = int(pstmt_desc[OD_PSTMT_DESC_LEN_FIELD_NAME])
+
+        # try to render key data as SQL string
+        sql = None
+        if desc_data != 0 and desc_len > 0:
+            try:
+                sql = gdb.parse_and_eval(
+                    f'(char *){hex(desc_data)}'
+                ).string()
+            except gdb.error:
+                sql = None
+
+        gdb.write(
+            f"[{idx}] bucket={bi} hash={hash_val:#x} "
+            f"key={{data={hex(desc_data)}, len={desc_len}}} "
+            f"val={{name=\"{pstmt_name}\", "
+            f"desc.data={hex(pstmt_desc_data)}, "
+            f"desc.len={pstmt_desc_len}, refs={refs}}}"
+        )
+        if sql is not None:
+            gdb.write(f" sql=\"{sql}\"")
+        gdb.write("\n")
+
+    def _print_ptr_entry(self, idx, bi, hash_val, kvp_addr, keyoff, valoff):
+        # key: char * (C string)
+        key_addr = kvp_addr + keyoff
+        key_ptr = self._read_ptr_at(key_addr)
+        key_str = self._read_cstring(key_ptr) or "<unreadable>"
+
+        # value: od_pstmt_t *
+        val_addr = kvp_addr + valoff
+        pstmt_ptr = self._read_ptr_at(val_addr)
+
+        if pstmt_ptr != 0:
+            pstmt_val = gdb.parse_and_eval(
+                f'({OD_PSTMT_TYPE_NAME} *){hex(pstmt_ptr)}'
+            ).dereference()
+            try:
+                pstmt_name = str(pstmt_val[OD_PSTMT_NAME_FIELD_NAME].string())
+            except gdb.error:
+                pstmt_name = "<unreadable>"
+            try:
+                refs = int(pstmt_val[OD_PSTMT_REFS_FIELD_NAME])
+            except (gdb.error, KeyError):
+                refs = -1
+            gdb.write(
+                f"[{idx}] bucket={bi} hash={hash_val:#x} "
+                f"key=\"{key_str}\" "
+                f"val->{{name=\"{pstmt_name}\", "
+                f"refs={refs}, @ {hex(pstmt_ptr)}}}\n"
+            )
+        else:
+            gdb.write(
+                f"[{idx}] bucket={bi} hash={hash_val:#x} "
+                f"key=\"{key_str}\" val=NULL\n"
+            )
+
+    def invoke(self, args, _):
+        argv = gdb.string_to_argv(args)
+        if len(argv) < 1:
+            gdb.write(
+                'Expected 1-2 arguments: mm_hashmap_t* expression '
+                'and optional max-entries limit\n', stream=gdb.STDLOG)
+            return
+
+        expr = argv[0]
+        limit = int(argv[1]) if len(argv) > 1 else 10 ** 9
+
+        ptr = gdb.parse_and_eval(expr)
+        if ptr.type.code != gdb.TYPE_CODE_PTR:
+            # bare address / non-pointer expression — cast to mm_hashmap_t*
+            ptr = ptr.cast(GDB_MM_HASHMAP_POINTER_TYPE)
+        if int(ptr) == 0:
+            gdb.write("hashmap pointer is NULL\n", stream=gdb.STDLOG)
+            return
+        hm_val = ptr.dereference()
+
+        kind = self._detect_kind(hm_val)
+        keyoff = int(hm_val['keyoff'])
+        valoff = int(hm_val['valoff'])
+        kvpsize = int(hm_val['kvpsize'])
+        nbuckets = int(hm_val['nbuckets'])
+        hm_addr = int(hm_val.address) if hm_val.address is not None else 0
+
+        gdb.write(
+            f"mm_hashmap_t @ {hex(hm_addr)}: "
+            f"kind={kind} nbuckets={nbuckets} kvpsize={kvpsize} "
+            f"keyoff={keyoff} valoff={valoff}\n"
+        )
+
+        count = 0
+        for bi, kvp_addr, hash_val in self._kvp_iterate(hm_val):
+            if kind == 'global':
+                self._print_global_entry(
+                    count, bi, hash_val, kvp_addr, keyoff, valoff)
+            else:
+                self._print_ptr_entry(
+                    count, bi, hash_val, kvp_addr, keyoff, valoff)
+
+            count += 1
+            if count >= limit:
+                gdb.write(f"... stopped after {limit} entries\n")
+                return
+
+        gdb.write(f"total entries: {count}\n")
+
+
 MMCoroutines()
 MMCoroutineCmd()
 IgnoreErrorsCmd()
@@ -951,5 +1222,6 @@ ODListPrintSelect()
 ODGetFieldOffset()
 ODClientCoroutines()
 ODListCurrentServers()
+ODHashmapPrint()
 
 gdb.write('done.\n', stream=gdb.STDLOG)
