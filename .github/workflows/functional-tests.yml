@@ -12,6 +12,7 @@ on:
       - "modules/**"
       - "cmake/**"
       - "!docker/prom-exporter/**"
+      - "!sources/machinarium/gdb/**"
 jobs:
   functional:
     name: Functional

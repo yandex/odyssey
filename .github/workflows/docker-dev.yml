@@ -4,9 +4,13 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - "sources/machinarium/gdb/**"
   pull_request:
     branches:
       - master
+    paths-ignore:
+      - "sources/machinarium/gdb/**"
 
 env:
   REGISTRY: ghcr.io

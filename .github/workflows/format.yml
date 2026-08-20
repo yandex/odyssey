@@ -2,8 +2,12 @@ name: Format
 on:
   push:
     branches: [ master ]
+    paths-ignore:
+      - "sources/machinarium/gdb/**"
   pull_request:
     branches: [ master ]
+    paths-ignore:
+      - "sources/machinarium/gdb/**"
 jobs:
   format:
     name: format
