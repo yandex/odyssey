@@ -313,6 +313,12 @@ The way the client DN is determined depends on whether `ldapbasedn` is set:
   performed: the client DN is formed by concatenating `ldapprefix`, the user
   name the client connected with, and `ldapsuffix`.
 
+The scope of the search in search+bind mode is not configurable: Odyssey
+always searches the whole subtree below `ldapbasedn`. The `ldapscope` option
+is accepted by the configuration parser and shown when the configuration is
+dumped, but its value is not used. PostgreSQL behaves the same way and has no
+separate option for the search scope either.
+
 In both modes Odyssey first opens the connection to the LDAP server and binds
 with `ldapbinddn` / `ldapbindpasswd`, or anonymously when they are not set.
 `ldapprefix` and `ldapsuffix` are ignored when `ldapbasedn` is set. The names
