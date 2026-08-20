@@ -18,6 +18,9 @@ struct od_system_server {
 	mm_io_t *io;
 	mm_eventfd_t shutdown_efd;
 	machine_tls_t *tls;
+	/* tls handles replaced by a reload, still referenced by live clients */
+	machine_tls_t **tls_retired;
+	size_t tls_retired_count;
 	od_config_listen_t *config;
 	mm_addrinfo_t *addr;
 	od_global_t *global;
