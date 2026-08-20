@@ -304,6 +304,34 @@ ldap_endpoint "ldap1" {
 }
 ```
 
+The way the client DN is determined depends on whether `ldapbasedn` is set:
+
+* **search+bind** — used when `ldapbasedn` is set. Odyssey searches the
+  directory below `ldapbasedn` for the entry matching the connecting user and
+  then binds with the DN it found.
+* **simple bind** — used when `ldapbasedn` is not set. No search is
+  performed: the client DN is formed by concatenating `ldapprefix`, the user
+  name the client connected with, and `ldapsuffix`.
+
+In both modes Odyssey first opens the connection to the LDAP server and binds
+with `ldapbinddn` / `ldapbindpasswd`, or anonymously when they are not set.
+`ldapprefix` and `ldapsuffix` are ignored when `ldapbasedn` is set. The names
+and the meaning of these two options follow the options of the same name in
+PostgreSQL `pg_hba.conf`.
+
+```
+ldap_endpoint "ldap2" {
+	ldapscheme "ldap"
+	ldapserver "192.168.233.16"
+	ldapport 389
+	ldapprefix "cn="
+	ldapsuffix ",ou=people,dc=example,dc=org"
+}
+```
+
+With this endpoint a client connecting as `user4` is authenticated as
+`cn=user4,ou=people,dc=example,dc=org`.
+
 ---
 
 ## **ldap\_pool\_size**
