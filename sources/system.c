@@ -502,6 +502,27 @@ static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
 	od_rules_unlock(&router->rules);
 }
 
+/*
+ * Give up on a config load and keep running on the config already in memory.
+ * The file on disk is not usable, so a restart would not come up on it.
+ */
+static inline void od_system_config_reload_abort(od_system_t *system,
+						 od_config_t *config,
+						 od_rules_t *rules)
+{
+	od_instance_t *instance = system->global->instance;
+
+	atomic_store(&instance->config_load_failed, 1);
+
+	od_rules_unlock(&system->global->router->rules);
+	od_config_free(config);
+	od_rules_free(rules);
+
+	od_error(&instance->logger, "reload-config", NULL, NULL,
+		 "failed to load '%s', keeping the running configuration",
+		 instance->config_file);
+}
+
 void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
@@ -531,25 +552,19 @@ void od_system_config_reload(od_system_t *system)
 	rc = od_cfg_import(&instance->logger, &config, &rules, system->global,
 			   &hba_rules, instance->config_file);
 	if (rc == -1) {
-		od_rules_unlock(&router->rules);
-		od_config_free(&config);
-		od_rules_free(&rules);
+		od_system_config_reload_abort(system, &config, &rules);
 		return;
 	}
 
 	rc = od_config_validate(&config, &instance->logger);
 	if (rc == -1) {
-		od_rules_unlock(&router->rules);
-		od_config_free(&config);
-		od_rules_free(&rules);
+		od_system_config_reload_abort(system, &config, &rules);
 		return;
 	}
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
 	if (rc == -1) {
-		od_rules_unlock(&router->rules);
-		od_config_free(&config);
-		od_rules_free(&rules);
+		od_system_config_reload_abort(system, &config, &rules);
 		return;
 	}
 	od_config_reload(&instance->config, &config);
@@ -562,9 +577,7 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_sort_for_matching(&rules);
 
 	if (rc == -1) {
-		od_rules_unlock(&router->rules);
-		od_config_free(&config);
-		od_rules_free(&rules);
+		od_system_config_reload_abort(system, &config, &rules);
 		return;
 	}
 
@@ -692,6 +705,9 @@ void od_system_config_reload(od_system_t *system)
 	       "%d routes created/deleted and scheduled for removal", updates);
 
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
+
+	/* the file on disk loaded, so a restart would come up on it */
+	atomic_store(&instance->config_load_failed, 0);
 }
 
 static inline void od_system(void *arg)
