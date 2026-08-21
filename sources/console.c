@@ -61,6 +61,7 @@ typedef enum {
 	OD_LIS_PAUSED,
 	OD_LHOST_UTILIZATION,
 	OD_LRULES,
+	OD_LCONFIG,
 } od_console_keywords_t;
 
 static od_keyword_t od_console_keywords[] = {
@@ -95,6 +96,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("is_paused", OD_LIS_PAUSED),
 	od_keyword("host_utilization", OD_LHOST_UTILIZATION),
 	od_keyword("rules", OD_LRULES),
+	od_keyword("config", OD_LCONFIG),
 	{ 0, 0, 0 }
 };
 
@@ -267,9 +269,12 @@ static inline int od_console_show_help(machine_msg_t *stream)
 		"\n"
 		"Console usage\n"
 		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS|HOST_UTILIZATION\n"
-		"\tSHOW LISTS|ERRORS|ERRORS_PER_ROUTE|VERSION|LISTEN|STORAGES\n"
+		"\tSHOW LISTS|ERRORS|ERRORS_PER_ROUTE|VERSION|VERSION_EXTENDED|LISTEN|STORAGES\n"
+		"\tSHOW CONFIG|RULES|FDS|IS_PAUSED|GLOBAL_PREPARED_STATEMENTS\n"
 		"\tKILL_CLIENT <client_id>\n"
 		"\tRELOAD\n"
+		"\tPAUSE\n"
+		"\tRESUME\n"
 		"\tSET key=arg\n"
 		"\tCREATE <module_path>\n"
 		"\tDROP SERVERS|MODULE <servers>|<module>";
@@ -1605,6 +1610,88 @@ static inline int od_console_show_host_utilization(od_client_t *client,
 				      sizeof("HOST_UTILIZATION"));
 }
 
+static inline int od_console_show_config_add(machine_msg_t *stream, char *key,
+					     char *value, char *fallback,
+					     char *changeable)
+{
+	int offset;
+	machine_msg_t *msg;
+	msg = kiwi_be_write_data_row(stream, &offset);
+	if (msg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	int rc;
+	/* key */
+	rc = kiwi_be_write_data_row_add(stream, offset, key, strlen(key));
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+	/* value */
+	rc = kiwi_be_write_data_row_add(stream, offset, value, strlen(value));
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+	/* default */
+	rc = kiwi_be_write_data_row_add(stream, offset, fallback,
+					strlen(fallback));
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+	/* changeable */
+	rc = kiwi_be_write_data_row_add(stream, offset, changeable,
+					strlen(changeable));
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+	return 0;
+}
+
+/*
+ * SHOW CONFIG
+ *
+ * Reports the global configuration of the running process: the value
+ * currently in effect, the built-in default, and whether the parameter
+ * is picked up by RELOAD. Reading odyssey.conf shows what was asked
+ * for, not what is in effect - od_config_reload() copies only part of
+ * the parsed configuration into the running instance.
+ */
+static inline int od_console_show_config(od_client_t *client,
+					 machine_msg_t *stream)
+{
+	od_assert(stream);
+
+	od_instance_t *instance = client->global->instance;
+
+	machine_msg_t *msg;
+	msg = kiwi_be_write_row_descriptionf(stream, "ssss", "key", "value",
+					     "default", "changeable");
+	if (msg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	size_t count = od_config_fields_count();
+	for (size_t i = 0; i < count; i++) {
+		const od_config_field_t *field = od_config_field_at(i);
+		if (field == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+		char value[OD_CONFIG_FIELD_VALUE_MAX];
+		char fallback[OD_CONFIG_FIELD_VALUE_MAX];
+
+		od_config_field_value(&instance->config, field, value,
+				      sizeof(value));
+		od_config_field_default(field, fallback, sizeof(fallback));
+
+		int rc = od_console_show_config_add(
+			stream, field->key, value, fallback,
+			field->reloadable ? "yes" : "no");
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+	}
+	return kiwi_be_write_complete(stream, "SHOW", 5);
+}
+
 static inline int od_console_show_rules(machine_msg_t *stream)
 {
 	int offset;
@@ -2288,6 +2375,8 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_host_utilization(client, stream);
 	case OD_LRULES:
 		return od_console_show_rules(stream);
+	case OD_LCONFIG:
+		return od_console_show_config(client, stream);
 	}
 	return NOT_OK_RESPONSE;
 }

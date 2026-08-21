@@ -136,6 +136,44 @@ console=> show host_utilization;
 ```
 
 
+### show config
+
+Reports the global configuration of the running process.
+
+`show config`
+
+```plain
+console=> show config;
+             key             | value | default | changeable
+-----------------------------+-------+---------+------------
+ workers                     | 4     | 1       | no
+ log_query                   | yes   | no      | yes
+ ...
+```
+
+| Column | Meaning |
+| --- | --- |
+| `key` | parameter name, as accepted by the configuration parser |
+| `value` | value the running process is using right now |
+| `default` | built-in value used when the parameter is absent from the configuration file |
+| `changeable` | whether `RELOAD` applies a new value without a restart |
+
+Reading `odyssey.conf` tells you what was asked for, not what is in
+effect. `RELOAD` applies only part of the global configuration; the rest
+keeps the value the process started with, and no error is reported. The
+`changeable` column tells the two apart, so comparing `value` against the
+file is enough to spot a parameter that needs a restart.
+
+Notes:
+
+- `default` is the built-in initial value. A few parameters are derived
+  from others when left unset - `client_max_routing`, for instance,
+  becomes `workers * 64` - so `value` can differ from `default` even
+  though the configuration file does not mention the parameter.
+- Values longer than 255 characters are truncated in the output.
+- Per-route settings are not reported here, see `show rules`. Listen
+  sockets are reported by `show listen`, storages by `show storages`.
+
 ## pause
 
 Pause Odyssey execution. This will drop any session connections and
