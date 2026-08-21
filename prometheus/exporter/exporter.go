@@ -206,6 +206,9 @@ var (
 		"dns_queries": prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "lists", "in_flight_dns_queries"),
 			"Count of in-flight DNS queries", nil, nil),
+		"config_load_failed": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "config", "load_failed"),
+			"Whether the last config load failed, leaving the process on its previous configuration", nil, nil),
 	}
 
 	describeMetricDescs = []*prometheus.Desc{

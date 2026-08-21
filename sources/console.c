@@ -2006,6 +2006,7 @@ static inline int od_console_show_lists(od_client_t *client,
 {
 	od_assert(stream);
 	od_router_t *router = client->global->router;
+	od_instance_t *instance = client->global->instance;
 
 	/* Gather router information.
 
@@ -2098,6 +2099,13 @@ static inline int od_console_show_lists(od_client_t *client,
 	}
 	/* dns_pending */
 	rc = od_console_show_lists_add(stream, "dns_pending", 0);
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+	/* config_load_failed */
+	rc = od_console_show_lists_add(
+		stream, "config_load_failed",
+		atomic_load(&instance->config_load_failed));
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
