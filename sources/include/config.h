@@ -201,3 +201,8 @@ int od_config_validate(od_config_t *, od_logger_t *);
 void od_config_print(od_config_t *, od_logger_t *);
 
 od_config_listen_t *od_config_listen_add(od_config_t *);
+
+static inline char *od_config_listen_host_name(od_config_listen_t *listen)
+{
+	return listen->host == NULL ? "(NULL)" : listen->host;
+}
