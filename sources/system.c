@@ -467,11 +467,6 @@ static inline int od_system_listen(od_system_t *system)
 	return binded;
 }
 
-static inline char *od_config_listen_host_name(od_config_listen_t *config)
-{
-	return config->host == NULL ? "(NULL)" : config->host;
-}
-
 static inline int od_config_listen_host_cmp(char *host_listen,
 					    char *host_server)
 {
@@ -623,6 +618,18 @@ void od_system_config_reload(od_system_t *system)
 			listen_config != NULL &&
 			!od_tls_opts_files_eq(server->config->tls_opts,
 					      listen_config->tls_opts);
+
+		/* do not let a broken certificate replace a working one */
+		char tls_error[256];
+		if (od_tls_frontend_validate(tls_source, tls_error,
+					     sizeof(tls_error)) !=
+		    OK_RESPONSE) {
+			od_error(
+				&instance->logger, "reload-config", NULL, NULL,
+				"failed to load tls certificate for %s:%d, keeping previous certificate: %s",
+				host_name, server->config->port, tls_error);
+			continue;
+		}
 
 		machine_tls_t *tls = od_tls_frontend(tls_source);
 		if (tls == NULL) {

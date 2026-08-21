@@ -16,6 +16,7 @@
 #include <types.h>
 #include <router.h>
 #include <config.h>
+#include <tls.h>
 #include <od_memory.h>
 
 void od_config_init(od_config_t *config)
@@ -314,6 +315,35 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 			} else {
 				od_error(logger, "config", NULL, NULL,
 					 "unknown tls_opts->tls mode");
+				return -1;
+			}
+		}
+
+		/*
+		 * Report a broken certificate up front instead of failing
+		 * every connection later. With "allow" and "prefer" the
+		 * listener still serves plaintext clients, so only a mandatory
+		 * tls mode is a fatal config error.
+		 */
+		char tls_error[256];
+		if (listen->tls_opts->tls_mode != OD_CONFIG_TLS_DISABLE &&
+		    od_tls_frontend_validate(listen, tls_error,
+					     sizeof(tls_error)) !=
+			    OK_RESPONSE) {
+			int tls_optional = listen->tls_opts->tls_mode ==
+						   OD_CONFIG_TLS_ALLOW ||
+					   listen->tls_opts->tls_mode ==
+						   OD_CONFIG_TLS_PREFER;
+
+			od_error(
+				logger, "config", NULL, NULL,
+				"failed to load tls certificate for %s:%d%s: %s",
+				od_config_listen_host_name(listen),
+				listen->port,
+				tls_optional ? ", serving plaintext only" : "",
+				tls_error);
+
+			if (!tls_optional) {
 				return -1;
 			}
 		}
