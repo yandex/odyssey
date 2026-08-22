@@ -1923,7 +1923,6 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 			if (rc != OK_RESPONSE) {
 				od_gerror("main", client, server,
 					  "can't parse close message");
-				machine_msg_free(msg);
 				return OD_ESERVER_READ;
 			}
 
