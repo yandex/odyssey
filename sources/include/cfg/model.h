@@ -116,6 +116,7 @@ typedef struct od_cfg_listen {
 	od_cfg_string_field_t host;
 	od_cfg_int_field_t port;
 	od_cfg_string_field_t target_session_attrs;
+	od_cfg_string_field_t balancing_method;
 
 	od_cfg_int_field_t client_login_timeout;
 	od_cfg_int_field_t backlog;

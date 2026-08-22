@@ -85,6 +85,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "host", HOST },
 	{ "port", PORT },
 	{ "target_session_attrs", TARGET_SESSION_ATTRS },
+	{ "balancing_method", BALANCING_METHOD },
 	{ "client_login_timeout", CLIENT_LOGIN_TIMEOUT },
 	{ "backlog", BACKLOG },
 	{ "tls", TLS },

@@ -519,7 +519,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			return -1;
 		}
 	}
-	od_unreachable();
+	OD_UNREACHABLE();
 	return 0;
 }
 

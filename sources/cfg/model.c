@@ -82,6 +82,7 @@ static void dump_listen(FILE *file, const od_cfg_listen_t *l)
 	dump_string(file, "host", 1, &l->host);
 	dump_int(file, "port", 1, &l->port);
 	dump_string(file, "target_session_attrs", 1, &l->target_session_attrs);
+	dump_string(file, "balancing_method", 1, &l->balancing_method);
 	dump_int(file, "client_login_timeout", 1, &l->client_login_timeout);
 	dump_int(file, "backlog", 1, &l->backlog);
 	dump_string(file, "tls", 1, &l->tls);
@@ -575,6 +576,7 @@ static void od_cfg_listen_free(od_cfg_listen_t *listen)
 	od_cfg_string_field_free(&listen->host);
 	od_cfg_int_field_free(&listen->port);
 	od_cfg_string_field_free(&listen->target_session_attrs);
+	od_cfg_string_field_free(&listen->balancing_method);
 	od_cfg_int_field_free(&listen->client_login_timeout);
 	od_cfg_int_field_free(&listen->backlog);
 	od_cfg_string_field_free(&listen->tls);

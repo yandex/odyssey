@@ -14,7 +14,7 @@
  * stderr is unavailable
  */
 
-#include <stdlib.h>
+#include <od_c.h>
 
 extern void od_assert_fail(const char *expr, const char *file, int line);
 
@@ -35,3 +35,5 @@ extern void od_assert_fail(const char *expr, const char *file, int line);
 			od_assert_fail(#expr, __FILE__, __LINE__); \
 		}                                                  \
 	} while (0)
+
+OD_NORETURN void od_abort(void);

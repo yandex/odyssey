@@ -17,6 +17,8 @@ typedef enum {
 
 od_balancing_method_t od_balancing_method_from_str(const char *str, size_t len);
 
+const char *od_balancing_method_to_str(od_balancing_method_t method);
+
 typedef struct {
 	/*
 	 * high 32 bit is counter for local endpoints
@@ -50,12 +52,10 @@ typedef struct {
 	struct {
 		od_balancing_method_t type;
 		int az_aware;
-		union {
-			od_method_roundroubin_t roundrobin;
-			od_method_weighted_t weighted;
-			od_method_weighted_leastconn_t weighted_leastconn;
-			od_method_responsetime_t responsetime;
-		};
+		od_method_roundroubin_t roundrobin;
+		od_method_weighted_t weighted;
+		od_method_weighted_leastconn_t weighted_leastconn;
+		od_method_responsetime_t responsetime;
 	} method;
 
 	int debug_notice;
@@ -70,7 +70,11 @@ void od_storage_balancing_copy(od_storage_balancing_t *dest,
 			       const od_storage_balancing_t *src);
 
 size_t od_storage_balancing_select(od_storage_balancing_t *b,
+				   od_balancing_method_t override_method,
 				   od_rule_storage_t *storage,
 				   od_route_t *route,
 				   od_storage_endpoint_t **out, size_t max,
 				   od_balancing_filter_fn filter, void *arg);
+
+od_balancing_method_t od_balancing_get_effective(od_client_t *client,
+						 od_rule_storage_t *storage);

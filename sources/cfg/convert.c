@@ -101,6 +101,30 @@ static int parse_tsa(const char *s, od_target_session_attrs_t *out)
 		}                                                                     \
 	} while (0)
 
+static int parse_balance_method(const char *s, od_balancing_method_t *out)
+{
+	od_balancing_method_t m = od_balancing_method_from_str(s, strlen(s));
+	if (m == OD_BALANCING_METHOD_UNDEF) {
+		return 1;
+	}
+	*out = m;
+	return 0;
+}
+
+#define COPY_BALANCE_METHOD(field, out, diags)                                    \
+	do {                                                                      \
+		if ((field).seen.is_set) {                                        \
+			int rc = parse_balance_method((field).value, &out);       \
+			if (rc) {                                                 \
+				od_cfg_diag_error(                                \
+					diags, (field).seen.location,             \
+					"can't parse balancing method from '%s'", \
+					(field).value);                           \
+				goto error;                                       \
+			}                                                         \
+		}                                                                 \
+	} while (0)
+
 static inline void ldap_not_supported(od_cfg_diag_list_t *diags,
 				      od_cfg_location_t location)
 	__attribute__((unused));
@@ -1011,6 +1035,8 @@ static int convert_listen(convert_ctx_t *ctx, const od_cfg_listen_t *cfg)
 	COPY_INT(cfg->port, listen->port);
 	COPY_TSA(cfg->target_session_attrs, listen->target_session_attrs,
 		 diags);
+	COPY_BALANCE_METHOD(cfg->balancing_method, listen->balancing_method,
+			    diags);
 	COPY_INT(cfg->client_login_timeout, listen->client_login_timeout);
 	COPY_INT(cfg->catchup_timeout, listen->catchup_timeout);
 	COPY_INT(cfg->backlog, listen->backlog);

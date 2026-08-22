@@ -11,7 +11,6 @@
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <od_assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <limits.h>
@@ -55,31 +54,15 @@ typedef int od_retcode_t;
 
 #define INVALID_COROUTINE_ID -1
 
-/* only GCC supports the unused attribute */
-#ifdef __GNUC__
-#define od_attribute_unused() __attribute__((unused))
+#if defined(__GNUC__) || defined(__clang__)
+#define OD_NORETURN __attribute__((noreturn))
+#define OD_UNREACHABLE() __builtin_unreachable()
 #else
-#define od_attribute_unused()
-#endif
-
-/* GCC support aligned, packed and noreturn */
-#ifdef __GNUC__
-#define od_attribute_aligned(a) __attribute__((aligned(a)))
-#define od_attribute_noreturn() __attribute__((noreturn))
-#define od_attribute_packed() __attribute__((packed))
+#define OD_NORETURN
+#define OD_UNREACHABLE() abort()
 #endif
 
 #define FLEXIBLE_ARRAY_MEMBER /* empty */
-
-#if defined __has_builtin
-#if __has_builtin(__builtin_unreachable) /* odyssey unreachable code */
-#define od_unreachable() __builtin_unreachable()
-#endif
-#endif
-
-#ifndef od_unreachable
-#define od_unreachable() abort()
-#endif
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 #define OD_THREAD_LOCAL thread_local
@@ -147,3 +130,6 @@ static inline void od_explicit_bzero(void *buf, size_t len)
 #if !defined(explicit_bzero)
 #define explicit_bzero od_explicit_bzero
 #endif
+
+/* included there, because it uses some macroses from this file */
+#include <od_assert.h>
