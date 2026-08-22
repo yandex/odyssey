@@ -176,6 +176,7 @@ od_instance_t *od_instance_create(void)
 	instance->pstmts = NULL;
 
 	atomic_store(&instance->shutdown_worker_id, INVALID_COROUTINE_ID);
+	atomic_store(&instance->config_load_failed, 0);
 
 	instance->cmdline.argc = 0;
 	instance->cmdline.argv = NULL;
