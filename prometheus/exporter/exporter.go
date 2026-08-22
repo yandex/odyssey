@@ -30,6 +30,7 @@ const (
 	showVersionCommand         = "show version;"
 	showVersionExtendedCommand = "show version_extended;"
 	showListsCommand           = "show lists;"
+	showListsExtendedCommand   = "show lists_extended;"
 	showIsPausedCommand        = "show is_paused;"
 	showErrorsCommand          = "show errors;"
 	showStatsCommand           = "show stats;"
@@ -663,9 +664,14 @@ func (exporter *Exporter) sendIsPausedMetric(ctx context.Context, ch chan<- prom
 }
 
 func (exporter *Exporter) sendListsMetrics(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB) error {
-	rows, err := db.QueryContext(ctx, showListsCommand)
+	// Try lists_extended first, fall back to plain lists for backward
+	// compatibility with older Odyssey instances.
+	rows, err := db.QueryContext(ctx, showListsExtendedCommand)
 	if err != nil {
-		return fmt.Errorf("error getting version: %w", err)
+		rows, err = db.QueryContext(ctx, showListsCommand)
+		if err != nil {
+			return fmt.Errorf("error getting lists: %w", err)
+		}
 	}
 	defer rows.Close()
 
