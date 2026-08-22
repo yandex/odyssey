@@ -7,6 +7,8 @@
 #include <multi_pool.h>
 #include <route.h>
 #include <util.h>
+#include <client.h>
+#include <config.h>
 
 #define METHOD_RR_STR "roundrobin"
 #define METHOD_LEASTCONN_STR "leastconn"
@@ -42,6 +44,26 @@ od_balancing_method_t od_balancing_method_from_str(const char *str, size_t len)
 	}
 
 	return OD_BALANCING_METHOD_UNDEF;
+}
+
+const char *od_balancing_method_to_str(od_balancing_method_t method)
+{
+	switch (method) {
+	case OD_BALANCING_METHOD_ROUNDROBIN:
+		return METHOD_RR_STR;
+	case OD_BALANCING_METHOD_LEASTCONN:
+		return METHOD_LEASTCONN_STR;
+	case OD_BALANCING_METHOD_WEIGHTED:
+		return METHOD_WEIGHTED_STR;
+	case OD_BALANCING_METHOD_WEIGHTED_LEASTCONN:
+		return METHOD_WEIGHTED_LEASTCONN;
+	case OD_BALANCING_METHOD_RESPONSETIME:
+		return METHOD_RESPONSETIME;
+	case OD_BALANCING_METHOD_UNDEF:
+		return "no specified";
+	default:
+		od_abort();
+	}
 }
 
 void od_storage_balancing_init(od_storage_balancing_t *b)
@@ -298,6 +320,7 @@ static size_t responsetime(od_storage_balancing_t *b, od_route_t *route,
 }
 
 size_t od_storage_balancing_select(od_storage_balancing_t *b,
+				   od_balancing_method_t override_method,
 				   od_rule_storage_t *storage,
 				   od_route_t *route,
 				   od_storage_endpoint_t **out, size_t max,
@@ -312,7 +335,12 @@ size_t od_storage_balancing_select(od_storage_balancing_t *b,
 		return 1;
 	}
 
-	switch (b->method.type) {
+	od_balancing_method_t method =
+		(override_method != OD_BALANCING_METHOD_UNDEF) ?
+			override_method :
+			b->method.type;
+
+	switch (method) {
 	case OD_BALANCING_METHOD_UNDEF:
 	case OD_BALANCING_METHOD_ROUNDROBIN:
 		return roundrobin(b, storage, out, max, filter, arg);
@@ -327,4 +355,22 @@ size_t od_storage_balancing_select(od_storage_balancing_t *b,
 	default:
 		abort();
 	}
+}
+
+od_balancing_method_t od_balancing_get_effective(od_client_t *client,
+						 od_rule_storage_t *storage)
+{
+	od_config_listen_t *l = client->config_listen;
+
+	if (l == NULL) {
+		return storage->balancing.method.type;
+	}
+
+	od_balancing_method_t listen_method = l->balancing_method;
+
+	if (listen_method != OD_BALANCING_METHOD_UNDEF) {
+		return listen_method;
+	}
+
+	return storage->balancing.method.type;
 }

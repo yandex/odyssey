@@ -43,3 +43,20 @@ Endpoints with equals target session attributes will be tried third.
 The pools in unique per each endpoint in host, so if you set `pool_size` to 10,
 you will get 10 pools per each host, and if there is 3 hosts, you will get 30
 total connections.
+
+## Per-listen override
+
+The balancing method can be overridden per listen endpoint using
+[`balancing_method`](../configuration/listen.md#balancing_method) in the
+`listen` section. When set, it takes precedence over the storage-level
+`balancing { method ... }` configuration, while the round-robin counter and
+other shared state remain in the storage, ensuring fair distribution across
+all listeners that reference the same storage.
+
+```
+listen {
+    host "*"
+    port 6432
+    balancing_method "leastconn"
+}
+```

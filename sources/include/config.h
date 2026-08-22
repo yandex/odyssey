@@ -9,6 +9,7 @@
 #include <tls_config.h>
 #include <list.h>
 #include <tsa.h>
+#include <balancing.h>
 #include <types.h>
 #include <affinity.h>
 #include <logger.h>
@@ -32,6 +33,7 @@ struct od_config_listen {
 	od_list_t link;
 
 	od_target_session_attrs_t target_session_attrs;
+	od_balancing_method_t balancing_method;
 	int catchup_timeout;
 
 	char **storage_names;

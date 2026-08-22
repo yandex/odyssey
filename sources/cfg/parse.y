@@ -205,6 +205,7 @@
 %token HOST "host"
 %token PORT "port"
 %token TARGET_SESSION_ATTRS "target_session_attrs"
+%token BALANCING_METHOD "balancing_method"
 %token CLIENT_LOGIN_TIMEOUT "client_login_timeout"
 %token BACKLOG "backlog"
 %token TLS "tls"
@@ -2310,6 +2311,15 @@ listen_item:
 							  $2,
 							  @1,
 							  "target_session_attrs");
+			$2 = NULL;
+		}
+	| BALANCING_METHOD string_value
+		{
+			od_cfg_set_string(ctx->diags,
+							  &ctx->current_listen->balancing_method,
+							  $2,
+							  @1,
+							  "balancing_method");
 			$2 = NULL;
 		}
 	| CLIENT_LOGIN_TIMEOUT int_value

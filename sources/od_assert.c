@@ -79,3 +79,9 @@ void od_assert_fail(const char *expr, const char *file, int line)
 
 	abort();
 }
+
+void od_abort(void)
+{
+	od_release_assert(0);
+	OD_UNREACHABLE();
+}

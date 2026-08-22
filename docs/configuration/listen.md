@@ -129,6 +129,20 @@ host is primary or not.
 
 `target_session_attrs "read-write"`
 
+## **balancing_method**
+*string*
+
+Overrides the load-balancing strategy for this listen endpoint. When not set,
+the balancing method configured on the matched storage is used. See
+[balancing](../features/balancing.md) for details.
+
+Possible values are:
+
+- roundrobin - distribute connections across endpoints in round-robin order (default)
+- leastconn - select the endpoint with the fewest active connections
+
+`balancing_method "leastconn"`
+
 ## **client_login_timeout**
 *integer*
 
