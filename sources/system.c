@@ -194,6 +194,11 @@ static inline void od_system_server(void *arg)
 	}
 }
 
+static void od_system_server_tls_dtor(void *element)
+{
+	machine_tls_free(*(machine_tls_t **)element);
+}
+
 od_system_server_t *od_system_server_init(void)
 {
 	od_system_server_t *server;
@@ -211,6 +216,8 @@ od_system_server_t *od_system_server_init(void)
 
 	server->io = NULL;
 	server->tls = NULL;
+	mm_vector_init(&server->tls_retired, sizeof(machine_tls_t *),
+		       od_system_server_tls_dtor);
 	od_id_generate(&server->sid, "sid");
 	atomic_init(&server->closed, false);
 	server->coro_id = -1;
@@ -225,16 +232,9 @@ od_system_server_retire_tls(od_system_server_t *server)
 		return OK_RESPONSE;
 	}
 
-	machine_tls_t **retired = od_realloc(
-		server->tls_retired,
-		sizeof(machine_tls_t *) * (server->tls_retired_count + 1));
-	if (retired == NULL) {
+	if (mm_vector_append(&server->tls_retired, &server->tls) != 0) {
 		return NOT_OK_RESPONSE;
 	}
-
-	retired[server->tls_retired_count] = server->tls;
-	server->tls_retired = retired;
-	server->tls_retired_count++;
 
 	return OK_RESPONSE;
 }
@@ -247,12 +247,7 @@ void od_system_server_free(od_system_server_t *server)
 		/* Free tls */
 		machine_tls_free(server->tls);
 	}
-	for (size_t i = 0; i < server->tls_retired_count; i++) {
-		machine_tls_free(server->tls_retired[i]);
-	}
-	if (server->tls_retired) {
-		od_free(server->tls_retired);
-	}
+	mm_vector_destroy(&server->tls_retired);
 	server->io = NULL;
 	server->tls = NULL;
 
@@ -502,27 +497,6 @@ static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
 	od_rules_unlock(&router->rules);
 }
 
-/*
- * Give up on a config load and keep running on the config already in memory.
- * The file on disk is not usable, so a restart would not come up on it.
- */
-static inline void od_system_config_reload_abort(od_system_t *system,
-						 od_config_t *config,
-						 od_rules_t *rules)
-{
-	od_instance_t *instance = system->global->instance;
-
-	atomic_store(&instance->config_load_failed, 1);
-
-	od_rules_unlock(&system->global->router->rules);
-	od_config_free(config);
-	od_rules_free(rules);
-
-	od_error(&instance->logger, "reload-config", NULL, NULL,
-		 "failed to load '%s', keeping the running configuration",
-		 instance->config_file);
-}
-
 void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
@@ -552,20 +526,17 @@ void od_system_config_reload(od_system_t *system)
 	rc = od_cfg_import(&instance->logger, &config, &rules, system->global,
 			   &hba_rules, instance->config_file);
 	if (rc == -1) {
-		od_system_config_reload_abort(system, &config, &rules);
-		return;
+		goto error;
 	}
 
 	rc = od_config_validate(&config, &instance->logger);
 	if (rc == -1) {
-		od_system_config_reload_abort(system, &config, &rules);
-		return;
+		goto error;
 	}
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
 	if (rc == -1) {
-		od_system_config_reload_abort(system, &config, &rules);
-		return;
+		goto error;
 	}
 	od_config_reload(&instance->config, &config);
 	od_logger_set_debug(&instance->logger, instance->config.log_debug);
@@ -577,8 +548,7 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_sort_for_matching(&rules);
 
 	if (rc == -1) {
-		od_system_config_reload_abort(system, &config, &rules);
-		return;
+		goto error;
 	}
 
 	od_rules_unlock(&router->rules);
@@ -708,6 +678,22 @@ void od_system_config_reload(od_system_t *system)
 
 	/* the file on disk loaded, so a restart would come up on it */
 	atomic_store(&instance->config_load_failed, 0);
+	return;
+
+error:
+	/*
+	 * Keep running on the config already in memory. The file on disk is
+	 * not usable, so a restart would not come up on it.
+	 */
+	atomic_store(&instance->config_load_failed, 1);
+
+	od_rules_unlock(&router->rules);
+	od_config_free(&config);
+	od_rules_free(&rules);
+
+	od_error(&instance->logger, "reload-config", NULL, NULL,
+		 "failed to load '%s', keeping the running configuration",
+		 instance->config_file);
 }
 
 static inline void od_system(void *arg)
