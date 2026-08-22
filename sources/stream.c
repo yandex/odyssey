@@ -828,13 +828,6 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 	copy_stream_t stream;
 	copy_stream_init(&stream);
 
-	/*
-	 * set up the client io operations to be interrupted if
-	 * something happens on server io
-	 * this is done for disconnection/errors of server detection
-	 */
-	od_io_set_peer(&client->io, &server->io);
-
 	if (additional) {
 		kiwi_header_t *hdr =
 			(kiwi_header_t *)machine_msg_data(additional);
@@ -850,6 +843,13 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 			return OD_ESERVER_WRITE;
 		}
 	}
+
+	/*
+	 * set up the client io operations to be interrupted if
+	 * something happens on server io
+	 * this is done for disconnection/errors of server detection
+	 */
+	od_io_set_peer(&client->io, &server->io);
 
 	int server_event = 0;
 
