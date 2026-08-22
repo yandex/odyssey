@@ -2,6 +2,8 @@ odyssey_client_pool_active_route{database="console",user="console"} 0
 odyssey_client_pool_active_route{database="postgres",user="postgres"} 0
 odyssey_client_pool_maxwait_seconds_route{database="console",user="console"} 0
 odyssey_client_pool_maxwait_seconds_route{database="postgres",user="postgres"} 0
+odyssey_client_pool_queue_route{database="console",user="console"} 0
+odyssey_client_pool_queue_route{database="postgres",user="postgres"} 0
 odyssey_client_pool_waiting_route{database="console",user="console"} 1
 odyssey_client_pool_waiting_route{database="postgres",user="postgres"} 0
 odyssey_database_avg_query_per_second{database="console"} 0
