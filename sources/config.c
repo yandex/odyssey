@@ -505,17 +505,25 @@ void od_config_field_value(od_config_t *config, const od_config_field_t *field,
 	}
 }
 
+/*
+ * Defaults are shared by every caller and never change, so they are built
+ * once per process. od_config_t is too large to keep on a coroutine stack,
+ * and od_config_init() allocates nothing, so this instance needs no
+ * matching od_config_free().
+ */
+static od_config_t od_config_defaults;
+static pthread_once_t od_config_defaults_ctrl = PTHREAD_ONCE_INIT;
+
+static void od_config_defaults_build(void)
+{
+	od_config_init(&od_config_defaults);
+}
+
 void od_config_field_default(const od_config_field_t *field, char *buf,
 			     size_t size)
 {
-	od_config_t defaults;
-
-	/*
-	 * od_config_init() allocates nothing, so the throwaway config needs
-	 * no matching od_config_free().
-	 */
-	od_config_init(&defaults);
-	od_config_field_value(&defaults, field, buf, size);
+	pthread_once(&od_config_defaults_ctrl, od_config_defaults_build);
+	od_config_field_value(&od_config_defaults, field, buf, size);
 }
 
 void od_config_print(od_config_t *config, od_logger_t *logger)
