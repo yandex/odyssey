@@ -1,3 +1,10 @@
+odyssey (1.5.2-rc2-1) unstable; urgency=medium
+
+  * ref counters for global pstmts map (#1515)
+  * bug fixes
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Mon, 24 Aug 2026 17:28:21 +0500
+
 odyssey (1.5.2-rc1-1) unstable; urgency=medium
 
   * scram-passthrough impl (#1463)
