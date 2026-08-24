@@ -160,6 +160,33 @@ struct od_config {
 	od_affinity_config_t *cpu_affinity;
 };
 
+/* longest configuration value the console is willing to print */
+#define OD_CONFIG_FIELD_VALUE_MAX 256
+
+typedef enum {
+	OD_CONFIG_FIELD_INT,
+	OD_CONFIG_FIELD_BOOL,
+	OD_CONFIG_FIELD_STRING,
+	OD_CONFIG_FIELD_STRING_INLINE,
+} od_config_field_type_t;
+
+typedef struct {
+	/* name accepted by the configuration parser */
+	char *key;
+	od_config_field_type_t type;
+	/* offset of the field inside od_config_t */
+	size_t offset;
+	/* whether RELOAD applies a new value, see od_config_reload() */
+	int reloadable;
+} od_config_field_t;
+
+size_t od_config_fields_count(void);
+const od_config_field_t *od_config_field_at(size_t index);
+void od_config_field_value(od_config_t *config, const od_config_field_t *field,
+			   char *buf, size_t size);
+void od_config_field_default(const od_config_field_t *field, char *buf,
+			     size_t size);
+
 void od_config_init(od_config_t *);
 void od_config_free(od_config_t *);
 void od_config_reload(od_config_t *, od_config_t *);

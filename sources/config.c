@@ -17,6 +17,7 @@
 #include <router.h>
 #include <config.h>
 #include <od_memory.h>
+#include <util.h>
 
 void od_config_init(od_config_t *config)
 {
@@ -335,6 +336,195 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 static inline char *od_config_yes_no(int value)
 {
 	return value ? "yes" : "no";
+}
+
+/*
+ * Description of the global configuration for SHOW CONFIG.
+ *
+ * The default column is not stored here on purpose: od_config_field_default()
+ * initializes a throwaway od_config_t through od_config_init() and reads the
+ * same offset, so the reported defaults cannot drift away from the real ones.
+ *
+ * The reloadable flag has no such source and must be kept in sync with
+ * od_config_reload() by hand.
+ */
+
+#define OD_CONFIG_FIELD_NOT_SET "(not set)"
+
+static const od_config_field_t od_config_fields[] = {
+	{ "daemonize", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, daemonize),
+	  0 },
+	{ "priority", OD_CONFIG_FIELD_INT, offsetof(od_config_t, priority), 0 },
+	{ "sequential_routing", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, sequential_routing), 0 },
+	{ "log_to_stdout", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, log_to_stdout), 0 },
+	{ "log_debug", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_debug),
+	  1 },
+	{ "log_config", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_config),
+	  1 },
+	{ "log_session", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, log_session), 1 },
+	{ "log_query", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_query),
+	  1 },
+	{ "log_queue_depth", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, log_queue_depth), 0 },
+	{ "log_async", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_async),
+	  0 },
+	{ "log_file", OD_CONFIG_FIELD_STRING, offsetof(od_config_t, log_file),
+	  0 },
+	{ "log_format", OD_CONFIG_FIELD_STRING,
+	  offsetof(od_config_t, log_format), 0 },
+	{ "log_stats", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_stats),
+	  1 },
+	{ "log_general_stats_prom", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, log_general_stats_prom), 0 },
+	{ "log_route_stats_prom", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, log_route_stats_prom), 0 },
+	{ "log_syslog", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_syslog),
+	  0 },
+	{ "log_syslog_ident", OD_CONFIG_FIELD_STRING,
+	  offsetof(od_config_t, log_syslog_ident), 0 },
+	{ "log_syslog_facility", OD_CONFIG_FIELD_STRING,
+	  offsetof(od_config_t, log_syslog_facility), 0 },
+	{ "stats_interval", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, stats_interval), 1 },
+	{ "pid_file", OD_CONFIG_FIELD_STRING, offsetof(od_config_t, pid_file),
+	  0 },
+	{ "unix_socket_dir", OD_CONFIG_FIELD_STRING,
+	  offsetof(od_config_t, unix_socket_dir), 0 },
+	{ "unix_socket_mode", OD_CONFIG_FIELD_STRING,
+	  offsetof(od_config_t, unix_socket_mode), 0 },
+	{ "locks_dir", OD_CONFIG_FIELD_STRING, offsetof(od_config_t, locks_dir),
+	  0 },
+	{ "external_auth_socket_path", OD_CONFIG_FIELD_STRING,
+	  offsetof(od_config_t, external_auth_socket_path), 0 },
+	{ "graceful_die_on_errors", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, graceful_die_on_errors), 0 },
+	{ "graceful_shutdown_timeout_ms", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, graceful_shutdown_timeout_ms), 1 },
+	{ "enable_online_restart", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, enable_online_restart_feature), 0 },
+	{ "bindwith_reuseport", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, bindwith_reuseport), 0 },
+	{ "readahead", OD_CONFIG_FIELD_INT, offsetof(od_config_t, readahead),
+	  0 },
+	{ "nodelay", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, nodelay), 0 },
+	{ "disable_nolinger", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, disable_nolinger), 1 },
+	{ "keepalive", OD_CONFIG_FIELD_INT, offsetof(od_config_t, keepalive),
+	  1 },
+	{ "keepalive_keep_interval", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, keepalive_keep_interval), 1 },
+	{ "keepalive_probes", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, keepalive_probes), 1 },
+	{ "keepalive_usr_timeout", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, keepalive_usr_timeout), 1 },
+	{ "workers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, workers), 0 },
+	{ "resolvers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, resolvers),
+	  0 },
+	{ "client_max", OD_CONFIG_FIELD_INT, offsetof(od_config_t, client_max),
+	  1 },
+	{ "client_max_routing", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, client_max_routing), 1 },
+	{ "server_login_retry", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, server_login_retry), 1 },
+	{ "cache_coroutine", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, cache_coroutine), 0 },
+	{ "cache_msg_gc_size", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, cache_msg_gc_size), 0 },
+	{ "coroutine_stack_size", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, coroutine_stack_size), 0 },
+	{ "system_coroutine_stack_size", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, system_coroutine_stack_size), 0 },
+	{ "dns_cache_ttl", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, dns_ttl_ms), 0 },
+	{ "hba_file", OD_CONFIG_FIELD_STRING, offsetof(od_config_t, hba_file),
+	  0 },
+	{ "group_checker_interval", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, group_checker_interval), 0 },
+	{ "backend_connect_timeout_ms", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, backend_connect_timeout_ms), 1 },
+	{ "cancel_timeout_ms", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, cancel_timeout_ms), 1 },
+	{ "cancel_queue_timeout_ms", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, cancel_queue_timeout_ms), 0 },
+	{ "cancel_max_inflight", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, cancel_max_inflight), 0 },
+	{ "virtual_processing", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, virtual_processing), 0 },
+	{ "virtual_transaction", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, virtual_transaction), 0 },
+	{ "availability_zone", OD_CONFIG_FIELD_STRING_INLINE,
+	  offsetof(od_config_t, availability_zone), 0 },
+	{ "max_sigterms_to_die", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, max_sigterms_to_die), 1 },
+	{ "enable_host_watcher", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, host_watcher_enabled), 0 },
+	{ "smart_search_path_enquoting", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, smart_search_path_enquoting), 1 },
+};
+
+size_t od_config_fields_count(void)
+{
+	return sizeof(od_config_fields) / sizeof(od_config_fields[0]);
+}
+
+const od_config_field_t *od_config_field_at(size_t index)
+{
+	if (index >= od_config_fields_count()) {
+		return NULL;
+	}
+	return &od_config_fields[index];
+}
+
+void od_config_field_value(od_config_t *config, const od_config_field_t *field,
+			   char *buf, size_t size)
+{
+	char *at = (char *)config + field->offset;
+
+	switch (field->type) {
+	case OD_CONFIG_FIELD_INT:
+		od_snprintf(buf, size, "%d", *(int *)at);
+		break;
+	case OD_CONFIG_FIELD_BOOL:
+		od_snprintf(buf, size, "%s", *(int *)at ? "yes" : "no");
+		break;
+	case OD_CONFIG_FIELD_STRING: {
+		char *value = *(char **)at;
+		od_snprintf(buf, size, "%s",
+			    value ? value : OD_CONFIG_FIELD_NOT_SET);
+		break;
+	}
+	case OD_CONFIG_FIELD_STRING_INLINE:
+		od_snprintf(buf, size, "%s",
+			    at[0] ? at : OD_CONFIG_FIELD_NOT_SET);
+		break;
+	default:
+		od_snprintf(buf, size, "%s", OD_CONFIG_FIELD_NOT_SET);
+		break;
+	}
+}
+
+/*
+ * Defaults are shared by every caller and never change, so they are built
+ * once per process. od_config_t is too large to keep on a coroutine stack,
+ * and od_config_init() allocates nothing, so this instance needs no
+ * matching od_config_free().
+ */
+static od_config_t od_config_defaults;
+static pthread_once_t od_config_defaults_ctrl = PTHREAD_ONCE_INIT;
+
+static void od_config_defaults_build(void)
+{
+	od_config_init(&od_config_defaults);
+}
+
+void od_config_field_default(const od_config_field_t *field, char *buf,
+			     size_t size)
+{
+	pthread_once(&od_config_defaults_ctrl, od_config_defaults_build);
+	od_config_field_value(&od_config_defaults, field, buf, size);
 }
 
 void od_config_print(od_config_t *config, od_logger_t *logger)
