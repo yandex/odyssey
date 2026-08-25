@@ -14,3 +14,6 @@ SHOW odyssey.target_session_attrs;
 
 SET odyssey.target_session_attrs TO 'any';
 SHOW odyssey.target_session_attrs;
+
+SET odyssey.target_session_attrs TO 'z';
+SHOW odyssey.target_session_attrs;
