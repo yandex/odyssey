@@ -5,6 +5,11 @@
 #include <od_memory.h>
 #include <tests/odyssey_test.h>
 
+typedef struct {
+	mm_wait_flag_t *flag;
+	machine_wait_group_t *group;
+} blocking_arg_t;
+
 static void *calc(void *a)
 {
 	atomic_size_t *arg = a;
@@ -66,11 +71,21 @@ static void *sleepy(void *a)
 	return NULL;
 }
 
+static void *blocking_task(void *a)
+{
+	blocking_arg_t *arg = a;
+
+	machine_wait_group_done(arg->group);
+	mm_wait_flag_wait(arg->flag, UINT32_MAX);
+
+	return NULL;
+}
+
 static void test_queue_full(void *arg)
 {
 	(void)arg;
 
-	size_t n = 2;
+	size_t n = 4;
 
 	od_future_t **futures = od_malloc(n * sizeof(od_future_t *));
 	test(futures != NULL);
@@ -79,16 +94,39 @@ static void test_queue_full(void *arg)
 	od_thread_pool_t pool;
 	test(od_thread_pool_init(&pool, "sleeper", 2, 2) == 0);
 
-	futures[0] = od_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
+	machine_wait_group_t *wait_group = machine_wait_group_create();
+	test(wait_group != NULL);
+	mm_wait_flag_t *blocking_flag = mm_wait_flag_create();
+	test(blocking_flag != NULL);
+
+	blocking_arg_t blocking_arg;
+	blocking_arg.flag = blocking_flag;
+	blocking_arg.group = wait_group;
+
+	machine_wait_group_add(wait_group);
+	futures[0] = od_thread_pool_submit(&pool, blocking_task, &blocking_arg,
+					   NULL, NULL, 0);
 	test(futures[0] != NULL);
 
-	futures[1] = od_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
+	machine_wait_group_add(wait_group);
+	futures[1] = od_thread_pool_submit(&pool, blocking_task, &blocking_arg,
+					   NULL, NULL, 0);
 	test(futures[1] != NULL);
+
+	test(machine_wait_group_wait(wait_group, 60 * 1000) == 0);
+
+	futures[2] = od_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
+	test(futures[2] != NULL);
+
+	futures[3] = od_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
+	test(futures[3] != NULL);
 
 	od_future_t *f =
 		od_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
 	test(f == NULL);
 	test(mm_errno_get() == EAGAIN);
+
+	mm_wait_flag_set(blocking_flag);
 
 	for (size_t i = 0; i < n; ++i) {
 		test(od_thread_pool_wait(futures[i], 60 * 1000) == 0);
@@ -98,6 +136,8 @@ static void test_queue_full(void *arg)
 	od_free(futures);
 
 	od_thread_pool_destroy(&pool);
+	machine_wait_group_destroy(wait_group);
+	mm_wait_flag_destroy(blocking_flag);
 }
 
 void odyssey_test_thread_pool(void)
