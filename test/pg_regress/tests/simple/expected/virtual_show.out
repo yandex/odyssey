@@ -48,8 +48,8 @@ NOTICE:  processed virtually by odyssey
 (1 row)
 
 SET odyssey.target_session_attrs TO 'z';
-ERROR:  invalid value for parameter "odyssey.target_session_attrs": "z"
 NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.target_session_attrs": "z"
 SHOW odyssey.target_session_attrs;
 NOTICE:  processed virtually by odyssey
  odyssey.target_session_attrs 
