@@ -46,7 +46,10 @@ listen {
 	port 7432
 	backlog 128
 	tls "disable"
-	balancing_method "leastconn"
+	balancing {
+		method "leastconn" {}
+		show_notice_messages yes
+	}
 }
 
 storage "rr-hosts" {

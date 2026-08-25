@@ -149,8 +149,14 @@ static size_t roundrobin(od_storage_balancing_t *b, od_rule_storage_t *storage,
 
 	od_instance_t *instance = od_global_get_instance();
 
+	/*
+	 * round-robin counter always comes from the storage so that
+	 * multiple listen endpoints referencing the same storage share it,
+	 * ensuring fair distribution. az_aware flag (and any other
+	 * per-listen override) is taken from the effective balancing struct
+	 */
 	uint32_t local, global;
-	rr_next(&b->method.roundrobin, &local, &global);
+	rr_next(&storage->balancing.method.roundrobin, &local, &global);
 
 	size_t count = 0;
 	for (size_t i = 0; i < storage->endpoints_count && count < max; ++i) {
@@ -320,7 +326,6 @@ static size_t responsetime(od_storage_balancing_t *b, od_route_t *route,
 }
 
 size_t od_storage_balancing_select(od_storage_balancing_t *b,
-				   od_balancing_method_t override_method,
 				   od_rule_storage_t *storage,
 				   od_route_t *route,
 				   od_storage_endpoint_t **out, size_t max,
@@ -335,12 +340,7 @@ size_t od_storage_balancing_select(od_storage_balancing_t *b,
 		return 1;
 	}
 
-	od_balancing_method_t method =
-		(override_method != OD_BALANCING_METHOD_UNDEF) ?
-			override_method :
-			b->method.type;
-
-	switch (method) {
+	switch (b->method.type) {
 	case OD_BALANCING_METHOD_UNDEF:
 	case OD_BALANCING_METHOD_ROUNDROBIN:
 		return roundrobin(b, storage, out, max, filter, arg);
@@ -357,20 +357,14 @@ size_t od_storage_balancing_select(od_storage_balancing_t *b,
 	}
 }
 
-od_balancing_method_t od_balancing_get_effective(od_client_t *client,
-						 od_rule_storage_t *storage)
+od_storage_balancing_t *od_balancing_get_effective(od_client_t *client,
+						   od_rule_storage_t *storage)
 {
 	od_config_listen_t *l = client->config_listen;
 
-	if (l == NULL) {
-		return storage->balancing.method.type;
+	if (l != NULL && l->balancing_override_set) {
+		return &l->balancing_override;
 	}
 
-	od_balancing_method_t listen_method = l->balancing_method;
-
-	if (listen_method != OD_BALANCING_METHOD_UNDEF) {
-		return listen_method;
-	}
-
-	return storage->balancing.method.type;
+	return &storage->balancing;
 }

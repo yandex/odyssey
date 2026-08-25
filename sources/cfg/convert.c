@@ -101,29 +101,43 @@ static int parse_tsa(const char *s, od_target_session_attrs_t *out)
 		}                                                                     \
 	} while (0)
 
-static int parse_balance_method(const char *s, od_balancing_method_t *out)
+static int convert_balancing(const od_cfg_balancing_t *cfg,
+			     od_storage_balancing_t *out,
+			     od_cfg_diag_list_t *diags)
 {
-	od_balancing_method_t m = od_balancing_method_from_str(s, strlen(s));
-	if (m == OD_BALANCING_METHOD_UNDEF) {
-		return 1;
+	od_storage_balancing_init(out);
+
+	if (!cfg->seen.is_set) {
+		return 0;
 	}
-	*out = m;
+
+	if (cfg->method.seen.is_set) {
+		int mlen = (int)strlen(cfg->method.name);
+		od_balancing_method_t method =
+			od_balancing_method_from_str(cfg->method.name, mlen);
+		if (method == OD_BALANCING_METHOD_UNDEF) {
+			od_cfg_diag_error(diags, cfg->method.seen.location,
+					  "unexpected balancing method '%s'",
+					  cfg->method.name);
+			return -1;
+		}
+
+		if (method != OD_BALANCING_METHOD_ROUNDROBIN &&
+		    method != OD_BALANCING_METHOD_LEASTCONN) {
+			od_cfg_diag_error(
+				diags, cfg->method.seen.location,
+				"not implemented balancing method '%s'",
+				cfg->method.name);
+			return -1;
+		}
+
+		out->method.type = method;
+		COPY_BOOL(cfg->method.az_aware, out->method.az_aware);
+	}
+
+	COPY_BOOL(cfg->show_notice_messages, out->debug_notice);
 	return 0;
 }
-
-#define COPY_BALANCE_METHOD(field, out, diags)                                    \
-	do {                                                                      \
-		if ((field).seen.is_set) {                                        \
-			int rc = parse_balance_method((field).value, &out);       \
-			if (rc) {                                                 \
-				od_cfg_diag_error(                                \
-					diags, (field).seen.location,             \
-					"can't parse balancing method from '%s'", \
-					(field).value);                           \
-				goto error;                                       \
-			}                                                         \
-		}                                                                 \
-	} while (0)
 
 static inline void ldap_not_supported(od_cfg_diag_list_t *diags,
 				      od_cfg_location_t location)
@@ -1035,8 +1049,14 @@ static int convert_listen(convert_ctx_t *ctx, const od_cfg_listen_t *cfg)
 	COPY_INT(cfg->port, listen->port);
 	COPY_TSA(cfg->target_session_attrs, listen->target_session_attrs,
 		 diags);
-	COPY_BALANCE_METHOD(cfg->balancing_method, listen->balancing_method,
-			    diags);
+	{
+		int rc = convert_balancing(&cfg->balancing,
+					   &listen->balancing_override, diags);
+		if (rc != 0) {
+			goto error;
+		}
+		listen->balancing_override_set = cfg->balancing.seen.is_set;
+	}
 	COPY_INT(cfg->client_login_timeout, listen->client_login_timeout);
 	COPY_INT(cfg->catchup_timeout, listen->catchup_timeout);
 	COPY_INT(cfg->backlog, listen->backlog);
@@ -1186,38 +1206,12 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 		}
 	}
 
-	if (cfg->balancing.seen.is_set) {
-		if (cfg->balancing.method.seen.is_set) {
-			int mlen = (int)strlen(cfg->balancing.method.name);
-			od_balancing_method_t method =
-				od_balancing_method_from_str(
-					cfg->balancing.method.name, mlen);
-			if (method == OD_BALANCING_METHOD_UNDEF) {
-				od_cfg_diag_error(
-					diags,
-					cfg->balancing.method.seen.location,
-					"unexpected balancing method '%s'",
-					cfg->balancing.method.name);
-				goto error;
-			}
-
-			if (method != OD_BALANCING_METHOD_ROUNDROBIN &&
-			    method != OD_BALANCING_METHOD_LEASTCONN) {
-				od_cfg_diag_error(
-					diags,
-					cfg->balancing.method.seen.location,
-					"not implemented balancing method '%s'",
-					cfg->balancing.method.name);
-				goto error;
-			}
-
-			storage->balancing.method.type = method;
-			COPY_BOOL(cfg->balancing.method.az_aware,
-				  storage->balancing.method.az_aware);
+	{
+		int rc = convert_balancing(&cfg->balancing, &storage->balancing,
+					   diags);
+		if (rc != 0) {
+			goto error;
 		}
-
-		COPY_BOOL(cfg->balancing.show_notice_messages,
-			  storage->balancing.debug_notice);
 	}
 
 	if (cfg->watchdog != NULL) {

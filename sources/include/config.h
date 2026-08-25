@@ -33,7 +33,8 @@ struct od_config_listen {
 	od_list_t link;
 
 	od_target_session_attrs_t target_session_attrs;
-	od_balancing_method_t balancing_method;
+	od_storage_balancing_t balancing_override;
+	int balancing_override_set;
 	int catchup_timeout;
 
 	char **storage_names;

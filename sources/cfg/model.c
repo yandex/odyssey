@@ -76,13 +76,31 @@ static void dump_conn_drop(FILE *file, const od_cfg_conn_drop_options_t *cd)
 	}
 }
 
+static void dump_balancing(FILE *file, int indent, const od_cfg_balancing_t *b)
+{
+	if (!b->seen.is_set) {
+		return;
+	}
+
+	fprintf(file, "%*sbalancing {\n", indent, "");
+	if (b->method.seen.is_set) {
+		fprintf(file, "%*smethod \"%s\" {\n", indent + 1, "",
+			b->method.name);
+		dump_bool(file, "az_aware", indent + 2, &b->method.az_aware);
+		fprintf(file, "%*s}\n", indent + 1, "");
+	}
+	dump_bool(file, "show_notice_messages", indent + 1,
+		  &b->show_notice_messages);
+	fprintf(file, "%*s}\n", indent, "");
+}
+
 static void dump_listen(FILE *file, const od_cfg_listen_t *l)
 {
 	fprintf(file, "listen {\n");
 	dump_string(file, "host", 1, &l->host);
 	dump_int(file, "port", 1, &l->port);
 	dump_string(file, "target_session_attrs", 1, &l->target_session_attrs);
-	dump_string(file, "balancing_method", 1, &l->balancing_method);
+	dump_balancing(file, 1, &l->balancing);
 	dump_int(file, "client_login_timeout", 1, &l->client_login_timeout);
 	dump_int(file, "backlog", 1, &l->backlog);
 	dump_string(file, "tls", 1, &l->tls);
@@ -112,16 +130,7 @@ static void dump_storage(FILE *file, const od_cfg_storage_t *s)
 	dump_int(file, "endpoints_status_poll_interval_ms", 1,
 		 &s->endpoints_status_poll_interval_ms);
 
-	if (s->balancing.seen.is_set) {
-		fprintf(file, "\tbalancing {\n");
-		if (s->balancing.method.seen.is_set) {
-			fprintf(file, "\t\tmethod \"%s\" {}\n",
-				s->balancing.method.name);
-		}
-		dump_bool(file, "show_notice_messages", 2,
-			  &s->balancing.show_notice_messages);
-		fprintf(file, "\t}\n");
-	}
+	dump_balancing(file, 1, &s->balancing);
 
 	if (s->watchdog != NULL) {
 		dump_user(file, "watchdog", s->watchdog);
@@ -567,6 +576,17 @@ od_cfg_listen_storage_t *od_cfg_listen_add_storage(od_cfg_listen_t *listen,
 	return storage;
 }
 
+static void od_cfg_balancing_free(od_cfg_balancing_t *b)
+{
+	od_cfg_seen_free(&b->seen);
+	od_cfg_location_free(&b->location);
+	od_cfg_bool_field_free(&b->show_notice_messages);
+	od_cfg_seen_free(&b->method.seen);
+	od_cfg_location_free(&b->method.location);
+	od_cfg_bool_field_free(&b->method.az_aware);
+	od_free(b->method.name);
+}
+
 static void od_cfg_listen_free(od_cfg_listen_t *listen)
 {
 	if (listen == NULL) {
@@ -576,7 +596,7 @@ static void od_cfg_listen_free(od_cfg_listen_t *listen)
 	od_cfg_string_field_free(&listen->host);
 	od_cfg_int_field_free(&listen->port);
 	od_cfg_string_field_free(&listen->target_session_attrs);
-	od_cfg_string_field_free(&listen->balancing_method);
+	od_cfg_balancing_free(&listen->balancing);
 	od_cfg_int_field_free(&listen->client_login_timeout);
 	od_cfg_int_field_free(&listen->backlog);
 	od_cfg_string_field_free(&listen->tls);
@@ -623,13 +643,7 @@ static void od_cfg_storage_free(od_cfg_storage_t *storage)
 	od_cfg_int_field_free(&storage->server_max_routing);
 	od_cfg_int_field_free(&storage->endpoints_status_poll_interval_ms);
 
-	od_cfg_seen_free(&storage->balancing.seen);
-	od_cfg_location_free(&storage->balancing.location);
-	od_cfg_bool_field_free(&storage->balancing.show_notice_messages);
-	od_cfg_seen_free(&storage->balancing.method.seen);
-	od_cfg_location_free(&storage->balancing.method.location);
-	od_cfg_bool_field_free(&storage->balancing.method.az_aware);
-	od_free(storage->balancing.method.name);
+	od_cfg_balancing_free(&storage->balancing);
 
 	od_cfg_location_free(&storage->location);
 	od_cfg_location_free(&storage->name_location);
