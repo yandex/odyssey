@@ -2775,7 +2775,6 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_REQ_SYNC:
 	case OD_ATTACH:
 	/* fallthrough */
-	case OD_DETACH:
 	case OD_ESYNC_BROKEN:
 	default:
 		od_error(&instance->logger, context, client, server,
