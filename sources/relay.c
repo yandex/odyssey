@@ -130,12 +130,18 @@ static od_frontend_status_t reply_reject_guc(od_client_t *client,
 
 	server = client->server;
 
+	machine_msg_t *m =
+		kiwi_be_write_notice(NULL, 'M', PROCESSED_BY_ODYSSEY_STR);
+	if (m == NULL) {
+		return OD_EOOM;
+	}
+
 	char buf[128];
 	int len = od_snprintf(buf, sizeof(buf),
 			      "invalid value for parameter \"%s\": \"%.*s\"",
 			      guc_name, (int)option_value_len, option_value);
-	machine_msg_t *m = kiwi_be_write_error(
-		NULL, KIWI_INVALID_PARAMETER_VALUE, buf, len);
+
+	m = kiwi_be_write_error(m, KIWI_INVALID_PARAMETER_VALUE, buf, len);
 	if (m == NULL) {
 		return OD_EOOM;
 	}
@@ -146,25 +152,14 @@ static od_frontend_status_t reply_reject_guc(od_client_t *client,
 		return OD_ECLIENT_WRITE;
 	}
 
-	char msg[128 /* message below is ~ 30 bytes */];
-	char *out = msg;
-	char *end = msg + sizeof(msg);
-	rc = kiwi_be_format_notice(out, end - out, 'M',
-				   PROCESSED_BY_ODYSSEY_STR);
-	od_assert(rc != -1);
-	out += rc;
-
 	uint8_t txstatus = 'I';
 	if (server != NULL) {
 		txstatus = server->is_transaction ? 'T' : 'I';
 	}
 
-	rc = kiwi_be_format_ready(out, end - out, txstatus);
-	od_assert(rc != -1);
-	out += rc;
+	m = kiwi_be_write_ready(NULL, txstatus);
 
-	size_t unused;
-	rc = od_io_write_raw(&client->io, msg, out - msg, &unused, 1000, 0);
+	rc = od_write2(&client->io, m, 1000);
 	if (rc != 0) {
 		return OD_ECLIENT_WRITE;
 	}
