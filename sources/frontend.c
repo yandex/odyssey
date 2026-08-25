@@ -793,10 +793,10 @@ static od_frontend_status_t attach_with_storage(od_client_t *client,
 
 	od_storage_endpoint_t *endpoints[OD_STORAGE_MAX_ENDPOINTS];
 	size_t count;
-	od_balancing_method_t bal_method =
+	od_storage_balancing_t *balancing =
 		od_balancing_get_effective(client, storage);
 	count = od_storage_balancing_select(
-		&storage->balancing, bal_method, storage, route, endpoints,
+		balancing, storage, route, endpoints,
 		sizeof(endpoints) / sizeof(endpoints[0]), host_filter, &arg);
 
 	if (tsa == OD_TARGET_SESSION_ATTRS_PREFER_STANDBY && count > 1) {

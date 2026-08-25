@@ -129,19 +129,25 @@ host is primary or not.
 
 `target_session_attrs "read-write"`
 
-## **balancing_method**
-*string*
+## **balancing**
 
-Overrides the load-balancing strategy for this listen endpoint. When not set,
-the balancing method configured on the matched storage is used. See
-[balancing](../features/balancing.md) for details.
+Optional sub-section that overrides the load-balancing behaviour for this
+listen endpoint. When not set, the `balancing` section configured on the
+matched storage is used. See [balancing](../features/balancing.md) for
+details on the available methods and options.
 
-Possible values are:
-
-- roundrobin - distribute connections across endpoints in round-robin order (default)
-- leastconn - select the endpoint with the fewest active connections
-
-`balancing_method "leastconn"`
+```plain
+listen {
+    host "*"
+    port 6432
+    balancing {
+        method "leastconn" {
+            az_aware no
+        }
+        show_notice_messages yes
+    }
+}
+```
 
 ## **client_login_timeout**
 *integer*

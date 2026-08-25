@@ -70,11 +70,10 @@ void od_storage_balancing_copy(od_storage_balancing_t *dest,
 			       const od_storage_balancing_t *src);
 
 size_t od_storage_balancing_select(od_storage_balancing_t *b,
-				   od_balancing_method_t override_method,
 				   od_rule_storage_t *storage,
 				   od_route_t *route,
 				   od_storage_endpoint_t **out, size_t max,
 				   od_balancing_filter_fn filter, void *arg);
 
-od_balancing_method_t od_balancing_get_effective(od_client_t *client,
-						 od_rule_storage_t *storage);
+od_storage_balancing_t *od_balancing_get_effective(od_client_t *client,
+						   od_rule_storage_t *storage);

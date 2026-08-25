@@ -205,7 +205,6 @@
 %token HOST "host"
 %token PORT "port"
 %token TARGET_SESSION_ATTRS "target_session_attrs"
-%token BALANCING_METHOD "balancing_method"
 %token CLIENT_LOGIN_TIMEOUT "client_login_timeout"
 %token BACKLOG "backlog"
 %token TLS "tls"
@@ -2174,31 +2173,42 @@ storage_item:
 			ctx->current_watchdog = NULL;
 			ctx->current_user = NULL;
 		}
-	| balancing_section
+	| storage_balancing_section
+	;
+
+storage_balancing_section:
+	  /* set current_balancing before entering balancing_section */
+	  {
+		ctx->current_balancing = &ctx->current_storage->balancing;
+	  }
+	  balancing_section
 	;
 
 balancing_section:
 	  BALANCING
 		{
-			od_cfg_balancing_t *b = &ctx->current_storage->balancing;
+			od_cfg_balancing_t *b = ctx->current_balancing;
+
+			if (b == NULL) {
+				od_cfg_diag_error(ctx->diags, @1,
+								  "balancing section is not allowed here");
+				YYERROR;
+			}
 
 			if (b->seen.is_set) {
 				od_cfg_diag_error(ctx->diags, @1,
-								  "balancing section is redefined for storage '%s'",
-								  ctx->current_storage->name);
+								  "balancing section is redefined");
 				YYERROR;
 			}
 
 			od_cfg_seen_set(&b->seen, @1);
 			b->location = od_cfg_location_copy(@1);
-
-			ctx->current_balancing = b;
 		}
 	  '{' balancing_items '}'
 		{
 			ctx->current_balancing = NULL;
 		}
-	;
+  ;
 
 
 balancing_items:
@@ -2280,6 +2290,14 @@ listen_section:
 		}
 	;
 
+listen_balancing_section:
+	  /* set current_balancing before entering balancing_section */
+	  {
+		ctx->current_balancing = &ctx->current_listen->balancing;
+	  }
+	  balancing_section
+	;
+
 listen_items:
 	  %empty
 	| listen_items listen_item
@@ -2313,15 +2331,7 @@ listen_item:
 							  "target_session_attrs");
 			$2 = NULL;
 		}
-	| BALANCING_METHOD string_value
-		{
-			od_cfg_set_string(ctx->diags,
-							  &ctx->current_listen->balancing_method,
-							  $2,
-							  @1,
-							  "balancing_method");
-			$2 = NULL;
-		}
+	| listen_balancing_section
 	| CLIENT_LOGIN_TIMEOUT int_value
 		{
 			od_cfg_set_int_range_from_i64(ctx->diags,

@@ -110,13 +110,29 @@ typedef struct od_cfg_listen_storage {
 	od_cfg_location_t location;
 } od_cfg_listen_storage_t;
 
+typedef struct od_cfg_balancing_method {
+	od_cfg_seen_t seen;
+	od_cfg_location_t location;
+
+	char *name;
+	od_cfg_bool_field_t az_aware;
+} od_cfg_balancing_method_t;
+
+typedef struct od_cfg_balancing {
+	od_cfg_seen_t seen;
+	od_cfg_location_t location;
+
+	od_cfg_balancing_method_t method;
+	od_cfg_bool_field_t show_notice_messages;
+} od_cfg_balancing_t;
+
 typedef struct od_cfg_listen {
 	od_cfg_location_t location;
 
 	od_cfg_string_field_t host;
 	od_cfg_int_field_t port;
 	od_cfg_string_field_t target_session_attrs;
-	od_cfg_string_field_t balancing_method;
+	od_cfg_balancing_t balancing;
 
 	od_cfg_int_field_t client_login_timeout;
 	od_cfg_int_field_t backlog;
@@ -137,22 +153,6 @@ typedef struct od_cfg_listen {
 od_cfg_listen_storage_t *od_cfg_listen_add_storage(od_cfg_listen_t *listen,
 						   od_cfg_location_t location,
 						   const char *name);
-
-typedef struct od_cfg_balancing_method {
-	od_cfg_seen_t seen;
-	od_cfg_location_t location;
-
-	char *name;
-	od_cfg_bool_field_t az_aware;
-} od_cfg_balancing_method_t;
-
-typedef struct od_cfg_balancing {
-	od_cfg_seen_t seen;
-	od_cfg_location_t location;
-
-	od_cfg_balancing_method_t method;
-	od_cfg_bool_field_t show_notice_messages;
-} od_cfg_balancing_t;
 
 typedef struct od_cfg_route od_cfg_route_t;
 

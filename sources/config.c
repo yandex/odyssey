@@ -203,7 +203,8 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 	listen->backlog = 128;
 	listen->client_login_timeout = 15000;
 	listen->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
-	listen->balancing_method = OD_BALANCING_METHOD_UNDEF;
+	listen->balancing_override_set = 0;
+	od_storage_balancing_init(&listen->balancing_override);
 
 	od_list_init(&listen->link);
 	od_list_append(&config->listen, &listen->link);
@@ -220,6 +221,8 @@ static void od_config_listen_free(od_config_listen_t *config)
 	if (config->tls_opts) {
 		od_tls_opts_free(config->tls_opts);
 	}
+
+	od_storage_balancing_destroy(&config->balancing_override);
 
 	for (size_t i = 0; i < config->storage_count; ++i) {
 		od_free(config->storage_names[i]);
@@ -702,8 +705,13 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       "  target_session_attrs %s",
 		       od_target_session_attrs_to_str(
 			       listen->target_session_attrs));
-		od_log(logger, "config", NULL, NULL, "  balancing_method %s",
-		       od_balancing_method_to_str(listen->balancing_method));
+		if (listen->balancing_override_set) {
+			od_log(logger, "config", NULL, NULL,
+			       "  balancing override: method %s, az_aware %d",
+			       od_balancing_method_to_str(
+				       listen->balancing_override.method.type),
+			       listen->balancing_override.method.az_aware);
+		}
 		if (listen->catchup_timeout) {
 			od_log(logger, "config", NULL, NULL,
 			       "  catchup_timeout %d", listen->catchup_timeout);
