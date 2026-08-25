@@ -241,14 +241,17 @@ jdbc_test: build_images
 userver_test: build_images
 	docker compose -f ./test/drivers/userver/docker-compose.yml up --build --abort-on-container-exit --exit-code-from userver_test --remove-orphans # --force-recreate
 
-regress_test:
+pg-base-image:
+	docker build -f ./test/pg-base/Dockerfile --tag=odyssey/pg-base .
+
+regress_test: pg-base-image
 	docker build -f ./test/pg_regress/Dockerfile \
 		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
 		--build-arg odyssey_cc=$(ODYSSEY_CC) \
 		--tag=odyssey/regress-tester .
 	docker run odyssey/regress-tester
 
-scram_passthrough_test:
+scram_passthrough_test: pg-base-image
 	docker build -f ./test/scram-passthrough/Dockerfile \
 		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
 		--build-arg odyssey_cc=$(ODYSSEY_CC) \
