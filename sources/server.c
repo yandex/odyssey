@@ -122,8 +122,6 @@ void od_server_detach_client(od_server_t *server)
 	od_assert(server->state == OD_SERVER_ACTIVE);
 	od_assert(server == client->server);
 
-	server->client_pinned = 0;
-
 	client->server = NULL;
 	server->client = NULL;
 

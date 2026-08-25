@@ -78,6 +78,9 @@ struct od_client {
 	/* Used to kill client in kill_client or odyssey reload */
 	od_atomic_u64_t killed;
 
+	/* client-side GUC state. XXX: maybe use embedded struct here */
+	bool backend_pin;
+
 	/* storage_user & storage_password provided by ldapsearch result */
 #ifdef LDAP_FOUND
 	char *ldap_storage_username;
