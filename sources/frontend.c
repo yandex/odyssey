@@ -2772,7 +2772,6 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		break;
 	case OD_UNDEF:
 	case OD_SKIP:
-	case OD_REQ_SYNC:
 	case OD_ATTACH:
 	/* fallthrough */
 	case OD_ESYNC_BROKEN:
