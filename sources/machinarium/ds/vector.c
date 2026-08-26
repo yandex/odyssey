@@ -59,20 +59,22 @@ void mm_vector_clear(mm_vector_t *vec)
 
 int mm_vector_shrink_to_fit(mm_vector_t *vec)
 {
-	if (vec->capacity <= MIN_CAPACITY) {
+	size_t new_cap = vec->size;
+	if (new_cap < MIN_CAPACITY) {
+		new_cap = MIN_CAPACITY;
+	}
+
+	if (new_cap >= vec->capacity) {
 		return 0;
 	}
 
-	size_t new_cap = vec->size;
-	if (new_cap != vec->capacity) {
-		void *ne = mm_realloc(vec->elements, new_cap * vec->elsize);
-		if (ne == NULL) {
-			return -1;
-		}
-
-		vec->elements = ne;
-		vec->capacity = new_cap;
+	void *ne = mm_realloc(vec->elements, new_cap * vec->elsize);
+	if (ne == NULL) {
+		return -1;
 	}
+
+	vec->elements = ne;
+	vec->capacity = new_cap;
 
 	return 0;
 }
