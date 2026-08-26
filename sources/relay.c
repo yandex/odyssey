@@ -32,6 +32,7 @@
 
 #define APPLICATION_NAME_STR "application_name"
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
+#define ODYSSEY_PIN_BACKEND "odyssey.pin_backend"
 #define PROCESSED_BY_ODYSSEY_STR "processed virtually by odyssey"
 
 /*
@@ -120,6 +121,117 @@ void od_relay_destroy(od_relay_t *relay)
 	xbuf_destroy(&relay->xbuf);
 }
 
+static od_frontend_status_t reply_reject_guc(od_client_t *client,
+					     const char *guc_name,
+					     const char *option_value,
+					     size_t option_value_len)
+{
+	od_server_t *server;
+
+	server = client->server;
+
+	machine_msg_t *m =
+		kiwi_be_write_notice(NULL, 'M', PROCESSED_BY_ODYSSEY_STR);
+	if (m == NULL) {
+		return OD_EOOM;
+	}
+
+	char buf[128];
+	int len = od_snprintf(buf, sizeof(buf),
+			      "invalid value for parameter \"%s\": \"%.*s\"",
+			      guc_name, (int)option_value_len, option_value);
+
+	m = kiwi_be_write_error(m, KIWI_INVALID_PARAMETER_VALUE, buf, len);
+	if (m == NULL) {
+		return OD_EOOM;
+	}
+
+	int rc;
+	rc = od_write2(&client->io, m, 1000);
+	if (rc != 0) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	uint8_t txstatus = 'I';
+	if (server != NULL) {
+		txstatus = server->is_transaction ? 'T' : 'I';
+	}
+
+	m = kiwi_be_write_ready(NULL, txstatus);
+
+	rc = od_write2(&client->io, m, 1000);
+	if (rc != 0) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	return OD_SKIP;
+}
+
+static od_frontend_status_t
+process_set_generic_bool(od_client_t *client,
+			 const od_sql_minimal_set_stmt_t *stmt,
+			 bool *guc_val_ptr)
+{
+	const char *option_value;
+	size_t option_value_len;
+
+	od_server_t *server;
+	od_instance_t *instance = client->global->instance;
+
+	server = client->server;
+	option_value = stmt->value;
+	option_value_len = strlen(option_value);
+
+	if (strncasecmp(option_value, "true", option_value_len) == 0 ||
+	    strncasecmp(option_value, "on", option_value_len) == 0 ||
+	    strncasecmp(option_value, "1", option_value_len) == 0) {
+		*guc_val_ptr = 1;
+	} else if (strncasecmp(option_value, "false", option_value_len) == 0 ||
+		   strncasecmp(option_value, "off", option_value_len) == 0 ||
+		   strncasecmp(option_value, "0", option_value_len) == 0) {
+		*guc_val_ptr = 0;
+	} else {
+		/* Reject this */
+		return reply_reject_guc(client, stmt->key, option_value,
+					option_value_len);
+	}
+
+	/* XXX: refactor this */
+	od_debug(&instance->logger, "virtual processing", client, server,
+		 "processed virtual bool GUC %.*s", (int)option_value_len,
+		 option_value);
+
+	uint8_t txstatus = 'I';
+	if (server != NULL) {
+		txstatus = server->is_transaction ? 'T' : 'I';
+	}
+
+	char msg[128 /* message below is ~ 60 bytes */];
+	int rc;
+	char *out = msg;
+	char *end = msg + sizeof(msg);
+	rc = kiwi_be_format_notice(out, end - out, 'M',
+				   PROCESSED_BY_ODYSSEY_STR);
+	od_assert(rc != -1);
+	out += rc;
+
+	rc = kiwi_be_format_command_complete(out, end - out, "SET");
+	od_assert(rc != -1);
+	out += rc;
+
+	rc = kiwi_be_format_ready(out, end - out, txstatus);
+	od_assert(rc != -1);
+	out += rc;
+
+	size_t unused;
+	rc = od_io_write_raw(&client->io, msg, out - msg, &unused, 1000, 0);
+	if (rc != 0) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	return OD_SKIP;
+}
+
 static od_frontend_status_t
 process_set_tsa(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
 {
@@ -157,48 +269,9 @@ process_set_tsa(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
 			 server, "unsupported tsa hint %.*s",
 			 (int)option_value_len, option_value);
 
-		char buf[128];
-		int len = od_snprintf(
-			buf, sizeof(buf),
-			"invalid value for parameter \"%s\": \"%s\"",
-			ODYSSEY_TARGET_SESSION_ATTRS_STR, option_value);
-		machine_msg_t *m = kiwi_be_write_error(
-			NULL, KIWI_INVALID_PARAMETER_VALUE, buf, len);
-		if (m == NULL) {
-			return OD_EOOM;
-		}
-
-		int rc;
-		rc = od_write2(&client->io, m, 1000);
-		if (rc != 0) {
-			return OD_ECLIENT_WRITE;
-		}
-
-		char msg[128 /* message below is ~ 30 bytes */];
-		char *out = msg;
-		char *end = msg + sizeof(msg);
-		rc = kiwi_be_format_notice(out, end - out, 'M',
-					   PROCESSED_BY_ODYSSEY_STR);
-		od_assert(rc != -1);
-		out += rc;
-
-		uint8_t txstatus = 'I';
-		if (server != NULL) {
-			txstatus = server->is_transaction ? 'T' : 'I';
-		}
-
-		rc = kiwi_be_format_ready(out, end - out, txstatus);
-		od_assert(rc != -1);
-		out += rc;
-
-		size_t unused;
-		rc = od_io_write_raw(&client->io, msg, out - msg, &unused, 1000,
-				     0);
-		if (rc != 0) {
-			return OD_ECLIENT_WRITE;
-		}
-
-		return OD_SKIP;
+		return reply_reject_guc(client,
+					ODYSSEY_TARGET_SESSION_ATTRS_STR,
+					option_value, option_value_len);
 	}
 
 	od_debug(&instance->logger, "virtual processing", client, server,
@@ -311,6 +384,13 @@ static od_frontend_status_t process_vset(od_client_t *client,
 		}
 	}
 
+	if (strcmp(stmt->key, ODYSSEY_PIN_BACKEND) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_set_generic_bool(client, stmt,
+							&client->backend_pin);
+		}
+	}
+
 	return OD_OK;
 }
 
@@ -384,6 +464,12 @@ static od_frontend_status_t process_show_tsa(od_client_t *client)
 	return virtual_str_ans(client, ODYSSEY_TARGET_SESSION_ATTRS_STR, val);
 }
 
+static od_frontend_status_t process_show_bool_guc(od_client_t *client,
+						  const char *name, bool val)
+{
+	return virtual_str_ans(client, name, val ? "on" : "off");
+}
+
 static od_frontend_status_t
 process_vshow(od_client_t *client, const od_sql_minimal_show_stmt_t *stmt)
 {
@@ -392,6 +478,13 @@ process_vshow(od_client_t *client, const od_sql_minimal_show_stmt_t *stmt)
 	if (strcmp(stmt->name, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_show_tsa(client);
+		}
+	}
+
+	if (strcmp(stmt->name, ODYSSEY_PIN_BACKEND) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_show_bool_guc(client, stmt->name,
+						     client->backend_pin);
 		}
 	}
 

@@ -1,0 +1,77 @@
+SELECT 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+
+SET odyssey.pin_backend = "on";
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+SET odyssey.pin_backend TO 'off';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+
+SET odyssey.pin_backend = "true";
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+SET odyssey.pin_backend TO 'false';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+
+SET odyssey.pin_backend = "1";
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+SET odyssey.pin_backend TO '0';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+
+SET odyssey.pin_backend = "invalid";
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.pin_backend": "invalid"
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+

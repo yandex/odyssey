@@ -75,7 +75,6 @@ struct od_server {
 	machine_msg_t *error_connect;
 	/* do not set this field directly, use od_server_attach_client */
 	od_client_t *client;
-	int client_pinned;
 	od_route_t *route;
 
 	od_global_t *global;
@@ -118,7 +117,6 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->pool_element = NULL;
 	server->endpoint = NULL;
 	server->need_startup = 1;
-	server->client_pinned = 0;
 	server->msg_broken = 0;
 	server->oom = 0;
 	od_stat_state_init(&server->stats_state);

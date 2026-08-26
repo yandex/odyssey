@@ -2000,7 +2000,7 @@ static od_frontend_status_t process_possible_detach(od_client_t *client)
 		return OD_OK;
 	}
 
-	if (server->client_pinned) {
+	if (client->backend_pin) {
 		return OD_OK;
 	}
 
