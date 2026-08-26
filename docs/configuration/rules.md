@@ -61,6 +61,7 @@ A special `user default` is used when no user is matched.
 | pool_client_idle_timeout          | integer (sec)                        | 0             | runtime (new connections) | Timeout for idle client connections; only applies to session pooling mode.                                                                                                 |
 | pool_idle_in_transaction_timeout  | integer (sec)                          | 0             | runtime (new connections) | Timeout for idle clients with open transactions; session pooling only.                                                                                                     |
 | pool_reserve_prepared_statement   | boolean                                | yes (0)       | runtime (new connections) | Enable prepared statement support; incompatible with session pooling and certain discard modes.                                                                            |
+| server_pstmt_cache_size           | integer                                | 0             | runtime (new connections) | Per-server limit of reserved prepared statements; evicts statements not recently used (SIEVE policy) on server reset; 0 = unlimited. Only meaningful with prepared statement support enabled. |
 | pool_pin_on_listen          | boolean                        | no (0)             | runtime (new connections) | Enable pinning client to server after LISTEN execution                                                                                    |
 | log_debug                         | boolean                                | no (0)        | runtime (new connections) | Enable debug logging for this route.                                                                                                                                       |
 | group_checker_interval            | integer (ms)                           | 7000 (global) | runtime (global)          | Global setting: interval for checking group membership changes (7 seconds default).                                                                                        |
@@ -676,6 +677,17 @@ Default: no
 Enable support of prepared statements in transactional pooling.
 
 `pool_reserve_prepared_statement yes`
+
+## **server_pstmt_cache_size**
+
+*integer*
+
+Per-server-connection limit of reserved prepared statements.
+Eviction happens on returning connection to the pool.
+Eviction is best-effort: statements still referenced by clients or by other servers are not evicted, so the number of reserved statements may stay above the configured limit.
+Default: 0 (disabled)
+
+`server_pstmt_cache_size 512`
 
 ## **pool_pin_on_listen**
 *yes/no*

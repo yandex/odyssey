@@ -362,6 +362,7 @@ struct od_cfg_route {
 	od_cfg_bool_field_t pool_rollback;
 	od_cfg_u64_field_t pool_reset_timeout_ms;
 	od_cfg_bool_field_t pool_reserve_prepared_statement;
+	od_cfg_int_field_t server_pstmt_cache_size;
 	od_cfg_bool_field_t pool_pin_on_listen;
 	od_cfg_bool_field_t pool_attach_check;
 	od_cfg_bool_field_t pool_acquire_fail_fast;

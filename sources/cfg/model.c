@@ -317,6 +317,8 @@ static void dump_user(FILE *file, const char *type, const od_cfg_route_t *user)
 		    &user->pool_reset_timeout_ms);
 	dump_bool(file, "pool_reserve_prepared_statement", 2,
 		  &user->pool_reserve_prepared_statement);
+	dump_int(file, "server_pstmt_cache_size", 2,
+		 &user->server_pstmt_cache_size);
 	dump_bool(file, "pool_pin_on_listen", 2, &user->pool_pin_on_listen);
 	dump_bool(file, "pool_attach_check", 2, &user->pool_attach_check);
 	dump_bool(file, "pool_acquire_fail_fast", 2,
@@ -777,6 +779,7 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 	od_cfg_bool_field_free(&user->pool_rollback);
 	od_cfg_u64_field_free(&user->pool_reset_timeout_ms);
 	od_cfg_bool_field_free(&user->pool_reserve_prepared_statement);
+	od_cfg_int_field_free(&user->server_pstmt_cache_size);
 	od_cfg_bool_field_free(&user->pool_pin_on_listen);
 	od_cfg_bool_field_free(&user->pool_attach_check);
 	od_cfg_bool_field_free(&user->pool_acquire_fail_fast);

@@ -155,6 +155,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "server_drop_on_cached_plan_error",
 	  SERVER_DROP_ON_CACHED_PLAN_ERROR },
 	{ "server_lifetime", SERVER_LIFETIME },
+	{ "server_pstmt_cache_size", SERVER_PSTMT_CACHE_SIZE },
 	{ "ldap_pool_size", LDAP_POOL_SIZE },
 	{ "ldap_pool_timeout", LDAP_POOL_TIMEOUT },
 	{ "ldap_pool_ttl", LDAP_POOL_TTL },

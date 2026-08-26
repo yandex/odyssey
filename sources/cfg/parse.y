@@ -274,6 +274,7 @@
 %token APPLICATION_NAME_ADD_HOST "application_name_add_host"
 %token SERVER_DROP_ON_CACHED_PLAN_ERROR "server_drop_on_cached_plan_error"
 %token SERVER_LIFETIME "server_lifetime"
+%token SERVER_PSTMT_CACHE_SIZE "server_pstmt_cache_size"
 %token LDAP_POOL_SIZE "ldap_pool_size"
 %token LDAP_POOL_TIMEOUT "ldap_pool_timeout"
 %token LDAP_POOL_TTL "ldap_pool_ttl"
@@ -1509,6 +1510,16 @@ route_item:
 							$2,
 							@1,
 							"pool_reserve_prepared_statement");
+		}
+	| SERVER_PSTMT_CACHE_SIZE int_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_int_range_from_i64(ctx->diags,
+							  &ur->server_pstmt_cache_size,
+							  $2,
+							  0, INT_MAX,
+							  @1,
+							  "server_pstmt_cache_size");
 		}
 	| POOL_PIN_ON_LISTEN bool_value
 		{

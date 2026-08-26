@@ -381,6 +381,211 @@ static void test_pstmt_server_hashmap(void)
 	od_global_pstmts_map_free(global);
 }
 
+static void test_pstmt_server_sieve_eviction(void)
+{
+	od_global_pstmt_map_t *global = od_global_pstmts_map_create(1);
+	test(global != NULL);
+
+	/* fresh server per sub-test: deterministic hand position */
+
+	/* --- pinned statements are never evicted --- */
+
+	od_pstmt_desc_t d[4];
+	static char buf[4][8];
+	for (int i = 0; i < 4; i++) {
+		snprintf(buf[i], sizeof(buf[i]), "q%d", i);
+		d[i].data = buf[i];
+		d[i].len = (size_t)strlen(buf[i]) + 1;
+	}
+
+	od_pstmt_t *p[4];
+	for (int i = 0; i < 4; i++) {
+		p[i] = od_pstmt_create_or_get(global, d[i]);
+		test(p[i] != NULL);
+	}
+
+	od_server_t *server = od_server_allocate(1);
+	test(server->prep_stmts != NULL);
+	test(server->pstmt_count == 0);
+
+	machine_msg_t *stream = machine_msg_create(0);
+	test(stream != NULL);
+	test(od_server_pstmt_evict_overflow(server, 10, stream) == 0);
+	test(server->pstmt_count == 0);
+	machine_msg_free(stream);
+
+	/* refs = 3: pinned */
+	for (int i = 0; i < 4; i++) {
+		test(od_server_add_pstmt(server, p[i]) == 0);
+	}
+	test(server->pstmt_count == 4);
+
+	stream = machine_msg_create(0);
+	test(od_server_pstmt_evict_overflow(server, 2, stream) == 0);
+	test(server->pstmt_count == 4);
+	machine_msg_free(stream);
+
+	/* refs = 2: evictable */
+	for (int i = 0; i < 4; i++) {
+		od_pstmt_unref(p[i]);
+	}
+
+	stream = machine_msg_create(0);
+	test(od_server_pstmt_evict_overflow(server, 0, stream) == 4);
+	test(server->pstmt_count == 0);
+	machine_msg_free(stream);
+
+	for (int i = 0; i < 4; i++) {
+		test(od_global_pstmts_has_pstmt(global, d[i]) == 0);
+	}
+
+	od_server_free(server);
+
+	/* --- oldest unvisited entries are evicted first --- */
+
+	for (int i = 0; i < 4; i++) {
+		p[i] = od_pstmt_create_or_get(global, d[i]);
+		test(p[i] != NULL);
+	}
+
+	server = od_server_allocate(1);
+	for (int i = 0; i < 4; i++) {
+		test(od_server_add_pstmt(server, p[i]) == 0);
+	}
+	for (int i = 0; i < 4; i++) {
+		od_pstmt_unref(p[i]);
+	}
+
+	size_t close_msg_size = 5 + 1 + strlen(p[0]->name) + 1;
+	stream = machine_msg_create(0);
+	test(od_server_pstmt_evict_overflow(server, 2, stream) == 2);
+	test(server->pstmt_count == 2);
+
+	/* p[0], p[1] are freed - checked via the global map only */
+	test(od_global_pstmts_has_pstmt(global, d[0]) == 0);
+	test(od_global_pstmts_has_pstmt(global, d[1]) == 0);
+	test(od_global_pstmts_has_pstmt(global, d[2]) == 1);
+	test(od_global_pstmts_has_pstmt(global, d[3]) == 1);
+
+	test(machine_msg_size(stream) == 2 * (int)close_msg_size);
+	char *data = machine_msg_data(stream);
+	test(data[0] == 'C');
+	test(data[close_msg_size] == 'C');
+	machine_msg_free(stream);
+
+	od_server_free(server);
+
+	/* --- SIEVE: visited entries survive, unvisited are evicted --- */
+
+	od_pstmt_desc_t dh[4];
+	static char hbuf[4][8];
+	for (int i = 0; i < 4; i++) {
+		snprintf(hbuf[i], sizeof(hbuf[i]), "h%d", i);
+		dh[i].data = hbuf[i];
+		dh[i].len = (size_t)strlen(hbuf[i]) + 1;
+	}
+
+	od_pstmt_t *hp[4];
+	for (int i = 0; i < 4; i++) {
+		hp[i] = od_pstmt_create_or_get(global, dh[i]);
+		test(hp[i] != NULL);
+	}
+
+	server = od_server_allocate(1);
+	for (int i = 0; i < 4; i++) {
+		test(od_server_add_pstmt(server, hp[i]) == 0);
+	}
+	for (int i = 0; i < 4; i++) {
+		od_pstmt_unref(hp[i]);
+	}
+
+	test(od_server_has_pstmt(server, hp[0]) == 1);
+
+	stream = machine_msg_create(0);
+	test(od_server_pstmt_evict_overflow(server, 2, stream) == 2);
+	test(server->pstmt_count == 2);
+
+	test(od_server_has_pstmt(server, hp[0]) == 1);
+	test(od_global_pstmts_has_pstmt(global, dh[0]) == 1);
+	test(od_global_pstmts_has_pstmt(global, dh[1]) == 0);
+	test(od_global_pstmts_has_pstmt(global, dh[2]) == 0);
+	test(od_global_pstmts_has_pstmt(global, dh[3]) == 1);
+	machine_msg_free(stream);
+
+	od_server_free(server);
+
+	/* --- a pinned statement is skipped and evicted on a later pass --- */
+
+	od_pstmt_desc_t dr[4];
+	static char rbuf[4][8];
+	for (int i = 0; i < 4; i++) {
+		snprintf(rbuf[i], sizeof(rbuf[i]), "r%d", i);
+		dr[i].data = rbuf[i];
+		dr[i].len = (size_t)strlen(rbuf[i]) + 1;
+	}
+
+	od_pstmt_t *rp[4];
+	for (int i = 0; i < 4; i++) {
+		rp[i] = od_pstmt_create_or_get(global, dr[i]);
+		test(rp[i] != NULL);
+	}
+
+	server = od_server_allocate(1);
+	for (int i = 0; i < 4; i++) {
+		test(od_server_add_pstmt(server, rp[i]) == 0);
+	}
+	for (int i = 0; i < 4; i++) {
+		od_pstmt_unref(rp[i]);
+	}
+
+	od_pstmt_ref(rp[0]);
+
+	stream = machine_msg_create(0);
+	test(od_server_pstmt_evict_overflow(server, 0, stream) == 3);
+	test(server->pstmt_count == 1);
+	test(od_server_has_pstmt(server, rp[0]) == 1);
+	test(od_global_pstmts_has_pstmt(global, dr[0]) == 1);
+	test(od_global_pstmts_has_pstmt(global, dr[1]) == 0);
+	test(od_global_pstmts_has_pstmt(global, dr[2]) == 0);
+	test(od_global_pstmts_has_pstmt(global, dr[3]) == 0);
+	machine_msg_free(stream);
+
+	od_pstmt_unref(rp[0]);
+	stream = machine_msg_create(0);
+	test(od_server_pstmt_evict_overflow(server, 0, stream) == 1);
+	test(server->pstmt_count == 0);
+	test(od_global_pstmts_has_pstmt(global, dr[0]) == 0);
+	machine_msg_free(stream);
+
+	od_server_free(server);
+
+	/* --- clear resets the eviction bookkeeping --- */
+
+	od_pstmt_desc_t d4;
+	d4.data = "q4";
+	d4.len = sizeof("q4");
+	od_pstmt_t *p4 = od_pstmt_create_or_get(global, d4);
+	test(p4 != NULL);
+
+	server = od_server_allocate(1);
+	test(od_server_add_pstmt(server, p4) == 0);
+	test(od_server_add_pstmt(server, p4) == 1);
+	test(server->pstmt_count == 1);
+
+	od_server_pstmts_clear(server);
+	test(server->pstmt_count == 0);
+
+	stream = machine_msg_create(0);
+	test(od_server_pstmt_evict_overflow(server, 0, stream) == 0);
+	machine_msg_free(stream);
+
+	od_pstmt_unref(p4);
+
+	od_server_free(server);
+
+	od_global_pstmts_map_free(global);
+}
+
 static void test_impl(void *a)
 {
 	(void)a;
@@ -391,6 +596,7 @@ static void test_impl(void *a)
 	test_pstmt_client_hashmap();
 	test_portal_client_hashmap();
 	test_pstmt_server_hashmap();
+	test_pstmt_server_sieve_eviction();
 }
 
 void odyssey_test_pstmt(void)

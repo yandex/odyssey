@@ -49,6 +49,7 @@ struct od_rule_pool {
 
 	/* --------  makes sense only for transaction pooling --------------------------- */
 	int reserve_prepared_statement;
+	int server_pstmt_cache_size;
 	/* ------------------------------------------------------------------------------ */
 
 	/* --------  makes sense only for session pooling ------------------------------- */
