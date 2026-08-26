@@ -531,7 +531,8 @@ void od_xplan_destroy(od_xplan_t *xp)
 
 void od_xplan_clear(od_xplan_t *xp)
 {
-	mm_vector_clear(&xp->entries);
+	/* TODO: do not ignore error? */
+	mm_vector_shrink_to_fit(&xp->entries);
 }
 
 static od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp, od_client_t *client,

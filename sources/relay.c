@@ -61,7 +61,8 @@ static void xbuf_init(od_relay_xbuf_t *xbuf)
 
 static void xbuf_destroy_msgs(od_relay_xbuf_t *xbuf)
 {
-	mm_vector_clear(&xbuf->msgs);
+	/* TODO: do not ignore error? */
+	mm_vector_shrink_to_fit(&xbuf->msgs);
 }
 
 static void xbuf_destroy(od_relay_xbuf_t *xbuf)
