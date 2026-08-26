@@ -4,6 +4,8 @@
 #include <machinarium/memory.h>
 #include <machinarium/ds/vector.h>
 
+#define MIN_CAPACITY 16
+
 void mm_vector_init(mm_vector_t *vec, size_t elsize,
 		    mm_vector_element_dtor_fn eldtor)
 {
@@ -55,6 +57,28 @@ void mm_vector_clear(mm_vector_t *vec)
 	vec->size = 0;
 }
 
+int mm_vector_shrink_to_fit(mm_vector_t *vec)
+{
+	size_t new_cap = vec->size;
+	if (new_cap < MIN_CAPACITY) {
+		new_cap = MIN_CAPACITY;
+	}
+
+	if (new_cap >= vec->capacity) {
+		return 0;
+	}
+
+	void *ne = mm_realloc(vec->elements, new_cap * vec->elsize);
+	if (ne == NULL) {
+		return -1;
+	}
+
+	vec->elements = ne;
+	vec->capacity = new_cap;
+
+	return 0;
+}
+
 void *mm_vector_get(mm_vector_t *vec, size_t idx)
 {
 	if (idx < vec->size) {
@@ -72,7 +96,8 @@ void *mm_vector_back(mm_vector_t *vec)
 int mm_vector_append(mm_vector_t *vec, const void *val)
 {
 	if (vec->size >= vec->capacity) {
-		size_t nc = vec->capacity == 0 ? 16 : vec->capacity * 2;
+		size_t nc =
+			vec->capacity == 0 ? MIN_CAPACITY : vec->capacity * 2;
 		void *ne = mm_realloc(vec->elements, nc * vec->elsize);
 		if (ne == NULL) {
 			return -1;
