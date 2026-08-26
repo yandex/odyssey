@@ -83,7 +83,12 @@ static int xbuf_append(od_relay_xbuf_t *xbuf, machine_msg_t *msg)
 	memset(&xmsg, 0, sizeof(od_xbuf_msg_t));
 	xmsg.msg = copy;
 
-	return mm_vector_append(&xbuf->msgs, &xmsg);
+	int rc = mm_vector_append(&xbuf->msgs, &xmsg);
+	if (rc != 0) {
+		machine_msg_free(copy);
+	}
+
+	return rc;
 }
 
 static int xbuf_append_raw(od_relay_xbuf_t *xbuf, const void *data, size_t len)
@@ -100,7 +105,12 @@ static int xbuf_append_raw(od_relay_xbuf_t *xbuf, const void *data, size_t len)
 	memset(&xmsg, 0, sizeof(od_xbuf_msg_t));
 	xmsg.msg = copy;
 
-	return mm_vector_append(&xbuf->msgs, &xmsg);
+	int rc = mm_vector_append(&xbuf->msgs, &xmsg);
+	if (rc != 0) {
+		machine_msg_free(copy);
+	}
+
+	return rc;
 }
 
 static void xbuf_clear(od_relay_xbuf_t *xbuf)
@@ -858,6 +868,7 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 	return 0;
 }
 
+/* note: does not free the buffers */
 static od_frontend_status_t execute_xbuf(od_relay_t *relay, machine_msg_t *msg,
 					 uint32_t timeout_ms)
 {
@@ -871,21 +882,15 @@ static od_frontend_status_t execute_xbuf(od_relay_t *relay, machine_msg_t *msg,
 	}
 
 	if (relay_append(relay, msg)) {
-		status = OD_EOOM;
-		goto to_return;
+		return OD_EOOM;
 	}
 
 	status = od_xplan_make_from_xbuf(&relay->xplan, relay);
 	if (status != OD_OK) {
-		goto to_return;
+		return status;
 	}
 
 	status = od_xplan_run(&relay->xplan, relay, timeout_ms);
-
-to_return:
-	/* never reuse this ones */
-	xbuf_clear(&relay->xbuf);
-	od_xplan_clear(&relay->xplan);
 
 	return status;
 }
@@ -951,14 +956,28 @@ od_frontend_status_t od_relay_process_xflush(od_relay_t *relay,
 					     machine_msg_t *msg,
 					     uint32_t timeout_ms)
 {
-	return process_possible_attach(execute_xbuf, relay, msg, timeout_ms);
+	od_frontend_status_t status =
+		process_possible_attach(execute_xbuf, relay, msg, timeout_ms);
+
+	/* never reuse this ones */
+	xbuf_clear(&relay->xbuf);
+	od_xplan_clear(&relay->xplan);
+
+	return status;
 }
 
 od_frontend_status_t od_relay_process_xsync(od_relay_t *relay,
 					    machine_msg_t *msg,
 					    uint32_t timeout_ms)
 {
-	return process_possible_attach(execute_xbuf, relay, msg, timeout_ms);
+	od_frontend_status_t status =
+		process_possible_attach(execute_xbuf, relay, msg, timeout_ms);
+
+	/* never reuse this ones */
+	xbuf_clear(&relay->xbuf);
+	od_xplan_clear(&relay->xplan);
+
+	return status;
 }
 
 od_frontend_status_t od_relay_process_xmsg(od_relay_t *relay,
