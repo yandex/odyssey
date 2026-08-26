@@ -18,7 +18,8 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     make cmake \
     tzdata \
     libsystemd-dev \
-    debhelper debootstrap devscripts equivs
+    debhelper debootstrap devscripts equivs \
+    google-perftools libgoogle-perftools-dev
 
 RUN apt-get clean autoclean; \
     apt-get autoremove --yes; \
@@ -35,6 +36,6 @@ COPY . /odyssey
 WORKDIR /odyssey
 
 # RUN OPENSSL_LIBRARIES='/aws-lc/build/ssl/libssl.a;/aws-lc/build/crypto/libcrypto.a' OPENSSL_INCLUDE_DIR=/aws-lc/include BUILD_TYPE=build_relwithdbginfo dpkg-buildpackage -us -uc
-RUN BUILD_TYPE=build_relwithdbginfo dpkg-buildpackage -us -uc
+RUN BUILD_TYPE=build_reltcmalloc_prof dpkg-buildpackage -us -uc
 
 RUN /odyssey/docker/dpkg/copy-package-files.sh

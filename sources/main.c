@@ -19,6 +19,17 @@
 
 static inline void init_tcmalloc_profile(void)
 {
+	/* compiled-in defaults: heap profile dump every 50 MiB, output prefix in /tmp */
+	if (getenv("HEAPPROFILE") == NULL) {
+		setenv("HEAPPROFILE", "/tmp/odyssey_heap", 0);
+	}
+	if (getenv("HEAP_PROFILE_ALLOCATION_INTERVAL") == NULL) {
+		setenv("HEAP_PROFILE_ALLOCATION_INTERVAL", "524288000", 0);
+	}
+	if (getenv("HEAP_PROFILE_INUSE_INTERVAL") == NULL) {
+		setenv("HEAP_PROFILE_INUSE_INTERVAL", "104857600", 0);
+	}
+
 	const char *heapprofile_path = getenv("HEAPPROFILE");
 
 	if (heapprofile_path == NULL) {
