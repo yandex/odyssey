@@ -32,3 +32,4 @@ void mm_vector_clear(mm_vector_t *vec);
 void *mm_vector_get(mm_vector_t *vec, size_t idx);
 void *mm_vector_back(mm_vector_t *vec);
 int mm_vector_append(mm_vector_t *vec, const void *val);
+int mm_vector_shrink_to_fit(mm_vector_t *vec);
