@@ -189,6 +189,7 @@
 %token RESOLVERS "resolvers"
 %token DNS_CACHE_TTL "dns_cache_ttl"
 %token CACHE_MSG_GC_SIZE "cache_msg_gc_size"
+%token CACHE_MSG_GC_COUNT "cache_msg_gc_count"
 %token CACHE_COROUTINE "cache_coroutine"
 %token COROUTINE_STACK_SIZE "coroutine_stack_size"
 %token SYSTEM_COROUTINE_STACK_SIZE "system_coroutine_stack_size"
@@ -792,6 +793,14 @@ top_item:
 							$2,
 							@1,
 							"cache_msg_gc_size");
+		}
+	| CACHE_MSG_GC_COUNT int_value
+		{
+			od_cfg_set_int_from_i64(ctx->diags,
+							&ctx->model->global.cache_msg_gc_count,
+							$2,
+							@1,
+							"cache_msg_gc_count");
 		}
 	| CACHE_COROUTINE int_value
 		{

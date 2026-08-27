@@ -75,6 +75,7 @@ void od_config_init(od_config_t *config)
 	config->server_login_retry = 1;
 	config->cache_coroutine = 1024;
 	config->cache_msg_gc_size = 0;
+	config->cache_msg_gc_count = 1024;
 	config->coroutine_stack_size = 16;
 	config->system_coroutine_stack_size = 32;
 	config->hba_file = NULL;
@@ -436,6 +437,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, cache_coroutine), 0 },
 	{ "cache_msg_gc_size", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, cache_msg_gc_size), 0 },
+	{ "cache_msg_gc_count", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, cache_msg_gc_count), 0 },
 	{ "coroutine_stack_size", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, coroutine_stack_size), 0 },
 	{ "system_coroutine_stack_size", OD_CONFIG_FIELD_INT,
@@ -611,6 +614,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->server_login_retry);
 	od_log(logger, "config", NULL, NULL, "cache_msg_gc_size       %d",
 	       config->cache_msg_gc_size);
+	od_log(logger, "config", NULL, NULL, "cache_msg_gc_count      %d",
+	       config->cache_msg_gc_count);
 	od_log(logger, "config", NULL, NULL, "cache_coroutine         %d",
 	       config->cache_coroutine);
 	od_log(logger, "config", NULL, NULL, "coroutine_stack_size    %d",

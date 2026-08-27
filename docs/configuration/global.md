@@ -66,7 +66,8 @@ for all Odyssey rules.
 | `cancel_max_inflight`                      | int              | `-1` (none) | SIGHUP  | Max concurrent in-flight cancel requests; -1 = unlimited          |
 | `virtual_transaction`                           | int (bool)       | `yes`       | restart  | Enable virtual transaction features    |
 | `dns_cache_ttl`                            | int (ms)         | `30000`     | SIGHUP  | TTL for DNS cache entries                                         |
-| `cache_msg_gc_size`                        | int              | `0`         | SIGHUP  | Message GC cache size; 0 = disabled                               |
+| `cache_msg_gc_size`                        | int (bytes)      | `0`         | SIGHUP  | Max single message buffer size for caching; 0 = caching disabled   |
+| `cache_msg_gc_count`                      | int              | `0`         | SIGHUP  | Message GC cache max count; 0 = unlimited                         |
 | `graceful_die_on_errors`                   | int (bool)       | `no`        | runtime | **Deprecated.** Use SIGUSR2 signal directly instead               |
 | `pipeline`                                 | int              | —           | —       | **Deprecated.** Ignored.                                          |
 | `cache`                                    | int              | —           | —       | **Deprecated.** Ignored.                                          |
@@ -679,11 +680,21 @@ Default: 30000 (30 seconds). Set to 0 to disable caching.
 ## **cache\_msg\_gc\_size**
 *integer*
 
-Size of the internal message garbage-collection cache (number of reusable
-message objects). Larger values reduce allocator pressure under high
-message rates. Default: 0 (disabled).
+Maximum buffer size (in bytes) of a single message that may be retained
+in the internal message garbage-collection cache. Messages whose buffer
+exceeds this threshold are freed immediately instead of being cached.
+Default: 0 (caching disabled — all messages are freed).
 
-`cache_msg_gc_size 100`
+`cache_msg_gc_size 12288`
+
+## **cache\_msg\_gc\_count**
+*integer*
+
+Maximum number of message objects retained in the internal
+garbage-collection cache. When the cache exceeds this limit, the oldest
+cached messages are freed. Default: 1024.
+
+`cache_msg_gc_count 1000`
 
 ## **virtual\_transaction**
 *yes|no*

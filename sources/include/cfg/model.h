@@ -96,6 +96,7 @@ typedef struct od_cfg_global {
 	od_cfg_int_field_t resolvers;
 	od_cfg_int_field_t dns_cache_ttl;
 	od_cfg_int_field_t cache_msg_gc_size;
+	od_cfg_int_field_t cache_msg_gc_count;
 	od_cfg_int_field_t cache_coroutine;
 	od_cfg_int_field_t coroutine_stack_size;
 	od_cfg_int_field_t system_coroutine_stack_size;
