@@ -114,6 +114,7 @@ set(od_src
     setproctitle.c
     restart_sync.c
     readahead.c
+    rate.c
     soft_oom.c
     sighandler.c
     systemd_notify.c

@@ -55,6 +55,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "stats_interval", STATS_INTERVAL },
 	{ "client_max", CLIENT_MAX },
 	{ "client_max_routing", CLIENT_MAX_ROUTING },
+	{ "accept_rate_limit", ACCEPT_RATE_LIMIT },
 	{ "server_login_retry", SERVER_LOGIN_RETRY },
 	{ "readahead", READAHEAD },
 	{ "keepalive", KEEPALIVE },
