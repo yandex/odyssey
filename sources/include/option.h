@@ -13,6 +13,7 @@ extern int od_config_testing(od_instance_t *instance);
 extern void od_print_version(void);
 extern void od_print_help(const char *program);
 extern void fill_supported_features_string(char *out, size_t max);
+extern int od_format_version_string(char *buf, size_t size);
 
 typedef struct {
 	od_instance_t *instance;

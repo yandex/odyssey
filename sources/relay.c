@@ -27,6 +27,7 @@
 #include <xplan.h>
 #include <pstmt.h>
 #include <misc.h>
+#include <option.h>
 #include <worker.h>
 #include <sql/minimal/parser.h>
 
@@ -486,15 +487,7 @@ static od_frontend_status_t process_show_bool_guc(od_client_t *client,
 static od_frontend_status_t process_show_version(od_client_t *client)
 {
 	char data[128];
-#ifdef ODYSSEY_VERSION_GIT
-	od_snprintf(data, sizeof(data), "%s %s (git %s) %s, compiled by %s",
-		    ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
-		    ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
-#else
-	od_snprintf(data, sizeof(data), "%s %s %s, compiled by %s",
-		    ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE,
-		    ODYSSEY_COMPILER_STRING);
-#endif
+	od_format_version_string(data, sizeof(data));
 	return virtual_str_ans(client, ODYSSEY_VERSION_STR, data);
 }
 

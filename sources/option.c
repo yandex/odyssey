@@ -10,6 +10,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <util.h>
 #include <option.h>
 
 void od_print_version(void)
@@ -25,6 +26,20 @@ void od_print_version(void)
 	printf("%s %s %s%s\ncompiled by %s\n", ODYSSEY_NAME,
 	       ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE, features,
 	       ODYSSEY_COMPILER_STRING);
+#endif
+}
+
+int od_format_version_string(char *buf, size_t size)
+{
+#ifdef ODYSSEY_VERSION_GIT
+	return od_snprintf(buf, size, "%s %s (git %s) %s, compiled by %s",
+			   ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER,
+			   ODYSSEY_VERSION_GIT, ODYSSEY_BUILD_TYPE,
+			   ODYSSEY_COMPILER_STRING);
+#else
+	return od_snprintf(buf, size, "%s %s %s, compiled by %s", ODYSSEY_NAME,
+			   ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE,
+			   ODYSSEY_COMPILER_STRING);
 #endif
 }
 
