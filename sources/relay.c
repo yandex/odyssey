@@ -487,9 +487,8 @@ static od_frontend_status_t process_show_version(od_client_t *client)
 {
 	char data[128];
 #ifdef ODYSSEY_VERSION_GIT
-	od_snprintf(data, sizeof(data),
-		    "%s %s (git %s) %s, compiled by %s", ODYSSEY_NAME,
-		    ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
+	od_snprintf(data, sizeof(data), "%s %s (git %s) %s, compiled by %s",
+		    ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
 		    ODYSSEY_BUILD_TYPE, ODYSSEY_COMPILER_STRING);
 #else
 	od_snprintf(data, sizeof(data), "%s %s %s, compiled by %s",
