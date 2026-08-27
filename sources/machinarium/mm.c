@@ -13,6 +13,7 @@ static int machinarium_stack_size = 0;
 static int machinarium_pool_size = 0;
 static int machinarium_coroutine_cache_size = 0;
 static int machinarium_msg_cache_gc_size = 0;
+static int machinarium_msg_cache_gc_count = 0;
 static int machinarium_initialized = 0;
 static int machinarium_dns_ttl_ms = -1;
 mm_t machinarium;
@@ -40,6 +41,11 @@ MACHINE_API void machinarium_set_coroutine_cache_size(int size)
 MACHINE_API void machinarium_set_msg_cache_gc_size(int size)
 {
 	machinarium_msg_cache_gc_size = size;
+}
+
+MACHINE_API void machinarium_set_msg_cache_gc_count(int count)
+{
+	machinarium_msg_cache_gc_count = count;
 }
 
 MACHINE_API void machinarium_set_dns_ttl_ms(int ttl_ms)
@@ -71,6 +77,7 @@ MACHINE_API int machinarium_init(void)
 	machinarium.config.coroutine_cache_size =
 		machinarium_coroutine_cache_size;
 	machinarium.config.msg_cache_gc_size = machinarium_msg_cache_gc_size;
+	machinarium.config.msg_cache_gc_count = machinarium_msg_cache_gc_count;
 	machinarium.config.dns_ttl_ms = machinarium_dns_ttl_ms;
 
 	mm_machinemgr_init(&machinarium.machine_mgr);

@@ -139,6 +139,8 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	mm_msgcache_init(&machine->msg_cache);
 	mm_msgcache_set_gc_watermark(&machine->msg_cache,
 				     machinarium.config.msg_cache_gc_size);
+	mm_msgcache_set_gc_count_watermark(
+		&machine->msg_cache, machinarium.config.msg_cache_gc_count);
 
 	mm_coroutine_cache_init(&machine->coroutine_cache,
 				machinarium.config.stack_size *

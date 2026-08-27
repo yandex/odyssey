@@ -19,7 +19,8 @@ struct mm_msgcache {
 	uint64_t count_allocated;
 	uint64_t count_gc;
 	uint64_t size;
-	int gc_watermark;
+	int gc_size_watermark;
+	int gc_count_watermark;
 };
 
 void mm_msgcache_init(mm_msgcache_t *);
@@ -31,9 +32,16 @@ mm_msg_t *mm_msgcache_pop(mm_msgcache_t *);
 
 void mm_msgcache_push(mm_msgcache_t *, mm_msg_t *);
 
-static inline void mm_msgcache_set_gc_watermark(mm_msgcache_t *cache, int wm)
+static inline void mm_msgcache_set_gc_watermark(mm_msgcache_t *cache,
+						int size_wm)
 {
-	cache->gc_watermark = wm;
+	cache->gc_size_watermark = size_wm;
+}
+
+static inline void mm_msgcache_set_gc_count_watermark(mm_msgcache_t *cache,
+						      int count_wm)
+{
+	cache->gc_count_watermark = count_wm;
 }
 
 static inline void mm_msg_ref(mm_msg_t *msg)

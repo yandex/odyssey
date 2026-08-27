@@ -373,6 +373,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->server_login_retry);
 	od_log(logger, "config", NULL, NULL, "cache_msg_gc_size       %d",
 	       config->cache_msg_gc_size);
+	od_log(logger, "config", NULL, NULL, "cache_msg_gc_count      %d",
+	       config->cache_msg_gc_count);
 	od_log(logger, "config", NULL, NULL, "cache_coroutine         %d",
 	       config->cache_coroutine);
 	od_log(logger, "config", NULL, NULL, "coroutine_stack_size    %d",
