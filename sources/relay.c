@@ -265,7 +265,7 @@ process_set_tsa(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
 			      "read-only", strlen("read-only"));
 	} else if (option_value_len == strlen("read-write") &&
 		   strncasecmp(option_value, "read-write", option_value_len) ==
-		   0) {
+			   0) {
 		kiwi_vars_set(&client->vars,
 			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
 			      "read-write", strlen("read-write"));
@@ -276,7 +276,7 @@ process_set_tsa(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
 			      strlen("any"));
 	} else if (option_value_len == strlen("prefer-standby") &&
 		   strncasecmp(option_value, "prefer-standby",
-				option_value_len) == 0) {
+			       option_value_len) == 0) {
 		kiwi_vars_set(&client->vars,
 			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
 			      "prefer-standby", strlen("prefer-standby"));
