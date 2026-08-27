@@ -17,3 +17,12 @@ SHOW odyssey.target_session_attrs;
 
 SET odyssey.target_session_attrs TO 'z';
 SHOW odyssey.target_session_attrs;
+
+SET odyssey.target_session_attrs TO 'read-onl';
+SHOW odyssey.target_session_attrs;
+
+SET odyssey.target_session_attrs TO 'read-only-foo';
+SHOW odyssey.target_session_attrs;
+
+SET odyssey.target_session_attrs TO 'an';
+SHOW odyssey.target_session_attrs;

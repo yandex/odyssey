@@ -258,21 +258,25 @@ process_set_tsa(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
 	option_value_len = strlen(option_value);
 
 	/* for now, very straightforward logic, as there is only one supported param */
-	if (strncasecmp(option_value, "read-only", option_value_len) == 0) {
+	if (option_value_len == strlen("read-only") &&
+	    strncasecmp(option_value, "read-only", option_value_len) == 0) {
 		kiwi_vars_set(&client->vars,
 			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
 			      "read-only", strlen("read-only"));
-	} else if (strncasecmp(option_value, "read-write", option_value_len) ==
+	} else if (option_value_len == strlen("read-write") &&
+		   strncasecmp(option_value, "read-write", option_value_len) ==
 		   0) {
 		kiwi_vars_set(&client->vars,
 			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
 			      "read-write", strlen("read-write"));
-	} else if (strncasecmp(option_value, "any", option_value_len) == 0) {
+	} else if (option_value_len == strlen("any") &&
+		   strncasecmp(option_value, "any", option_value_len) == 0) {
 		kiwi_vars_set(&client->vars,
 			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS, "any",
 			      strlen("any"));
-	} else if (strncasecmp(option_value, "prefer-standby",
-			       option_value_len) == 0) {
+	} else if (option_value_len == strlen("prefer-standby") &&
+		   strncasecmp(option_value, "prefer-standby",
+				option_value_len) == 0) {
 		kiwi_vars_set(&client->vars,
 			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
 			      "prefer-standby", strlen("prefer-standby"));

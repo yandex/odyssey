@@ -57,3 +57,33 @@ NOTICE:  processed virtually by odyssey
  any
 (1 row)
 
+SET odyssey.target_session_attrs TO 'read-onl';
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.target_session_attrs": "read-onl"
+SHOW odyssey.target_session_attrs;
+NOTICE:  processed virtually by odyssey
+ odyssey.target_session_attrs 
+------------------------------
+ any
+(1 row)
+
+SET odyssey.target_session_attrs TO 'read-only-foo';
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.target_session_attrs": "read-only-foo"
+SHOW odyssey.target_session_attrs;
+NOTICE:  processed virtually by odyssey
+ odyssey.target_session_attrs 
+------------------------------
+ any
+(1 row)
+
+SET odyssey.target_session_attrs TO 'an';
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.target_session_attrs": "an"
+SHOW odyssey.target_session_attrs;
+NOTICE:  processed virtually by odyssey
+ odyssey.target_session_attrs 
+------------------------------
+ any
+(1 row)
+
