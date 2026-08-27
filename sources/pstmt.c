@@ -200,8 +200,9 @@ void od_client_pstmts_clear(od_client_t *client)
  * Close Portal, transaction end, or DISCARD ALL / DEALLOCATE ALL.
  *
  * the value is a non-owning pointer into the global pstmt map. the pointer
- * is stable because the global map is append-only (od_pstmt_create_or_get
- * never removes entries; the map is freed on instance shutdown).
+ * is stable because the map holds its own reference while the entry exists
+ * (entries are removed only when the last external reference is dropped,
+ * see od_pstmt_unref).
  */
 
 mm_hashmap_t *od_client_portal_hashmap_create(void)
@@ -302,8 +303,36 @@ void od_client_portals_clear(od_client_t *client)
 
 /*
  * server hashmap
- * "odyssey_pstmt_0" -> *od_prepared_stmt_t
+ * "odyssey_pstmt_0" -> od_server_pstmt_slot_t
+ *
+ * the slot embeds the SIEVE queue node and the visited bit
  */
+
+typedef struct {
+	/* borrowed: the hashmap entry owns the ref */
+	od_pstmt_t *pstmt;
+	od_list_t link;
+	int visited;
+} od_server_pstmt_slot_t;
+
+static int unref_server_pstmt_slot(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
+				   void **argv)
+{
+	(void)argv;
+
+	od_server_pstmt_slot_t *slot = mm_hashmap_kvp_val(hm, kvp);
+
+	od_pstmt_unref(slot->pstmt);
+
+	return 0;
+}
+
+static void server_pstmt_queue_reset(od_server_t *server)
+{
+	od_list_init(&server->pstmt_fifo);
+	server->pstmt_hand = &server->pstmt_fifo;
+	server->pstmt_count = 0;
+}
 
 static mm_hash_t xxh_str_inplace(const void *data)
 {
@@ -326,7 +355,7 @@ mm_hashmap_t *od_server_pstmt_hashmap_create(void)
 		100 /* XXX: big enough? */,
 		1 /* nlocks = 1, no fully-concurrent access to server hashmap */,
 		sizeof(od_pstmt_name_t) /* key size */,
-		sizeof(od_pstmt_t *) /* value size */,
+		sizeof(od_server_pstmt_slot_t) /* value size */,
 		str_inplace_cmp /* key cmp */, xxh_str_inplace /* key hash */,
 		NULL /* no need to free on inplace str */,
 		NULL /* no need to free the pointer from global table */,
@@ -334,11 +363,15 @@ mm_hashmap_t *od_server_pstmt_hashmap_create(void)
 	);
 }
 
-void od_server_pstmt_hashmap_free(mm_hashmap_t *hm)
+void od_server_pstmts_free(od_server_t *server)
 {
-	mm_hashmap_foreach(hm, unref_pstmt_entry, NULL);
+	/* the hashmap has no value dtor, unref explicitly */
+	mm_hashmap_foreach(server->prep_stmts, unref_server_pstmt_slot, NULL);
 
-	mm_hashmap_free(hm);
+	mm_hashmap_free(server->prep_stmts);
+	server->prep_stmts = NULL;
+
+	server_pstmt_queue_reset(server);
 }
 
 int od_server_has_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
@@ -349,6 +382,11 @@ int od_server_has_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 	(void)rc;
 
 	if (klock.found) {
+		/* SIEVE hit */
+		od_server_pstmt_slot_t *slot =
+			mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
+		slot->visited = 1;
+
 		/* no real concurrent access - can unlock now and return */
 		mm_hashmap_unlock_key(server->prep_stmts, &klock);
 		return 1;
@@ -377,12 +415,21 @@ int od_server_add_pstmt(od_server_t *server, od_pstmt_t *pstmt)
 	int ret = 0;
 
 	if (!klock.found) {
-		/* new element - set the value */
-		void *val = mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
-		memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
+		od_server_pstmt_slot_t *slot =
+			mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
+		slot->pstmt = pstmt;
+		slot->visited = 0;
+		od_list_init(&slot->link);
+		od_list_append(&server->pstmt_fifo, &slot->link);
+		server->pstmt_count++;
+
 		od_pstmt_ref(pstmt);
 		ret = 0;
 	} else {
+		/* count a duplicate add as a hit */
+		od_server_pstmt_slot_t *slot =
+			mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
+		slot->visited = 1;
 		ret = 1;
 	}
 
@@ -400,8 +447,18 @@ int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 	(void)rc;
 
 	if (klock.found) {
-		od_pstmt_t *p = *(od_pstmt_t **)mm_hashmap_kvp_val(
-			server->prep_stmts, klock.kvp);
+		od_server_pstmt_slot_t *slot =
+			mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
+
+		/* the hand must not point at the node being unlinked */
+		if (server->pstmt_hand == &slot->link) {
+			server->pstmt_hand = slot->link.next;
+		}
+
+		od_list_unlink(&slot->link);
+		server->pstmt_count--;
+
+		od_pstmt_t *p = slot->pstmt;
 		mm_hashmap_remove(server->prep_stmts, &klock);
 		if (p != NULL) {
 			od_pstmt_unref(p);
@@ -415,9 +472,105 @@ int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 
 void od_server_pstmts_clear(od_server_t *server)
 {
-	mm_hashmap_foreach(server->prep_stmts, unref_pstmt_entry, NULL);
+	mm_hashmap_foreach(server->prep_stmts, unref_server_pstmt_slot, NULL);
 
 	mm_hashmap_clear(server->prep_stmts);
+
+	server_pstmt_queue_reset(server);
+}
+
+const od_pstmt_t *od_server_pstmt_kvp_pstmt(mm_hashmap_t *hm,
+					    mm_hashmap_kvp_t *kvp)
+{
+	const od_server_pstmt_slot_t *slot = mm_hashmap_kvp_val_const(hm, kvp);
+
+	return slot->pstmt;
+}
+
+int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
+				   machine_msg_t *stream)
+{
+	if (server->prep_stmts == NULL) {
+		return 0;
+	}
+
+	int evicted = 0;
+
+	/* three sweeps always reach a fixed point, see the SIEVE paper */
+	size_t iterations = 0;
+	size_t bound = 3 * server->pstmt_count + 3;
+
+	while (server->pstmt_count > cap && iterations++ < bound) {
+		if (server->pstmt_hand == &server->pstmt_fifo) {
+			server->pstmt_hand = server->pstmt_fifo.next;
+			if (server->pstmt_hand == &server->pstmt_fifo) {
+				break;
+			}
+		}
+
+		od_server_pstmt_slot_t *slot = od_container_of(
+			server->pstmt_hand, od_server_pstmt_slot_t, link);
+		od_pstmt_t *pstmt = slot->pstmt;
+
+		/* advance first: the node may be freed below */
+		server->pstmt_hand = slot->link.next;
+
+		if (slot->visited) {
+			slot->visited = 0;
+			continue;
+		}
+
+		/* refs == 2: only the global map and this server hold it */
+		uint64_t refs = atomic_load_explicit(&pstmt->refs,
+						     memory_order_acquire);
+		if (refs > 2) {
+			continue;
+		}
+
+		mm_hashmap_keylock_t klock;
+		int rc =
+			mm_hashmap_lock_key(server->prep_stmts, &klock,
+					    pstmt->name, 0 /* do not create */);
+		if (rc == -1) {
+			continue;
+		}
+
+		if (!klock.found) {
+			/* out of sync with the map - drop the node and its reference */
+			mm_hashmap_unlock_key(server->prep_stmts, &klock);
+			od_list_unlink(&slot->link);
+			server->pstmt_count--;
+			od_pstmt_unref(pstmt);
+			continue;
+		}
+
+		od_release_assert((od_server_pstmt_slot_t *)mm_hashmap_kvp_val(
+					  server->prep_stmts, klock.kvp) ==
+				  slot);
+		od_release_assert(((od_server_pstmt_slot_t *)mm_hashmap_kvp_val(
+					   server->prep_stmts, klock.kvp))
+					  ->pstmt == pstmt);
+
+		machine_msg_t *next = kiwi_fe_write_close(
+			stream, 'S', pstmt->name, strlen(pstmt->name) + 1);
+		if (next == NULL) {
+			mm_hashmap_unlock_key(server->prep_stmts, &klock);
+			return -1;
+		}
+		stream = next;
+
+		od_list_unlink(&slot->link);
+		server->pstmt_count--;
+
+		mm_hashmap_remove(server->prep_stmts, &klock);
+
+		/* last use of pstmt: the unref may free it */
+		od_pstmt_unref(pstmt);
+
+		evicted++;
+	}
+
+	return evicted;
 }
 
 /*

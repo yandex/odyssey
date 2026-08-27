@@ -26,6 +26,7 @@ od_rule_pool_t *od_rule_pool_alloc(void)
 	pool->cancel = 1;
 	pool->rollback = 1;
 	pool->reserve_prepared_statement = 1;
+	pool->server_pstmt_cache_size = 0;
 	pool->reset_timeout_ms = 1000; /* 1 sec */
 	pool->notice_after_waiting_ms = -1;
 	pool->attach_check = 1;
@@ -103,6 +104,11 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 
 	/* reserve_prepared_statement */
 	if (a->reserve_prepared_statement != b->reserve_prepared_statement) {
+		return 0;
+	}
+
+	/* server_pstmt_cache_size */
+	if (a->server_pstmt_cache_size != b->server_pstmt_cache_size) {
 		return 0;
 	}
 

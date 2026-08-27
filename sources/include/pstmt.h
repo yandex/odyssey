@@ -93,12 +93,20 @@ void od_client_portals_clear(od_client_t *client);
 
 /* "odyssey_pstmt_0" -> *od_pstmt_t */
 mm_hashmap_t *od_server_pstmt_hashmap_create(void);
-void od_server_pstmt_hashmap_free(mm_hashmap_t *hm);
+void od_server_pstmts_free(od_server_t *server);
 
 int od_server_has_pstmt(od_server_t *server, const od_pstmt_t *pstmt);
 int od_server_add_pstmt(od_server_t *server, od_pstmt_t *pstmt);
 int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt);
 void od_server_pstmts_clear(od_server_t *server);
+
+/* accessor for the value of the server pstmt hashmap (used by console) */
+const od_pstmt_t *od_server_pstmt_kvp_pstmt(mm_hashmap_t *hm,
+					    mm_hashmap_kvp_t *kvp);
+
+/* SIEVE eviction of reserved statements in excess of cap; returns count or -1 */
+int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
+				   machine_msg_t *stream);
 
 /* od_pstmt_desc_t -> od_pstmt_t */
 od_global_pstmt_map_t *od_global_pstmts_map_create(size_t nlocks);

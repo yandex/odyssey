@@ -28,7 +28,7 @@ static inline void od_server_free_now(od_server_t *server)
 		server->tls = NULL;
 	}
 	if (server->prep_stmts) {
-		od_server_pstmt_hashmap_free(server->prep_stmts);
+		od_server_pstmts_free(server);
 	}
 	od_scram_state_free(&server->scram_state);
 	od_free(server);

@@ -179,6 +179,52 @@ int od_reset(od_server_t *server)
 		}
 	}
 
+	/* evict reserved prepared statements over the configured limit */
+	if (route->rule->pool->reserve_prepared_statement &&
+	    route->rule->pool->server_pstmt_cache_size > 0 &&
+	    server->pstmt_count >
+		    (size_t)route->rule->pool->server_pstmt_cache_size) {
+		machine_msg_t *stream = machine_msg_create(0);
+		if (stream == NULL) {
+			goto error;
+		}
+
+		int evicted = od_server_pstmt_evict_overflow(
+			server,
+			(size_t)route->rule->pool->server_pstmt_cache_size,
+			stream);
+		if (evicted < 0) {
+			machine_msg_free(stream);
+			goto error;
+		}
+
+		if (evicted > 0) {
+			machine_msg_t *sync = kiwi_fe_write_sync(stream);
+			if (sync == NULL) {
+				machine_msg_free(stream);
+				goto error;
+			}
+
+			rc = od_io_write(&server->io, sync, reset_timeout_ms);
+			machine_msg_free(sync);
+			if (rc != 0) {
+				goto error;
+			}
+
+			od_server_sync_request(server, 1);
+
+			od_frontend_status_t st =
+				od_service_stream_server_until_rfq(
+					"reset", server, 1 /* ignore_errors */,
+					reset_timeout_ms);
+			if (st != OD_OK) {
+				goto error;
+			}
+		} else {
+			machine_msg_free(stream);
+		}
+	}
+
 	if (od_readahead_unread(&server->io.readahead) > 0) {
 		od_error(
 			&instance->logger, "reset", server->client, server,

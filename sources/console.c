@@ -1332,8 +1332,7 @@ static inline int show_server_pstmt_cb_internal(mm_hashmap_t *server_map,
 		goto error;
 	}
 
-	const od_pstmt_t *pstmt =
-		*(const od_pstmt_t **)mm_hashmap_kvp_val_const(server_map, kvp);
+	const od_pstmt_t *pstmt = od_server_pstmt_kvp_pstmt(server_map, kvp);
 
 	/* name */
 	rc = kiwi_be_write_data_row_add(stream, offset, pstmt->name,

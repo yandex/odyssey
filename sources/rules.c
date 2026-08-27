@@ -1742,6 +1742,15 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		       db_name, user_name, address_range->string_value);
 	}
 
+	if (!pool->reserve_prepared_statement &&
+	    pool->server_pstmt_cache_size > 0) {
+		pool->server_pstmt_cache_size = 0;
+
+		od_log(logger, "rules", NULL, NULL,
+		       "rule '%s.%s %s': ignore server_pstmt_cache_size due to disabled prepared statements reserving",
+		       db_name, user_name, address_range->string_value);
+	}
+
 	if (pool->reserve_prepared_statement && pool->discard) {
 		pool->discard = 0;
 		pool->smart_discard = 1;
@@ -2464,6 +2473,9 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			       "  pool prepared statement support   %s",
 			       rule->pool->reserve_prepared_statement ? "yes" :
 									"no");
+			od_log(logger, "rules", NULL, NULL,
+			       "  server pstmt cache size            %d",
+			       rule->pool->server_pstmt_cache_size);
 		}
 
 		if (rule->client_max_set) {

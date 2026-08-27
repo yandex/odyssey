@@ -754,6 +754,8 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	COPY_U64(cfg->pool_reset_timeout_ms, rule->pool->reset_timeout_ms);
 	COPY_BOOL(cfg->pool_reserve_prepared_statement,
 		  rule->pool->reserve_prepared_statement);
+	COPY_INT(cfg->server_pstmt_cache_size,
+		 rule->pool->server_pstmt_cache_size);
 	COPY_BOOL(cfg->pool_pin_on_listen, rule->pool->pin_on_listen);
 	COPY_BOOL(cfg->pool_attach_check, rule->pool->attach_check);
 	COPY_BOOL(cfg->pool_acquire_fail_fast, rule->pool->acquire_fail_fast);
