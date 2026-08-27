@@ -27,12 +27,14 @@
 #include <xplan.h>
 #include <pstmt.h>
 #include <misc.h>
+#include <option.h>
 #include <worker.h>
 #include <sql/minimal/parser.h>
 
 #define APPLICATION_NAME_STR "application_name"
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
 #define ODYSSEY_PIN_BACKEND "odyssey.pin_backend"
+#define ODYSSEY_VERSION_STR "odyssey.version"
 #define PROCESSED_BY_ODYSSEY_STR "processed virtually by odyssey"
 
 /*
@@ -486,6 +488,13 @@ static od_frontend_status_t process_show_bool_guc(od_client_t *client,
 	return virtual_str_ans(client, name, val ? "on" : "off");
 }
 
+static od_frontend_status_t process_show_version(od_client_t *client)
+{
+	char data[128];
+	od_format_version_string(data, sizeof(data));
+	return virtual_str_ans(client, ODYSSEY_VERSION_STR, data);
+}
+
 static od_frontend_status_t
 process_vshow(od_client_t *client, const od_sql_minimal_show_stmt_t *stmt)
 {
@@ -501,6 +510,12 @@ process_vshow(od_client_t *client, const od_sql_minimal_show_stmt_t *stmt)
 		if (instance->config.virtual_processing) {
 			return process_show_bool_guc(client, stmt->name,
 						     client->backend_pin);
+		}
+	}
+
+	if (strcmp(stmt->name, ODYSSEY_VERSION_STR) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_show_version(client);
 		}
 	}
 
