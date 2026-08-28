@@ -25,8 +25,8 @@ static inline machine_msg_t *od_frontend_error_msg(od_client_t *client,
 {
 	char msg[OD_QRY_MAX_SZ];
 	int msg_len;
-	int show_id = 1;
-	if (client->rule != NULL) {
+	int show_id = client != NULL;
+	if (client != NULL && client->rule != NULL) {
 		show_id = client->rule->client_show_id;
 	}
 
@@ -120,6 +120,7 @@ od_frontend_infof(od_client_t *client, machine_msg_t *stream, char *fmt, ...)
 int od_frontend_info(od_client_t *, char *, ...);
 int od_frontend_error(od_client_t *, char *, char *, ...);
 int od_frontend_fatal(od_client_t *, char *, char *, ...);
+int od_frontend_fatal_no_startup(mm_io_t *, char *, char *, ...);
 int od_frontend_fatal_detailed(od_client_t *client, const char *code,
 			       const char *detail, const char *hint,
 			       const char *fmt, ...);

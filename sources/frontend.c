@@ -78,6 +78,20 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	return od_write(&client->io, msg);
 }
 
+int od_frontend_fatal_no_startup(mm_io_t *io, char *code, char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	machine_msg_t *msg;
+	msg = od_frontend_error_msg(NULL, NULL, code, fmt, args);
+	va_end(args);
+	if (msg == NULL) {
+		return -1;
+	}
+
+	return machine_write(io, msg, UINT32_MAX);
+}
+
 int od_frontend_fatal(od_client_t *client, char *code, char *fmt, ...)
 {
 	va_list args;
@@ -2835,19 +2849,6 @@ void od_frontend(void *arg)
 			 "failed to transfer client io");
 		od_io_close(&client->io);
 		od_client_free(client);
-		od_routing_slot_release(global);
-		return;
-	}
-
-	/* ensure global client_max limit */
-	uint32_t clients = od_atomic_u32_inc(&router->clients);
-	if (instance->config.client_max_set &&
-	    clients >= (uint32_t)instance->config.client_max) {
-		od_frontend_error(
-			client, KIWI_TOO_MANY_CONNECTIONS,
-			"too many tcp connections (global client_max %d)",
-			instance->config.client_max);
-		od_frontend_close(client);
 		od_routing_slot_release(global);
 		return;
 	}

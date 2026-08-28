@@ -172,6 +172,7 @@ COPY ./test/functional/odyssey.conf /etc/odyssey/odyssey.conf
 
 COPY ./test/functional/bin/ody-restart /usr/bin/ody-restart
 COPY ./test/functional/bin/ody-start  /usr/bin/ody-start
+COPY ./test/functional/bin/ody-start2  /usr/bin/ody-start2
 COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
 COPY ./test/functional/bin/start-pg /usr/bin/start-pg
 
