@@ -9,7 +9,8 @@ p=$!
 sleep 0.1
 
 if psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=disable' -c 'select 42'; then
-	echo "skibidi"
+	echo "the connect must fail"
+	exit 1
 fi
 
 kill -9 $p
