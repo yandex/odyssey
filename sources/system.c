@@ -116,6 +116,32 @@ static inline void od_system_server(void *arg)
 			continue;
 		}
 
+		/* ensure global client_max limit */
+		uint32_t clients = od_atomic_u32_inc(&global->router->clients);
+		if (instance->config.client_max_set &&
+		    clients >= (uint32_t)instance->config.client_max) {
+			/*
+			 * writing error message could not be displayed correctly, if
+			 * client requested ssl establishment, which can not be afforded
+			 * because the system is probably under haavy load now
+			 *
+			 * so the fatal sending is just best effort
+			 */
+			od_atomic_u32_dec(&global->router->clients);
+			mm_io_attach(client_io);
+			od_error(
+				&instance->logger, "server", NULL, NULL,
+				"too many tcp connections (global client_max %d), connection declined",
+				instance->config.client_max);
+			od_frontend_fatal_no_startup(
+				client_io, KIWI_TOO_MANY_CONNECTIONS,
+				"too many tcp connections (global client_max %d)",
+				instance->config.client_max);
+			mm_io_close(client_io);
+			mm_io_free(client_io);
+			continue;
+		}
+
 		/* set network options */
 		mm_io_set_nodelay(client_io, instance->config.nodelay);
 		if (instance->config.keepalive > 0) {
