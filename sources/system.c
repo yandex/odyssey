@@ -69,6 +69,20 @@ static inline void od_system_server(void *arg)
 	mm_eventfd_peer_to(&server->shutdown_efd, server->io);
 
 	while (!atomic_load(&server->closed)) {
+		od_global_t *global = server->global;
+
+		/* Rate lim ourselves, if any limiter configured.
+		 * XXX: Here we do not (yet) have knowledge if client is cancel request or
+		 * not, so this rate limit actually rates everything. */
+
+		if (global->accept_rate_limiter != NULL) {
+			int rc = od_rate_limiter_waitn(
+				global->accept_rate_limiter, 1);
+			if (rc != 0) {
+				continue;
+			}
+		}
+
 		/* accepted client io is not attached to epoll context yet */
 		mm_io_t *client_io;
 		int rc;
@@ -156,21 +170,6 @@ static inline void od_system_server(void *arg)
 		machine_msg_set_type(msg, OD_MSG_CLIENT_NEW);
 		memcpy(machine_msg_data(msg), &client, sizeof(od_client_t *));
 
-		od_global_t *global = server->global;
-
-		/* Rate lim ourselves, if any limiter configured.
-		 * XXX: Here we do not (yet) have knowledge if client is cancel request or
-		 * not, so this rate limit actually rates everything. */
-
-		if (global->accept_rate_limiter != NULL) {
-			int rc = od_rate_limiter_waitn(
-				global->accept_rate_limiter, 1);
-			if (rc != 0) {
-				od_io_close(&client->io);
-				od_client_free(client);
-				continue;
-			}
-		}
 
 		rc = od_routing_slot_acquire(global,
 					     od_client_login_timeout(client));
