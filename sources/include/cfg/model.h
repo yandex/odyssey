@@ -82,6 +82,7 @@ typedef struct od_cfg_global {
 	od_cfg_int_field_t stats_interval;
 	od_cfg_int_field_t client_max;
 	od_cfg_int_field_t client_max_routing;
+	od_cfg_int_field_t accept_rate_limit;
 	od_cfg_int_field_t server_login_retry;
 	od_cfg_int_field_t readahead;
 	od_cfg_int_field_t keepalive;

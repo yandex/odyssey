@@ -72,6 +72,7 @@ void od_config_init(od_config_t *config)
 	config->client_max_set = 0;
 	config->client_max = 0;
 	config->client_max_routing = 0;
+	config->accept_rate_limit = 0;
 	config->server_login_retry = 1;
 	config->cache_coroutine = 1024;
 	config->cache_msg_gc_size = 0;
@@ -121,6 +122,7 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->client_max = new_config->client_max;
 	current_config->max_sigterms_to_die = new_config->max_sigterms_to_die;
 	current_config->client_max_routing = new_config->client_max_routing;
+	current_config->accept_rate_limit = new_config->accept_rate_limit;
 	current_config->server_login_retry = new_config->server_login_retry;
 	current_config->backend_connect_timeout_ms =
 		new_config->backend_connect_timeout_ms;
@@ -430,6 +432,8 @@ static const od_config_field_t od_config_fields[] = {
 	  1 },
 	{ "client_max_routing", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, client_max_routing), 1 },
+	{ "accept_rate_limit", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, accept_rate_limit), 1 },
 	{ "server_login_retry", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, server_login_retry), 1 },
 	{ "cache_coroutine", OD_CONFIG_FIELD_INT,

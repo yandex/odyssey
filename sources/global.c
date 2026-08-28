@@ -31,6 +31,8 @@ int od_global_init(od_global_t *global, od_instance_t *instance,
 		return 1;
 	}
 
+	global->accept_rate_limiter = NULL;
+
 	memset(&global->soft_oom, 0, sizeof(global->soft_oom));
 
 	memset(&global->host_watcher, 0, sizeof(global->host_watcher));

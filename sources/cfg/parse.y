@@ -175,6 +175,7 @@
 %token STATS_INTERVAL "stats_interval"
 %token CLIENT_MAX "client_max"
 %token CLIENT_MAX_ROUTING "client_max_routing"
+%token ACCEPT_RATE_LIMIT "accept_rate_limit"
 %token SERVER_LOGIN_RETRY "server_login_retry"
 %token READAHEAD "readahead"
 %token KEEPALIVE "keepalive"
@@ -678,6 +679,14 @@ top_item:
 							$2,
 							@1,
 							"client_max_routing");
+		}
+	| ACCEPT_RATE_LIMIT int_value
+		{
+			od_cfg_set_int_from_i64(ctx->diags,
+							&ctx->model->global.accept_rate_limit,
+							$2,
+							@1,
+							"accept_rate_limit");
 		}
 	| SERVER_LOGIN_RETRY int_value
 		{

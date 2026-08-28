@@ -42,6 +42,7 @@
 #include <memory.h>
 #include <od_error.h>
 #include <systemd_notify.h>
+#include <rate.h>
 #include <restart_sync.h>
 #include <od_ldap.h>
 
@@ -68,6 +69,20 @@ static inline void od_system_server(void *arg)
 	mm_eventfd_peer_to(&server->shutdown_efd, server->io);
 
 	while (!atomic_load(&server->closed)) {
+		od_global_t *global = server->global;
+
+		/* Rate lim ourselves, if any limiter configured.
+		 * XXX: Here we do not (yet) have knowledge if client is cancel request or
+		 * not, so this rate limit actually rates everything. */
+
+		if (global->accept_rate_limiter != NULL) {
+			int rc = od_rate_limiter_waitn(
+				global->accept_rate_limiter, 1);
+			if (rc != 0) {
+				continue;
+			}
+		}
+
 		/* accepted client io is not attached to epoll context yet */
 		mm_io_t *client_io;
 		int rc;
@@ -155,7 +170,6 @@ static inline void od_system_server(void *arg)
 		machine_msg_set_type(msg, OD_MSG_CLIENT_NEW);
 		memcpy(machine_msg_data(msg), &client, sizeof(od_client_t *));
 
-		od_global_t *global = server->global;
 		rc = od_routing_slot_acquire(global,
 					     od_client_login_timeout(client));
 		if (rc == -1) {
@@ -648,6 +662,18 @@ static inline void od_system(void *arg)
 	mm_sem_init(&global->cancel_sem, max_inflight);
 	mm_sem_init(&global->routing_sem,
 		    (uint64_t)instance->config.client_max_routing);
+
+	if (instance->config.accept_rate_limit > 0) {
+		global->accept_rate_limiter = od_rate_limiter_create(
+			(uint64_t)instance->config.accept_rate_limit);
+		if (global->accept_rate_limiter == NULL) {
+			od_error(&instance->logger, "system", NULL, NULL,
+				 "failed to create accept rate limiter");
+			return;
+		}
+	} else {
+		global->accept_rate_limiter = NULL;
+	}
 
 	/* start cron coroutine */
 	od_cron_t *cron = system->global->cron;

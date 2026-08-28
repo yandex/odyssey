@@ -14,6 +14,7 @@
 #include <host_watcher.h>
 #include <logger.h>
 #include <od_memory.h>
+#include <rate.h>
 
 struct od_global {
 	od_instance_t *instance;
@@ -30,6 +31,8 @@ struct od_global {
 
 	od_atomic_u64_t pause;
 	mm_wait_list_t *resume_waiters;
+
+	od_rate_limiter_t *accept_rate_limiter;
 
 	mm_sem_t cancel_sem;
 
@@ -57,6 +60,9 @@ od_instance_t *od_global_get_instance(void);
 static inline void od_global_destroy(od_global_t *global)
 {
 	mm_wait_list_free(global->resume_waiters);
+	if (global->accept_rate_limiter) {
+		od_rate_limiter_free(global->accept_rate_limiter);
+	}
 	od_free(global);
 	od_global_set(NULL);
 }

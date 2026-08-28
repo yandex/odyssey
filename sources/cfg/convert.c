@@ -474,6 +474,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 		config->client_max_set = 1;
 	}
 	COPY_INT(cfg->client_max_routing, config->client_max_routing);
+	COPY_INT(cfg->accept_rate_limit, config->accept_rate_limit);
 	COPY_INT(cfg->server_login_retry, config->server_login_retry);
 	COPY_INT(cfg->readahead, config->readahead);
 	COPY_INT(cfg->keepalive, config->keepalive);
