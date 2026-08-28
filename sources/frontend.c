@@ -2494,7 +2494,7 @@ static void od_frontend_report_drop(od_client_t *client, char *context,
 		od_log(&instance->logger, context, client, server,
 		       "client dropped by idle timeout");
 		od_frontend_fatal_detailed(
-			client, KIWI_CONNECTION_FAILURE,
+			client, KIWI_ADMIN_SHUTDOWN,
 			"Connection was dropped by Odyssey due to idle timeout",
 			"", "Odyssey has dropped the connection");
 		break;
@@ -2502,7 +2502,7 @@ static void od_frontend_report_drop(od_client_t *client, char *context,
 		od_log(&instance->logger, context, client, server,
 		       "client dropped by idle in transaction timeout");
 		od_frontend_fatal_detailed(
-			client, KIWI_CONNECTION_FAILURE,
+			client, KIWI_ADMIN_SHUTDOWN,
 			"Connection was dropped by Odyssey due to idle in transaction timeout",
 			"", "Odyssey has dropped the connection");
 		break;
@@ -2510,7 +2510,7 @@ static void od_frontend_report_drop(od_client_t *client, char *context,
 		od_log(&instance->logger, context, client, server,
 		       "client killed by reload or console command");
 		od_frontend_fatal_detailed(
-			client, KIWI_CONNECTION_FAILURE,
+			client, KIWI_ADMIN_SHUTDOWN,
 			"Connection was killed by Odyssey configuration reloading or console command",
 			"Try to reconnect",
 			"Odyssey has dropped the connection");
@@ -2520,7 +2520,7 @@ static void od_frontend_report_drop(od_client_t *client, char *context,
 		       "unexpected reason for client drop: %d (%s)", status,
 		       od_frontend_status_to_str(status));
 		od_frontend_fatal_detailed(
-			client, KIWI_CONNECTION_FAILURE,
+			client, KIWI_ADMIN_SHUTDOWN,
 			"Connection was dropped by unexpected reason", "",
 			"Odyssey has dropped the connection");
 		break;
@@ -2659,13 +2659,13 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_EGRACEFUL_SHUTDOWN:
 		if (od_global_get_instance()->pid.restart_new_pid != -1) {
 			od_frontend_fatal_detailed(
-				client, KIWI_CONNECTION_FAILURE,
+				client, KIWI_ADMIN_SHUTDOWN,
 				"The Odyssey instance is performing online restart to update configuration or binary, and the connections are being drained",
 				"Try to reconnect",
 				"Odyssey is gracefully shutting down");
 		} else {
 			od_frontend_fatal_detailed(
-				client, KIWI_CONNECTION_FAILURE,
+				client, KIWI_ADMIN_SHUTDOWN,
 				"The Odyssey instance is gracefully shutting down, and the connections are being drained",
 				"", "Odyssey is gracefully shutting down");
 		}
