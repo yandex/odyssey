@@ -102,6 +102,7 @@ static void dump_listen(FILE *file, const od_cfg_listen_t *l)
 	dump_string(file, "target_session_attrs", 1, &l->target_session_attrs);
 	dump_balancing(file, 1, &l->balancing);
 	dump_int(file, "client_login_timeout", 1, &l->client_login_timeout);
+	dump_int(file, "reserved_clients", 1, &l->reserved_clients);
 	dump_int(file, "backlog", 1, &l->backlog);
 	dump_string(file, "tls", 1, &l->tls);
 	dump_string(file, "tls_ca_file", 1, &l->tls_ca_file);
@@ -607,6 +608,7 @@ static void od_cfg_listen_free(od_cfg_listen_t *listen)
 	od_cfg_string_field_free(&listen->tls_cert_file);
 	od_cfg_string_field_free(&listen->tls_protocols);
 	od_cfg_int_field_free(&listen->catchup_timeout);
+	od_cfg_int_field_free(&listen->reserved_clients);
 
 	for (size_t i = 0; i < listen->storages_count; ++i) {
 		od_cfg_location_free(&listen->storages[i]->location);

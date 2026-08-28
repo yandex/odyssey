@@ -322,6 +322,7 @@
 %token MINIMAL "minimal"
 %token FULL "full"
 %token MEM_LIMIT "mem_limit"
+%token RESERVED_CLIENTS "reserved_clients"
 
 %type <boolean> bool_value
 %type <str> string_value
@@ -2440,6 +2441,15 @@ listen_item:
 								  "failed to allocate storage");
 				YYERROR;
 			}
+		}
+	| RESERVED_CLIENTS int_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+								&ctx->current_listen->reserved_clients,
+								$2,
+								0, INT_MAX,
+								@1,
+								"reserved_clients");
 		}
 	;
 

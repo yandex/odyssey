@@ -29,6 +29,7 @@
 #include <cancel.h>
 #include <auth.h>
 #include <reset.h>
+#include <system.h>
 #include <hba.h>
 #include <dns.h>
 #include <backend.h>
@@ -46,8 +47,10 @@ static inline void od_frontend_close(od_client_t *client)
 	od_assert(client->server == NULL);
 
 	od_router_t *router = client->global->router;
-	od_atomic_u32_dec(&router->clients);
-
+	atomic_fetch_sub(&router->clients, 1);
+	if (client->source != NULL) {
+		atomic_fetch_sub(&client->source->clients, 1);
+	}
 	od_io_close(&client->io);
 	od_client_free(client);
 }
@@ -177,7 +180,7 @@ static int read_and_parse_startup(od_client_t *client, int *parse_rc)
 	od_instance_t *instance = client->global->instance;
 
 	machine_msg_t *msg = od_read_startup(
-		&client->io, client->config_listen->client_login_timeout);
+		&client->io, client->source->config->client_login_timeout);
 	if (msg == NULL) {
 		if (parse_rc) {
 			*parse_rc = KIWI_STARTUP_READ_LEN_ERROR;
@@ -299,7 +302,7 @@ static int od_frontend_startup(od_client_t *client)
 
 		if (client->startup.is_ssl_request && !ssl_done) {
 			if (od_tls_frontend_accept(client, &instance->logger,
-						   client->config_listen,
+						   client->source->config,
 						   client->tls) == -1) {
 				goto error;
 			}
@@ -332,7 +335,7 @@ static int od_frontend_startup(od_client_t *client)
 		return 0;
 	}
 
-	if (client->config_listen->tls_opts->tls_mode >=
+	if (client->source->config->tls_opts->tls_mode >=
 		    OD_CONFIG_TLS_REQUIRE &&
 	    !ssl_done) {
 		od_log(&instance->logger, "tls", client, NULL,
@@ -354,7 +357,7 @@ static int od_frontend_startup(od_client_t *client)
 		}
 	}
 
-	if (od_compression_frontend_setup(client, client->config_listen,
+	if (od_compression_frontend_setup(client, client->source->config,
 					  &instance->logger) == -1) {
 		od_error(&instance->logger, "startup", client, NULL,
 			 "can't setup compression, errno=%d (%s)",
@@ -531,7 +534,7 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 			int rc;
 			od_atomic_u32_inc(&router->servers_routing);
 
-			od_assert(client->config_listen != NULL);
+			od_assert(client->source != NULL);
 			rc = od_backend_connect(server, context, route_params,
 						client, storage);
 
@@ -621,7 +624,7 @@ static uint32_t get_effective_catchup_timeout(od_client_t *client)
 	 * var from pgoption > value from rule > value from listen
 	 */
 
-	od_config_listen_t *listen = client->config_listen;
+	od_config_listen_t *listen = client->source->config;
 
 	int default_timeout = 0;
 	if (listen != NULL) {
@@ -851,7 +854,7 @@ static od_frontend_status_t attach_impl(od_client_t *client, char *context,
 					int is_deploy)
 {
 	od_instance_t *instance = client->global->instance;
-	od_config_listen_t *listen = client->config_listen;
+	od_config_listen_t *listen = client->source->config;
 
 	if (listen != NULL && listen->storage_count > 0) {
 		od_router_t *router = client->global->router;

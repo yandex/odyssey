@@ -146,6 +146,8 @@ typedef struct od_cfg_listen {
 
 	od_cfg_int_field_t catchup_timeout;
 
+	od_cfg_int_field_t reserved_clients;
+
 	od_cfg_listen_storage_t **storages;
 	size_t storages_count;
 	size_t storages_capacity;

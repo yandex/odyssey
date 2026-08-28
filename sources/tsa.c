@@ -13,13 +13,16 @@
 #include <route.h>
 #include <rules.h>
 #include <config.h>
+#include <system.h>
 
 od_target_session_attrs_t od_tsa_get_effective(od_client_t *client)
 {
 	od_route_t *route = client->route;
 
-	od_target_session_attrs_t default_tsa =
-		client->config_listen->target_session_attrs;
+	od_target_session_attrs_t default_tsa = OD_TARGET_SESSION_ATTRS_UNDEF;
+	if (client->source != NULL) {
+		default_tsa = client->source->config->target_session_attrs;
+	}
 	od_target_session_attrs_t effective_tsa = OD_TARGET_SESSION_ATTRS_UNDEF;
 
 	if (route->rule->target_session_attrs !=

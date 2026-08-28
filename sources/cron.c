@@ -181,7 +181,8 @@ static inline void od_cron_stat(od_cron_t *cron)
 		request_logger_stats(&instance->logger);
 
 		od_log(&instance->logger, "stats", NULL, NULL, "clients %d",
-		       od_atomic_u32_of(&router->clients));
+		       (int)atomic_load_explicit(&router->clients,
+						 memory_order_relaxed));
 	}
 
 	/* update stats per route and print info */

@@ -29,7 +29,7 @@ void od_router_init(od_router_t *router, od_global_t *global)
 	od_rules_init(&router->rules);
 	od_list_init(&router->servers);
 	od_route_pool_init(&router->route_pool);
-	router->clients = 0;
+	atomic_init(&router->clients, 0);
 	router->servers_routing = 0;
 
 	router->global = global;

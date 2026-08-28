@@ -205,6 +205,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "minimal", MINIMAL },
 	{ "full", FULL },
 	{ "mem_limit", MEM_LIMIT },
+	{ "reserved_clients", RESERVED_CLIENTS },
 
 	{ NULL, 0 }
 };

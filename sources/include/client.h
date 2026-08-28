@@ -43,7 +43,7 @@ struct od_client {
 	od_io_t io;
 	od_relay_t relay;
 	od_rule_t *rule;
-	od_config_listen_t *config_listen;
+	od_system_server_t *source;
 
 	uint64_t time_accept;
 	uint64_t time_setup;

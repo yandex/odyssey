@@ -1062,6 +1062,7 @@ static int convert_listen(convert_ctx_t *ctx, const od_cfg_listen_t *cfg)
 	}
 	COPY_INT(cfg->client_login_timeout, listen->client_login_timeout);
 	COPY_INT(cfg->catchup_timeout, listen->catchup_timeout);
+	COPY_INT(cfg->reserved_clients, listen->reserved_clients);
 	COPY_INT(cfg->backlog, listen->backlog);
 	COPY_STR(cfg->tls, listen->tls_opts->tls, diags);
 	COPY_STR(cfg->tls_ca_file, listen->tls_opts->tls_ca_file, diags);

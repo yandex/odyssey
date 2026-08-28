@@ -149,6 +149,27 @@ listen {
 }
 ```
 
+## **reserved_clients**
+*integer*
+
+Number of client connections reserved for this listen endpoint that are
+**exempt from the global `client_max` limit**.
+
+When the global `client_max` is reached, Odyssey starts rejecting new
+connections on listen endpoints that have no reserve. An endpoint with
+`reserved_clients` set can still accept connections up to its reserve value,
+even while the global limit is exceeded.
+
+Set to `-1` (the default) to disable the reserve for this endpoint —
+connections on it are rejected as soon as the global `client_max` is hit.
+A value of `0` means the endpoint has no reserve budget either, and behaves
+the same as `-1`.
+
+Only takes effect when `client_max` is set in the global section. See also
+[client_max](global.md#client_max).
+
+`reserved_clients 2`
+
 ## **client_login_timeout**
 *integer*
 
