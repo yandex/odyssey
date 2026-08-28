@@ -134,7 +134,6 @@ int od_rate_limiter_waitn(od_rate_limiter_t *lim, uint64_t n)
 		wait_usec =
 			od_rate_duration_from_tokens(lim->limit, -remaining);
 
-
 		uint32_t wait_ms = (uint32_t)(wait_usec / 1000);
 		if (wait_ms == 0) {
 			wait_ms = 1;

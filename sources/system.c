@@ -170,7 +170,6 @@ static inline void od_system_server(void *arg)
 		machine_msg_set_type(msg, OD_MSG_CLIENT_NEW);
 		memcpy(machine_msg_data(msg), &client, sizeof(od_client_t *));
 
-
 		rc = od_routing_slot_acquire(global,
 					     od_client_login_timeout(client));
 		if (rc == -1) {
