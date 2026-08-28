@@ -1,0 +1,20 @@
+#!/bin/bash
+
+/usr/bin/odyssey "$1"
+
+
+MAX_RETRIES=50
+COUNT=0
+
+until pg_isready -h localhost -p 6432 -U "$2" -d "$2"; do
+  if [ $COUNT -ge $MAX_RETRIES ]; then
+    echo "ERROR: Timeout waiting for Odyssey after $MAX_RETRIES seconds."
+    exit 1
+  fi
+  
+  echo "Wait for odyssey... ($COUNT/$MAX_RETRIES)"
+  sleep 0.1
+  COUNT=$((COUNT+1))
+done
+
+echo "Odyssey is ready!"
