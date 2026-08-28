@@ -2494,7 +2494,7 @@ static void od_frontend_report_drop(od_client_t *client, char *context,
 		od_log(&instance->logger, context, client, server,
 		       "client dropped by idle timeout");
 		od_frontend_fatal_detailed(
-			client, KIWI_CONNECTION_FAILURE,
+			client, KIWI_ADMIN_SHUTDOWN,
 			"Connection was dropped by Odyssey due to idle timeout",
 			"", "Odyssey has dropped the connection");
 		break;
@@ -2502,7 +2502,7 @@ static void od_frontend_report_drop(od_client_t *client, char *context,
 		od_log(&instance->logger, context, client, server,
 		       "client dropped by idle in transaction timeout");
 		od_frontend_fatal_detailed(
-			client, KIWI_CONNECTION_FAILURE,
+			client, KIWI_ADMIN_SHUTDOWN,
 			"Connection was dropped by Odyssey due to idle in transaction timeout",
 			"", "Odyssey has dropped the connection");
 		break;
@@ -2510,7 +2510,7 @@ static void od_frontend_report_drop(od_client_t *client, char *context,
 		od_log(&instance->logger, context, client, server,
 		       "client killed by reload or console command");
 		od_frontend_fatal_detailed(
-			client, KIWI_CONNECTION_FAILURE,
+			client, KIWI_ADMIN_SHUTDOWN,
 			"Connection was killed by Odyssey configuration reloading or console command",
 			"Try to reconnect",
 			"Odyssey has dropped the connection");
