@@ -12,6 +12,7 @@
 #include <status.h>
 #include <client.h>
 #include <atomic.h>
+#include <system.h>
 #include <config.h>
 #include <list.h>
 
@@ -22,7 +23,7 @@ void od_client_init(od_client_t *client)
 	client->coroutine_id = 0;
 	client->tls = NULL;
 	client->rule = NULL;
-	client->config_listen = NULL;
+	client->source = NULL;
 	client->server = NULL;
 	client->route = NULL;
 	client->global = NULL;
@@ -106,8 +107,8 @@ void od_client_free(od_client_t *client)
 
 uint32_t od_client_login_timeout(const od_client_t *client)
 {
-	if (client->config_listen != NULL) {
-		return (uint32_t)client->config_listen->client_login_timeout;
+	if (client->source != NULL) {
+		return (uint32_t)client->source->config->client_login_timeout;
 	}
 
 	/* TODO: do not use infinite timeout */

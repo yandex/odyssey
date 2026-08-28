@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <stdatomic.h>
+
 #include <tls_config.h>
 #include <list.h>
 #include <tsa.h>
@@ -39,6 +41,8 @@ struct od_config_listen {
 
 	char **storage_names;
 	size_t storage_count;
+
+	int reserved_clients;
 };
 
 struct od_config_conn_drop_options {

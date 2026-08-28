@@ -9,6 +9,7 @@
 #include <util.h>
 #include <client.h>
 #include <config.h>
+#include <system.h>
 
 #define METHOD_RR_STR "roundrobin"
 #define METHOD_LEASTCONN_STR "leastconn"
@@ -360,10 +361,10 @@ size_t od_storage_balancing_select(od_storage_balancing_t *b,
 od_storage_balancing_t *od_balancing_get_effective(od_client_t *client,
 						   od_rule_storage_t *storage)
 {
-	od_config_listen_t *l = client->config_listen;
+	od_system_server_t *l = client->source;
 
-	if (l != NULL && l->balancing_override_set) {
-		return &l->balancing_override;
+	if (l != NULL && l->config->balancing_override_set) {
+		return &l->config->balancing_override;
 	}
 
 	return &storage->balancing;

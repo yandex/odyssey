@@ -2017,7 +2017,8 @@ static inline int od_console_show_lists(od_client_t *client,
 	int router_used_servers = 0;
 	int router_free_servers = 0;
 	int router_pools = router->route_pool.count;
-	int router_clients = od_atomic_u32_of(&router->clients);
+	int router_clients = (int)atomic_load_explicit(&router->clients,
+						       memory_order_relaxed);
 
 	void *argv[] = { &router_used_servers, &router_free_servers };
 	od_route_pool_foreach(&router->route_pool, od_console_show_lists_cb,

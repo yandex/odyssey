@@ -42,7 +42,7 @@ for all Odyssey rules.
 | `backend_connect_timeout_ms`               | int (ms)         | `30000`     | SIGHUP  | Backend connection timeout                            |
 | `coroutine_stack_size`                     | int (pages)      | `16`        | restart | Coroutine stack size (client/worker coroutines); values below 16 are not recommended |
 | `system_coroutine_stack_size`              | int (pages)      | `32`        | restart | Coroutine stack size for internal system coroutines   |
-| `client_max`                               | int              | `0`         | SIGHUP  | Max client connections (0/unset = no global limit)    |
+| `client_max`                               | int              | `0`         | SIGHUP  | Max client connections (0/unset = no global limit); per-listen reserve via `reserved_clients` |
 | `client_max_routing`                       | int              | `0`         | SIGHUP  | 0/unset → auto (typically `64 * workers`)             |
 | `server_login_retry`                       | int              | `1`         | SIGHUP  | Retry delay on "Too many clients"                     |
 | `hba_file`                                 | string           | unset       | SIGHUP  | Path to pg\_hba-like rules                            |
@@ -435,6 +435,9 @@ Global limit of client connections.
 
 Comment 'client_max' to disable the limit. On client limit reach, Odyssey will
 reply with 'too many connections'.
+
+Individual listen endpoints can be granted a reserve that bypasses this limit
+via the [`reserved_clients`](listen.md#reserved_clients) listen option.
 
 `client_max 100`
 

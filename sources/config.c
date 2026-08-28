@@ -204,6 +204,7 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 	listen->port = 6432;
 	listen->backlog = 128;
 	listen->client_login_timeout = 15000;
+	listen->reserved_clients = -1; /* disabled */
 	listen->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 	listen->balancing_override_set = 0;
 	od_storage_balancing_init(&listen->balancing_override);
@@ -705,6 +706,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		od_log(logger, "config", NULL, NULL,
 		       "  client_login_timeout %d",
 		       listen->client_login_timeout);
+		od_log(logger, "config", NULL, NULL, "  reserved_clients %d",
+		       listen->reserved_clients);
 		od_log(logger, "config", NULL, NULL,
 		       "  target_session_attrs %s",
 		       od_target_session_attrs_to_str(

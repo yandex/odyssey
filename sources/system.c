@@ -53,6 +53,43 @@ void od_system_server_shutdown(od_system_server_t *server)
 	mm_eventfd_write(&server->shutdown_efd, UINT32_MAX);
 }
 
+static int check_client_max(od_system_server_t *server, od_global_t *global,
+			    od_instance_t *instance)
+{
+	/*
+	 * if global limit is reached - check if limit
+	 * for this listen is not reached
+	 */
+
+	uint64_t global_cnt = atomic_fetch_add(&global->router->clients, 1);
+	uint64_t local_cnt = atomic_fetch_add(&server->clients, 1);
+
+	if (instance->config.client_max_set &&
+	    global_cnt >= (uint64_t)instance->config.client_max) {
+		if (server->config->reserved_clients == -1) {
+			/* no reserve on this port - give up */
+			goto fail;
+		}
+
+		if (local_cnt >= (uint64_t)server->config->reserved_clients) {
+			/* reserve exhausted */
+			goto fail;
+		}
+
+		/* ok, we have some reserve, continue */
+	} else {
+		/* global client_max is not reached - no need to check reserve */
+	}
+
+	return 0;
+
+fail:
+	atomic_fetch_sub(&server->clients, 1);
+	atomic_fetch_sub(&global->router->clients, 1);
+
+	return 1;
+}
+
 static inline void od_system_server(void *arg)
 {
 	od_system_server_t *server = arg;
@@ -116,10 +153,7 @@ static inline void od_system_server(void *arg)
 			continue;
 		}
 
-		/* ensure global client_max limit */
-		uint32_t clients = od_atomic_u32_inc(&global->router->clients);
-		if (instance->config.client_max_set &&
-		    clients >= (uint32_t)instance->config.client_max) {
+		if (check_client_max(server, global, instance)) {
 			/*
 			 * writing error message could not be displayed correctly, if
 			 * client requested ssl establishment, which can not be afforded
@@ -127,7 +161,6 @@ static inline void od_system_server(void *arg)
 			 *
 			 * so the fatal sending is just best effort
 			 */
-			od_atomic_u32_dec(&global->router->clients);
 			mm_io_attach(client_io);
 			od_error(
 				&instance->logger, "server", NULL, NULL,
@@ -178,7 +211,7 @@ static inline void od_system_server(void *arg)
 			continue;
 		}
 		client->rule = NULL;
-		client->config_listen = server->config;
+		client->source = server;
 		client->tls = server->tls;
 		client->time_accept = 0;
 		client->time_accept = machine_time_us();
@@ -253,6 +286,7 @@ od_system_server_t *od_system_server_init(void)
 	server->tls = NULL;
 	od_id_generate(&server->sid, "sid");
 	atomic_init(&server->closed, false);
+	atomic_init(&server->clients, 0);
 	server->coro_id = -1;
 
 	return server;

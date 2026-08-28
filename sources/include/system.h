@@ -27,6 +27,8 @@ struct od_system_server {
 	atomic_bool closed;
 
 	int64_t coro_id;
+
+	atomic_uint_fast64_t clients;
 };
 
 void od_system_server_free(od_system_server_t *server);
