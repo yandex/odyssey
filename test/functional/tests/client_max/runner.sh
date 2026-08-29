@@ -16,9 +16,11 @@ fi
 # reserve_clients for listen allows to add some connections
 psql 'host=localhost port=9999 user=postgres dbname=postgres sslmode=disable' -c 'select pg_sleep(10000)' &
 p1=$!
+sleep 0.5
 
 psql 'host=localhost port=9999 user=postgres dbname=postgres sslmode=disable' -c 'select pg_sleep(10000)' &
 p2=$!
+sleep 0.5
 
 if psql 'host=localhost port=9999 user=postgres dbname=postgres sslmode=disable' -c 'select 42'; then
 	echo "the connect must fail"
