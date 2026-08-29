@@ -661,6 +661,12 @@ typedef struct {
 	od_rule_storage_t *storage;
 	od_target_session_attrs_t tsa;
 	uint32_t lag_timeout;
+	/*
+	 * For prefer-standby: when set, the primary (RW host) is filtered
+	 * out so that round-robin rotates over standbys only. Cleared on
+	 * the fallback pass to allow connecting to the primary.
+	 */
+	int standby_only;
 } host_select_arg_t;
 
 static int check_lag(uint32_t timeout, int64_t lag)
@@ -692,6 +698,20 @@ static int host_filter(od_storage_endpoint_t *endpoint, void *a)
 			check_lag(arg->lag_timeout, status.repl_lag_sec);
 
 		if (!status.alive || !lag_match || !tsa_match) {
+			return 0;
+		}
+
+		/*
+		 * For prefer-standby we want round-robin to rotate over
+		 * standbys (RO hosts) only, so that the balancing counter
+		 * advances by the number of standbys, not by the total
+		 * number of hosts (which would skew distribution towards
+		 * the standby preceding the primary in the list).
+		 *
+		 * The primary is kept as a fallback and is tried later via
+		 * a separate balancing_select pass without this filter.
+		 */
+		if (arg->standby_only && status.is_read_write) {
 			return 0;
 		}
 	}
@@ -749,47 +769,33 @@ attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 	return status;
 }
 
-static int is_read_write(od_storage_endpoint_t *e)
+static od_frontend_status_t
+attach_to_first_with_fail_fast(od_client_t *client, char *context,
+			       kiwi_params_t *route_params,
+			       od_storage_endpoint_t **endpoints, size_t count,
+			       od_target_session_attrs_t tsa, int is_deploy,
+			       od_rule_storage_t *storage)
 {
-	od_storage_endpoint_status_t status;
-	od_storage_endpoint_status_init(&status);
-	od_storage_endpoint_status_get(&e->status, &status);
+	int acquire_fail_fast =
+		client->route->rule->pool->acquire_fail_fast && count > 1;
 
-	return status.is_read_write;
-}
-
-/*
- * stable partition: RO (or unknown-status) hosts first,
- * RW hosts last
- *
- * relative order inside each group (i.e. balancing order) is preserved
- */
-static size_t prefer_standby_reorder(od_storage_endpoint_t **endpoints,
-				     size_t count, od_storage_endpoint_t **tmp,
-				     int *rw_status_tmp)
-{
-	for (size_t i = 0; i < count; ++i) {
-		rw_status_tmp[i] = is_read_write(endpoints[i]);
+	od_frontend_status_t status =
+		attach_to_first(client, context, route_params, endpoints, count,
+				tsa, acquire_fail_fast, is_deploy, storage);
+	if (status != OD_OK && acquire_fail_fast) {
+		/*
+		 * attach failed
+		 *
+		 * if this was an attempt to do it without awaiting - retry with awaiting
+		 * for connections from pool
+		 */
+		status = attach_to_first(client, context, route_params,
+					 endpoints, count, tsa,
+					 0 /* wait for connection from pool */,
+					 is_deploy, storage);
 	}
 
-	size_t ro_count = 0;
-
-	for (size_t i = 0; i < count; ++i) {
-		if (!rw_status_tmp[i]) {
-			tmp[ro_count++] = endpoints[i];
-		}
-	}
-
-	size_t idx = ro_count;
-	for (size_t i = 0; i < count; ++i) {
-		if (rw_status_tmp[i]) {
-			tmp[idx++] = endpoints[i];
-		}
-	}
-
-	memcpy(endpoints, tmp, count * sizeof(endpoints[0]));
-
-	return ro_count;
+	return status;
 }
 
 static od_frontend_status_t attach_with_storage(od_client_t *client,
@@ -807,44 +813,51 @@ static od_frontend_status_t attach_with_storage(od_client_t *client,
 	arg.storage = storage;
 	arg.tsa = tsa;
 	arg.lag_timeout = lag_timeout;
+	arg.standby_only = 0;
 
 	od_storage_endpoint_t *endpoints[OD_STORAGE_MAX_ENDPOINTS];
-	size_t count;
 	od_storage_balancing_t *balancing =
 		od_balancing_get_effective(client, storage);
-	count = od_storage_balancing_select(
-		balancing, storage, route, endpoints,
-		sizeof(endpoints) / sizeof(endpoints[0]), host_filter, &arg);
-
-	if (tsa == OD_TARGET_SESSION_ATTRS_PREFER_STANDBY && count > 1) {
-		od_storage_endpoint_t *t[lengthof(endpoints)];
-		int status_tmp[lengthof(endpoints)];
-		prefer_standby_reorder(endpoints, count, t, status_tmp);
-	}
-
-	int acquire_fail_fast =
-		route->rule->pool->acquire_fail_fast && count > 1;
 
 	od_frontend_status_t status = OD_EATTACH;
 
-	status =
-		attach_to_first(client, context, route_params, endpoints, count,
-				tsa, acquire_fail_fast, is_deploy, storage);
-	if (status != OD_OK) {
+	if (tsa == OD_TARGET_SESSION_ATTRS_PREFER_STANDBY) {
 		/*
-		 * attach failed
-		 *
-		 * if this was an attempt to do it without awaiting - retry with awaiting
-		 * for connections from pool
+		 * First pass: balance over standbys only so that the
+		 * round-robin counter advances by the number of
+		 * standbys (not by the total number of hosts), keeping
+		 * distribution even across replicas.
 		 */
+		arg.standby_only = 1;
+		size_t count = od_storage_balancing_select(
+			balancing, storage, route, endpoints,
+			sizeof(endpoints) / sizeof(endpoints[0]), host_filter,
+			&arg);
 
-		if (acquire_fail_fast) {
-			status = attach_to_first(
+		if (count > 0) {
+			status = attach_to_first_with_fail_fast(
 				client, context, route_params, endpoints, count,
-				tsa, 0 /* wait for connection from pool */,
-				is_deploy, storage);
+				tsa, is_deploy, storage);
+			if (status == OD_OK) {
+				return status;
+			}
 		}
+
+		/*
+		 * Fallback: no standbys available or all standby
+		 * attempts failed — retry over all hosts (including the
+		 * primary) without the standby-only filter.
+		 */
+		arg.standby_only = 0;
 	}
+
+	size_t count = od_storage_balancing_select(
+		balancing, storage, route, endpoints,
+		sizeof(endpoints) / sizeof(endpoints[0]), host_filter, &arg);
+
+	status = attach_to_first_with_fail_fast(client, context, route_params,
+						endpoints, count, tsa,
+						is_deploy, storage);
 
 	return status;
 }
