@@ -492,6 +492,7 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 	dump_int(file, "group_checker_interval", 0,
 		 &model->global.group_checker_interval);
 	dump_int(file, "workers", 0, &model->global.workers);
+	dump_int(file, "tls_workers", 0, &model->global.tls_workers);
 
 	for (size_t i = 0; i < model->listens_count; ++i) {
 		dump_listen(file, model->listens[i]);
@@ -943,6 +944,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_int_field_free(&g->promhttp_server_port);
 	od_cfg_int_field_free(&g->group_checker_interval);
 	od_cfg_int_field_free(&g->workers);
+	od_cfg_int_field_free(&g->tls_workers);
 
 	memset(g, 0, sizeof(*g));
 }
