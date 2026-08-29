@@ -490,6 +490,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_INT(cfg->resolvers, config->resolvers);
 	COPY_INT(cfg->dns_cache_ttl, config->dns_ttl_ms);
 	COPY_INT(cfg->cache_msg_gc_size, config->cache_msg_gc_size);
+	COPY_INT(cfg->cache_msg_gc_count, config->cache_msg_gc_count);
 	COPY_INT(cfg->cache_coroutine, config->cache_coroutine);
 	COPY_INT(cfg->coroutine_stack_size, config->coroutine_stack_size);
 	if (config->coroutine_stack_size < 16) {

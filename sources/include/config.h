@@ -135,6 +135,7 @@ struct od_config {
 	/*  */
 	int cache_coroutine;
 	int cache_msg_gc_size;
+	int cache_msg_gc_count;
 	int coroutine_stack_size;
 	int system_coroutine_stack_size;
 	int dns_ttl_ms;

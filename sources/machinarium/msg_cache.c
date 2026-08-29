@@ -16,7 +16,8 @@ void mm_msgcache_init(mm_msgcache_t *cache)
 	cache->count_allocated = 0;
 	cache->count_gc = 0;
 	cache->size = 0;
-	cache->gc_watermark = 0;
+	cache->gc_size_watermark = 0;
+	cache->gc_count_watermark = 0;
 }
 
 void mm_msgcache_free(mm_msgcache_t *cache)
@@ -67,8 +68,11 @@ init:
 
 void mm_msgcache_push(mm_msgcache_t *cache, mm_msg_t *msg)
 {
-	if (msg->machine_id != mm_self->id ||
-	    mm_buf_size(&msg->data) > cache->gc_watermark) {
+	int too_many = cache->count >= (uint64_t)cache->gc_count_watermark;
+	int too_large = mm_buf_size(&msg->data) > cache->gc_size_watermark;
+	int not_own = msg->machine_id != mm_self->id;
+
+	if (not_own || too_many || too_large) {
 		cache->count_gc++;
 		mm_buf_free(&msg->data);
 		mm_free(msg);

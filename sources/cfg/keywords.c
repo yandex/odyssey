@@ -70,6 +70,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "resolvers", RESOLVERS },
 	{ "dns_cache_ttl", DNS_CACHE_TTL },
 	{ "cache_msg_gc_size", CACHE_MSG_GC_SIZE },
+	{ "cache_msg_gc_count", CACHE_MSG_GC_COUNT },
 	{ "cache_coroutine", CACHE_COROUTINE },
 	{ "coroutine_stack_size", COROUTINE_STACK_SIZE },
 	{ "system_coroutine_stack_size", SYSTEM_COROUTINE_STACK_SIZE },

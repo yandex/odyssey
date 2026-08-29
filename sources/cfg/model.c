@@ -467,6 +467,8 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 	dump_int(file, "dns_cache_ttl", 0, &model->global.dns_cache_ttl);
 	dump_int(file, "cache_msg_gc_size", 0,
 		 &model->global.cache_msg_gc_size);
+	dump_int(file, "cache_msg_gc_count", 0,
+		 &model->global.cache_msg_gc_count);
 	dump_int(file, "cache_coroutine", 0, &model->global.cache_coroutine);
 	dump_int(file, "coroutine_stack_size", 0,
 		 &model->global.coroutine_stack_size);
@@ -905,6 +907,7 @@ void od_cfg_model_free(od_cfg_model_t *model)
 	od_cfg_int_field_free(&model->global.resolvers);
 	od_cfg_int_field_free(&model->global.dns_cache_ttl);
 	od_cfg_int_field_free(&model->global.cache_msg_gc_size);
+	od_cfg_int_field_free(&model->global.cache_msg_gc_count);
 	od_cfg_int_field_free(&model->global.cache_coroutine);
 	od_cfg_int_field_free(&model->global.coroutine_stack_size);
 	od_cfg_int_field_free(&model->global.system_coroutine_stack_size);
