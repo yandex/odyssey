@@ -86,6 +86,18 @@ MACHINE_API int machine_msg_size(machine_msg_t *obj)
 	return mm_buf_used(&msg->data);
 }
 
+MACHINE_API void machine_msg_reset(machine_msg_t *obj)
+{
+	mm_msg_t *msg = mm_cast(mm_msg_t *, obj);
+	mm_buf_reset(&msg->data);
+}
+
+MACHINE_API int machine_msg_shrink(machine_msg_t *obj, int size)
+{
+	mm_msg_t *msg = mm_cast(mm_msg_t *, obj);
+	return mm_buf_shrink(&msg->data, size);
+}
+
 MACHINE_API int machine_msg_write(machine_msg_t *obj, void *buf, int size)
 {
 	mm_msg_t *msg = mm_cast(mm_msg_t *, obj);

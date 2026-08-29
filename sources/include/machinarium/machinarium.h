@@ -177,6 +177,10 @@ MACHINE_API void *machine_msg_data(machine_msg_t *);
 
 MACHINE_API int machine_msg_size(machine_msg_t *);
 
+MACHINE_API void machine_msg_reset(machine_msg_t *);
+
+MACHINE_API int machine_msg_shrink(machine_msg_t *, int size);
+
 MACHINE_API int machine_msg_write(machine_msg_t *, void *buf, int size);
 
 MACHINE_API machine_msg_t *machine_msg_copy(machine_msg_t *msg);

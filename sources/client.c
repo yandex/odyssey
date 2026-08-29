@@ -68,6 +68,8 @@ void od_client_init(od_client_t *client)
 	memset(client->scram_server_key, 0, sizeof(client->scram_server_key));
 	client->scram_key_valid = 0;
 
+	client->read_msg = NULL;
+
 	/* Init GUCs. */
 	client->backend_pin = false;
 }
@@ -101,6 +103,8 @@ void od_client_free(od_client_t *client)
 	memset(client->scram_client_key, 0, sizeof(client->scram_client_key));
 	memset(client->scram_server_key, 0, sizeof(client->scram_server_key));
 	client->scram_key_valid = 0;
+
+	machine_msg_free_safe(client->read_msg);
 
 	od_free(client);
 }

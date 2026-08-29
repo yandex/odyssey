@@ -101,6 +101,8 @@ struct od_client {
 	uint8_t scram_server_key[OD_SCRAM_MAX_KEY_LEN];
 	int scram_key_valid;
 
+	machine_msg_t *read_msg;
+
 	od_client_query_ctx_t query_ctx;
 };
 
