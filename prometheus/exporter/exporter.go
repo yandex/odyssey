@@ -30,7 +30,7 @@ const (
 	showVersionCommand         = "show version;"
 	showVersionExtendedCommand = "show version_extended;"
 	showListsCommand           = "show lists;"
-	showListsExtendedCommand   = "show lists_extended;"
+	showInstanceCommand        = "show instance;"
 	showIsPausedCommand        = "show is_paused;"
 	showErrorsCommand          = "show errors;"
 	showStatsCommand           = "show stats;"
@@ -207,6 +207,9 @@ var (
 		"dns_queries": prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "lists", "in_flight_dns_queries"),
 			"Count of in-flight DNS queries", nil, nil),
+		"dns_pending": prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "lists", "pending_dns_queries"),
+			"Count of pending DNS queries", nil, nil),
 		"config_load_failed": prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "config", "load_failed"),
 			"Whether the last config load failed, leaving the process on its previous configuration", nil, nil),
@@ -430,6 +433,7 @@ func (exporter *Exporter) collectWithDB(ctx context.Context, ch chan<- prometheu
 
 	runStep("version", func() error { return exporter.sendVersionMetric(ctx, ch, db) })
 	runStep("lists", func() error { return exporter.sendListsMetrics(ctx, ch, db) })
+	runStep("instance", func() error { return exporter.sendInstanceMetrics(ctx, ch, db) })
 	runStep("is_paused", func() error { return exporter.sendIsPausedMetric(ctx, ch, db) })
 	runStep("errors", func() error { return exporter.sendErrorMetrics(ctx, ch, db) })
 	runStep("stats", func() error { return exporter.sendStatsMetrics(ctx, ch, db) })
@@ -663,45 +667,118 @@ func (exporter *Exporter) sendIsPausedMetric(ctx context.Context, ch chan<- prom
 	return nil
 }
 
-func (exporter *Exporter) sendListsMetrics(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB) error {
-	// Try lists_extended first, fall back to plain lists for backward
-	// compatibility with older Odyssey instances.
-	rows, err := db.QueryContext(ctx, showListsExtendedCommand)
-	if err != nil {
-		rows, err = db.QueryContext(ctx, showListsCommand)
-		if err != nil {
-			return fmt.Errorf("error getting lists: %w", err)
+// listMetricDescription returns the description to export a "<name>, <count>"
+// row under. Names present in listMetricNameToDescription keep their curated
+// help text and metric name; anything else is exported under a generated
+// description so that a server which reports a new counter is picked up
+// without an exporter release.
+func listMetricDescription(view, name string) (*prometheus.Desc, bool) {
+	if description, ok := listMetricNameToDescription[name]; ok {
+		return description, true
+	}
+
+	// Guard against a server sending something that cannot be a metric name.
+	if !isValidMetricSuffix(name) {
+		return nil, false
+	}
+
+	return prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, view, name),
+		fmt.Sprintf("Value of %q as reported by SHOW %s", name, strings.ToUpper(view)),
+		nil, nil), true
+}
+
+// isValidMetricSuffix reports whether name can be used as the last element of
+// a Prometheus metric name: [a-zA-Z_][a-zA-Z0-9_]*.
+func isValidMetricSuffix(name string) bool {
+	if name == "" {
+		return false
+	}
+
+	for i, c := range name {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c == '_':
+		case i > 0 && c >= '0' && c <= '9':
+		default:
+			return false
 		}
+	}
+
+	return true
+}
+
+func (exporter *Exporter) sendListsMetrics(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB) error {
+	return exporter.sendKeyValueMetrics(ctx, ch, db, showListsCommand, "lists")
+}
+
+// sendInstanceMetrics scrapes SHOW INSTANCE, which reports the state of the
+// Odyssey process itself. Older servers do not implement it, so a query error
+// is not treated as a scrape failure.
+func (exporter *Exporter) sendInstanceMetrics(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB) error {
+	err := exporter.sendKeyValueMetrics(ctx, ch, db, showInstanceCommand, "instance")
+	if err != nil {
+		exporter.logger.Debug("skipping instance metrics", "err", err)
+	}
+
+	return nil
+}
+
+// sendKeyValueMetrics scrapes a console view shaped as "<name>, <count>" rows
+// and exports every row it can turn into a metric.
+func (exporter *Exporter) sendKeyValueMetrics(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB, command, view string) error {
+	rows, err := db.QueryContext(ctx, command)
+	if err != nil {
+		return fmt.Errorf("error getting %s: %w", view, err)
 	}
 	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {
-		return fmt.Errorf("can't get columns of lists")
+		return fmt.Errorf("can't get columns of %s", view)
 	}
 	if len(columns) != 2 || columns[0] != "list" || columns[1] != "items" {
-		return fmt.Errorf("invalid format of lists output")
+		return fmt.Errorf("invalid format of %s output", view)
 	}
+
+	// A row naming an already-exported metric would make the registry reject
+	// the whole scrape, so keep only the first occurrence of each name.
+	seen := make(map[string]struct{}, len(columns))
 
 	var list string
 	var items sql.RawBytes
 	for rows.Next() {
 		if err = rows.Scan(&list, &items); err != nil {
-			return fmt.Errorf("error scanning lists row: %w", err)
+			return fmt.Errorf("error scanning %s row: %w", view, err)
 		}
 
 		value, err := strconv.ParseFloat(string(items), 64)
 		if err != nil {
-			return fmt.Errorf("can't parse items of %q: %w", string(items), err)
+			// A future server may report a non-numeric field here. Skip it
+			// rather than failing the scrape for every other metric.
+			exporter.logger.Debug("skipping non-numeric field",
+				"view", view, "field", list, "value", string(items))
+			continue
 		}
 
-		if description, ok := listMetricNameToDescription[list]; ok {
-			ch <- prometheus.MustNewConstMetric(description, prometheus.GaugeValue, value)
+		description, ok := listMetricDescription(view, list)
+		if !ok {
+			exporter.logger.Debug("skipping unusable field name",
+				"view", view, "field", list)
+			continue
 		}
+
+		if _, duplicate := seen[list]; duplicate {
+			exporter.logger.Debug("skipping duplicate field",
+				"view", view, "field", list)
+			continue
+		}
+		seen[list] = struct{}{}
+
+		ch <- prometheus.MustNewConstMetric(description, prometheus.GaugeValue, value)
 	}
 
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("error iterating lists rows: %w", err)
+		return fmt.Errorf("error iterating %s rows: %w", view, err)
 	}
 
 	return nil
