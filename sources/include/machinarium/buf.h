@@ -57,6 +57,22 @@ static inline void mm_buf_reset(mm_buf_t *buf)
 	buf->pos = buf->start;
 }
 
+static inline int mm_buf_shrink(mm_buf_t *buf, int size)
+{
+	if (mm_buf_size(buf) <= size) {
+		mm_buf_reset(buf);
+		return 0;
+	}
+	char *p = mm_realloc(buf->start, size);
+	if (p == NULL) {
+		return -1;
+	}
+	buf->start = p;
+	buf->pos = p;
+	buf->end = p + size;
+	return 0;
+}
+
 static inline int mm_buf_ensure(mm_buf_t *buf, int size)
 {
 	if (buf->end - buf->pos >= size) {
