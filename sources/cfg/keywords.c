@@ -104,6 +104,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "show_notice_messages", SHOW_NOTICE_MESSAGES },
 	{ "compression", COMPRESSION },
 	{ "workers", WORKERS },
+	{ "tls_workers", TLS_WORKERS },
 	{ "pipeline", PIPELINE },
 	{ "cache", CACHE },
 	{ "cache_chunk", CACHE_CHUNK },

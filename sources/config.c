@@ -68,6 +68,7 @@ void od_config_init(od_config_t *config)
 	// od_affinity_config_init(&config->cpu_affinity);
 
 	config->workers = 1;
+	config->tls_workers = 0;
 	config->resolvers = 1;
 	config->client_max_set = 0;
 	config->client_max = 0;
@@ -240,6 +241,12 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 {
 	if (config->workers <= 0) {
 		od_error(logger, "config", NULL, NULL, "bad workers number");
+		return -1;
+	}
+
+	if (config->tls_workers < 0) {
+		od_error(logger, "config", NULL, NULL,
+			 "bad tls_workers number");
 		return -1;
 	}
 
@@ -428,6 +435,8 @@ static const od_config_field_t od_config_fields[] = {
 	{ "keepalive_usr_timeout", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, keepalive_usr_timeout), 1 },
 	{ "workers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, workers), 0 },
+	{ "tls_workers", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, tls_workers), 0 },
 	{ "resolvers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, resolvers),
 	  0 },
 	{ "client_max", OD_CONFIG_FIELD_INT, offsetof(od_config_t, client_max),
@@ -629,6 +638,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->system_coroutine_stack_size);
 	od_log(logger, "config", NULL, NULL, "workers                 %d",
 	       config->workers);
+	od_log(logger, "config", NULL, NULL, "tls_workers             %d",
+	       config->tls_workers);
 	od_log(logger, "config", NULL, NULL, "resolvers               %d",
 	       config->resolvers);
 	od_log(logger, "config", NULL, NULL, "backend_connect_timeout_ms %u",

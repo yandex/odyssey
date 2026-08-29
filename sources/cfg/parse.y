@@ -225,6 +225,7 @@
 %token SHOW_NOTICE_MESSAGES "show_notice_messages"
 %token COMPRESSION "compression"
 %token WORKERS "workers"
+%token TLS_WORKERS "tls_workers"
 %token PIPELINE "pipeline"
 %token CACHE "cache"
 %token CACHE_CHUNK "cache_chunk"
@@ -878,6 +879,34 @@ top_item:
 						(1 + od_get_ncpu()) / 2,
 						@1,
 						"workers");
+			od_free($2);
+			$2 = NULL;
+		}
+	| TLS_WORKERS int_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+							&ctx->model->global.tls_workers,
+							$2,
+							0,
+							INT_MAX,
+							@1,
+							"tls_workers");
+		}
+	| TLS_WORKERS string_value
+		{
+			if (strcmp($2, "auto") != 0) {
+				od_cfg_diag_error(ctx->diags, @1,
+								  "'%s' is invalid value for tls_workers", $2);
+				od_free($2);
+				$2 = NULL;
+				YYERROR;
+			}
+
+			od_cfg_set_int_from_i64(ctx->diags,
+						&ctx->model->global.tls_workers,
+						(1 + od_get_ncpu()) / 2,
+						@1,
+						"tls_workers");
 			od_free($2);
 			$2 = NULL;
 		}
