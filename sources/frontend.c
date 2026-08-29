@@ -1603,11 +1603,16 @@ client_read_full_msg(od_client_t *client, const kiwi_header_t *header,
 {
 	*out = NULL;
 
-	machine_msg_t *msg;
-	msg = machine_msg_create(sizeof(kiwi_header_t) + size);
+	machine_msg_t *msg = client->read_msg;
+	if (msg != NULL) {
+		machine_msg_reset(msg);
+	}
+
+	msg = machine_msg_create_or_advance(msg, sizeof(kiwi_header_t) + size);
 	if (msg == NULL) {
 		return OD_EOOM;
 	}
+	client->read_msg = msg;
 
 	char *dest;
 	dest = machine_msg_data(msg);
@@ -1616,7 +1621,6 @@ client_read_full_msg(od_client_t *client, const kiwi_header_t *header,
 
 	int rc = od_io_read(&client->io, dest, size, timeout_ms);
 	if (rc == -1) {
-		machine_msg_free(msg);
 		return OD_ECLIENT_READ;
 	}
 
@@ -1872,7 +1876,9 @@ static od_frontend_status_t client_process_message(od_client_t *client,
 
 	status = client_process_message_full(client, msg, timeout_ms);
 
-	machine_msg_free(msg);
+	if (client->read_msg != NULL) {
+		machine_msg_shrink(client->read_msg, PQ_SMALL_MESSAGE_LIMIT);
+	}
 
 	if (status != OD_OK) {
 		return status;

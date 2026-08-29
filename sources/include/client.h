@@ -93,6 +93,8 @@ struct od_client {
 	uint8_t scram_client_key[OD_SCRAM_MAX_KEY_LEN];
 	uint8_t scram_server_key[OD_SCRAM_MAX_KEY_LEN];
 	int scram_key_valid;
+
+	machine_msg_t *read_msg;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)
