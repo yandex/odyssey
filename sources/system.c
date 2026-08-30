@@ -746,7 +746,7 @@ static inline void od_system(void *arg)
 #ifdef LDAP_FOUND
 	rc = od_ldap_workers_init(instance->config.workers);
 	if (rc == -1) {
-		od_error(&instance->logger, "system", NULL, NULL,
+		od_fatal(&instance->logger, "system", NULL, NULL,
 			 "failed to start ldap pool, errno = %d (%s)",
 			 machine_errno(), strerror(machine_errno()));
 		return;
@@ -765,7 +765,7 @@ static inline void od_system(void *arg)
 	int64_t mid;
 	mid = machine_create("sighandler", od_system_signal_handler, system);
 	if (mid == -1) {
-		od_error(&instance->logger, "system", NULL, NULL,
+		od_fatal(&instance->logger, "system", NULL, NULL,
 			 "failed to start signal handler");
 		return;
 	}
@@ -775,8 +775,9 @@ static inline void od_system(void *arg)
 	/* start listen servers */
 	rc = od_system_listen(system);
 	if (rc == 0) {
-		od_error(&instance->logger, "system", NULL, NULL,
-			 "failed to bind any listen address");
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to bind any listen address, errno=%d (%s)",
+			 mm_errno_get(), strerror(mm_errno_get()));
 		exit(1);
 	}
 
