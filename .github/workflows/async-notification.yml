@@ -1,7 +1,7 @@
 name: Async notification proxy
 on:
   push:
-    branches: [ master ]
+    branches: [ master, 'REL_*' ]
   pull_request:
     branches: [ master ]
     paths:
