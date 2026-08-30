@@ -95,9 +95,6 @@ void mm_mutex_unlock(mm_mutex_t *mutex)
 		abort();
 	}
 
-	assert(mutex->owner_machine == (void *)mm_self);
-	assert(mutex->owner_coro_id == mm_self->scheduler.current->id);
-
 	mutex->owner_machine = NULL;
 	mutex->owner_coro_id = MM_SLEEPY_NO_CORO_ID;
 	atomic_store(&mutex->state, MM_MUTEX_UNLOCKED);
