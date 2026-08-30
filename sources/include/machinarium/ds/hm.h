@@ -39,11 +39,12 @@ typedef int (*mm_hm_kvp_cb_fn)(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
 typedef struct {
 	/* mm_hashmap_kvp_t[] */
 	mm_list_t kvps;
+	mm_mutex_t *mu;
 } mm_hashmap_bucket_t;
 
 typedef struct {
 	mm_hashmap_kvp_t *kvp;
-	mm_mutex_t *mu;
+	mm_hashmap_bucket_t *bucket;
 	int found;
 } mm_hashmap_keylock_t;
 

@@ -64,7 +64,7 @@ mm_hashmap_t *od_client_pstmt_hashmap_create(void)
 {
 	return mm_hashmap_create(
 		50 /* XXX: big enough? */,
-		1 /* nlocks = 1, no fully-concurrent access to client hashmap */,
+		0 /* nlocks = 0, map is client-private */,
 		sizeof(char *) /* key size */,
 		sizeof(od_pstmt_t *) /* val size */, str_ptr_cmp /* key cmp */,
 		xxh_str_ptr /* key hash */, str_ptr_dtor /* key dtor */,
@@ -208,7 +208,7 @@ mm_hashmap_t *od_client_portal_hashmap_create(void)
 {
 	return mm_hashmap_create(
 		50 /* XXX: big enough? */,
-		1 /* nlocks = 1, no fully-concurrent access */,
+		0 /* nlocks = 0, map is client-private */,
 		sizeof(char *) /* key size */,
 		sizeof(od_pstmt_t *) /* value size */,
 		str_ptr_cmp /* key cmp */, xxh_str_ptr /* key hash */,
@@ -323,8 +323,8 @@ static int str_inplace_cmp(const void *k1, const void *k2)
 mm_hashmap_t *od_server_pstmt_hashmap_create(void)
 {
 	return mm_hashmap_create(
-		100 /* XXX: big enough? */,
-		1 /* nlocks = 1, no fully-concurrent access to server hashmap */,
+		1000 /* XXX: big enough? */,
+		1 /* nlocks = 1, console foreach may run concurrently with writers */,
 		sizeof(od_pstmt_name_t) /* key size */,
 		sizeof(od_pstmt_t *) /* value size */,
 		str_inplace_cmp /* key cmp */, xxh_str_inplace /* key hash */,
