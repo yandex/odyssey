@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - 'REL_*'
     paths-ignore:
       - "sources/machinarium/gdb/**"
   pull_request:

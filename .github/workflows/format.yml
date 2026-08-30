@@ -1,7 +1,7 @@
 name: Format
 on:
   push:
-    branches: [ master ]
+    branches: [ master, 'REL_*' ]
     paths-ignore:
       - "sources/machinarium/gdb/**"
   pull_request:
