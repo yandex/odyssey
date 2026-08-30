@@ -12,8 +12,8 @@
 
 typedef struct {
 	atomic_uint_fast64_t state;
-	atomic_uintptr_t owner_machine;
-	atomic_uint_fast64_t owner_coro_id;
+	void *owner_machine;
+	uint64_t owner_coro_id;
 	mm_wait_list_t wl;
 } mm_mutex_t;
 

@@ -18,8 +18,8 @@ enum {
 void mm_mutex_init(mm_mutex_t *mutex)
 {
 	atomic_init(&mutex->state, MM_MUTEX_UNLOCKED);
-	atomic_init(&mutex->owner_machine, (uintptr_t)NULL);
-	atomic_init(&mutex->owner_coro_id, MM_SLEEPY_NO_CORO_ID);
+	mutex->owner_machine = NULL;
+	mutex->owner_coro_id = MM_SLEEPY_NO_CORO_ID;
 
 	mm_wait_list_init(&mutex->wl, &mutex->state);
 }
@@ -60,9 +60,8 @@ int mm_mutex_lock(mm_mutex_t *mutex, uint32_t timeout_ms)
 		uint_fast64_t expected = MM_MUTEX_UNLOCKED;
 		if (atomic_compare_exchange_strong(&mutex->state, &expected,
 						   MM_MUTEX_LOCKED)) {
-			atomic_store(&mutex->owner_machine, (uintptr_t)mm_self);
-			atomic_store(&mutex->owner_coro_id,
-				     mm_self->scheduler.current->id);
+			mutex->owner_machine = (void *)mm_self;
+			mutex->owner_coro_id = mm_self->scheduler.current->id;
 			return 1;
 		}
 
@@ -96,12 +95,8 @@ void mm_mutex_unlock(mm_mutex_t *mutex)
 		abort();
 	}
 
-	assert(atomic_load(&mutex->owner_machine) == (uintptr_t)mm_self);
-	assert(atomic_load(&mutex->owner_coro_id) ==
-	       mm_self->scheduler.current->id);
-
-	atomic_store(&mutex->owner_machine, (uintptr_t)NULL);
-	atomic_store(&mutex->owner_coro_id, MM_SLEEPY_NO_CORO_ID);
+	mutex->owner_machine = NULL;
+	mutex->owner_coro_id = MM_SLEEPY_NO_CORO_ID;
 	atomic_store(&mutex->state, MM_MUTEX_UNLOCKED);
 
 	mm_wait_list_notify(&mutex->wl);
