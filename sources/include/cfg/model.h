@@ -104,6 +104,7 @@ typedef struct od_cfg_global {
 	od_cfg_int_field_t promhttp_server_port;
 	od_cfg_int_field_t group_checker_interval;
 	od_cfg_int_field_t workers;
+	od_cfg_int_field_t tls_workers;
 
 } od_cfg_global_t;
 
