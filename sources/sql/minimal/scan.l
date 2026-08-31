@@ -83,6 +83,7 @@ INTEGER     -?{DIGIT}+
 "("          { SET_YYLLOC(); return '('; }
 ")"          { SET_YYLLOC(); return ')'; }
 "."          { SET_YYLLOC(); return '.'; }
+"*"          { SET_YYLLOC(); return '*'; }
 
 {INTEGER} {
 	SET_YYLLOC();

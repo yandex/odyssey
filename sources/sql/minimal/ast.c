@@ -89,6 +89,16 @@ int od_sql_minimal_node_print(const od_sql_minimal_node_t *node, char *buf,
 				n->name ? n->name : "");
 	}
 
+	case OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT: {
+		const od_sql_minimal_unlisten_stmt_t *n =
+			(const od_sql_minimal_unlisten_stmt_t *)node;
+		if (n->is_all) {
+			return snprintf(buf, buflen, "(unlisten *)");
+		}
+		return snprintf(buf, buflen, "(unlisten %s)",
+				n->name ? n->name : "");
+	}
+
 	case OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT: {
 		const od_sql_minimal_discard_stmt_t *n =
 			(const od_sql_minimal_discard_stmt_t *)node;

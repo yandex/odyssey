@@ -152,6 +152,7 @@ typedef int od_sql_minimal_yyltype_t;
 %token KW_TEMPORARY
 %token KW_PLANS
 %token KW_SEQUENCES
+%token KW_UNLISTEN
 
 %type <node> stmt
 %type <node> set_stmt
@@ -164,6 +165,7 @@ typedef int od_sql_minimal_yyltype_t;
 %type <node> begin_stmt
 %type <node> deallocate_stmt
 %type <node> discard_stmt
+%type <node> unlisten_stmt
 %type <str>  var_name
 %type <str>  var_value
 %type <str>  col_id
@@ -195,6 +197,7 @@ stmt:
 	| begin_stmt
 	| deallocate_stmt
 	| discard_stmt
+	| unlisten_stmt
 	;
 
 /*
@@ -337,6 +340,30 @@ discard_target:
 	| KW_TEMPORARY   { $$ = OD_SQL_MINIMAL_DISCARD_TEMP; }
 	| KW_PLANS       { $$ = OD_SQL_MINIMAL_DISCARD_PLANS; }
 	| KW_SEQUENCES   { $$ = OD_SQL_MINIMAL_DISCARD_SEQUENCES; }
+	;
+
+/*
+ * UNLISTEN { identifier | * }
+ */
+unlisten_stmt:
+	  KW_UNLISTEN '*'
+		{
+			od_sql_minimal_unlisten_stmt_t *n = ALLOC_NODE(ctx, unlisten,
+				OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT);
+			if (n == NULL) YYABORT;
+			n->name   = NULL;
+			n->is_all = 1;
+			$$ = (od_sql_minimal_node_t *)n;
+		}
+	| KW_UNLISTEN col_id
+		{
+			od_sql_minimal_unlisten_stmt_t *n = ALLOC_NODE(ctx, unlisten,
+				OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT);
+			if (n == NULL) YYABORT;
+			n->name   = $2; $2 = NULL;
+			n->is_all = 0;
+			$$ = (od_sql_minimal_node_t *)n;
+		}
 	;
 
 kill_client_stmt:

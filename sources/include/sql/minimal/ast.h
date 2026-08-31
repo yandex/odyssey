@@ -23,6 +23,7 @@ typedef enum {
 	OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT,
+	OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT,
 } od_sql_minimal_node_tag_t;
 
 typedef struct od_sql_minimal_node {
@@ -83,6 +84,12 @@ typedef struct {
 	od_sql_minimal_node_tag_t type;
 	od_sql_minimal_discard_target_t target;
 } od_sql_minimal_discard_stmt_t;
+
+typedef struct {
+	od_sql_minimal_node_tag_t type;
+	char *name;
+	int is_all;
+} od_sql_minimal_unlisten_stmt_t;
 
 od_sql_minimal_node_t *od_sql_minimal_node_alloc(od_linear_alloc_t *al,
 						 od_sql_minimal_node_tag_t type,

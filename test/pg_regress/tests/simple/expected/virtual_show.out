@@ -20,6 +20,13 @@ NOTICE:  processed virtually by odyssey
  read-only
 (1 row)
 
+SHOW "odyssey.target_session_attrs";
+NOTICE:  processed virtually by odyssey
+ odyssey.target_session_attrs 
+------------------------------
+ read-only
+(1 row)
+
 SET odyssey.target_session_attrs TO 'read-write';
 NOTICE:  processed virtually by odyssey
 SHOW odyssey.target_session_attrs;
