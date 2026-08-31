@@ -417,6 +417,7 @@ static void test_unlisten_name(void)
 static void test_unlisten_star(void)
 {
 	test(strcmp(parse_ok("UNLISTEN *"), "(unlisten *)") == 0);
+	test(strcmp(parse_ok("UNLISTEN \"*\""), "(unlisten *)") == 0);
 }
 
 static void test_unlisten_case_insensitive(void)
