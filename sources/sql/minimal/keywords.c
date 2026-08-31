@@ -48,6 +48,8 @@ static const od_sql_minimal_keyword_t keywords[] = {
 	{ "plans", KW_PLANS },
 	{ "sequences", KW_SEQUENCES },
 
+	{ "unlisten", KW_UNLISTEN },
+
 	{ NULL, 0 }
 };
 

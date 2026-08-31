@@ -409,6 +409,28 @@ static void test_discard_with_semicolon(void)
 	test(strcmp(parse_ok("DISCARD ALL;"), "(discard all)") == 0);
 }
 
+static void test_unlisten_name(void)
+{
+	test(strcmp(parse_ok("UNLISTEN foo"), "(unlisten foo)") == 0);
+}
+
+static void test_unlisten_star(void)
+{
+	test(strcmp(parse_ok("UNLISTEN *"), "(unlisten *)") == 0);
+}
+
+static void test_unlisten_case_insensitive(void)
+{
+	test(strcmp(parse_ok("unlisten foo"), "(unlisten foo)") == 0);
+	test(strcmp(parse_ok("Unlisten Foo"), "(unlisten foo)") == 0);
+}
+
+static void test_unlisten_with_semicolon(void)
+{
+	test(strcmp(parse_ok("UNLISTEN foo;"), "(unlisten foo)") == 0);
+	test(strcmp(parse_ok("UNLISTEN *;"), "(unlisten *)") == 0);
+}
+
 static void test_empty_input(void)
 {
 	od_linear_alloc_reset(&s_arena);
@@ -427,6 +449,7 @@ static void test_parse_errors(void)
 	parse_fail("DEALLOCATE");
 	parse_fail("DEALLOCATE PREPARE");
 	parse_fail("DISCARD");
+	parse_fail("UNLISTEN");
 	parse_fail("COMMIT");
 	parse_fail("ROLLBACK");
 	parse_fail("ABORT");
@@ -540,6 +563,11 @@ void odyssey_test_sql_minimal_parser(void)
 	test_discard_sequences();
 	test_discard_case_insensitive();
 	test_discard_with_semicolon();
+
+	test_unlisten_name();
+	test_unlisten_star();
+	test_unlisten_case_insensitive();
+	test_unlisten_with_semicolon();
 
 	test_empty_input();
 	test_parse_errors();
