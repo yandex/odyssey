@@ -1985,11 +1985,11 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 		 */
 
 		if (mm_vector_empty(&client->relay.xbuf.msgs)) {
-			od_gerror(
-				"main", client, server,
-				"unexpected message type '%c' for client not in xproto mode",
-				type);
-			status = OD_ECLIENT_PROTOCOL_ERROR;
+			/*
+			 * simply ignore this messages, see:
+			 * https://github.com/postgres/postgres/blob/REL_18_6/src/backend/tcop/postgres.c#L5013
+			 */
+			status = OD_OK;
 			break;
 		}
 
