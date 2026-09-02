@@ -40,6 +40,7 @@ typedef enum {
 	OD_LPREPARED_STMTS,
 	OD_LCLIENTS,
 	OD_LLISTS,
+	OD_LINSTANCE,
 	OD_LHELP,
 	OD_LSET,
 	OD_LCREATE,
@@ -76,6 +77,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("global_prepared_statements", OD_LPREPARED_STMTS),
 	od_keyword("clients", OD_LCLIENTS),
 	od_keyword("lists", OD_LLISTS),
+	od_keyword("instance", OD_LINSTANCE),
 	od_keyword("set", OD_LSET),
 	od_keyword("pools", OD_LPOOLS),
 	od_keyword("pools_extended", OD_LPOOLS_EXTENDED),
@@ -270,7 +272,7 @@ static inline int od_console_show_help(machine_msg_t *stream)
 		"\n"
 		"Console usage\n"
 		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS|HOST_UTILIZATION\n"
-		"\tSHOW LISTS|ERRORS|ERRORS_PER_ROUTE|VERSION|VERSION_EXTENDED|LISTEN|STORAGES\n"
+		"\tSHOW LISTS|INSTANCE|ERRORS|ERRORS_PER_ROUTE|VERSION|VERSION_EXTENDED|LISTEN|STORAGES\n"
 		"\tSHOW CONFIG|RULES|FDS|IS_PAUSED|GLOBAL_PREPARED_STATEMENTS\n"
 		"\tKILL_CLIENT <client_id>\n"
 		"\tRELOAD\n"
@@ -2104,6 +2106,32 @@ static inline int od_console_show_lists(od_client_t *client,
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
 
+/*
+ * Report the state of the running process itself, as opposed to the objects
+ * it is currently routing.
+ */
+static inline int od_console_show_instance(od_client_t *client,
+					   machine_msg_t *stream)
+{
+	od_assert(stream);
+	od_instance_t *instance = client->global->instance;
+
+	machine_msg_t *msg;
+	msg = kiwi_be_write_row_descriptionf(stream, "sd", "list", "items");
+	if (msg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+	int rc;
+	/* config_load_failed */
+	rc = od_console_show_lists_add(
+		stream, "config_load_failed",
+		atomic_load(&instance->config_load_failed));
+	if (rc == NOT_OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+	return kiwi_be_write_complete(stream, "SHOW", 5);
+}
+
 static inline int od_console_write_nullable_str(machine_msg_t *stream,
 						int offset, char *str)
 {
@@ -2346,6 +2374,8 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_clients(client, stream);
 	case OD_LLISTS:
 		return od_console_show_lists(client, stream);
+	case OD_LINSTANCE:
+		return od_console_show_instance(client, stream);
 	case OD_LERRORS:
 		return od_console_show_errors(client, stream);
 	case OD_LERRORS_PER_ROUTE:

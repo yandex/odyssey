@@ -267,6 +267,11 @@ static inline void od_system_server(void *arg)
 	}
 }
 
+static void od_system_server_tls_dtor(void *element)
+{
+	machine_tls_free(*(machine_tls_t **)element);
+}
+
 od_system_server_t *od_system_server_init(void)
 {
 	od_system_server_t *server;
@@ -284,12 +289,28 @@ od_system_server_t *od_system_server_init(void)
 
 	server->io = NULL;
 	server->tls = NULL;
+	mm_vector_init(&server->tls_retired, sizeof(machine_tls_t *),
+		       od_system_server_tls_dtor);
 	od_id_generate(&server->sid, "sid");
 	atomic_init(&server->closed, false);
 	atomic_init(&server->clients, 0);
 	server->coro_id = -1;
 
 	return server;
+}
+
+static inline od_retcode_t
+od_system_server_retire_tls(od_system_server_t *server)
+{
+	if (server->tls == NULL) {
+		return OK_RESPONSE;
+	}
+
+	if (mm_vector_append(&server->tls_retired, &server->tls) != 0) {
+		return NOT_OK_RESPONSE;
+	}
+
+	return OK_RESPONSE;
 }
 
 void od_system_server_free(od_system_server_t *server)
@@ -300,6 +321,7 @@ void od_system_server_free(od_system_server_t *server)
 		/* Free tls */
 		machine_tls_free(server->tls);
 	}
+	mm_vector_destroy(&server->tls_retired);
 	server->io = NULL;
 	server->tls = NULL;
 
@@ -578,26 +600,17 @@ void od_system_config_reload(od_system_t *system)
 	rc = od_cfg_import(&instance->logger, &config, &rules, system->global,
 			   &hba_rules, instance->config_file);
 	if (rc == -1) {
-		od_rules_unlock(&router->rules);
-		od_config_free(&config);
-		od_rules_free(&rules);
-		return;
+		goto error;
 	}
 
 	rc = od_config_validate(&config, &instance->logger);
 	if (rc == -1) {
-		od_rules_unlock(&router->rules);
-		od_config_free(&config);
-		od_rules_free(&rules);
-		return;
+		goto error;
 	}
 
 	rc = od_rules_validate(&rules, &config, &instance->logger);
 	if (rc == -1) {
-		od_rules_unlock(&router->rules);
-		od_config_free(&config);
-		od_rules_free(&rules);
-		return;
+		goto error;
 	}
 	od_config_reload(&instance->config, &config);
 	od_logger_set_debug(&instance->logger, instance->config.log_debug);
@@ -609,10 +622,7 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_sort_for_matching(&rules);
 
 	if (rc == -1) {
-		od_rules_unlock(&router->rules);
-		od_config_free(&config);
-		od_rules_free(&rules);
-		return;
+		goto error;
 	}
 
 	od_rules_unlock(&router->rules);
@@ -637,33 +647,75 @@ void od_system_config_reload(od_system_t *system)
 			listen_config = NULL;
 		}
 
+		char *host_name = od_config_listen_host_name(server->config);
+
 		if (listen_config == NULL) {
 			od_log(&instance->logger, "reload-config", NULL, NULL,
 			       "failed to match listen config for %s:%d",
-			       server->config->host == NULL ?
-				       "(NULL)" :
-				       server->config->host,
-			       server->config->port);
+			       host_name, server->config->port);
 		} else if (server->config->tls_opts->tls_mode !=
 			   listen_config->tls_opts->tls_mode) {
 			od_log(&instance->logger, "reload-config", NULL, NULL,
-			       "reloaded tls mode for %s:%d",
-			       server->config->host == NULL ?
-				       "(NULL)" :
-				       server->config->host,
+			       "reloaded tls mode for %s:%d", host_name,
 			       server->config->port);
 
 			server->config->tls_opts->tls_mode =
 				listen_config->tls_opts->tls_mode;
 		}
 
-		if (server->config->tls_opts->tls_mode !=
-		    OD_CONFIG_TLS_DISABLE) {
-			machine_tls_t *tls = od_tls_frontend(server->config);
-			/* TODO: support changing cert files */
-			if (tls != NULL) {
-				server->tls = tls;
-			}
+		/* build tls from the new config, so that changed cert paths apply */
+		od_config_listen_t *tls_source =
+			listen_config != NULL ? listen_config : server->config;
+
+		if (tls_source->tls_opts->tls_mode == OD_CONFIG_TLS_DISABLE) {
+			continue;
+		}
+
+		int files_changed =
+			listen_config != NULL &&
+			!od_tls_opts_files_eq(server->config->tls_opts,
+					      listen_config->tls_opts);
+
+		/* do not let a broken certificate replace a working one */
+		char tls_error[256];
+		if (od_tls_frontend_validate(tls_source, tls_error,
+					     sizeof(tls_error)) !=
+		    OK_RESPONSE) {
+			od_error(
+				&instance->logger, "reload-config", NULL, NULL,
+				"failed to load tls certificate for %s:%d, keeping previous certificate: %s",
+				host_name, server->config->port, tls_error);
+			continue;
+		}
+
+		machine_tls_t *tls = od_tls_frontend(tls_source);
+		if (tls == NULL) {
+			od_error(
+				&instance->logger, "reload-config", NULL, NULL,
+				"failed to build tls handler for %s:%d, keeping previous certificate",
+				host_name, server->config->port);
+			continue;
+		}
+
+		/*
+		 * The replaced handle stays alive until shutdown: clients
+		 * accepted earlier still point at it.
+		 */
+		if (od_system_server_retire_tls(server) != OK_RESPONSE) {
+			machine_tls_free(tls);
+			od_error(
+				&instance->logger, "reload-config", NULL, NULL,
+				"failed to retire tls handler for %s:%d, keeping previous certificate",
+				host_name, server->config->port);
+			continue;
+		}
+
+		server->tls = tls;
+
+		if (files_changed) {
+			od_log(&instance->logger, "reload-config", NULL, NULL,
+			       "reloaded tls certificate files for %s:%d",
+			       host_name, server->config->port);
 		}
 	}
 
@@ -697,6 +749,25 @@ void od_system_config_reload(od_system_t *system)
 	       "%d routes created/deleted and scheduled for removal", updates);
 
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
+
+	/* the file on disk loaded, so a restart would come up on it */
+	atomic_store(&instance->config_load_failed, 0);
+	return;
+
+error:
+	/*
+	 * Keep running on the config already in memory. The file on disk is
+	 * not usable, so a restart would not come up on it.
+	 */
+	atomic_store(&instance->config_load_failed, 1);
+
+	od_rules_unlock(&router->rules);
+	od_config_free(&config);
+	od_rules_free(&rules);
+
+	od_error(&instance->logger, "reload-config", NULL, NULL,
+		 "failed to load '%s', keeping the running configuration",
+		 instance->config_file);
 }
 
 static inline void od_system(void *arg)
