@@ -49,6 +49,9 @@ struct od_client {
 	uint64_t time_setup;
 	uint64_t time_last_active;
 
+	/* set on entering OD_CLIENT_QUEUE, valid only in that state */
+	uint64_t time_queue_start;
+
 	bool is_watchdog;
 
 	kiwi_be_startup_t startup;

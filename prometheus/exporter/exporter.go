@@ -109,7 +109,14 @@ var (
 
 	clientPoolWaitingRouteDescription = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "client_pool", "waiting_route"),
-		"Clients connected to the route but idle (not actively using a server)",
+		"Clients connected to the route but not currently using a backend connection (idle between transactions); "+
+			"see client_pool_queue_route for clients blocked on an exhausted pool",
+		[]string{"user", "database"}, nil,
+	)
+
+	clientPoolQueueRouteDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "client_pool", "queue_route"),
+		"Clients blocked waiting for a free backend connection (pool exhausted)",
 		[]string{"user", "database"}, nil,
 	)
 
@@ -221,6 +228,7 @@ var (
 		avgWaitTimeSecondsDescription,
 		clientPoolActiveRouteDescription,
 		clientPoolWaitingRouteDescription,
+		clientPoolQueueRouteDescription,
 		serverPoolCapacityConfiguredRouteDescription,
 		clientPoolMaxwaitSecondsRouteDescription,
 		routePoolModeInfoDescription,
@@ -309,6 +317,10 @@ var poolsExtendedColumnToMetric = map[string]poolColumnMetricDesc{
 	},
 	"cl_waiting": {
 		desc:      clientPoolWaitingRouteDescription,
+		valueType: prometheus.GaugeValue,
+	},
+	"cl_queue": {
+		desc:      clientPoolQueueRouteDescription,
 		valueType: prometheus.GaugeValue,
 	},
 
@@ -1082,7 +1094,12 @@ func (exporter *Exporter) processPoolRow(columns []string, values []any, capacit
 			continue
 		}
 
-		return fmt.Errorf("got unexpected column %q", columnName)
+		// Skip columns from a newer Odyssey rather than failing the whole
+		// scrape, so the two can be upgraded independently
+		if exporter.logger != nil {
+			exporter.logger.Debug("ignoring unknown pools_extended column",
+				"column", columnName)
+		}
 	}
 
 	// Always export configured capacity (0 means unlimited) based on SHOW DATABASES

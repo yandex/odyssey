@@ -11,6 +11,7 @@ import (
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 )
 
 func TestExporterDescribeDoesNotTouchDatabase(t *testing.T) {
@@ -79,6 +80,99 @@ func TestSendPoolsExtendedMetricsHandlesByteColumns(t *testing.T) {
 
 	if count == 0 {
 		t.Fatalf("expected at least one metric, got %d", count)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
+func TestSendPoolsExtendedMetricsExportsQueueColumn(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	exporter := &Exporter{
+		logger: logger,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	rows := sqlmock.
+		NewRows([]string{"database", "user", "cl_active", "cl_waiting", "cl_queue"}).
+		AddRow("db1", "user1", 1, 2, 7)
+
+	mock.ExpectQuery(regexp.QuoteMeta(showPoolsExtendedCommand)).WillReturnRows(rows)
+
+	ch := make(chan prometheus.Metric, 32)
+	err = exporter.sendPoolsExtendedMetrics(context.Background(), ch, db, map[routeKey]float64{})
+	if err != nil {
+		t.Fatalf("sendPoolsExtendedMetrics returned error: %v", err)
+	}
+
+	close(ch)
+
+	found := false
+	for metric := range ch {
+		if metric.Desc().String() != clientPoolQueueRouteDescription.String() {
+			continue
+		}
+		found = true
+
+		var written dto.Metric
+		if err := metric.Write(&written); err != nil {
+			t.Fatalf("failed to write metric: %v", err)
+		}
+		if got := written.GetGauge().GetValue(); got != 7 {
+			t.Fatalf("unexpected cl_queue value, got %v, want 7", got)
+		}
+	}
+
+	if !found {
+		t.Fatalf("expected %s metric to be exported", clientPoolQueueRouteDescription)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
+func TestSendPoolsExtendedMetricsSkipsUnknownColumns(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	exporter := &Exporter{
+		logger: logger,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	rows := sqlmock.
+		NewRows([]string{"database", "user", "cl_active", "cl_from_the_future"}).
+		AddRow("db1", "user1", 5, 42)
+
+	mock.ExpectQuery(regexp.QuoteMeta(showPoolsExtendedCommand)).WillReturnRows(rows)
+
+	ch := make(chan prometheus.Metric, 32)
+	err = exporter.sendPoolsExtendedMetrics(context.Background(), ch, db, map[routeKey]float64{})
+	if err != nil {
+		t.Fatalf("unknown column must not fail the scrape, got: %v", err)
+	}
+
+	close(ch)
+
+	found := false
+	for metric := range ch {
+		if metric.Desc().String() == clientPoolActiveRouteDescription.String() {
+			found = true
+		}
+	}
+
+	if !found {
+		t.Fatalf("expected known columns to still be exported alongside an unknown one")
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {

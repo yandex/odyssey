@@ -29,6 +29,7 @@ void od_client_init(od_client_t *client)
 	client->global = NULL;
 	client->time_accept = 0;
 	client->time_setup = 0;
+	client->time_queue_start = 0;
 #ifdef LDAP_FOUND
 	client->ldap_storage_username = NULL;
 	client->ldap_storage_username_len = 0;

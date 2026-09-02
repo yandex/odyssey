@@ -45,8 +45,9 @@ The Go-based exporter scrapes `SHOW POOLS_EXTENDED;` and `SHOW DATABASES;` and n
 | Metric | Labels | Type | Description |
 | --- | --- | --- | --- |
 | `odyssey_client_pool_active_route` | `user`, `database` | Gauge | Clients currently using the route. |
-| `odyssey_client_pool_waiting_route` | `user`, `database` | Gauge | Clients blocked waiting for a server connection. |
-| `odyssey_client_pool_maxwait_seconds_route` | `user`, `database` | Gauge | Maximum observed wait in seconds. |
+| `odyssey_client_pool_waiting_route` | `user`, `database` | Gauge | Clients holding the route but not attached to a backend, i.e. idle between transactions. Despite the name this is **not** a saturation signal. |
+| `odyssey_client_pool_queue_route` | `user`, `database` | Gauge | Clients blocked waiting for a free backend connection. Non-zero means the pool is exhausted. |
+| `odyssey_client_pool_maxwait_seconds_route` | `user`, `database` | Gauge | How long the longest-queued client has been waiting, in seconds. |
 | `odyssey_server_pool_capacity_configured_route` | `user`, `database` | Gauge | Configured `pool_size` from `SHOW DATABASES` (`0` means unlimited). When Odyssey doesn’t expose the mapping for a route, the exporter falls back to the observed `active+idle` at scrape time. |
 | `odyssey_route_pool_mode_info` | `user`, `database`, `mode` | Gauge | `1` for the active pool mode (`session`, `transaction`, `statement`). |
 | `odyssey_route_bytes_received_total` | `user`, `database` | Counter | Bytes received from clients on the route. |
@@ -66,6 +67,18 @@ If `capacity_configured_route == 0` (unlimited), prefer absolute values or deriv
 ```
 sum by (user, database) (odyssey_server_pool_state_route{state=~"active|idle"})
 ```
+
+Clients queuing is the most direct evidence that a pool is too small — it counts clients
+that have work to do but cannot get a backend connection:
+
+```
+odyssey_client_pool_queue_route > 0
+```
+
+Pair it with `odyssey_client_pool_maxwait_seconds_route` to tell a brief burst apart from
+sustained starvation. Note that a client that starts to queue moves out of
+`odyssey_client_pool_waiting_route` into `odyssey_client_pool_queue_route`, so the
+`waiting` series can fall exactly when saturation begins.
 
 Quantiles (`*_duration_seconds`) are instantaneous TDigest estimates; treat thresholds like gauges (for example, `odyssey_route_query_duration_seconds{quantile="0.95"} > 0.5`).
 
