@@ -104,6 +104,7 @@ extern void machinarium_test_wait_flag_timeout(void);
 extern void machinarium_test_ring_buffer(void);
 extern void machinarium_test_vrb(void);
 extern void machinarium_test_heap(void);
+extern void machinarium_test_lf_stack(void);
 extern void machinarium_test_queue(void);
 extern void machinarium_vrb_benchmark(void);
 extern void machinarium_test_eventfd(void);
@@ -227,6 +228,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_vrb);
 	odyssey_test(machinarium_test_queue);
 	odyssey_test(machinarium_test_heap);
+	odyssey_test(machinarium_test_lf_stack);
 	odyssey_playground_test(machinarium_vrb_benchmark);
 	odyssey_test(machinarium_test_mutex_threads);
 	odyssey_test(machinarium_test_mutex_coroutines);
