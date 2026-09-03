@@ -6,9 +6,9 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/ds/queue.h>
+#include <machinarium/ds/intrusive/lf-stack.h>
+#include <machinarium/ds/intrusive/mpsc_queue.h>
 #include <machinarium/wait_list.h>
-#include <machinarium/spinlock.h>
 
 #include <types.h>
 #include <list.h>
@@ -35,7 +35,8 @@ typedef enum {
 
 typedef struct {
 	od_logger_level_t level;
-	od_list_t link;
+	mm_lf_stack_entry_t link;
+	mm_mpsc_node_t node;
 	size_t len;
 	char text[OD_LOGLINE_MAXLEN];
 } od_logger_slot_t;
@@ -58,11 +59,17 @@ struct od_logger {
 	int64_t machine;
 
 	od_logger_slot_t *slots;
-	mm_queue_t tasks;
+	mm_mpsc_queue_t tasks;
 
-	od_list_t free_slots;
-	size_t free_slots_count;
-	mm_spinlock_t free_slots_lock;
+	/*
+	 * The last node popped from tasks.  It is now the queue's head
+	 * sentinel, so its `next` may still be written by a producer.
+	 * We cannot return it to free_slots until the next pop() advances
+	 * head past it. Recycled in the next process_log_queue() call.
+	 */
+	od_logger_slot_t *pending_slot;
+
+	mm_lf_stack_t free_slots;
 
 	mm_wait_list_t notifier;
 
