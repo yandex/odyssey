@@ -105,8 +105,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 
 	atomic_init(&logger->dropped_lines, 0);
 
-	od_list_init(&logger->free_slots);
-	mm_spinlock_init(&logger->free_slots_lock);
+	mm_lf_stack_init(&logger->free_slots);
 
 	mm_wait_list_init(&logger->notifier, &logger->state);
 
@@ -145,11 +144,9 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 	for (size_t i = 0; i < n; ++i) {
 		od_logger_slot_t *slot = &logger->slots[i];
 		memset(slot, 0, sizeof(od_logger_slot_t));
-		od_list_init(&slot->link);
 
-		od_list_append(&logger->free_slots, &slot->link);
+		mm_lf_stack_push(&logger->free_slots, &slot->link);
 	}
-	logger->free_slots_count = n;
 
 	char name[32];
 	od_snprintf(name, sizeof(name), "logger");
@@ -648,12 +645,9 @@ static void process_log_queue(od_logger_t *logger, od_logger_slot_t **slot_buf,
 
 	_od_logger_write_batch(logger, slot_buf, iovecs, nmsg);
 
-	mm_spinlock_lock(&logger->free_slots_lock);
 	for (size_t i = 0; i < nmsg; ++i) {
-		od_list_append(&logger->free_slots, &(slot_buf[i]->link));
+		mm_lf_stack_push(&logger->free_slots, &slot_buf[i]->link);
 	}
-	logger->free_slots_count += nmsg;
-	mm_spinlock_unlock(&logger->free_slots_lock);
 }
 
 static void do_reopen_logfile(od_logger_t *logger)
@@ -1069,17 +1063,15 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 
 	if (async) {
-		mm_spinlock_lock(&logger->free_slots_lock);
-		if (logger->free_slots_count > 0) {
-			od_list_t *i = od_list_pop(&logger->free_slots);
-			async_slot = od_container_of(i, od_logger_slot_t, link);
-			logger->free_slots_count--;
+		mm_lf_stack_entry_t *e = mm_lf_stack_pop(&logger->free_slots);
+		if (e) {
+			async_slot = od_container_of(e, od_logger_slot_t, link);
 		}
-		mm_spinlock_unlock(&logger->free_slots_lock);
 
 		if (async_slot == NULL) {
 			/* silently drop lines for overloaded logger */
-			atomic_fetch_add(&logger->dropped_lines, 1);
+			atomic_fetch_add_explicit(&logger->dropped_lines, 1,
+						  memory_order_relaxed);
 			return;
 		}
 

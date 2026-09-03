@@ -7,8 +7,8 @@
  */
 
 #include <machinarium/ds/queue.h>
+#include <machinarium/ds/intrusive/lf-stack.h>
 #include <machinarium/wait_list.h>
-#include <machinarium/spinlock.h>
 
 #include <types.h>
 #include <list.h>
@@ -35,7 +35,7 @@ typedef enum {
 
 typedef struct {
 	od_logger_level_t level;
-	od_list_t link;
+	mm_lf_stack_entry_t link;
 	size_t len;
 	char text[OD_LOGLINE_MAXLEN];
 } od_logger_slot_t;
@@ -60,9 +60,7 @@ struct od_logger {
 	od_logger_slot_t *slots;
 	mm_queue_t tasks;
 
-	od_list_t free_slots;
-	size_t free_slots_count;
-	mm_spinlock_t free_slots_lock;
+	mm_lf_stack_t free_slots;
 
 	mm_wait_list_t notifier;
 
