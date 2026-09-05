@@ -880,8 +880,7 @@ od_router_try_create_new_server(od_router_t *router, od_client_t *client,
 	int busyloop_retry = 0;
 	while (od_should_not_spun_connection_yet(
 		od_route_server_pool_total(route, pool_element), pool_size,
-		(int)od_atomic_u32_of(&router->servers_routing),
-		(int)max_routing)) {
+		(int)atomic_load(&router->servers_routing), (int)max_routing)) {
 		/* concurrent server connection in progress. */
 		od_route_unlock(route);
 		machine_sleep(busyloop_sleep);

@@ -146,9 +146,8 @@ static inline void od_cron_stat(od_cron_t *cron)
 		uint64_t msg_cache_gc_count = 0;
 		uint64_t msg_cache_size = 0;
 
-		od_atomic_u64_t startup_errors =
-			od_atomic_u64_of(&cron->startup_errors);
-		cron->startup_errors = 0;
+		uint64_t startup_errors =
+			atomic_exchange(&cron->startup_errors, 0);
 		machine_stat(&count_coroutine, &count_coroutine_cache,
 			     &msg_allocated, &msg_cache_count,
 			     &msg_cache_gc_count, &msg_cache_size);

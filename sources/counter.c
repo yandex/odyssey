@@ -33,8 +33,9 @@ od_counter_t *od_counter_create(size_t max_value)
 	/* 0..max_value */
 	size_t values_count = max_value + 1;
 
-	od_counter_t *counter = od_malloc(
-		sizeof(od_counter_t) + sizeof(od_atomic_u64_t) * values_count);
+	od_counter_t *counter =
+		od_malloc(sizeof(od_counter_t) +
+			  sizeof(atomic_uint_fast64_t) * values_count);
 	if (od_unlikely(counter == NULL)) {
 		return NULL;
 	}
@@ -42,7 +43,7 @@ od_counter_t *od_counter_create(size_t max_value)
 	counter->size = values_count;
 
 	for (size_t i = 0; i < counter->size; ++i) {
-		od_atomic_u64_set(&counter->value_to_count[i], 0ULL);
+		atomic_store(&counter->value_to_count[i], 0ULL);
 	}
 
 	return counter;
@@ -59,21 +60,21 @@ void od_counter_inc(od_counter_t *counter, size_t value)
 {
 	check_value(counter, value);
 
-	od_atomic_u64_inc(&counter->value_to_count[value]);
+	atomic_fetch_add(&counter->value_to_count[value], 1);
 }
 
 uint64_t od_counter_get_count(od_counter_t *counter, size_t value)
 {
 	check_value(counter, value);
 
-	return od_atomic_u64_of(&counter->value_to_count[value]);
+	return atomic_load(&counter->value_to_count[value]);
 }
 
 od_retcode_t od_counter_reset(od_counter_t *counter, size_t value)
 {
 	check_value(counter, value);
 
-	od_atomic_u64_set(&counter->value_to_count[value], 0ULL);
+	atomic_store(&counter->value_to_count[value], 0ULL);
 
 	return OK_RESPONSE;
 }
@@ -81,7 +82,7 @@ od_retcode_t od_counter_reset(od_counter_t *counter, size_t value)
 od_retcode_t od_counter_reset_all(od_counter_t *counter)
 {
 	for (size_t i = 0; i < counter->size; ++i) {
-		od_atomic_u64_set(&counter->value_to_count[i], 0ULL);
+		atomic_store(&counter->value_to_count[i], 0ULL);
 	}
 
 	return OK_RESPONSE;

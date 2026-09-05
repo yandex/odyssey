@@ -11,7 +11,6 @@
 
 #include <status.h>
 #include <client.h>
-#include <atomic.h>
 #include <system.h>
 #include <config.h>
 #include <list.h>
@@ -54,7 +53,7 @@ void od_client_init(od_client_t *client)
 	client->portals = NULL;
 	client->last_catchup_lag = 0;
 
-	od_atomic_u64_set(&client->killed, 0);
+	atomic_store(&client->killed, 0);
 
 	od_relay_init(&client->relay, client);
 
