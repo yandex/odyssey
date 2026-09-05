@@ -9,7 +9,7 @@
 #include <machinarium/machinarium.h>
 #include <machinarium/ds/hm.h>
 
-#include <atomic.h>
+#include <stdatomic.h>
 #include <pool.h>
 #include <io.h>
 #include <types.h>
@@ -76,7 +76,7 @@ struct od_client {
 	od_list_t link;
 
 	/* Used to kill client in kill_client or odyssey reload */
-	od_atomic_u64_t killed;
+	atomic_uint_fast64_t killed;
 
 	/* client-side GUC state. XXX: maybe use embedded struct here */
 	bool backend_pin;
@@ -149,7 +149,7 @@ static inline void od_client_free_extended(od_client_t *client)
 
 static inline void od_client_kill(od_client_t *client)
 {
-	od_atomic_u64_set(&client->killed, 1UL);
+	atomic_store(&client->killed, 1UL);
 }
 
 uint32_t od_client_login_timeout(const od_client_t *client);

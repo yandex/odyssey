@@ -6,7 +6,7 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <atomic.h>
+#include <stdatomic.h>
 #include <tdigest.h>
 
 #define QUANTILES_WINDOW 2
@@ -24,20 +24,20 @@ struct od_stat {
 	bool enable_quantiles;
 	uint8_t current_tdigest;
 
-	od_atomic_u64_t count_query;
-	od_atomic_u64_t count_tx;
+	atomic_uint_fast64_t count_query;
+	atomic_uint_fast64_t count_tx;
 
-	od_atomic_u64_t query_time;
-	od_atomic_u64_t tx_time;
+	atomic_uint_fast64_t query_time;
+	atomic_uint_fast64_t tx_time;
 
-	od_atomic_u64_t count_wait;
-	od_atomic_u64_t wait_time_us;
+	atomic_uint_fast64_t count_wait;
+	atomic_uint_fast64_t wait_time_us;
 
-	od_atomic_u64_t recv_server;
-	od_atomic_u64_t recv_client;
-	od_atomic_u64_t count_parse;
-	od_atomic_u64_t count_parse_reuse;
-	od_atomic_u64_t count_cancel;
+	atomic_uint_fast64_t recv_server;
+	atomic_uint_fast64_t recv_client;
+	atomic_uint_fast64_t count_parse;
+	atomic_uint_fast64_t count_parse_reuse;
+	atomic_uint_fast64_t count_cancel;
 
 	td_histogram_t *transaction_hgram[QUANTILES_WINDOW];
 	td_histogram_t *query_hgram[QUANTILES_WINDOW];
@@ -74,23 +74,25 @@ static inline void od_stat_query_start(od_stat_state_t *state)
 
 static inline void od_stat_wait_time(od_stat_t *stat, uint64_t wait_time_us)
 {
-	od_atomic_u64_add(&stat->wait_time_us, wait_time_us);
-	od_atomic_u64_inc(&stat->count_wait);
+	atomic_fetch_add_explicit(&stat->wait_time_us, wait_time_us,
+				  memory_order_relaxed);
+	atomic_fetch_add_explicit(&stat->count_wait, 1, memory_order_relaxed);
 }
 
 static inline void od_stat_parse(od_stat_t *stat)
 {
-	od_atomic_u64_inc(&stat->count_parse);
+	atomic_fetch_add_explicit(&stat->count_parse, 1, memory_order_relaxed);
 }
 
 static inline void od_stat_parse_reuse(od_stat_t *stat)
 {
-	od_atomic_u64_inc(&stat->count_parse_reuse);
+	atomic_fetch_add_explicit(&stat->count_parse_reuse, 1,
+				  memory_order_relaxed);
 }
 
 static inline void od_stat_cancel(od_stat_t *stat)
 {
-	od_atomic_u64_inc(&stat->count_cancel);
+	atomic_fetch_add_explicit(&stat->count_cancel, 1, memory_order_relaxed);
 }
 
 static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
@@ -101,8 +103,10 @@ static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 		diff = machine_time_us() - state->query_time_start;
 		if (diff > 0) {
 			*query_time = diff;
-			od_atomic_u64_add(&stat->query_time, diff);
-			od_atomic_u64_inc(&stat->count_query);
+			atomic_fetch_add_explicit(&stat->query_time, diff,
+						  memory_order_relaxed);
+			atomic_fetch_add_explicit(&stat->count_query, 1,
+						  memory_order_relaxed);
 			if (stat->enable_quantiles) {
 				td_add(stat->query_hgram[stat->current_tdigest],
 				       diff, 1);
@@ -118,8 +122,10 @@ static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 	if (state->tx_time_start) {
 		diff = machine_time_us() - state->tx_time_start;
 		if (diff > 0) {
-			od_atomic_u64_add(&stat->tx_time, diff);
-			od_atomic_u64_inc(&stat->count_tx);
+			atomic_fetch_add_explicit(&stat->tx_time, diff,
+						  memory_order_relaxed);
+			atomic_fetch_add_explicit(&stat->count_tx, 1,
+						  memory_order_relaxed);
 			if (stat->enable_quantiles) {
 				td_add(stat->transaction_hgram
 					       [stat->current_tdigest],
@@ -132,50 +138,74 @@ static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 
 static inline void od_stat_recv_server(od_stat_t *stat, uint64_t bytes)
 {
-	od_atomic_u64_add(&stat->recv_server, bytes);
+	atomic_fetch_add_explicit(&stat->recv_server, bytes,
+				  memory_order_relaxed);
 }
 
 static inline void od_stat_recv_client(od_stat_t *stat, uint64_t bytes)
 {
-	od_atomic_u64_add(&stat->recv_client, bytes);
+	atomic_fetch_add_explicit(&stat->recv_client, bytes,
+				  memory_order_relaxed);
 }
 
 static inline void od_stat_copy(od_stat_t *dst, od_stat_t *src)
 {
-	dst->count_query = od_atomic_u64_of(&src->count_query);
-	dst->count_tx = od_atomic_u64_of(&src->count_tx);
-	dst->query_time = od_atomic_u64_of(&src->query_time);
-	dst->tx_time = od_atomic_u64_of(&src->tx_time);
-	dst->count_wait = od_atomic_u64_of(&src->count_wait);
-	dst->wait_time_us = od_atomic_u64_of(&src->wait_time_us);
-	dst->recv_client = od_atomic_u64_of(&src->recv_client);
-	dst->recv_server = od_atomic_u64_of(&src->recv_server);
-	dst->count_parse = od_atomic_u64_of(&src->count_parse);
-	dst->count_parse_reuse = od_atomic_u64_of(&src->count_parse_reuse);
-	dst->count_cancel = od_atomic_u64_of(&src->count_cancel);
+	dst->count_query =
+		atomic_load_explicit(&src->count_query, memory_order_relaxed);
+	dst->count_tx =
+		atomic_load_explicit(&src->count_tx, memory_order_relaxed);
+	dst->query_time =
+		atomic_load_explicit(&src->query_time, memory_order_relaxed);
+	dst->tx_time =
+		atomic_load_explicit(&src->tx_time, memory_order_relaxed);
+	dst->count_wait =
+		atomic_load_explicit(&src->count_wait, memory_order_relaxed);
+	dst->wait_time_us =
+		atomic_load_explicit(&src->wait_time_us, memory_order_relaxed);
+	dst->recv_client =
+		atomic_load_explicit(&src->recv_client, memory_order_relaxed);
+	dst->recv_server =
+		atomic_load_explicit(&src->recv_server, memory_order_relaxed);
+	dst->count_parse =
+		atomic_load_explicit(&src->count_parse, memory_order_relaxed);
+	dst->count_parse_reuse = atomic_load_explicit(&src->count_parse_reuse,
+						      memory_order_relaxed);
+	dst->count_cancel =
+		atomic_load_explicit(&src->count_cancel, memory_order_relaxed);
 }
 
 static inline void od_stat_sum(od_stat_t *sum, od_stat_t *stat)
 {
-	sum->count_query += od_atomic_u64_of(&stat->count_query);
-	sum->count_tx += od_atomic_u64_of(&stat->count_tx);
-	sum->query_time += od_atomic_u64_of(&stat->query_time);
-	sum->tx_time += od_atomic_u64_of(&stat->tx_time);
-	sum->count_wait += od_atomic_u64_of(&stat->count_wait);
-	sum->wait_time_us += od_atomic_u64_of(&stat->wait_time_us);
-	sum->recv_client += od_atomic_u64_of(&stat->recv_client);
-	sum->recv_server += od_atomic_u64_of(&stat->recv_server);
-	sum->count_parse += od_atomic_u64_of(&stat->count_parse);
-	sum->count_parse_reuse += od_atomic_u64_of(&stat->count_parse_reuse);
-	sum->count_cancel += od_atomic_u64_of(&stat->count_cancel);
+	sum->count_query +=
+		atomic_load_explicit(&stat->count_query, memory_order_relaxed);
+	sum->count_tx +=
+		atomic_load_explicit(&stat->count_tx, memory_order_relaxed);
+	sum->query_time +=
+		atomic_load_explicit(&stat->query_time, memory_order_relaxed);
+	sum->tx_time +=
+		atomic_load_explicit(&stat->tx_time, memory_order_relaxed);
+	sum->count_wait +=
+		atomic_load_explicit(&stat->count_wait, memory_order_relaxed);
+	sum->wait_time_us +=
+		atomic_load_explicit(&stat->wait_time_us, memory_order_relaxed);
+	sum->recv_client +=
+		atomic_load_explicit(&stat->recv_client, memory_order_relaxed);
+	sum->recv_server +=
+		atomic_load_explicit(&stat->recv_server, memory_order_relaxed);
+	sum->count_parse +=
+		atomic_load_explicit(&stat->count_parse, memory_order_relaxed);
+	sum->count_parse_reuse += atomic_load_explicit(&stat->count_parse_reuse,
+						       memory_order_relaxed);
+	sum->count_cancel +=
+		atomic_load_explicit(&stat->count_cancel, memory_order_relaxed);
 }
 
-static inline void od_stat_update_of(od_atomic_u64_t *prev,
-				     od_atomic_u64_t *current)
+static inline void od_stat_update_of(atomic_uint_fast64_t *prev,
+				     atomic_uint_fast64_t *current)
 {
-	/* todo: this could be made more optimal */
-	/* prev <= current */
-	__atomic_store((uint64_t *)prev, (uint64_t *)current, __ATOMIC_SEQ_CST);
+	atomic_store_explicit(
+		prev, atomic_load_explicit(current, memory_order_relaxed),
+		memory_order_relaxed);
 }
 
 static inline void od_stat_update(od_stat_t *dst, od_stat_t *stat)
@@ -204,24 +234,33 @@ static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
 	}
 
 	uint64_t count_query;
-	count_query = od_atomic_u64_of(&current->count_query) -
-		      od_atomic_u64_of(&prev->count_query);
+	count_query =
+		atomic_load_explicit(&current->count_query,
+				     memory_order_relaxed) -
+		atomic_load_explicit(&prev->count_query, memory_order_relaxed);
 
 	uint64_t count_tx;
-	count_tx = od_atomic_u64_of(&current->count_tx) -
-		   od_atomic_u64_of(&prev->count_tx);
+	count_tx =
+		atomic_load_explicit(&current->count_tx, memory_order_relaxed) -
+		atomic_load_explicit(&prev->count_tx, memory_order_relaxed);
 
 	uint64_t count_wait;
-	count_wait = od_atomic_u64_of(&current->count_wait) -
-		     od_atomic_u64_of(&prev->count_wait);
+	count_wait =
+		atomic_load_explicit(&current->count_wait,
+				     memory_order_relaxed) -
+		atomic_load_explicit(&prev->count_wait, memory_order_relaxed);
 
 	uint64_t count_parse;
-	count_parse = od_atomic_u64_of(&current->count_parse) -
-		      od_atomic_u64_of(&prev->count_parse);
+	count_parse =
+		atomic_load_explicit(&current->count_parse,
+				     memory_order_relaxed) -
+		atomic_load_explicit(&prev->count_parse, memory_order_relaxed);
 
 	uint64_t count_parse_reuse;
-	count_parse_reuse = od_atomic_u64_of(&current->count_parse_reuse) -
-			    od_atomic_u64_of(&prev->count_parse_reuse);
+	count_parse_reuse = atomic_load_explicit(&current->count_parse_reuse,
+						 memory_order_relaxed) -
+			    atomic_load_explicit(&prev->count_parse_reuse,
+						 memory_order_relaxed);
 
 	avg->count_query = (count_query * interval_usec) / interval_us;
 	avg->count_tx = (count_tx * interval_usec) / interval_us;
@@ -230,30 +269,41 @@ static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
 		(count_parse_reuse * interval_usec) / interval_us;
 
 	if (count_query > 0) {
-		avg->query_time = (od_atomic_u64_of(&current->query_time) -
-				   od_atomic_u64_of(&prev->query_time)) /
+		avg->query_time = (atomic_load_explicit(&current->query_time,
+							memory_order_relaxed) -
+				   atomic_load_explicit(&prev->query_time,
+							memory_order_relaxed)) /
 				  count_query;
 	}
 
 	if (count_tx > 0) {
-		avg->tx_time = (od_atomic_u64_of(&current->tx_time) -
-				od_atomic_u64_of(&prev->tx_time)) /
+		avg->tx_time = (atomic_load_explicit(&current->tx_time,
+						     memory_order_relaxed) -
+				atomic_load_explicit(&prev->tx_time,
+						     memory_order_relaxed)) /
 			       count_tx;
 	}
 
 	if (count_wait > 0) {
-		avg->wait_time_us = (od_atomic_u64_of(&current->wait_time_us) -
-				     od_atomic_u64_of(&prev->wait_time_us)) /
-				    count_wait;
+		avg->wait_time_us =
+			(atomic_load_explicit(&current->wait_time_us,
+					      memory_order_relaxed) -
+			 atomic_load_explicit(&prev->wait_time_us,
+					      memory_order_relaxed)) /
+			count_wait;
 	}
 
-	avg->recv_client = ((od_atomic_u64_of(&current->recv_client) -
-			     od_atomic_u64_of(&prev->recv_client)) *
+	avg->recv_client = ((atomic_load_explicit(&current->recv_client,
+						  memory_order_relaxed) -
+			     atomic_load_explicit(&prev->recv_client,
+						  memory_order_relaxed)) *
 			    interval_usec) /
 			   interval_us;
 
-	avg->recv_server = ((od_atomic_u64_of(&current->recv_server) -
-			     od_atomic_u64_of(&prev->recv_server)) *
+	avg->recv_server = ((atomic_load_explicit(&current->recv_server,
+						  memory_order_relaxed) -
+			     atomic_load_explicit(&prev->recv_server,
+						  memory_order_relaxed)) *
 			    interval_usec) /
 			   interval_us;
 }

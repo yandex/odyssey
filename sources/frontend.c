@@ -372,7 +372,7 @@ error:
 		 "startup packet read error, errno = %d (%s)", machine_errno(),
 		 strerror(machine_errno()));
 	od_cron_t *cron = client->global->cron;
-	od_atomic_u64_inc(&cron->startup_errors);
+	atomic_fetch_add(&cron->startup_errors, 1);
 	return -1;
 }
 
@@ -532,13 +532,13 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 		/* connect to server, if necessary */
 		if (od_backend_not_connected(server)) {
 			int rc;
-			od_atomic_u32_inc(&router->servers_routing);
+			atomic_fetch_add(&router->servers_routing, 1);
 
 			od_assert(client->source != NULL);
 			rc = od_backend_connect(server, context, route_params,
 						client, storage);
 
-			od_atomic_u32_dec(&router->servers_routing);
+			atomic_fetch_sub(&router->servers_routing, 1);
 			if (rc == NOT_OK_RESPONSE) {
 				/* In case of 'too many connections' error, retry attach attempt by
 				* waiting for a idle server connection for pool_timeout ms
@@ -1221,7 +1221,7 @@ static inline bool od_eject_conn_with_timeout(od_client_t *client,
 
 static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 {
-	if (od_atomic_u64_of(&client->killed) == 1) {
+	if (atomic_load(&client->killed) == 1) {
 		return OD_ECLIENT_KILLED;
 	}
 

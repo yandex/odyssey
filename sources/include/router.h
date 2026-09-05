@@ -8,6 +8,8 @@
 
 #include <machinarium/mutex.h>
 
+#include <stdatomic.h>
+
 #include <rules.h>
 #include <route_pool.h>
 #include <router_cancel.h>
@@ -20,7 +22,7 @@ struct od_router {
 	/* clients */
 	atomic_uint_fast64_t clients;
 	/* servers */
-	od_atomic_u32_t servers_routing;
+	atomic_uint_fast64_t servers_routing;
 	/* error logging */
 	od_error_logger_t *router_err_logger;
 

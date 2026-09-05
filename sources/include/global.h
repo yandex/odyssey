@@ -6,11 +6,12 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <stdatomic.h>
+
 #include <machinarium/sem.h>
 
 #include <types.h>
 #include <soft_oom.h>
-#include <atomic.h>
 #include <host_watcher.h>
 #include <logger.h>
 #include <od_memory.h>
@@ -29,7 +30,7 @@ struct od_global {
 
 	od_host_watcher_t host_watcher;
 
-	od_atomic_u64_t pause;
+	atomic_uint_fast64_t pause;
 	mm_wait_list_t *resume_waiters;
 
 	od_rate_limiter_t *accept_rate_limiter;
@@ -69,17 +70,17 @@ static inline void od_global_destroy(od_global_t *global)
 
 static inline uint64_t od_global_is_paused(od_global_t *global)
 {
-	return od_atomic_u64_of(&global->pause);
+	return atomic_load_explicit(&global->pause, memory_order_relaxed);
 }
 
 static inline void od_global_pause(od_global_t *global)
 {
-	od_atomic_u64_set(&global->pause, 1ULL);
+	atomic_store_explicit(&global->pause, 1ULL, memory_order_relaxed);
 }
 
 static inline void od_global_resume(od_global_t *global)
 {
-	od_atomic_u64_set(&global->pause, 0ULL);
+	atomic_store_explicit(&global->pause, 0ULL, memory_order_relaxed);
 	mm_wait_list_notify_all(global->resume_waiters);
 }
 
