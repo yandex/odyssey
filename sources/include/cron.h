@@ -10,7 +10,6 @@
 
 #include <types.h>
 #include <global.h>
-#include <atomic.h>
 
 #include <build.h>
 
@@ -21,7 +20,7 @@
 struct od_cron {
 	uint64_t stat_time_us;
 	od_global_t *global;
-	od_atomic_u64_t startup_errors;
+	atomic_uint_fast64_t startup_errors;
 
 #ifdef PROM_FOUND
 	od_prom_metrics_t *metrics;

@@ -6,13 +6,13 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <atomic.h>
+#include <stdatomic.h>
 
 #define OD_COUNTER_MAX_POSSIBLE_VALUE 1000UL
 
 typedef struct od_counter {
 	size_t size;
-	od_atomic_u64_t value_to_count[FLEXIBLE_ARRAY_MEMBER];
+	atomic_uint_fast64_t value_to_count[FLEXIBLE_ARRAY_MEMBER];
 } od_counter_t;
 
 od_counter_t *od_counter_create(size_t max_value);

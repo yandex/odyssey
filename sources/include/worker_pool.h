@@ -9,13 +9,13 @@
 #include <machinarium/machinarium.h>
 
 #include <types.h>
-#include <atomic.h>
+#include <stdatomic.h>
 #include <worker.h>
 #include <od_memory.h>
 
 struct od_worker_pool {
 	od_worker_t *pool;
-	od_atomic_u32_t round_robin;
+	atomic_uint_fast64_t round_robin;
 	uint32_t count;
 };
 
@@ -75,15 +75,15 @@ od_worker_pool_wait_gracefully_shutdown(od_worker_pool_t *pool)
 static inline void od_worker_pool_feed(od_worker_pool_t *pool,
 				       machine_msg_t *msg)
 {
-	uint32_t next;
-	uint32_t oldValue;
+	uint64_t next;
+	uint64_t oldValue;
 
 	for (;;) {
-		oldValue = od_atomic_u32_of(&pool->round_robin);
+		oldValue = atomic_load(&pool->round_robin);
 		next = oldValue + 1 == pool->count ? 0 : oldValue + 1;
 
-		if (od_atomic_u32_cas(&pool->round_robin, oldValue, next) ==
-		    oldValue) {
+		if (atomic_compare_exchange_strong(&pool->round_robin,
+						   &oldValue, next)) {
 			break;
 		}
 	}
