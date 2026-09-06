@@ -242,8 +242,6 @@ int mm_virtual_rbuf_cache_init(mm_virtual_rbuf_cache_t *cache, size_t max_bufs)
 	cache->count = 0;
 	cache->max = max_bufs;
 
-	mm_spinlock_init(&cache->lock);
-
 	if (max_bufs == 0) {
 		return 0;
 	}
@@ -265,15 +263,11 @@ void mm_virtual_rbuf_cache_destroy(mm_virtual_rbuf_cache_t *cache)
 	}
 
 	mm_free(cache->rbufs);
-
-	mm_spinlock_destroy(&cache->lock);
 }
 
 mm_virtual_rbuf_t *mm_virtual_rbuf_cache_get(mm_virtual_rbuf_cache_t *cache)
 {
 	mm_virtual_rbuf_t *vrb = NULL;
-
-	mm_spinlock_lock(&cache->lock);
 
 	if (cache->count > 0) {
 		--cache->count;
@@ -281,8 +275,6 @@ mm_virtual_rbuf_t *mm_virtual_rbuf_cache_get(mm_virtual_rbuf_cache_t *cache)
 		vrb = cache->rbufs[cache->count];
 		cache->rbufs[cache->count] = NULL;
 	}
-
-	mm_spinlock_unlock(&cache->lock);
 
 	if (vrb != NULL) {
 		memset(vrb->data, 0, vrb->capacity);
@@ -296,17 +288,11 @@ mm_virtual_rbuf_t *mm_virtual_rbuf_cache_get(mm_virtual_rbuf_cache_t *cache)
 void mm_virtual_rbuf_cache_put(mm_virtual_rbuf_cache_t *cache,
 			       mm_virtual_rbuf_t *vrb)
 {
-	mm_spinlock_lock(&cache->lock);
-
 	if (cache->count == cache->max) {
 		mm_virtual_rbuf_free(vrb);
-
-		mm_spinlock_unlock(&cache->lock);
 		return;
 	}
 
 	cache->rbufs[cache->count] = vrb;
 	cache->count++;
-
-	mm_spinlock_unlock(&cache->lock);
 }
