@@ -35,3 +35,41 @@ NOTICE:  processed virtually by odyssey
  off
 (1 row)
 
+listen b;
+show odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+unlisten * \parse unlisten_all_stmt
+\bind_named unlisten_all_stmt
+\g
+show odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+
+listen c \parse listen_stmt
+\bind_named listen_stmt
+\g
+show odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+unlisten * \parse unlisten_all_stmt2
+\bind_named unlisten_all_stmt2
+\g
+show odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+

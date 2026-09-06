@@ -4,8 +4,13 @@
 #include <client.h>
 #include <server.h>
 #include <tests/odyssey_test.h>
+#include <alloc/linear.h>
 
 #include <pstmt.h>
+
+#define ARENA_SIZE 8192
+static uint8_t s_arena_buf[ARENA_SIZE];
+static od_linear_alloc_t s_arena;
 
 static void test_refs(void)
 {
@@ -15,13 +20,13 @@ static void test_refs(void)
 	od_pstmt_desc_t desc;
 	desc.data = "data1";
 	desc.len = sizeof("data1");
-	od_pstmt_t *ps = od_pstmt_create_or_get(global, desc);
+	od_pstmt_t *ps = od_pstmt_create_or_get(global, desc, &s_arena);
 	test(ps != NULL);
 
 	od_pstmt_unref(ps);
 	test(od_global_pstmts_has_pstmt(global, desc) == 0);
 
-	ps = od_pstmt_create_or_get(global, desc);
+	ps = od_pstmt_create_or_get(global, desc, &s_arena);
 	test(ps != NULL);
 
 	od_pstmt_t *p2 = ps;
@@ -44,18 +49,18 @@ static void test_pstmt_global(void)
 	desc.data = "data";
 	desc.len = sizeof("data");
 
-	od_pstmt_t *pstmt = od_pstmt_create_or_get(gm, desc);
+	od_pstmt_t *pstmt = od_pstmt_create_or_get(gm, desc, &s_arena);
 	test(pstmt != NULL);
 	test(desc.len == pstmt->desc.len);
 	test(memcmp(desc.data, pstmt->desc.data, pstmt->desc.len) == 0);
 	test(&pstmt->desc != &desc);
 	test(pstmt->desc.data != desc.data);
 
-	od_pstmt_t *t = od_pstmt_create_or_get(gm, desc);
+	od_pstmt_t *t = od_pstmt_create_or_get(gm, desc, &s_arena);
 	test(t == pstmt);
 	od_pstmt_unref(t);
 
-	od_pstmt_t *pstmt2 = od_pstmt_create_or_get(gm, desc);
+	od_pstmt_t *pstmt2 = od_pstmt_create_or_get(gm, desc, &s_arena);
 	test(pstmt2 == pstmt);
 	test(pstmt2->desc.data == pstmt->desc.data);
 
@@ -63,7 +68,7 @@ static void test_pstmt_global(void)
 	desc_copy.data = od_strdup("data");
 	test(desc.data != NULL);
 	desc_copy.len = sizeof("data");
-	od_pstmt_t *pstmt3 = od_pstmt_create_or_get(gm, desc_copy);
+	od_pstmt_t *pstmt3 = od_pstmt_create_or_get(gm, desc_copy, &s_arena);
 	test(pstmt3 == pstmt2);
 	test(pstmt3 == pstmt);
 
@@ -74,6 +79,74 @@ static void test_pstmt_global(void)
 	od_free(desc_copy.data);
 
 	test(od_global_pstmts_has_pstmt(gm, desc) == 0);
+
+	od_global_pstmts_map_free(gm);
+}
+
+static void test_pstmt_query_ctx(void)
+{
+	od_global_pstmt_map_t *gm = od_global_pstmts_map_create(1);
+
+	/* DISCARD ALL */
+	od_pstmt_desc_t discard_desc;
+	discard_desc.data = "DISCARD ALL";
+	discard_desc.len = sizeof("DISCARD ALL");
+	od_pstmt_t *ps = od_pstmt_create_or_get(gm, discard_desc, &s_arena);
+	test(ps != NULL);
+	test(ps->query_ctx.is_discard_all == 1);
+	test(ps->query_ctx.is_unlisten_all == 0);
+	test(ps->query_ctx.is_deallocate_all == 0);
+	test(ps->query_ctx.has_deallocate_name == 0);
+	od_pstmt_unref(ps);
+
+	/* UNLISTEN * */
+	od_pstmt_desc_t unlisten_desc;
+	unlisten_desc.data = "UNLISTEN *";
+	unlisten_desc.len = sizeof("UNLISTEN *");
+	ps = od_pstmt_create_or_get(gm, unlisten_desc, &s_arena);
+	test(ps != NULL);
+	test(ps->query_ctx.is_discard_all == 0);
+	test(ps->query_ctx.is_unlisten_all == 1);
+	test(ps->query_ctx.is_deallocate_all == 0);
+	test(ps->query_ctx.has_deallocate_name == 0);
+	od_pstmt_unref(ps);
+
+	/* DEALLOCATE ALL */
+	od_pstmt_desc_t dealloc_all_desc;
+	dealloc_all_desc.data = "DEALLOCATE ALL";
+	dealloc_all_desc.len = sizeof("DEALLOCATE ALL");
+	ps = od_pstmt_create_or_get(gm, dealloc_all_desc, &s_arena);
+	test(ps != NULL);
+	test(ps->query_ctx.is_discard_all == 0);
+	test(ps->query_ctx.is_unlisten_all == 0);
+	test(ps->query_ctx.is_deallocate_all == 1);
+	test(ps->query_ctx.has_deallocate_name == 0);
+	od_pstmt_unref(ps);
+
+	/* DEALLOCATE name */
+	od_pstmt_desc_t dealloc_name_desc;
+	dealloc_name_desc.data = "DEALLOCATE foo";
+	dealloc_name_desc.len = sizeof("DEALLOCATE foo");
+	ps = od_pstmt_create_or_get(gm, dealloc_name_desc, &s_arena);
+	test(ps != NULL);
+	test(ps->query_ctx.is_discard_all == 0);
+	test(ps->query_ctx.is_unlisten_all == 0);
+	test(ps->query_ctx.is_deallocate_all == 0);
+	test(ps->query_ctx.has_deallocate_name == 1);
+	test(strcmp(ps->query_ctx.deallocate_name, "foo") == 0);
+	od_pstmt_unref(ps);
+
+	/* normal SELECT — no flags */
+	od_pstmt_desc_t select_desc;
+	select_desc.data = "SELECT 1";
+	select_desc.len = sizeof("SELECT 1");
+	ps = od_pstmt_create_or_get(gm, select_desc, &s_arena);
+	test(ps != NULL);
+	test(ps->query_ctx.is_discard_all == 0);
+	test(ps->query_ctx.is_unlisten_all == 0);
+	test(ps->query_ctx.is_deallocate_all == 0);
+	test(ps->query_ctx.has_deallocate_name == 0);
+	od_pstmt_unref(ps);
 
 	od_global_pstmts_map_free(gm);
 }
@@ -107,19 +180,19 @@ void test_pstmt_client_hashmap(void)
 	desc5.data = "data5";
 	desc5.len = sizeof("data5");
 
-	od_pstmt_t *unnamed1 = od_pstmt_create_or_get(global, desc1);
+	od_pstmt_t *unnamed1 = od_pstmt_create_or_get(global, desc1, &s_arena);
 	test(unnamed1 != NULL);
 
-	od_pstmt_t *unnamed2 = od_pstmt_create_or_get(global, desc2);
+	od_pstmt_t *unnamed2 = od_pstmt_create_or_get(global, desc2, &s_arena);
 	test(unnamed2 != NULL);
 
-	od_pstmt_t *p0 = od_pstmt_create_or_get(global, desc3);
+	od_pstmt_t *p0 = od_pstmt_create_or_get(global, desc3, &s_arena);
 	test(p0 != NULL);
 
-	od_pstmt_t *p1 = od_pstmt_create_or_get(global, desc4);
+	od_pstmt_t *p1 = od_pstmt_create_or_get(global, desc4, &s_arena);
 	test(p1 != NULL);
 
-	od_pstmt_t *dangling = od_pstmt_create_or_get(global, desc5);
+	od_pstmt_t *dangling = od_pstmt_create_or_get(global, desc5, &s_arena);
 	test(dangling != NULL);
 
 	test(unnamed1 != unnamed2);
@@ -234,19 +307,19 @@ static void test_portal_client_hashmap(void)
 	desc5.data = "data5";
 	desc5.len = sizeof("data5");
 
-	od_pstmt_t *unnamed1 = od_pstmt_create_or_get(global, desc1);
+	od_pstmt_t *unnamed1 = od_pstmt_create_or_get(global, desc1, &s_arena);
 	test(unnamed1 != NULL);
 
-	od_pstmt_t *unnamed2 = od_pstmt_create_or_get(global, desc2);
+	od_pstmt_t *unnamed2 = od_pstmt_create_or_get(global, desc2, &s_arena);
 	test(unnamed2 != NULL);
 
-	od_pstmt_t *p0 = od_pstmt_create_or_get(global, desc3);
+	od_pstmt_t *p0 = od_pstmt_create_or_get(global, desc3, &s_arena);
 	test(p0 != NULL);
 
-	od_pstmt_t *p1 = od_pstmt_create_or_get(global, desc4);
+	od_pstmt_t *p1 = od_pstmt_create_or_get(global, desc4, &s_arena);
 	test(p1 != NULL);
 
-	od_pstmt_t *dangling = od_pstmt_create_or_get(global, desc5);
+	od_pstmt_t *dangling = od_pstmt_create_or_get(global, desc5, &s_arena);
 	test(dangling != NULL);
 
 	test(unnamed1 != unnamed2);
@@ -333,13 +406,13 @@ static void test_pstmt_server_hashmap(void)
 	desc5.data = "data5";
 	desc5.len = sizeof("data5");
 
-	od_pstmt_t *p0 = od_pstmt_create_or_get(global, desc3);
+	od_pstmt_t *p0 = od_pstmt_create_or_get(global, desc3, &s_arena);
 	test(p0 != NULL);
 
-	od_pstmt_t *p1 = od_pstmt_create_or_get(global, desc4);
+	od_pstmt_t *p1 = od_pstmt_create_or_get(global, desc4, &s_arena);
 	test(p1 != NULL);
 
-	od_pstmt_t *dangling = od_pstmt_create_or_get(global, desc5);
+	od_pstmt_t *dangling = od_pstmt_create_or_get(global, desc5, &s_arena);
 	test(dangling != NULL);
 
 	test(p0 != p1);
@@ -400,7 +473,7 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	od_pstmt_t *p[4];
 	for (int i = 0; i < 4; i++) {
-		p[i] = od_pstmt_create_or_get(global, d[i]);
+		p[i] = od_pstmt_create_or_get(global, d[i], &s_arena);
 		test(p[i] != NULL);
 	}
 
@@ -444,7 +517,7 @@ static void test_pstmt_server_sieve_eviction(void)
 	/* --- oldest unvisited entries are evicted first --- */
 
 	for (int i = 0; i < 4; i++) {
-		p[i] = od_pstmt_create_or_get(global, d[i]);
+		p[i] = od_pstmt_create_or_get(global, d[i], &s_arena);
 		test(p[i] != NULL);
 	}
 
@@ -487,7 +560,7 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	od_pstmt_t *hp[4];
 	for (int i = 0; i < 4; i++) {
-		hp[i] = od_pstmt_create_or_get(global, dh[i]);
+		hp[i] = od_pstmt_create_or_get(global, dh[i], &s_arena);
 		test(hp[i] != NULL);
 	}
 
@@ -526,7 +599,7 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	od_pstmt_t *rp[4];
 	for (int i = 0; i < 4; i++) {
-		rp[i] = od_pstmt_create_or_get(global, dr[i]);
+		rp[i] = od_pstmt_create_or_get(global, dr[i], &s_arena);
 		test(rp[i] != NULL);
 	}
 
@@ -564,7 +637,7 @@ static void test_pstmt_server_sieve_eviction(void)
 	od_pstmt_desc_t d4;
 	d4.data = "q4";
 	d4.len = sizeof("q4");
-	od_pstmt_t *p4 = od_pstmt_create_or_get(global, d4);
+	od_pstmt_t *p4 = od_pstmt_create_or_get(global, d4, &s_arena);
 	test(p4 != NULL);
 
 	server = od_server_allocate(1);
@@ -590,8 +663,11 @@ static void test_impl(void *a)
 {
 	(void)a;
 
+	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
+
 	test_pstmt_global();
 	test_refs();
+	test_pstmt_query_ctx();
 
 	test_pstmt_client_hashmap();
 	test_portal_client_hashmap();

@@ -136,7 +136,6 @@ set(od_src
     mdb_iamproxy.c
     external_auth.c
     group.c
-    query_processing.c
     thread_pool.c
     xplan.c
     common/base64.c
@@ -401,7 +400,6 @@ set(od_test_src
     tests/odyssey/test_address.c
     tests/odyssey/test_affinity.c
     tests/odyssey/test_pstmt.c
-    tests/odyssey/test_query_processing.c
     tests/odyssey/test_duration_parse.c
     tests/odyssey/test_thread_pool.c
     tests/odyssey/test_linear_alloc.c

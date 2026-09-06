@@ -340,12 +340,32 @@ static void test_deallocate_name(void)
 {
 	test(strcmp(parse_ok("DEALLOCATE foo_stmt"), "(deallocate foo_stmt)") ==
 	     0);
+	test(strcmp(parse_ok("DEALLOCATE foo_bar"), "(deallocate foo_bar)") ==
+	     0);
+	test(strcmp(parse_ok("DEALLOCATE foo123"), "(deallocate foo123)") == 0);
 }
 
 static void test_deallocate_prepare_name(void)
 {
 	test(strcmp(parse_ok("DEALLOCATE PREPARE foo_stmt"),
 		    "(deallocate foo_stmt)") == 0);
+	test(strcmp(parse_ok("DEALLOCATE PREPARE pst"), "(deallocate pst)") ==
+	     0);
+	test(strcmp(parse_ok("deallocate prepare pst"), "(deallocate pst)") ==
+	     0);
+}
+
+static void test_deallocate_keyword_as_name(void)
+{
+	/* "preparepst" is not KW_PREPARE — parsed as IDENT */
+	test(strcmp(parse_ok("DEALLOCATE preparepst"),
+		    "(deallocate preparepst)") == 0);
+	test(strcmp(parse_ok("DEALLOCATE PREPAREpst"),
+		    "(deallocate preparepst)") == 0);
+
+	/* "allpst" / "ALLpst" are not KW_ALL — parsed as IDENT */
+	test(strcmp(parse_ok("DEALLOCATE allpst"), "(deallocate allpst)") == 0);
+	test(strcmp(parse_ok("DEALLOCATE ALLpst"), "(deallocate allpst)") == 0);
 }
 
 static void test_deallocate_all(void)
@@ -371,6 +391,42 @@ static void test_deallocate_with_semicolon(void)
 	test(strcmp(parse_ok("DEALLOCATE foo_stmt;"),
 		    "(deallocate foo_stmt)") == 0);
 	test(strcmp(parse_ok("DEALLOCATE ALL;"), "(deallocate all)") == 0);
+	test(strcmp(parse_ok("DEALLOCATE foo_stmt;   "),
+		    "(deallocate foo_stmt)") == 0);
+}
+
+static void test_deallocate_whitespace(void)
+{
+	test(strcmp(parse_ok("  DEALLOCATE foo_stmt"),
+		    "(deallocate foo_stmt)") == 0);
+	test(strcmp(parse_ok("\tDEALLOCATE\tfoo_stmt"),
+		    "(deallocate foo_stmt)") == 0);
+	test(strcmp(parse_ok("DEALLOCATE    foo_stmt   "),
+		    "(deallocate foo_stmt)") == 0);
+	test(strcmp(parse_ok("DEALLOCATE foo_stmt   ;"),
+		    "(deallocate foo_stmt)") == 0);
+	test(strcmp(parse_ok("DEALLOCATE foo_stmt;   "),
+		    "(deallocate foo_stmt)") == 0);
+	test(strcmp(parse_ok(" \n\r\t DEALLOCATE \n foo_stmt \r\n"),
+		    "(deallocate foo_stmt)") == 0);
+}
+
+static void test_deallocate_string_literal(void)
+{
+	/*
+	 * the old od_parse_deallocate accepted string literals
+	 * (DEALLOCATE 'foo'); the minimal parser only accepts
+	 * identifiers and ALL, so these now fail.
+	 */
+	parse_fail("DEALLOCATE 'foo'");
+	parse_fail("DEALLOCATE PREPARE 'foo'");
+	parse_fail("DEALLOCATE 'foo';");
+	parse_fail("DEALLOCATE 'ALL'");
+	parse_fail("DEALLOCATE PREPARE 'ALL'");
+	parse_fail("DEALLOCATE 'a''b'");
+	parse_fail("DEALLOCATE PREPARE 'a''b'");
+	parse_fail("DEALLOCATE 'x''y''z';");
+	parse_fail("DEALLOCATE 'PREPARE'");
 }
 
 static void test_discard_all(void)
@@ -449,12 +505,19 @@ static void test_parse_errors(void)
 	parse_fail("CREATE MODULE");
 	parse_fail("DEALLOCATE");
 	parse_fail("DEALLOCATE PREPARE");
+	parse_fail("DEALLOCATE PREPARE;");
+	parse_fail("DEALLOCATE PREPARE prepared pst");
+	parse_fail("DEALLOCATE PREPARED pst");
+	parse_fail("DEALLOCATE ALL pst");
+	parse_fail("DEALLOCATE foo_stmt extra");
 	parse_fail("DISCARD");
 	parse_fail("UNLISTEN");
 	parse_fail("COMMIT");
 	parse_fail("ROLLBACK");
 	parse_fail("ABORT");
 	parse_fail("END");
+	parse_fail("ALLOCATE foo");
+	parse_fail("PREPARE foo");
 }
 
 /*
@@ -493,6 +556,88 @@ static void test_long_set_value(void)
 	const char *res = parse_ok(input);
 	test(strncmp(res, "(set application_name=", 21) == 0);
 	test(strstr(res, "xxx") != NULL);
+}
+
+static void test_extract_query_ctx(void)
+{
+	od_linear_alloc_reset(&s_arena);
+
+	/* DISCARD ALL */
+	od_sql_minimal_node_t *ast = od_sql_minimal_parse(
+		"DISCARD ALL", strlen("DISCARD ALL"), &s_arena, NULL, NULL);
+	test(ast != NULL);
+	od_query_ctx_t ctx;
+	od_sql_minimal_extract_query_ctx(ast, &ctx);
+	test(ctx.parse_error == 0);
+	test(ctx.is_discard_all == 1);
+	test(ctx.is_unlisten_all == 0);
+	test(ctx.is_deallocate_all == 0);
+	test(ctx.has_deallocate_name == 0);
+	od_query_ctx_reset(&ctx);
+
+	/* UNLISTEN * */
+	od_linear_alloc_reset(&s_arena);
+	ast = od_sql_minimal_parse("UNLISTEN *", strlen("UNLISTEN *"), &s_arena,
+				   NULL, NULL);
+	test(ast != NULL);
+	od_sql_minimal_extract_query_ctx(ast, &ctx);
+	test(ctx.parse_error == 0);
+	test(ctx.is_discard_all == 0);
+	test(ctx.is_unlisten_all == 1);
+	test(ctx.is_deallocate_all == 0);
+	test(ctx.has_deallocate_name == 0);
+	od_query_ctx_reset(&ctx);
+
+	/* DEALLOCATE ALL */
+	od_linear_alloc_reset(&s_arena);
+	ast = od_sql_minimal_parse("DEALLOCATE ALL", strlen("DEALLOCATE ALL"),
+				   &s_arena, NULL, NULL);
+	test(ast != NULL);
+	od_sql_minimal_extract_query_ctx(ast, &ctx);
+	test(ctx.parse_error == 0);
+	test(ctx.is_discard_all == 0);
+	test(ctx.is_unlisten_all == 0);
+	test(ctx.is_deallocate_all == 1);
+	test(ctx.has_deallocate_name == 0);
+	od_query_ctx_reset(&ctx);
+
+	/* DEALLOCATE name */
+	od_linear_alloc_reset(&s_arena);
+	ast = od_sql_minimal_parse("DEALLOCATE foo", strlen("DEALLOCATE foo"),
+				   &s_arena, NULL, NULL);
+	test(ast != NULL);
+	od_sql_minimal_extract_query_ctx(ast, &ctx);
+	test(ctx.parse_error == 0);
+	test(ctx.is_discard_all == 0);
+	test(ctx.is_unlisten_all == 0);
+	test(ctx.is_deallocate_all == 0);
+	test(ctx.has_deallocate_name == 1);
+	test(strcmp(ctx.deallocate_name, "foo") == 0);
+	od_query_ctx_reset(&ctx);
+	test(ctx.has_deallocate_name == 0);
+
+	/* SELECT — nothing */
+	od_linear_alloc_reset(&s_arena);
+	ast = od_sql_minimal_parse("SELECT 1", strlen("SELECT 1"), &s_arena,
+				   NULL, NULL);
+	test(ast == NULL); /* not recognized by minimal parser */
+	od_sql_minimal_extract_query_ctx(NULL, &ctx);
+	test(ctx.parse_error == 1);
+	test(ctx.is_discard_all == 0);
+	test(ctx.is_unlisten_all == 0);
+	test(ctx.is_deallocate_all == 0);
+	test(ctx.has_deallocate_name == 0);
+	od_query_ctx_reset(&ctx);
+
+	/* DISCARD TEMP — not ALL, no parse error */
+	od_linear_alloc_reset(&s_arena);
+	ast = od_sql_minimal_parse("DISCARD TEMP", strlen("DISCARD TEMP"),
+				   &s_arena, NULL, NULL);
+	test(ast != NULL);
+	od_sql_minimal_extract_query_ctx(ast, &ctx);
+	test(ctx.parse_error == 0);
+	test(ctx.is_discard_all == 0);
+	od_query_ctx_reset(&ctx);
 }
 
 void odyssey_test_sql_minimal_parser(void)
@@ -556,6 +701,9 @@ void odyssey_test_sql_minimal_parser(void)
 	test_deallocate_prepare_all();
 	test_deallocate_case_insensitive();
 	test_deallocate_with_semicolon();
+	test_deallocate_whitespace();
+	test_deallocate_keyword_as_name();
+	test_deallocate_string_literal();
 
 	test_discard_all();
 	test_discard_temp();
@@ -575,4 +723,6 @@ void odyssey_test_sql_minimal_parser(void)
 
 	test_long_query_oom();
 	test_long_set_value();
+
+	test_extract_query_ctx();
 }

@@ -24,7 +24,6 @@
 #include <ejection.h>
 #include <parser.h>
 #include <stream.h>
-#include <query_processing.h>
 #include <module.h>
 #include <cancel.h>
 #include <auth.h>

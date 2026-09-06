@@ -30,11 +30,6 @@ typedef enum {
 
 #define OD_CLIENT_MAX_PEERLEN 128
 
-typedef struct {
-	int is_unlisten_all;
-	int is_discard_all;
-} od_client_query_ctx_t;
-
 struct od_client {
 	od_client_state_t state;
 	od_pool_client_type_t type;
@@ -104,7 +99,7 @@ struct od_client {
 
 	machine_msg_t *read_msg;
 
-	od_client_query_ctx_t query_ctx;
+	od_query_ctx_t query_ctx;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)

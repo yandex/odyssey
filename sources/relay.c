@@ -22,7 +22,6 @@
 #include <instance.h>
 #include <global.h>
 #include <parser.h>
-#include <query_processing.h>
 #include <stream.h>
 #include <xplan.h>
 #include <pstmt.h>
@@ -656,15 +655,10 @@ static od_frontend_status_t try_virtual_process_query(od_client_t *client,
 		return process_vdeallocate(
 			client, (const od_sql_minimal_deallocate_stmt_t *)ast);
 	case OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT:
-		client->query_ctx.is_unlisten_all =
-			((const od_sql_minimal_unlisten_stmt_t *)ast)->is_all;
+	case OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT:
+		od_sql_minimal_extract_query_ctx(ast, &client->query_ctx);
 		/* let the backend execute the query */
 		return OD_OK;
-	case OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT:
-		client->query_ctx.is_discard_all =
-			(((const od_sql_minimal_discard_stmt_t *)ast)->target ==
-			 OD_SQL_MINIMAL_DISCARD_ALL);
-		/* fallthrough */
 	default:
 		return OD_OK;
 	}
@@ -968,7 +962,7 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 	od_frontend_status_t status = process_possible_attach(
 		process_query_impl, relay, msg, timeout_ms);
 
-	memset(&relay->client->query_ctx, 0, sizeof(relay->client->query_ctx));
+	od_query_ctx_reset(&relay->client->query_ctx);
 
 	/*
 	 * in vanilla PG, executing simple query removes the
