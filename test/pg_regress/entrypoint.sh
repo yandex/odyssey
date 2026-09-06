@@ -72,6 +72,8 @@ pg_basebackup -D ${PGDIRREPL2} -p 5432 -R
 echo "port = 5434" >> ${PGDIRREPL2}/postgresql.conf
 pg_ctl start -D ${PGDIRREPL2} -l ${PGDIRREPL2}/log.txt
 
+do_test pin_on_listen 6432 postgres
+
 do_test simple 6432 suser
 do_test simple 6432 tuser
 

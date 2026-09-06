@@ -82,6 +82,7 @@ database "postgres" {
 		pool_discard yes
 		pool_cancel yes
 		pool_rollback yes
+		pool_pin_on_listen yes
 		pool_reserve_prepared_statement yes
 		pool_client_idle_timeout 4
 		pool_idle_in_transaction_timeout 5
