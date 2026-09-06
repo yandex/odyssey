@@ -16,6 +16,8 @@
 
 #define OD_LOGLINE_MAXLEN 1024
 
+#define OD_LOGGER_FORMAT_MAX_TOKENS 128
+
 #define OD_LOGGER_GLOBAL NULL
 
 typedef struct od_logger od_logger_t;
@@ -32,6 +34,34 @@ typedef enum {
 	OD_LOGGER_FORMAT_TEXT,
 	OD_LOGGER_FORMAT_JSON
 } od_logger_format_type_t;
+
+typedef enum {
+	OD_FMT_LITERAL, /* literal text run */
+	OD_FMT_PID, /* %p  */
+	OD_FMT_TID, /* %T  */
+	OD_FMT_TIMESTAMP, /* %t  */
+	OD_FMT_MILLIS, /* %e  */
+	OD_FMT_UNIXTIME, /* %n  */
+	OD_FMT_LEVEL, /* %l  */
+	OD_FMT_CONTEXT, /* %c  */
+	OD_FMT_MESSAGE, /* %m  */
+	OD_FMT_MESSAGE_ESC, /* %M  */
+	OD_FMT_CLIENT_ID, /* %i  */
+	OD_FMT_SERVER_ID, /* %s  */
+	OD_FMT_USER, /* %u  */
+	OD_FMT_DATABASE, /* %d  */
+	OD_FMT_EXTERNAL_ID, /* %x  */
+	OD_FMT_CLIENT_HOST, /* %h  */
+	OD_FMT_CLIENT_PORT, /* %r  */
+	OD_FMT_SERVER_HOST /* %H  */
+} od_fmt_token_type_t;
+
+typedef struct {
+	od_fmt_token_type_t type;
+	/* owner is original format string */
+	const char *literal;
+	int literal_len;
+} od_fmt_token_t;
 
 typedef struct {
 	od_logger_level_t level;
@@ -51,6 +81,10 @@ struct od_logger {
 	char *format;
 	int format_len;
 	od_logger_format_type_t format_type;
+
+	/* precompiled format-tokens */
+	od_fmt_token_t tokens[OD_LOGGER_FORMAT_MAX_TOKENS];
+	int tokens_count;
 
 	atomic_int fd;
 	atomic_int batching;
@@ -91,18 +125,7 @@ static inline void od_logger_set_stdout(od_logger_t *logger, int enable)
 	logger->log_stdout = enable;
 }
 
-static inline void od_logger_set_format(od_logger_t *logger, char *format)
-{
-	logger->format = format;
-	logger->format_len = strlen(format);
-
-	/* Detect JSON format */
-	if (strcasestr(format, "json") != NULL) {
-		logger->format_type = OD_LOGGER_FORMAT_JSON;
-	} else {
-		logger->format_type = OD_LOGGER_FORMAT_TEXT;
-	}
-}
+void od_logger_set_format(od_logger_t *logger, char *format);
 
 static inline void od_logger_set_async(od_logger_t *logger, int async)
 {
