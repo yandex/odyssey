@@ -31,6 +31,7 @@ typedef enum {
 #define OD_CLIENT_MAX_PEERLEN 128
 
 typedef struct {
+	int is_unlisten_all;
 	int is_discard_all;
 } od_client_query_ctx_t;
 

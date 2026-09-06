@@ -655,6 +655,11 @@ static od_frontend_status_t try_virtual_process_query(od_client_t *client,
 
 		return process_vdeallocate(
 			client, (const od_sql_minimal_deallocate_stmt_t *)ast);
+	case OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT:
+		client->query_ctx.is_unlisten_all =
+			((const od_sql_minimal_unlisten_stmt_t *)ast)->is_all;
+		/* let the backend execute the query */
+		return OD_OK;
 	case OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT:
 		client->query_ctx.is_discard_all =
 			(((const od_sql_minimal_discard_stmt_t *)ast)->target ==
@@ -708,6 +713,23 @@ static void process_discard(od_client_t *client, od_server_t *server)
 		if (server != NULL) {
 			od_server_pstmts_clear(server);
 		}
+	}
+}
+
+static inline void process_unlisten(od_client_t *client, od_server_t *server)
+{
+	od_route_t *route = client->route;
+	od_instance_t *instance = client->global->instance;
+
+	if (!route->rule->pool->pin_on_listen) {
+		return;
+	}
+
+	if (client->query_ctx.is_unlisten_all) {
+		od_debug(&instance->logger, "main", client, server,
+			 "UNLISTEN ALL detected, unpin client");
+
+		client->backend_pin = 0;
 	}
 }
 
@@ -858,6 +880,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	if (status == OD_OK) {
 		/* process only after success query completion */
 		process_discard(client, server);
+		process_unlisten(client, server);
 	}
 
 	return status;

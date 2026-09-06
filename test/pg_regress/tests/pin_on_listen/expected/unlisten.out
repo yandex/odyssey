@@ -1,0 +1,37 @@
+select 42;
+ ?column? 
+----------
+       42
+(1 row)
+
+show odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+
+listen a;
+show odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+unlisten b;
+show odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+unlisten *;
+show odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+
