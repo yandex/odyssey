@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os-version: ['bookworm', 'bullseye', 'trixie', 'forky', 'sid']
+        os-version: ['bookworm', 'trixie', 'forky', 'sid']
         build-type: ['build_release']
     steps:
     - uses: actions/checkout@v7
