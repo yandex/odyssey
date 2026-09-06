@@ -96,6 +96,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	logger->format = NULL;
 	logger->format_len = 0;
 	logger->format_type = OD_LOGGER_FORMAT_TEXT;
+	logger->tokens_count = 0;
 	atomic_init(&logger->fd, -1);
 	atomic_init(&logger->batching, 0);
 	atomic_init(&logger->state, OD_LOGGER_OFFLINE);
@@ -117,6 +118,150 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 }
 
 static inline void od_logger(void *arg);
+
+static inline od_fmt_token_type_t od_logger_format_parse_specifier(char c)
+{
+	switch (c) {
+	case 'p':
+		return OD_FMT_PID;
+	case 'T':
+		return OD_FMT_TID;
+	case 't':
+		return OD_FMT_TIMESTAMP;
+	case 'e':
+		return OD_FMT_MILLIS;
+	case 'n':
+		return OD_FMT_UNIXTIME;
+	case 'l':
+		return OD_FMT_LEVEL;
+	case 'c':
+		return OD_FMT_CONTEXT;
+	case 'm':
+		return OD_FMT_MESSAGE;
+	case 'M':
+		return OD_FMT_MESSAGE_ESC;
+	case 'i':
+		return OD_FMT_CLIENT_ID;
+	case 's':
+		return OD_FMT_SERVER_ID;
+	case 'u':
+		return OD_FMT_USER;
+	case 'd':
+		return OD_FMT_DATABASE;
+	case 'x':
+		return OD_FMT_EXTERNAL_ID;
+	case 'h':
+		return OD_FMT_CLIENT_HOST;
+	case 'r':
+		return OD_FMT_CLIENT_PORT;
+	case 'H':
+		return OD_FMT_SERVER_HOST;
+	default:
+		return OD_FMT_LITERAL;
+	}
+}
+
+void od_logger_set_format(od_logger_t *logger, char *format)
+{
+	logger->tokens_count = 0;
+
+	logger->format = format;
+	logger->format_len = strlen(format);
+
+	if (strcasestr(format, "json") != NULL) {
+		logger->format_type = OD_LOGGER_FORMAT_JSON;
+		return;
+	}
+
+	logger->format_type = OD_LOGGER_FORMAT_TEXT;
+
+	int n = 0;
+	const char *p = format;
+	const char *end = format + logger->format_len;
+	const char *lit_start = p;
+
+	while (p < end) {
+		if (*p == '\\') {
+			if (p + 1 >= end) {
+				p++;
+				continue;
+			}
+			if (lit_start < p && n < OD_LOGGER_FORMAT_MAX_TOKENS) {
+				logger->tokens[n].type = OD_FMT_LITERAL;
+				logger->tokens[n].literal = lit_start;
+				logger->tokens[n].literal_len =
+					(int)(p - lit_start);
+				n++;
+			}
+			lit_start = p;
+			if (n < OD_LOGGER_FORMAT_MAX_TOKENS) {
+				logger->tokens[n].type = OD_FMT_LITERAL;
+				logger->tokens[n].literal = p;
+				logger->tokens[n].literal_len = 2;
+				n++;
+			}
+			p += 2;
+			lit_start = p;
+			continue;
+		}
+
+		if (*p == '%') {
+			if (p + 1 >= end) {
+				p++;
+				continue;
+			}
+			char spec = p[1];
+			if (spec == '%') {
+				if (lit_start < p &&
+				    n < OD_LOGGER_FORMAT_MAX_TOKENS) {
+					logger->tokens[n].type = OD_FMT_LITERAL;
+					logger->tokens[n].literal = lit_start;
+					logger->tokens[n].literal_len =
+						(int)(p - lit_start);
+					n++;
+				}
+				if (n < OD_LOGGER_FORMAT_MAX_TOKENS) {
+					logger->tokens[n].type = OD_FMT_LITERAL;
+					logger->tokens[n].literal = p;
+					logger->tokens[n].literal_len = 1;
+					n++;
+				}
+				p += 2;
+				lit_start = p;
+				continue;
+			}
+			if (lit_start < p && n < OD_LOGGER_FORMAT_MAX_TOKENS) {
+				logger->tokens[n].type = OD_FMT_LITERAL;
+				logger->tokens[n].literal = lit_start;
+				logger->tokens[n].literal_len =
+					(int)(p - lit_start);
+				n++;
+			}
+			od_fmt_token_type_t type =
+				od_logger_format_parse_specifier(spec);
+			if (n < OD_LOGGER_FORMAT_MAX_TOKENS) {
+				logger->tokens[n].type = type;
+				logger->tokens[n].literal = NULL;
+				logger->tokens[n].literal_len = 0;
+				n++;
+			}
+			p += 2;
+			lit_start = p;
+			continue;
+		}
+
+		p++;
+	}
+
+	if (lit_start < p && n < OD_LOGGER_FORMAT_MAX_TOKENS) {
+		logger->tokens[n].type = OD_FMT_LITERAL;
+		logger->tokens[n].literal = lit_start;
+		logger->tokens[n].literal_len = (int)(p - lit_start);
+		n++;
+	}
+
+	logger->tokens_count = n;
+}
 
 od_retcode_t od_logger_load(od_logger_t *logger)
 {
@@ -259,6 +404,110 @@ __attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
 	return dst_pos - dest;
 }
 
+/* should be faster than od_snprintf("%s") */
+static inline int od_logger_append_str(char *dst, char *dst_end, const char *s)
+{
+	if (s == NULL) {
+		s = "none";
+	}
+	size_t len = strlen(s);
+	size_t avail = (size_t)(dst_end - dst);
+	if (len > avail) {
+		len = avail;
+	}
+	memcpy(dst, s, len);
+	return (int)len;
+}
+
+/* should be faster than od_snprintf("%s") */
+static inline int od_logger_append_strn(char *dst, char *dst_end, const char *s,
+					size_t len)
+{
+	size_t avail = (size_t)(dst_end - dst);
+	if (len > avail) {
+		len = avail;
+	}
+	memcpy(dst, s, len);
+	return (int)len;
+}
+
+/* should be faster than od_snprintf("%lu", val) */
+static inline int od_logger_append_u64(char *dst, char *dst_end, uint64_t val)
+{
+	char tmp[20];
+	int n = 0;
+	do {
+		tmp[n++] = (char)('0' + (val % 10));
+		val /= 10;
+	} while (val);
+	size_t avail = (size_t)(dst_end - dst);
+	size_t w = 0;
+	while (n > 0 && w < avail) {
+		dst[w++] = tmp[--n];
+	}
+	return (int)w;
+}
+
+/* should be faster than od_snprintf("%03d", val), width must be <= 10 */
+static inline int od_logger_append_u32_padded(char *dst, char *dst_end,
+					      uint32_t val, int width)
+{
+	char tmp[10];
+	int n = 0;
+	do {
+		tmp[n++] = (char)('0' + (val % 10));
+		val /= 10;
+	} while (val);
+	size_t avail = (size_t)(dst_end - dst);
+	size_t w = 0;
+	while (n < width && w < avail) {
+		dst[w++] = '0';
+		width--;
+	}
+	while (n > 0 && w < avail) {
+		dst[w++] = tmp[--n];
+	}
+	return (int)w;
+}
+
+/* should be faster than od_snprintf("0x%" PRIx64, val) */
+static inline int od_logger_append_hex64(char *dst, char *dst_end, uint64_t val)
+{
+	static const char hex[] = "0123456789abcdef";
+	char tmp[16];
+	int n = 0;
+	do {
+		tmp[n++] = hex[val & 0xF];
+		val >>= 4;
+	} while (val);
+	size_t avail = (size_t)(dst_end - dst);
+	size_t w = 0;
+	if (w < avail) {
+		dst[w++] = '0';
+	}
+	if (w < avail) {
+		dst[w++] = 'x';
+	}
+	while (n > 0 && w < avail) {
+		dst[w++] = tmp[--n];
+	}
+	return (int)w;
+}
+
+/* should be faster than od_snprintf("%s%.*s", prefix, id_len, id) */
+static inline int od_logger_append_id(char *dst, char *dst_end,
+				      const char *prefix, const char *id,
+				      int id_len)
+{
+	int total = 0;
+	if (prefix) {
+		total += od_logger_append_str(dst, dst_end, prefix);
+		dst += total;
+	}
+	total += od_logger_append_strn(dst, dst_end, id, id_len);
+	return total;
+}
+
 __attribute__((hot)) static inline int
 od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 		 od_client_t *client, od_server_t *server, char *fmt,
@@ -266,275 +515,220 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 {
 	char *dst_pos = output;
 	char *dst_end = output + output_len;
-	char *format_pos = logger->format;
-	char *format_end = logger->format + logger->format_len;
 	char peer[128];
 
-	int len;
-	while (format_pos < format_end) {
-		if (*format_pos == '\\') {
-			format_pos++;
-			if (od_unlikely(format_pos == format_end)) {
-				break;
-			}
-			if (od_unlikely((dst_end - dst_pos) < 1)) {
-				break;
-			}
-			switch (*format_pos) {
-			case '\\':
-				dst_pos[0] = '\\';
-				dst_pos += 1;
-				break;
-			case 'n':
-				dst_pos[0] = '\n';
-				dst_pos += 1;
-				break;
-			case 't':
-				dst_pos[0] = '\t';
-				dst_pos += 1;
-				break;
-			case 'r':
-				dst_pos[0] = '\r';
-				dst_pos += 1;
-				break;
-			default:
-				if (od_unlikely((dst_end - dst_pos) < 2)) {
-					break;
-				}
-				dst_pos[0] = '\\';
-				dst_pos[1] = *format_pos;
-				dst_pos += 2;
-				break;
-			}
-		} else if (*format_pos == '%') {
-			format_pos++;
-			if (od_unlikely(format_pos == format_end)) {
-				break;
-			}
-			switch (*format_pos) {
-			/* external_id */
-			case 'x': {
-				if (client && client->external_id != NULL) {
-					len = od_snprintf(dst_pos,
-							  dst_end - dst_pos,
-							  "%s",
-							  client->external_id);
-					dst_pos += len;
-					break;
-				}
+	/* Fast path: iterate over pre-compiled tokens. */
+	od_fmt_token_t *tokens = logger->tokens;
+	int n = logger->tokens_count;
 
-				/* fall through fix (if client is not defined will write 'none' to log file) */
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "none");
-				dst_pos += len;
-				break;
-			}
-			/* unixtime */
-			case 'n': {
-				time_t tm = time(NULL);
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "%lu", tm);
-				dst_pos += len;
-				break;
-			}
-			/* timestamp */
-			case 't': {
-				struct timeval tv;
-				gettimeofday(&tv, NULL);
-				struct tm tm;
-				len = strftime(dst_pos, dst_end - dst_pos,
-					       "%FT%TZ",
-					       gmtime_r(&tv.tv_sec, &tm));
-				dst_pos += len;
+	/* Lazily fetch time info only if needed. */
+	struct timeval tv;
+	int tv_fetched = 0;
+	struct tm tm;
+	int tm_parsed = 0;
 
-				break;
-			}
-			/* millis */
-			case 'e': {
-				struct timeval tv;
-				gettimeofday(&tv, NULL);
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "%03d",
-						  (signed)tv.tv_usec / 1000);
-				dst_pos += len;
-				break;
-			}
-			/* pid */
-			case 'p':
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "%s", logger->pid->pid_sz);
-				dst_pos += len;
-				break;
-			/* thread id */
-			case 'T':
-				len = od_snprintf(
-					dst_pos, dst_end - dst_pos,
-					"0x%" PRIx64,
-					(uint64_t)(uintptr_t)pthread_self());
-				dst_pos += len;
-				break;
-			/* client id */
-			case 'i':
-				if (client && client->id.id_prefix != NULL) {
-					len = od_snprintf(
-						dst_pos, dst_end - dst_pos,
-						"%s%.*s", client->id.id_prefix,
-						(signed)sizeof(client->id.id),
-						client->id.id);
-					dst_pos += len;
-					break;
-				}
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "none");
-				dst_pos += len;
-				break;
-			/* server id */
-			case 's':
-				if (server && server->id.id_prefix != NULL) {
-					len = od_snprintf(
-						dst_pos, dst_end - dst_pos,
-						"%s%.*s", server->id.id_prefix,
-						(signed)sizeof(server->id.id),
-						server->id.id);
-					dst_pos += len;
-					break;
-				}
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "none");
-				dst_pos += len;
-				break;
-			/* user name */
-			case 'u':
-				if (client && client->startup.user.value_len) {
-					len = od_snprintf(
-						dst_pos, dst_end - dst_pos,
-						"%s",
-						client->startup.user.value);
-					dst_pos += len;
-					break;
-				}
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "none");
-				dst_pos += len;
-				break;
-			/* database name */
-			case 'd':
-				if (client &&
-				    client->startup.database.value_len) {
-					len = od_snprintf(
-						dst_pos, dst_end - dst_pos,
-						"%s",
-						client->startup.database.value);
-					dst_pos += len;
-					break;
-				}
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "none");
-				dst_pos += len;
-				break;
-			/* context */
-			case 'c':
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "%s", context);
-				dst_pos += len;
-				break;
-			/* level */
-			case 'l':
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "%s", od_log_level[level]);
-				dst_pos += len;
-				break;
-			/* message */
-			case 'm':
-				len = od_vsnprintf(dst_pos, dst_end - dst_pos,
-						   fmt, args);
-				dst_pos += len;
-				break;
-			/* message (escaped) */
-			case 'M':
-				len = od_logger_escape(
-					dst_pos, dst_end - dst_pos, fmt, args);
-				dst_pos += len;
-				break;
-			/* server host */
-			case 'H':
-				if (client && client->route) {
-					od_rule_storage_t *storage =
-						client->route->rule->storage;
-					if (client->server != NULL &&
-					    client->server->endpoint != NULL) {
-						storage =
-							client->server->endpoint
-								->storage;
+	for (int i = 0; i < n; i++) {
+		od_fmt_token_t *tok = &tokens[i];
+		switch (tok->type) {
+		case OD_FMT_LITERAL: {
+			int lit_len = tok->literal_len;
+			const char *lit = tok->literal;
+			int j = 0;
+			while (j < lit_len) {
+				if (lit[j] == '\\' && j + 1 < lit_len) {
+					/* backslash escape: \n, \t, \r, \\ */
+					if (od_unlikely((dst_end - dst_pos) <
+							1)) {
+						goto format_done;
 					}
-					len = od_snprintf(
-						dst_pos, dst_end - dst_pos,
-						"%s",
-						storage ? storage->host :
-							  "none");
-					dst_pos += len;
-					break;
+					switch (lit[j + 1]) {
+					case '\\':
+						*dst_pos++ = '\\';
+						break;
+					case 'n':
+						*dst_pos++ = '\n';
+						break;
+					case 't':
+						*dst_pos++ = '\t';
+						break;
+					case 'r':
+						*dst_pos++ = '\r';
+						break;
+					default:
+						if (od_unlikely((dst_end -
+								 dst_pos) <
+								2)) {
+							goto format_done;
+						}
+						*dst_pos++ = '\\';
+						*dst_pos++ = lit[j + 1];
+						break;
+					}
+					j += 2;
+				} else {
+					if (od_unlikely((dst_end - dst_pos) <
+							1)) {
+						goto format_done;
+					}
+					*dst_pos++ = lit[j];
+					j += 1;
 				}
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "none");
-				dst_pos += len;
-				break;
-			/* client host */
-			case 'h':
-				if (client && client->io.io) {
-					od_getpeername(client->io.io, peer,
-						       sizeof(peer), 1, 0);
-					len = od_snprintf(dst_pos,
-							  dst_end - dst_pos,
-							  "%s", peer);
-					dst_pos += len;
-					break;
-				}
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "none");
-				dst_pos += len;
-				break;
-			/* client port */
-			case 'r':
-				if (client && client->io.io) {
-					od_getpeername(client->io.io, peer,
-						       sizeof(peer), 0, 1);
-					len = od_snprintf(dst_pos,
-							  dst_end - dst_pos,
-							  "%s", peer);
-					dst_pos += len;
-					break;
-				}
-				len = od_snprintf(dst_pos, dst_end - dst_pos,
-						  "none");
-				dst_pos += len;
-				break;
-			case '%':
-				if (od_unlikely((dst_end - dst_pos) < 1)) {
-					break;
-				}
-				dst_pos[0] = '%';
-				dst_pos += 1;
-				break;
-			default:
-				if (od_unlikely((dst_end - dst_pos) < 2)) {
-					break;
-				}
-				dst_pos[0] = '%';
-				dst_pos[1] = *format_pos;
-				dst_pos += 2;
-				break;
 			}
-		} else {
-			if (od_unlikely((dst_end - dst_pos) < 1)) {
-				break;
-			}
-			dst_pos[0] = *format_pos;
-			dst_pos += 1;
+			break;
 		}
-		format_pos++;
+		case OD_FMT_PID:
+			dst_pos += od_logger_append_strn(dst_pos, dst_end,
+							 logger->pid->pid_sz,
+							 logger->pid->pid_len);
+			break;
+		case OD_FMT_TID:
+			dst_pos += od_logger_append_hex64(
+				dst_pos, dst_end,
+				(uint64_t)(uintptr_t)pthread_self());
+			break;
+		case OD_FMT_TIMESTAMP: {
+			if (!tv_fetched) {
+				gettimeofday(&tv, NULL);
+				tv_fetched = 1;
+			}
+			if (!tm_parsed) {
+				gmtime_r(&tv.tv_sec, &tm);
+				tm_parsed = 1;
+			}
+			int len = strftime(dst_pos, dst_end - dst_pos, "%FT%TZ",
+					   &tm);
+			dst_pos += len;
+			break;
+		}
+		case OD_FMT_MILLIS: {
+			if (!tv_fetched) {
+				gettimeofday(&tv, NULL);
+				tv_fetched = 1;
+			}
+			dst_pos += od_logger_append_u32_padded(
+				dst_pos, dst_end,
+				(uint32_t)((signed)tv.tv_usec / 1000), 3);
+			break;
+		}
+		case OD_FMT_UNIXTIME: {
+			if (!tv_fetched) {
+				gettimeofday(&tv, NULL);
+				tv_fetched = 1;
+			}
+			dst_pos += od_logger_append_u64(dst_pos, dst_end,
+							(uint64_t)tv.tv_sec);
+			break;
+		}
+		case OD_FMT_LEVEL:
+			dst_pos += od_logger_append_str(dst_pos, dst_end,
+							od_log_level[level]);
+			break;
+		case OD_FMT_CONTEXT:
+			dst_pos +=
+				od_logger_append_str(dst_pos, dst_end, context);
+			break;
+		case OD_FMT_MESSAGE:
+			dst_pos += od_vsnprintf(dst_pos, dst_end - dst_pos, fmt,
+						args);
+			break;
+		case OD_FMT_MESSAGE_ESC:
+			dst_pos += od_logger_escape(dst_pos, dst_end - dst_pos,
+						    fmt, args);
+			break;
+		case OD_FMT_CLIENT_ID:
+			if (client && client->id.id_prefix != NULL) {
+				dst_pos += od_logger_append_id(
+					dst_pos, dst_end, client->id.id_prefix,
+					client->id.id,
+					(int)sizeof(client->id.id));
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
+			break;
+		case OD_FMT_SERVER_ID:
+			if (server && server->id.id_prefix != NULL) {
+				dst_pos += od_logger_append_id(
+					dst_pos, dst_end, server->id.id_prefix,
+					server->id.id,
+					(int)sizeof(server->id.id));
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
+			break;
+		case OD_FMT_USER:
+			if (client && client->startup.user.value_len) {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end,
+					client->startup.user.value);
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
+			break;
+		case OD_FMT_DATABASE:
+			if (client && client->startup.database.value_len) {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end,
+					client->startup.database.value);
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
+			break;
+		case OD_FMT_EXTERNAL_ID:
+			if (client && client->external_id != NULL) {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, client->external_id);
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
+			break;
+		case OD_FMT_SERVER_HOST:
+			if (client && client->route) {
+				od_rule_storage_t *storage =
+					client->route->rule->storage;
+				if (client->server != NULL &&
+				    client->server->endpoint != NULL) {
+					storage = client->server->endpoint
+							  ->storage;
+				}
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end,
+					storage ? storage->host : "none");
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
+			break;
+		case OD_FMT_CLIENT_HOST:
+			if (client && client->io.io) {
+				od_getpeername(client->io.io, peer,
+					       sizeof(peer), 1, 0);
+				dst_pos += od_logger_append_str(dst_pos,
+								dst_end, peer);
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
+			break;
+		case OD_FMT_CLIENT_PORT:
+			if (client && client->io.io) {
+				od_getpeername(client->io.io, peer,
+					       sizeof(peer), 0, 1);
+				dst_pos += od_logger_append_str(dst_pos,
+								dst_end, peer);
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
+			break;
+		}
 	}
 
+format_done:
 	/* append new line, if format string doesn't have it */
 	if (dst_pos < dst_end && dst_pos > output && *(dst_pos - 1) != '\n') {
 		*dst_pos = '\n';
