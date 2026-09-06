@@ -9,6 +9,7 @@
 #include <odyssey.h>
 #include <stdio.h>
 #include <sql/minimal/ast.h>
+#include <util.h>
 
 od_sql_minimal_node_t *od_sql_minimal_node_alloc(od_linear_alloc_t *al,
 						 od_sql_minimal_node_tag_t type,
@@ -118,4 +119,55 @@ int od_sql_minimal_node_print(const od_sql_minimal_node_t *node, char *buf,
 	default:
 		return snprintf(buf, buflen, "(unknown:%d)", (int)node->type);
 	}
+}
+
+void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
+				      od_query_ctx_t *ctx)
+{
+	ctx->is_discard_all = 0;
+	ctx->is_unlisten_all = 0;
+	ctx->is_deallocate_all = 0;
+	ctx->has_deallocate_name = 0;
+	ctx->deallocate_name[0] = '\0';
+	ctx->parse_error = 0;
+
+	if (ast == NULL) {
+		ctx->parse_error = 1;
+		return;
+	}
+
+	switch (ast->type) {
+	case OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT: {
+		const od_sql_minimal_unlisten_stmt_t *n =
+			(const od_sql_minimal_unlisten_stmt_t *)ast;
+		ctx->is_unlisten_all = n->is_all;
+		break;
+	}
+	case OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT: {
+		const od_sql_minimal_discard_stmt_t *n =
+			(const od_sql_minimal_discard_stmt_t *)ast;
+		ctx->is_discard_all = (n->target == OD_SQL_MINIMAL_DISCARD_ALL);
+		break;
+	}
+	case OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT: {
+		const od_sql_minimal_deallocate_stmt_t *n =
+			(const od_sql_minimal_deallocate_stmt_t *)ast;
+		if (n->is_all) {
+			ctx->is_deallocate_all = 1;
+		} else if (n->name != NULL) {
+			ctx->has_deallocate_name = 1;
+			od_snprintf(ctx->deallocate_name,
+				    sizeof(ctx->deallocate_name), "%s",
+				    n->name);
+		}
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+void od_query_ctx_reset(od_query_ctx_t *ctx)
+{
+	memset(ctx, 0, sizeof(od_query_ctx_t));
 }

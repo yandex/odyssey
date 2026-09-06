@@ -16,7 +16,7 @@
 #include <misc.h>
 #include <util.h>
 #include <parser.h>
-#include <query_processing.h>
+#include <worker.h>
 
 static inline kiwi_be_type_t msg_be_type(machine_msg_t *msg)
 {
@@ -381,6 +381,27 @@ xplan_append_fwd_no_delta(od_xplan_t *xp, machine_msg_t *original,
 {
 	od_xplan_entry_t e;
 	entry_init_fwd_no_delta(&e, original, rewritten);
+
+	int rc = xplan_append(xp, &e);
+	if (rc != 0) {
+		return OD_EOOM;
+	}
+
+	return OD_OK;
+}
+
+/*
+ * forward an Execute (or similar) with OD_XPLAN_DELTA_NONE, but attach
+ * pstmt so that delta_apply can inspect pstmt->query_ctx after the
+ * server replies (e.g. to clear backend_pin on UNLISTEN *).
+ */
+static inline od_frontend_status_t
+xplan_append_fwd_with_pstmt(od_xplan_t *xp, machine_msg_t *original,
+			    od_pstmt_t *pstmt)
+{
+	od_xplan_entry_t e;
+	entry_init_fwd(&e, original, NULL /* no rewrite */, OD_XPLAN_DELTA_NONE,
+		       NULL, pstmt);
 
 	int rc = xplan_append(xp, &e);
 	if (rc != 0) {
@@ -755,7 +776,8 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 
 	od_global_pstmt_map_t *global_pstmts =
 		od_instance_get_pstmts_map(instance);
-	od_pstmt_t *pstmt = od_pstmt_create_or_get(global_pstmts, desc);
+	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
+	od_pstmt_t *pstmt = od_pstmt_create_or_get(global_pstmts, desc, arena);
 	if (pstmt == NULL) {
 		return OD_EOOM;
 	}
@@ -883,41 +905,6 @@ static od_frontend_status_t plan_close(od_relay_t *relay, od_xplan_t *xp,
 
 	/* let the pg format the correct error */
 	return xplan_append_fwd_no_delta(xp, msg, NULL /* no rewrite */);
-}
-
-/*
- * detect whether a prepared statement is a DEALLOCATE that must be
- * virtualized (not sent to the server) in the extended protocol path.
- *
- * returns:
- *  -1  not a virtualizable query
- *   0  DEALLOCATE name  (name stored in *name / *name_len)
- *   1  DEALLOCATE ALL
- *
- * note: DISCARD ALL is NOT virtualized - it resets much more than just
- * prepared statements (temp tables, sequences, listen/notify, session
- * variables, advisory locks, etc) and must be executed on the server.
- *
- * for DEALLOCATE name, *name points into desc->data (stable, NUL-terminated).
- */
-static int pstmt_deallocate_check(const od_pstmt_t *pstmt, const char **name,
-				  size_t *name_len)
-{
-	const od_pstmt_desc_t *desc = &pstmt->desc;
-	if (desc->len < 10) {
-		return -1;
-	}
-
-	int rc = od_parse_deallocate(desc->data, strlen(desc->data), name,
-				     name_len);
-	switch (rc) {
-	case 1:
-		return 1;
-	case 0:
-		return 0;
-	default:
-		return -1;
-	}
 }
 
 static inline machine_msg_t *rewrite_bind_msg(char *data, int size,
@@ -1050,27 +1037,27 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 	}
 
 	/*
-	 * detect DEALLOCATE ALL / DEALLOCATE name in the prepared statement
-	 * text and virtualize the Execute:
-	 * - do not send Execute to the server
-	 * - synthesize a virtual CommandComplete
-	 * - apply the appropriate delta to keep client state in sync
-	 *
-	 * this fixes the long-standing issue where DEALLOCATE was detected at
-	 * Bind time (too early) and DEALLOCATE name was a no-op.
-	 *
-	 * note: we only clear the CLIENT hashmap (not server), matching the
-	 * simple-protocol process_vdeallocate behavior. the server still
-	 * holds its odyssey_pstmt_N entries (they are reused on next Bind).
+	 * detect virtualizable commands via the cached query_ctx flags
+	 * (parsed once at pstmt creation time in od_pstmt_create_or_get).
+	 * this avoids re-parsing the query text on every Execute.
 	 *
 	 * DISCARD ALL is NOT virtualized: it resets much more than just
 	 * prepared statements (temp tables, sequences, listen/notify,
 	 * session variables, advisory locks) and must run on the server.
 	 * it is forwarded and REMOVE_ALL delta clears both hashmaps after
 	 * the server replies (matching simple-protocol process_discard).
+	 *
+	 * DEALLOCATE ALL / DEALLOCATE name ARE virtualized (not sent to server):
+	 * only the client hashmap is cleared; the server keeps its
+	 * odyssey_pstmt_N entries (reused on next Bind).
+	 *
+	 * UNLISTEN * and other non-virtualized commands are forwarded with
+	 * the pstmt attached (OD_XPLAN_DELTA_NONE); delta_apply inspects
+	 * pstmt->query_ctx after success to apply side effects (e.g. clearing
+	 * backend_pin on UNLISTEN *).
 	 */
-	const od_pstmt_desc_t *desc = &pstmt->desc;
-	if (od_parse_discard_all(desc->data, strlen(desc->data))) {
+	const od_query_ctx_t *qctx = &pstmt->query_ctx;
+	if (qctx->is_discard_all) {
 		od_debug(&instance->logger, "rewrite execute", client, server,
 			 "DISCARD ALL detected via portal, invalidate caches");
 
@@ -1079,35 +1066,30 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 			NULL /* can not to pass the pstmt - it will not be used */);
 	}
 
-	size_t dealloc_name_len;
-	const char *dealloc_name = NULL;
-	int vrc =
-		pstmt_deallocate_check(pstmt, &dealloc_name, &dealloc_name_len);
-	switch (vrc) {
-	case 1: /* DEALLOCATE ALL */
+	if (qctx->is_deallocate_all) {
 		od_debug(
 			&instance->logger, "rewrite execute", client, server,
 			"DEALLOCATE ALL detected via portal, invalidate client caches");
 		return xplan_append_virtual_command_complete(
 			xp, msg, OD_XPLAN_DELTA_REMOVE_CLIENT_ALL, NULL, NULL,
 			cc_deallocate_all, sizeof(cc_deallocate_all));
-	case 0: { /* DEALLOCATE name */
+	}
+
+	if (qctx->has_deallocate_name) { /* DEALLOCATE name */
 		od_debug(&instance->logger, "rewrite execute", client, server,
-			 "DEALLOCATE '%.*s' detected via portal",
-			 (int)dealloc_name_len, dealloc_name);
+			 "DEALLOCATE '%s' detected via portal",
+			 qctx->deallocate_name);
 		/*
 		 * TODO: PG returns ERROR 26000 if the statement does not
 		 * exist; we always report success, same as
 		 * process_vdeallocate() in the simple path.
 		 *
-		 * od_parse_deallocate returns a pointer into pstmt->desc.data
-		 * (not NUL-terminated). The client_pstmt delta field is passed
-		 * to hashmap operations (strcmp/strlen) which require a
-		 * NUL-terminated string, so make an owned copy. It is freed in
-		 * plan_entry_destroy.
+		 * deallocate_name is stored inplace in od_pstmt_t.query_ctx.
+		 * The client_pstmt delta field is passed to hashmap operations
+		 * (strcmp/strlen), so make an owned NUL-terminated copy. It is
+		 * freed in plan_entry_destroy.
 		 */
-		char *dealloc_name_z =
-			od_strdup_from_buf(dealloc_name, dealloc_name_len);
+		char *dealloc_name_z = od_strdup(qctx->deallocate_name);
 		if (dealloc_name_z == NULL) {
 			return OD_EOOM;
 		}
@@ -1120,12 +1102,14 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 		}
 		return st;
 	}
-	default:
-		/* not a special query - forward normally */
-		break;
-	}
 
-	return xplan_append_fwd_no_delta(xp, msg, NULL /* no rewrite */);
+	/*
+	 * not a virtualized command (DISCARD ALL / DEALLOCATE) — forward to
+	 * the server. pass pstmt so that delta_apply can inspect the cached
+	 * query_ctx flags (e.g. is_unlisten_all to clear backend_pin after
+	 * successful execution).
+	 */
+	return xplan_append_fwd_with_pstmt(xp, msg, pstmt);
 }
 
 static od_frontend_status_t plan_flush(od_relay_t *relay, od_xplan_t *xp,
@@ -1304,6 +1288,15 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 {
 	od_xplan_delta_type_t type = delta->type;
 
+	/*
+	 * UNLISTEN * is forwarded (not virtualized) — the server must
+	 * actually drop the subscription. after success, clear
+	 * backend_pin, matching simple-protocol process_unlisten.
+	 */
+	if (delta->pstmt != NULL && delta->pstmt->query_ctx.is_unlisten_all) {
+		client->backend_pin = 0;
+	}
+
 	if (type == OD_XPLAN_DELTA_ADD_BOTH ||
 	    type == OD_XPLAN_DELTA_ADD_CLIENT_ONLY) {
 		int rc = od_client_add_pstmt(client, delta->client_pstmt,
@@ -1323,7 +1316,6 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 
 	switch (type) {
 	case OD_XPLAN_DELTA_NONE:
-		/* nothing to do */
 		break;
 	case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY:
 		od_client_remove_pstmt(client, delta->client_pstmt);

@@ -17,6 +17,7 @@
 #include <client.h>
 #include <server.h>
 #include <pstmt.h>
+#include <sql/minimal/parser.h>
 
 /* XXX: randomize seed ? */
 static const uint64_t hash_seed = 0;
@@ -657,7 +658,8 @@ void od_global_pstmts_map_free(od_global_pstmt_map_t *hm)
 }
 
 od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
-				   const od_pstmt_desc_t desc)
+				   const od_pstmt_desc_t desc,
+				   od_linear_alloc_t *arena)
 {
 	mm_hashmap_keylock_t klock;
 	int rc;
@@ -695,6 +697,22 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 		 * memcpy of find key (desc)
 		 */
 		key->data = value->desc.data;
+
+		/*
+		 * parse the query text once and cache the query context flags
+		 * (is_discard_all, is_unlisten_all, is_deallocate_all,
+		 *  deallocate_name) so that plan_execute / process_discard /
+		 * process_unlisten can avoid re-parsing on every Execute.
+		 *
+		 * od_sql_minimal_parse uses the arena provided by the caller;
+		 * the AST is discarded after extraction. deallocate_name is
+		 * stored inplace in query_ctx (no heap allocation).
+		 */
+		od_sql_minimal_node_t *ast =
+			od_sql_minimal_parse(value->desc.data,
+					     strlen(value->desc.data), arena,
+					     NULL, NULL);
+		od_sql_minimal_extract_query_ctx(ast, &value->query_ctx);
 	} else {
 		/* the key already exists and has a copy of desc.data, do nothing */
 	}

@@ -32,6 +32,8 @@
 #include <machinarium/machinarium.h>
 
 #include <types.h>
+#include <alloc/linear.h>
+#include <sql/minimal/ast.h>
 
 #define OD_PSTMT_NAME_PREFIX "odyssey_pstmt_"
 #define OD_MAX_PSTMT_NUM (99999999999999999UL)
@@ -55,6 +57,13 @@ struct od_pstmt {
 	/* own the desc->data copy */
 	od_pstmt_desc_t desc;
 	od_pstmt_name_t name;
+
+	/*
+	 * query context flags, parsed once from desc.data via
+	 * od_sql_minimal_parse at pstmt creation time.
+	 * deallocate_name is stored inplace (no heap allocation).
+	 */
+	od_query_ctx_t query_ctx;
 
 	/*
 	 * holded by:
@@ -112,7 +121,8 @@ int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
 od_global_pstmt_map_t *od_global_pstmts_map_create(size_t nlocks);
 void od_global_pstmts_map_free(od_global_pstmt_map_t *hm);
 od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *gm,
-				   od_pstmt_desc_t desc);
+				   od_pstmt_desc_t desc,
+				   od_linear_alloc_t *arena);
 int od_global_pstmts_has_pstmt(od_global_pstmt_map_t *gm,
 			       const od_pstmt_desc_t desc);
 void od_global_pstmt_try_remove(od_global_pstmt_map_t *gm, od_pstmt_t *pstmt);

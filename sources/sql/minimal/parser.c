@@ -22,6 +22,8 @@ od_sql_minimal_node_t *od_sql_minimal_parse(const char *input, size_t input_len,
 		return NULL;
 	}
 
+	od_linear_alloc_reset(arena);
+
 	od_sql_minimal_parse_ctx_t ctx;
 	od_sql_minimal_parse_ctx_init(&ctx, input, input_len, arena, error_cb,
 				      userdata);

@@ -91,6 +91,17 @@ typedef struct {
 	int is_all;
 } od_sql_minimal_unlisten_stmt_t;
 
+#define OD_PG_NAMEDATALEN 64
+
+typedef struct {
+	int parse_error;
+	int is_discard_all;
+	int is_unlisten_all;
+	int is_deallocate_all;
+	int has_deallocate_name;
+	char deallocate_name[OD_PG_NAMEDATALEN];
+} od_query_ctx_t;
+
 od_sql_minimal_node_t *od_sql_minimal_node_alloc(od_linear_alloc_t *al,
 						 od_sql_minimal_node_tag_t type,
 						 size_t size);
@@ -98,3 +109,17 @@ void od_sql_minimal_node_free(od_sql_minimal_node_t *node);
 
 int od_sql_minimal_node_print(const od_sql_minimal_node_t *node, char *buf,
 			      size_t buflen);
+
+/*
+ * Extract query-context flags from a minimal-parser AST into ctx.
+ * On a non-matching AST, all flags are set to 0.
+ * deallocate_name (if has_deallocate_name) is stored inplace (no heap alloc).
+ */
+void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
+				      od_query_ctx_t *ctx);
+
+/*
+ * Reset query context: zeroes the struct (no heap allocations to free).
+ * Safe to call on a zeroed/stack od_query_ctx_t.
+ */
+void od_query_ctx_reset(od_query_ctx_t *ctx);
