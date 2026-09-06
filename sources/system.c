@@ -199,17 +199,13 @@ static inline void od_system_server(void *arg)
 			continue;
 		}
 		od_id_generate(&client->id, "c");
-		rc = od_io_prepare(&client->io, client_io);
-		if (rc == -1) {
-			od_error(
-				&instance->logger, "server", NULL, NULL,
-				"failed to allocate client io object, errno = %d (%s)",
-				machine_errno(), strerror(machine_errno()));
-			mm_io_close(client_io);
-			mm_io_free(client_io);
-			od_client_free(client);
-			continue;
-		}
+		/*
+		 * Only assign the io handle here; defer readahead buffer
+		 * allocation to the worker thread so it comes from the
+		 * worker's thread-local vrb cache (avoids cross-thread
+		 * cache ownership).
+		 */
+		client->io.io = client_io;
 		client->rule = NULL;
 		client->source = server;
 		client->tls = server->tls;

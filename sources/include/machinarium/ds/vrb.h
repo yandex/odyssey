@@ -8,8 +8,6 @@
 
 #include <stdint.h>
 
-#include <machinarium/spinlock.h>
-
 #include <sys/uio.h>
 
 /*
@@ -48,7 +46,6 @@ typedef struct {
 	mm_virtual_rbuf_t **rbufs;
 	size_t max;
 	size_t count;
-	mm_spinlock_t lock;
 } mm_virtual_rbuf_cache_t;
 
 int mm_virtual_rbuf_cache_init(mm_virtual_rbuf_cache_t *cache, size_t max_bufs);
