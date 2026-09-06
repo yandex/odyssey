@@ -86,6 +86,14 @@ set(OD_DEVEL_LVL -1)
 
 set(COMMON_CFLAGS "-pedantic -Wall -Wextra -Werror -Wstrict-aliasing -pthread -g")
 
+# enable 128-bit CAS (cmpxchg16b) on x86-64 for lock-free 16-byte atomics.
+# On aarch64 it is available without any flag.
+# The lf-stack uses __sync builtins (not <stdatomic.h>) for 128-bit CAS,
+# which are always inlined by the compiler and never require libatomic.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
+    set(COMMON_CFLAGS "${COMMON_CFLAGS} -mcx16")
+endif()
+
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")
     set(OD_DEVEL_LVL 1)

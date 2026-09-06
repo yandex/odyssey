@@ -100,13 +100,13 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 	atomic_init(&logger->batching, 0);
 	atomic_init(&logger->state, OD_LOGGER_OFFLINE);
 
-	memset(&logger->tasks, 0, sizeof(mm_queue_t));
+	mm_mpsc_queue_init(&logger->tasks);
 	logger->slots = NULL;
+	logger->pending_slot = NULL;
 
 	atomic_init(&logger->dropped_lines, 0);
 
-	od_list_init(&logger->free_slots);
-	mm_spinlock_init(&logger->free_slots_lock);
+	mm_lf_stack_init(&logger->free_slots);
 
 	mm_wait_list_init(&logger->notifier, &logger->state);
 
@@ -128,16 +128,9 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 		return NOT_OK_RESPONSE;
 	}
 
-	int rc = mm_queue_init(&logger->tasks, (size_t)logger->queue_depth,
-			       sizeof(od_logger_slot_t *), NULL);
-	if (rc != 0) {
-		return NOT_OK_RESPONSE;
-	}
-
 	logger->slots =
 		od_malloc(logger->queue_depth * sizeof(od_logger_slot_t));
 	if (logger->slots == NULL) {
-		mm_queue_destroy(&logger->tasks);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -145,11 +138,9 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 	for (size_t i = 0; i < n; ++i) {
 		od_logger_slot_t *slot = &logger->slots[i];
 		memset(slot, 0, sizeof(od_logger_slot_t));
-		od_list_init(&slot->link);
 
-		od_list_append(&logger->free_slots, &slot->link);
+		mm_lf_stack_push(&logger->free_slots, &slot->link);
 	}
-	logger->free_slots_count = n;
 
 	char name[32];
 	od_snprintf(name, sizeof(name), "logger");
@@ -157,7 +148,6 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 
 	if (logger->machine == -1) {
 		od_free(logger->slots);
-		mm_queue_destroy(&logger->tasks);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -624,7 +614,7 @@ static inline void log_machine_stats(od_logger_t *logger)
 	       msg_allocated, msg_cache_count, msg_cache_gc_count,
 	       msg_cache_size, count_coroutine, count_coroutine_cache,
 	       atomic_load(&logger->dropped_lines),
-	       mm_queue_size(&logger->tasks));
+	       mm_mpsc_queue_size(&logger->tasks));
 }
 
 void od_logger_stat(od_logger_t *logger)
@@ -635,7 +625,15 @@ void od_logger_stat(od_logger_t *logger)
 static void process_log_queue(od_logger_t *logger, od_logger_slot_t **slot_buf,
 			      struct iovec *iovecs, size_t max)
 {
-	size_t nmsg = mm_queue_pop_batch(&logger->tasks, slot_buf, max);
+	size_t nmsg = 0;
+	while (nmsg < max) {
+		mm_mpsc_node_t *n = mm_mpsc_queue_pop(&logger->tasks);
+		if (n == NULL) {
+			break;
+		}
+		slot_buf[nmsg] = od_container_of(n, od_logger_slot_t, node);
+		nmsg++;
+	}
 
 	if (nmsg == 0) {
 		return;
@@ -648,12 +646,19 @@ static void process_log_queue(od_logger_t *logger, od_logger_slot_t **slot_buf,
 
 	_od_logger_write_batch(logger, slot_buf, iovecs, nmsg);
 
-	mm_spinlock_lock(&logger->free_slots_lock);
-	for (size_t i = 0; i < nmsg; ++i) {
-		od_list_append(&logger->free_slots, &(slot_buf[i]->link));
+	/*
+	 * The last popped slot becomes the new pending_slot: it is now
+	 * the queue's head sentinel, and its `next` may still be written
+	 * by a producer. It will be recycled in the next call.
+	 */
+	for (size_t i = 0; i + 1 < nmsg; ++i) {
+		mm_lf_stack_push(&logger->free_slots, &slot_buf[i]->link);
 	}
-	logger->free_slots_count += nmsg;
-	mm_spinlock_unlock(&logger->free_slots_lock);
+	if (logger->pending_slot) {
+		mm_lf_stack_push(&logger->free_slots,
+				 &logger->pending_slot->link);
+	}
+	logger->pending_slot = slot_buf[nmsg - 1];
 }
 
 static void do_reopen_logfile(od_logger_t *logger)
@@ -699,7 +704,7 @@ static inline void od_logger(void *arg)
 
 		process_log_queue(logger, slot_buf, iovecs, IOV_MAX);
 
-		if (mm_queue_size(&logger->tasks) == 0) {
+		if (mm_mpsc_queue_empty(&logger->tasks)) {
 			mm_wait_list_compare_wait(
 				&logger->notifier, NULL,
 				OD_LOGGER_ONLINE /* still online? */, 500);
@@ -715,9 +720,10 @@ static inline void od_logger(void *arg)
 	 * divide by IOV_MAX because this is max chunk size
 	 * of process_log_queue
 	 */
-	size_t tail = mm_queue_size(&logger->tasks);
+	size_t tail = mm_mpsc_queue_size(&logger->tasks);
 	tail = 2 * ((tail + IOV_MAX - 1) / IOV_MAX);
-	for (size_t i = 0; i < tail && mm_queue_size(&logger->tasks) > 0; ++i) {
+	for (size_t i = 0; i < tail && mm_mpsc_queue_size(&logger->tasks) > 0;
+	     ++i) {
 		process_log_queue(logger, slot_buf, iovecs, IOV_MAX);
 	}
 }
@@ -750,7 +756,7 @@ void od_logger_wait_finish(od_logger_t *logger)
 		abort();
 	}
 	mm_wait_list_destroy(&logger->notifier);
-	mm_queue_destroy(&logger->tasks);
+	logger->pending_slot = NULL;
 	od_free(logger->slots);
 }
 
@@ -1069,17 +1075,15 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 
 	if (async) {
-		mm_spinlock_lock(&logger->free_slots_lock);
-		if (logger->free_slots_count > 0) {
-			od_list_t *i = od_list_pop(&logger->free_slots);
-			async_slot = od_container_of(i, od_logger_slot_t, link);
-			logger->free_slots_count--;
+		mm_lf_stack_entry_t *e = mm_lf_stack_pop(&logger->free_slots);
+		if (e) {
+			async_slot = od_container_of(e, od_logger_slot_t, link);
 		}
-		mm_spinlock_unlock(&logger->free_slots_lock);
 
 		if (async_slot == NULL) {
 			/* silently drop lines for overloaded logger */
-			atomic_fetch_add(&logger->dropped_lines, 1);
+			atomic_fetch_add_explicit(&logger->dropped_lines, 1,
+						  memory_order_relaxed);
 			return;
 		}
 
@@ -1106,9 +1110,9 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 		async_slot->text[len] = '\0';
 		async_slot->level = level;
 
-		int new_size =
-			mm_queue_push_extended(&logger->tasks, &async_slot);
-		if (new_size >= 30) {
+		size_t sz =
+			mm_mpsc_queue_push(&logger->tasks, &async_slot->node);
+		if (sz >= 30) {
 			mm_wait_list_notify(&logger->notifier);
 		}
 	} else {
