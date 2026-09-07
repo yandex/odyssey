@@ -17,6 +17,7 @@ jobs:
   unit:
     name: unit
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         build-type: ['build_release', 'build_dbg', 'build_asan']
