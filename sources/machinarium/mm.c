@@ -70,7 +70,7 @@ MACHINE_API int machinarium_init(void)
 	}
 
 	if (machinarium_system_stack_size <= 0) {
-		machinarium_system_stack_size = machinarium_stack_size;
+		machinarium_system_stack_size = 32;
 	}
 
 	if (machinarium_pool_size == 0) {
