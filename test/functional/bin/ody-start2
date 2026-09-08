@@ -6,7 +6,7 @@
 MAX_RETRIES=50
 COUNT=0
 
-until pg_isready -h localhost -p 6432 -U "$2" -d "$2"; do
+until pg_isready -h localhost -p 6432 -U "$2" -d "$3"; do
   if [ $COUNT -ge $MAX_RETRIES ]; then
     echo "ERROR: Timeout waiting for Odyssey after $MAX_RETRIES seconds."
     exit 1

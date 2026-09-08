@@ -2,7 +2,7 @@
 
 set -ex
 
-/usr/bin/odyssey /tests/npgsql_compat/config.conf
+ody-start2 /tests/npgsql_compat/config.conf auth_query_db auth_query_user_scram_sha_256
 
 /tests/npgsql_compat/NpgsqlOdysseyScram.Console || {
 	echo "ERROR: npgsql-compat tests failed"

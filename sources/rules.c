@@ -1606,14 +1606,67 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 					       &rule->address_range,
 					       rule->conn_type);
 		if (origin) {
-			/* force drop rules with shared pools */
-
-			/* TODO: temporary disable not changing rules */
-			(void)not_changed;
-
-			/* if (origin->shared_pool == NULL &&
+			if (origin->shared_pool == NULL &&
 			    rule->shared_pool == NULL &&
 			    od_rules_rule_compare(origin, rule)) {
+				/*
+				 * Rule is unchanged.  Keep origin alive and
+				 * drop the freshly parsed copy.
+				 *
+				 * The reload path stops watchdogs and removes
+				 * storages from router->rules before merge,
+				 * so origin->storage->watchdog is NULL by
+				 * now.  Move the freshly allocated watchdog
+				 * (and endpoints status) from the new storage
+				 * onto the old storage so that origin keeps
+				 * its backend connections (which hold
+				 * server->endpoint pointers into the old
+				 * storage endpoints array) and also gets a
+				 * running watchdog.
+				 */
+				od_rule_storage_t *old_storage =
+					origin->storage;
+				od_rule_storage_t *new_storage = rule->storage;
+
+				if (old_storage && new_storage) {
+					/* move watchdog */
+					old_storage->watchdog =
+						new_storage->watchdog;
+					new_storage->watchdog = NULL;
+
+					/* move endpoint statuses (same
+					 * endpoints count expected since
+					 * storage_compare passed) */
+					if (old_storage->endpoints_count ==
+					    new_storage->endpoints_count) {
+						for (size_t k = 0;
+						     k <
+						     old_storage
+							     ->endpoints_count;
+						     k++) {
+							od_storage_endpoint_status_destroy(
+								&old_storage
+									 ->endpoints
+										 [k]
+									 .status);
+							od_storage_endpoint_status_init(
+								&old_storage
+									 ->endpoints
+										 [k]
+									 .status);
+							od_storage_endpoint_status_set(
+								&old_storage
+									 ->endpoints
+										 [k]
+									 .status,
+								&new_storage
+									 ->endpoints
+										 [k]
+									 .status);
+						}
+					}
+				}
+
 				origin->mark = 0;
 				count_mark--;
 				origin->order = rule->order;
@@ -1621,8 +1674,13 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 				od_rule_key_t *rk = rk_of(origin);
 				od_list_append(not_changed, &rk->link);
 
+				/*
+				 * Leave rule in src->rules; it will be
+				 * freed by od_rules_free(&rules) in the
+				 * reload path.
+				 */
 				continue;
-			} else */
+			}
 
 			if (!od_rules_rule_compare_to_drop(origin, rule)) {
 				od_rule_key_t *rk = rk_of(origin);
