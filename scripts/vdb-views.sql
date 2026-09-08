@@ -72,7 +72,6 @@ CREATE OR REPLACE VIEW odyssey.pools AS
         "user" text,
         cl_active int,
         cl_waiting int,
-        cl_queue int,
         sv_active int,
         sv_idle int,
         sv_used int,
@@ -112,7 +111,6 @@ CREATE OR REPLACE VIEW odyssey.pools_extended AS
         "user" text,
         cl_active int,
         cl_waiting int,
-        cl_queue int,
         sv_active int,
         sv_idle int,
         sv_used int,
@@ -123,7 +121,8 @@ CREATE OR REPLACE VIEW odyssey.pools_extended AS
         pool_mode text,
         bytes_received int,
         bytes_sent int,
-        tcp_conn_count int
+        tcp_conn_count int,
+        cl_queue int
     );
 
 CREATE OR REPLACE VIEW odyssey.listen AS

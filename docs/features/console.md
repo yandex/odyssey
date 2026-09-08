@@ -81,6 +81,16 @@ Write information about currently allocated pools for every database.user
 
 `show pools`
 
+### show pools_extended
+
+Write even more information about currently allocated pools for every database.user
+
+`show pools_extended`
+
+Returns every `show pools` column, then `bytes_received`, `bytes_sent`,
+`tcp_conn_count`, `cl_queue`, and a `query_<q>`/`transaction_<q>` pair per
+configured quantile.
+
 The client counters distinguish three different client states, which is easy to get wrong:
 
 | Column | Meaning |
@@ -94,12 +104,6 @@ The client counters distinguish three different client states, which is easy to 
 A client that starts to queue moves out of `cl_waiting` into `cl_queue`, so `cl_waiting`
 can drop exactly when the pool becomes saturated. Use `cl_queue` and `maxwait` to detect
 pool exhaustion.
-
-### show pools_extended
-
-Write even more information about currently allocated pools for every database.user
-
-`show pools_extended`
 
 ### show storages
 

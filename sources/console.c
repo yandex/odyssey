@@ -666,13 +666,6 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
-	/* cl_queue */
-	data_len = od_snprintf(data, sizeof(data), "%d",
-			       route->client_pool.count_queue);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		goto error;
-	}
 	/* sv_active */
 	data_len = od_snprintf(data, sizeof(data), "%d",
 			       od_route_server_pool_count_active_locked(
@@ -769,6 +762,14 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		/* tcp conn rate */
 		data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
 				       route->tcp_connections);
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			goto error;
+		}
+
+		/* cl_queue */
+		data_len = od_snprintf(data, sizeof(data), "%d",
+				       route->client_pool.count_queue);
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
@@ -968,10 +969,11 @@ static inline int od_console_show_pools(od_client_t *client,
 	int quantiles_count = route->rule->quantiles_count;
 
 	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(
-		stream, "sslllllllllls", "database", "user", "cl_active",
-		"cl_waiting", "cl_queue", "sv_active", "sv_idle", "sv_used",
-		"sv_tested", "sv_login", "maxwait", "maxwait_us", "pool_mode");
+	msg = kiwi_be_write_row_descriptionf(stream, "ssllllllllls", "database",
+					     "user", "cl_active", "cl_waiting",
+					     "sv_active", "sv_idle", "sv_used",
+					     "sv_tested", "sv_login", "maxwait",
+					     "maxwait_us", "pool_mode");
 	if (msg == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -999,6 +1001,15 @@ static inline int od_console_show_pools(od_client_t *client,
 						       strlen(tcp_conn_rate), 0,
 						       0, 23 /* INT4OID */, 4,
 						       0, 0);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+
+		char *cl_queue = "cl_queue";
+		rc = kiwi_be_write_row_description_add(msg, 0, cl_queue,
+						       strlen(cl_queue), 0, 0,
+						       23 /* INT4OID */, 4, 0,
+						       0);
 		if (rc == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
