@@ -94,6 +94,20 @@ Exported from `SHOW LISTS;`:
 | `odyssey_lists_free_servers` | Idle backend server connections |
 | `odyssey_lists_used_servers` | Active backend server connections |
 
+## Instance metrics
+
+Exported from `SHOW INSTANCE;`, which reports the state of the Odyssey process
+itself. Servers that do not implement the command are skipped without failing
+the scrape:
+
+| Metric | Description |
+| --- | --- |
+| `odyssey_config_load_failed` | `1` if the last config load failed, leaving the process on its previous configuration |
+
+Rows of either view that the exporter has no curated name for are exported as
+`odyssey_lists_<field>` or `odyssey_instance_<field>` respectively, so a newer
+Odyssey can add counters without requiring an exporter release.
+
 **Alert example** for detecting routing queue buildup:
 ```yaml
 - alert: OdysseyRoutingQueueHigh

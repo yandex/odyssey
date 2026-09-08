@@ -7,6 +7,8 @@
 
 #include <odyssey.h>
 
+#include <openssl/err.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/io.h>
 
@@ -63,6 +65,61 @@ machine_tls_t *od_tls_frontend(od_config_listen_t *config)
 		}
 	}
 	return tls;
+}
+
+/*
+ * Load the configured certificate material the same way the TLS handshake
+ * does. Runs before machinarium is initialized, so it must not use any
+ * machine_* call.
+ */
+od_retcode_t od_tls_frontend_validate(od_config_listen_t *config, char *error,
+				      int error_len)
+{
+	od_tls_opts_t *opts = config->tls_opts;
+	const char *failed = NULL;
+	od_retcode_t rc = NOT_OK_RESPONSE;
+
+	SSL_CTX *ctx = SSL_CTX_new(SSLv23_server_method());
+	if (ctx == NULL) {
+		failed = "SSL_CTX_new()";
+		goto done;
+	}
+
+	if (opts->tls_cert_file &&
+	    !SSL_CTX_use_certificate_chain_file(ctx, opts->tls_cert_file)) {
+		failed = "SSL_CTX_use_certificate_chain_file()";
+		goto done;
+	}
+	if (opts->tls_key_file &&
+	    SSL_CTX_use_PrivateKey_file(ctx, opts->tls_key_file,
+					SSL_FILETYPE_PEM) != 1) {
+		failed = "SSL_CTX_use_PrivateKey_file()";
+		goto done;
+	}
+	if (opts->tls_cert_file && opts->tls_key_file &&
+	    SSL_CTX_check_private_key(ctx) != 1) {
+		failed = "SSL_CTX_check_private_key()";
+		goto done;
+	}
+	if (opts->tls_ca_file &&
+	    SSL_CTX_load_verify_locations(ctx, opts->tls_ca_file, NULL) != 1) {
+		failed = "SSL_CTX_load_verify_locations()";
+		goto done;
+	}
+
+	rc = OK_RESPONSE;
+
+done:
+	if (rc != OK_RESPONSE && error != NULL && error_len > 0) {
+		unsigned long err = ERR_get_error();
+		od_snprintf(error, error_len, "%s: %s", failed,
+			    err ? ERR_error_string(err, NULL) :
+				  "unknown error");
+	}
+	if (ctx != NULL) {
+		SSL_CTX_free(ctx);
+	}
+	return rc;
 }
 
 int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,

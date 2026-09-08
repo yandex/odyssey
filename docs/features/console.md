@@ -117,6 +117,24 @@ Show statistics about currently appeared errors
 
 `show errors`
 
+### show lists
+
+Show counts of the objects Odyssey is tracking: pools, clients in each
+state, servers and DNS cache entries
+
+`show lists`
+
+### show instance
+
+Show the state of the running Odyssey process itself, as opposed to the
+objects it is currently routing
+
+`show instance`
+
+| Field | Description |
+| --- | --- |
+| `config_load_failed` | `1` if the last config load failed, so the process kept its previous configuration and a restart would not come up on the file currently on disk. `0` otherwise |
+
 ### show databases
 
 Show info about databases

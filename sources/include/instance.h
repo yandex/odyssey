@@ -26,6 +26,8 @@ struct od_instance {
 	char *orig_argv_ptr;
 	int orig_argv_ptr_len;
 	atomic_int_fast64_t shutdown_worker_id;
+	/* last config load failed, so a restart would not come up */
+	atomic_int config_load_failed;
 	struct {
 		int argc;
 		char **argv;

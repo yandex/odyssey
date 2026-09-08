@@ -9,6 +9,7 @@
 #include <machinarium/machinarium.h>
 #include <machinarium/eventfd.h>
 #include <machinarium/dns.h>
+#include <machinarium/ds/vector.h>
 
 #include <types.h>
 #include <id.h>
@@ -18,6 +19,8 @@ struct od_system_server {
 	mm_io_t *io;
 	mm_eventfd_t shutdown_efd;
 	machine_tls_t *tls;
+	/* tls handles replaced by a reload, still referenced by live clients */
+	mm_vector_t tls_retired;
 	od_config_listen_t *config;
 	mm_addrinfo_t *addr;
 	od_global_t *global;

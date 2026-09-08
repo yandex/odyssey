@@ -65,6 +65,13 @@ CREATE OR REPLACE VIEW odyssey.lists AS
         items int
     );
 
+CREATE OR REPLACE VIEW odyssey.instance AS
+    SELECT * FROM dblink('odyssey', 'show instance') AS
+    _(
+        list text,
+        items int
+    );
+
 CREATE OR REPLACE VIEW odyssey.pools AS
     SELECT * FROM dblink('odyssey', 'show pools') AS
     _(

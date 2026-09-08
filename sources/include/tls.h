@@ -12,6 +12,8 @@
 
 machine_tls_t *od_tls_frontend(od_config_listen_t *);
 
+od_retcode_t od_tls_frontend_validate(od_config_listen_t *, char *, int);
+
 int od_tls_frontend_accept(od_client_t *, od_logger_t *, od_config_listen_t *,
 			   machine_tls_t *);
 
