@@ -24,6 +24,7 @@
 
 typedef struct {
 	atomic_int_fast64_t refs;
+	bool is_null;
 	char value[];
 } od_route_pswd_t;
 

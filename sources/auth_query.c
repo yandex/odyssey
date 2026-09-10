@@ -347,6 +347,11 @@ int od_auth_query(od_client_t *client, char *peer)
 
 	od_route_unlock(route);
 
+	if (cached->is_null) {
+		od_route_pswd_unref(cached);
+		return 0;
+	}
+
 	client->password.password = od_strdup(cached->value);
 	od_route_pswd_unref(cached);
 	if (client->password.password == NULL) {

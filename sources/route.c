@@ -196,7 +196,7 @@ void od_route_signal_locked(od_route_t *route, od_server_t *server)
 
 od_route_pswd_t *od_route_pswd_create(const char *value)
 {
-	size_t len = strlen(value);
+	size_t len = value == NULL ? 0 : strlen(value);
 	size_t t = sizeof(od_route_pswd_t) + len + 1;
 
 	od_route_pswd_t *p = od_malloc(t);
@@ -207,8 +207,11 @@ od_route_pswd_t *od_route_pswd_create(const char *value)
 	memset(p, 0, t);
 
 	atomic_store(&p->refs, 1);
+	p->is_null = value == NULL;
 
-	memcpy(p->value, value, len + 1);
+	if (!p->is_null) {
+		memcpy(p->value, value, len + 1);
+	}
 
 	return p;
 }
