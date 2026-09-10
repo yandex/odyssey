@@ -49,6 +49,7 @@ struct od_client {
 
 	kiwi_be_startup_t startup;
 	kiwi_vars_t vars;
+	kiwi_var_t startup_application_name;
 	kiwi_key_t key;
 
 	/* do not set this field directly, use od_server_attach_client */

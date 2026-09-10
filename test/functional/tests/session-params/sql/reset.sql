@@ -1,0 +1,12 @@
+SHOW application_name;
+SET application_name = 'changed';
+RESET application_name;
+SHOW application_name;
+SET application_name = 'changed';
+RESET ALL;
+SHOW application_name;
+SET application_name = 'changed';
+DISCARD ALL;
+SHOW application_name;
+SELECT pg_backend_pid();
+SET application_name = 'left_by_previous_client';
