@@ -589,6 +589,17 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 			return OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH;
 		}
 
+		if (is_deploy && client->rule->maintain_params) {
+			int rc = od_deploy(client, context);
+			if (rc == -1) {
+				od_gerror("deploy", client, client->server,
+					  "deploy failed, errno=%d (%s)",
+					  mm_errno_get(),
+					  strerror(mm_errno_get()));
+				return OD_ESERVER_WRITE;
+			}
+		}
+
 		if (is_deploy && storage->balancing.debug_notice &&
 		    storage->endpoints_count > 1) {
 			od_address_to_str(&client->server->endpoint->address,
@@ -937,26 +948,8 @@ od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 od_frontend_status_t od_frontend_attach_and_deploy(od_client_t *client,
 						   char *context)
 {
-	/* attach and maybe connect server */
-	od_frontend_status_t status;
-	status = attach_impl(client, context, NULL, 1 /* is_deploy */);
-	if (status != OD_OK) {
-		return status;
-	}
-
-	/* configure server using client parameters */
-	if (client->rule->maintain_params) {
-		int rc;
-		rc = od_deploy(client, context);
-		if (rc == -1) {
-			od_gerror("deploy", client, client->server,
-				  "deploy failed, errno=%d (%s)",
-				  mm_errno_get(), strerror(mm_errno_get()));
-			return OD_ESERVER_WRITE;
-		}
-	}
-
-	return OD_OK;
+	/* attach and maybe connect server, then deploy params */
+	return attach_impl(client, context, NULL, 1 /* is_deploy */);
 }
 
 static inline od_frontend_status_t od_frontend_setup_params(od_client_t *client)
