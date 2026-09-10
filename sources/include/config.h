@@ -124,6 +124,7 @@ struct od_config {
 	int keepalive_usr_timeout;
 	/*                                */
 	int workers;
+	int tls_workers;
 	int resolvers;
 	/*         client                 */
 	int client_max_set;

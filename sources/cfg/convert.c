@@ -505,6 +505,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 		 config->system_coroutine_stack_size);
 	COPY_INT(cfg->group_checker_interval, config->group_checker_interval);
 	COPY_INT(cfg->workers, config->workers);
+	COPY_INT(cfg->tls_workers, config->tls_workers);
 
 	if (config->keepalive_usr_timeout < 0) {
 		config->keepalive_usr_timeout =

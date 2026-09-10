@@ -137,6 +137,7 @@ set(od_src
     external_auth.c
     group.c
     thread_pool.c
+    tls_thread_pool.c
     xplan.c
     common/base64.c
     common/saslprep.c
