@@ -71,6 +71,7 @@ void od_client_init(od_client_t *client)
 
 	/* Init GUCs. */
 	client->backend_pin = false;
+	client->opportunistic_acquire = false;
 }
 
 void od_client_free(od_client_t *client)

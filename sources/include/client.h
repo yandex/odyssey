@@ -76,6 +76,7 @@ struct od_client {
 
 	/* client-side GUC state. XXX: maybe use embedded struct here */
 	bool backend_pin;
+	bool opportunistic_acquire;
 
 	/* storage_user & storage_password provided by ldapsearch result */
 #ifdef LDAP_FOUND

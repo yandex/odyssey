@@ -670,6 +670,25 @@ Default: no
 
 `pool_acquire_fail_fast yes`
 
+### odyssey.opportunistic\_acquire *(runtime GUC)*
+
+*on/off*
+
+Per-client override that can be set at runtime via `SET odyssey.opportunistic_acquire = 'on'`.
+When enabled, Odyssey never waits for a free connection from the pool — it immediately
+fails with a "too many connections" error, even if there is only one host. Unlike
+`pool_acquire_fail_fast`, this option works per-client and does not require multiple
+hosts; it also does not retry with waiting.
+
+Can be inspected with `SHOW odyssey.opportunistic_acquire`.
+
+Requires `virtual_processing yes` in the global config.
+
+```sql
+SET odyssey.opportunistic_acquire = 'on';
+SHOW odyssey.opportunistic_acquire;
+```
+
 ## **pool_reserve_prepared_statement**
 
 *yes|no*

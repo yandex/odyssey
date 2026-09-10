@@ -778,10 +778,20 @@ attach_to_first_with_fail_fast(od_client_t *client, char *context,
 	int acquire_fail_fast =
 		client->route->rule->pool->acquire_fail_fast && count > 1;
 
+	/*
+	 * Per-client override: when set via SET odyssey.opportunistic_acquire,
+	 * never wait for a free connection — fail immediately with
+	 * "too many connections", even for a single host, and do not retry.
+	 */
+	int client_opportunistic = client->opportunistic_acquire;
+	if (client_opportunistic) {
+		acquire_fail_fast = 1;
+	}
+
 	od_frontend_status_t status =
 		attach_to_first(client, context, route_params, endpoints, count,
 				tsa, acquire_fail_fast, is_deploy, storage);
-	if (status != OD_OK && acquire_fail_fast) {
+	if (status != OD_OK && acquire_fail_fast && !client_opportunistic) {
 		/*
 		 * attach failed
 		 *
