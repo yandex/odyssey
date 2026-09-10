@@ -31,6 +31,7 @@ host   ldap_db1        ldap_readonly                 127.0.0.1/32 password
 host   ldap_db2        ldap_rw                       127.0.0.1/32 md5
 host   auth_query_db   auth_query_user_scram_sha_256 127.0.0.1/32 trust
 host   auth_query_db   auth_query_user_md5           127.0.0.1/32 trust
+host   auth_query_db   auth_query_user_null_password 127.0.0.1/32 trust
 local  all             postgres                                   trust
 host   postgres        user1                         127.0.0.1/32 trust
 host   db1             user1                         127.0.0.1/32 trust
@@ -100,6 +101,14 @@ psql -h localhost -p 5432 -U postgres -c "create role user1 with login;create ro
 # Create users
 psql -h localhost -p 5432 -U postgres -c "set password_encryption TO 'md5'; create user auth_query_user_md5 with password 'passwd'" -d postgres >> $SETUP_LOG 2>&1 || {
     echo "ERROR: users creation failed, examine the log"
+    cat "$SETUP_LOG"
+    cat "$PG_LOG"
+    exit 1
+}
+
+# Create users
+psql -h localhost -p 5432 -U postgres -c "create role auth_query_user_null_password login password null" -d postgres >> $SETUP_LOG 2>&1 || {
+    echo "ERROR: null-password user creation failed, examine the log"
     cat "$SETUP_LOG"
     cat "$PG_LOG"
     exit 1
