@@ -491,11 +491,11 @@ from the pool.
 *yes|no*
 
 When this parameter is enabled, Odyssey sends a smart discard query instead of the default `DISCARD ALL` when it
-returns a connection to the pool. Its default value may be overwritten by the pool\_discard\_string setting.
+returns a connection to the pool. Its default value may be overwritten by the pool\_discard\_query setting.
 
 ---
 
-## **pool\_discard\_string**
+## **pool\_discard\_query**
 
 *string*
 
