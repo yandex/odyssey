@@ -50,6 +50,7 @@ typedef enum {
 	OD_FMT_SERVER_ID, /* %s  */
 	OD_FMT_USER, /* %u  */
 	OD_FMT_DATABASE, /* %d  */
+	OD_FMT_APPLICATION_NAME, /* %a  */
 	OD_FMT_EXTERNAL_ID, /* %x  */
 	OD_FMT_CLIENT_HOST, /* %h  */
 	OD_FMT_CLIENT_PORT, /* %r  */

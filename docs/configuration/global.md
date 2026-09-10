@@ -174,6 +174,7 @@ Supported flags:
 %s = server ID
 %u = user name
 %d = database name
+%a = application_name
 %c = context
 %l = level (error, warning, debug)
 %m = message
