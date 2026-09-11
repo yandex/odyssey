@@ -60,6 +60,7 @@ static inline int od_route_id_copy(od_route_id_t *dest, od_route_id_t *id)
 
 	dest->physical_rep = id->physical_rep;
 	dest->logical_rep = id->logical_rep;
+
 	return 0;
 }
 

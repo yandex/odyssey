@@ -38,6 +38,9 @@ void od_client_init(od_client_t *client)
 #endif
 	client->external_id = NULL;
 
+	client->physical_rep = false;
+	client->logical_rep = false;
+
 	kiwi_be_startup_init(&client->startup);
 	kiwi_vars_init(&client->vars);
 	kiwi_key_init(&client->key);

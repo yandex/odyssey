@@ -81,6 +81,9 @@ struct od_client {
 	bool backend_pin;
 	bool opportunistic_acquire;
 
+	bool physical_rep;
+	bool logical_rep;
+
 	/* storage_user & storage_password provided by ldapsearch result */
 #ifdef LDAP_FOUND
 	char *ldap_storage_username;

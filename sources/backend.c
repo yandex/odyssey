@@ -372,11 +372,11 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 
 	argc += 4;
 
-	if (route->id.physical_rep) {
+	if (client->physical_rep) {
 		argv[argc + 1].name = "on";
 		argv[argc + 1].len = 3;
 		argc += 2;
-	} else if (route->id.logical_rep) {
+	} else if (client->logical_rep) {
 		argv[argc + 1].name = "database";
 		argv[argc + 1].len = 9;
 		argc += 2;

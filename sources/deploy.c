@@ -34,9 +34,8 @@ int od_deploy(od_client_t *client, char *context)
 {
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
-	od_route_t *route = client->route;
 
-	if (route->id.physical_rep || route->id.logical_rep) {
+	if (client->physical_rep || client->logical_rep) {
 		return 0;
 	}
 
