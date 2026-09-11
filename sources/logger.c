@@ -148,6 +148,8 @@ static inline od_fmt_token_type_t od_logger_format_parse_specifier(char c)
 		return OD_FMT_USER;
 	case 'd':
 		return OD_FMT_DATABASE;
+	case 'a':
+		return OD_FMT_APPLICATION_NAME;
 	case 'x':
 		return OD_FMT_EXTERNAL_ID;
 	case 'h':
@@ -677,6 +679,16 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 					dst_pos, dst_end, "none");
 			}
 			break;
+		case OD_FMT_APPLICATION_NAME: {
+			kiwi_var_t *var = NULL;
+			if (client) {
+				var = kiwi_vars_get(&client->vars,
+						    KIWI_VAR_APPLICATION_NAME);
+			}
+			dst_pos += od_logger_append_str(
+				dst_pos, dst_end, var ? var->value : "none");
+			break;
+		}
 		case OD_FMT_EXTERNAL_ID:
 			if (client && client->external_id != NULL) {
 				dst_pos += od_logger_append_str(
