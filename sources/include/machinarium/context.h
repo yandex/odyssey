@@ -6,6 +6,8 @@
  * cooperative multitasking engine.
  */
 
+#include <machinarium/build.h>
+
 #ifdef USE_UCONTEXT
 #include <ucontext.h>
 #endif
