@@ -380,6 +380,7 @@ set(od_test_src
     tests/machinarium/test_read_var.c
     tests/machinarium/test_ring_buffer.c
     tests/machinarium/test_tls0.c
+    tests/machinarium/test_tls_verify_error.c
     tests/machinarium/test_tls_unix_socket.c
     tests/machinarium/test_tls_unix_socket_no_msg.c
     tests/machinarium/test_tls_read_10mb0.c
