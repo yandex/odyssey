@@ -33,6 +33,7 @@
 #define APPLICATION_NAME_STR "application_name"
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
 #define ODYSSEY_PIN_BACKEND "odyssey.pin_backend"
+#define ODYSSEY_OPPORTUNISTIC_ACQUIRE "odyssey.opportunistic_acquire"
 #define ODYSSEY_VERSION_STR "odyssey.version"
 #define PROCESSED_BY_ODYSSEY_STR "processed virtually by odyssey"
 
@@ -408,6 +409,13 @@ static od_frontend_status_t process_vset(od_client_t *client,
 		}
 	}
 
+	if (strcmp(stmt->key, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_set_generic_bool(
+				client, stmt, &client->opportunistic_acquire);
+		}
+	}
+
 	return OD_OK;
 }
 
@@ -509,6 +517,14 @@ process_vshow(od_client_t *client, const od_sql_minimal_show_stmt_t *stmt)
 		if (instance->config.virtual_processing) {
 			return process_show_bool_guc(client, stmt->name,
 						     client->backend_pin);
+		}
+	}
+
+	if (strcmp(stmt->name, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_show_bool_guc(
+				client, stmt->name,
+				client->opportunistic_acquire);
 		}
 	}
 
