@@ -681,6 +681,13 @@ static void od_rules_rule_free_now(od_rule_t *rule)
 	if (rule->shared_pool) {
 		od_shared_pool_unref(rule->shared_pool);
 	}
+	if (rule->backend_startup_vars) {
+		for (size_t j = 0; j < rule->backend_startup_vars_sz; j++) {
+			od_free(rule->backend_startup_vars[j].name);
+			od_free(rule->backend_startup_vars[j].value);
+		}
+		od_free(rule->backend_startup_vars);
+	}
 
 	od_list_t *i, *n;
 	od_list_foreach_safe (&rule->auth_common_names, i, n) {

@@ -938,8 +938,8 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 		rule->backend_startup_vars_sz =
 			cfg->backend_startup_options.pairs_count;
 		rule->backend_startup_vars =
-			od_malloc(sizeof(untyped_kiwi_var_t) *
-				  rule->backend_startup_vars_sz);
+			od_calloc(rule->backend_startup_vars_sz,
+				  sizeof(untyped_kiwi_var_t));
 		if (rule->backend_startup_vars == NULL) {
 			od_cfg_diag_error(
 				diags, cfg->location,
