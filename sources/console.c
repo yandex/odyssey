@@ -704,14 +704,20 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
+	/* reported as whole seconds plus the sub-second remainder */
+	uint64_t maxwait_us = od_client_pool_max_queue_time_us(
+		&route->client_pool, machine_time_us());
+
 	/* maxwait */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+			       maxwait_us / 1000000);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
 	}
 	/* maxwait_us */
-	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
+	data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+			       maxwait_us % 1000000);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
@@ -758,6 +764,14 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		/* tcp conn rate */
 		data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
 				       route->tcp_connections);
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			goto error;
+		}
+
+		/* cl_queue */
+		data_len = od_snprintf(data, sizeof(data), "%d",
+				       route->client_pool.count_queue);
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
@@ -993,6 +1007,15 @@ static inline int od_console_show_pools(od_client_t *client,
 			return NOT_OK_RESPONSE;
 		}
 
+		char *cl_queue = "cl_queue";
+		rc = kiwi_be_write_row_description_add(msg, 0, cl_queue,
+						       strlen(cl_queue), 0, 0,
+						       23 /* INT4OID */, 4, 0,
+						       0);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+
 		for (int i = 0; i < quantiles_count; i++) {
 			char caption[KIWI_MAX_VAR_SIZE];
 			int caption_len;
@@ -1045,7 +1068,7 @@ static inline int od_console_show_pools(od_client_t *client,
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
-		const size_t rest_columns_count = 13;
+		const size_t rest_columns_count = 14;
 		for (size_t i = 0; i < rest_columns_count; ++i) {
 			rc = kiwi_be_write_data_row_add(stream, offset, NULL,
 							NULL_MSG_LEN);

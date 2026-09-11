@@ -128,7 +128,8 @@ CREATE OR REPLACE VIEW odyssey.pools_extended AS
         pool_mode text,
         bytes_received int,
         bytes_sent int,
-        tcp_conn_count int
+        tcp_conn_count int,
+        cl_queue int
     );
 
 CREATE OR REPLACE VIEW odyssey.listen AS

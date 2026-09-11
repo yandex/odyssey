@@ -943,7 +943,17 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 	od_server_t *server;
 	od_route_t *route = client->route;
 
+	uint64_t now_us = machine_time_us();
+
 	od_route_lock(route);
+
+	/*
+	 * stamp on the first transition only: the caller retries in a loop
+	 * and re-stamping would keep resetting the measured waiting time
+	 */
+	if (client->state != OD_CLIENT_QUEUE) {
+		client->time_queue_start = now_us;
+	}
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_QUEUE);
 
