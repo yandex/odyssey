@@ -342,9 +342,10 @@ static int od_frontend_startup(od_client_t *client)
 			client->logical_rep = true;
 		} else if (!parse_bool(client->startup.replication.value,
 				       &client->physical_rep)) {
-			od_error(&instance->logger, "startup", client, NULL,
-				 "invalid value for parameter \"replication\" for client '%s'",
-				 client->peer);
+			od_error(
+				&instance->logger, "startup", client, NULL,
+				"invalid value for parameter \"replication\" for client '%s'",
+				client->peer);
 			od_frontend_error(
 				client, KIWI_CONNECTION_FAILURE,
 				"invalid value for parameter \"replication\"");
