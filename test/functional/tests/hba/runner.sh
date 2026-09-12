@@ -85,6 +85,8 @@ PGPASSWORD=correct_password PGCONNECT_TIMEOUT=5 psql -h ip4-localhost -p 6432 -U
 	exit 1
 }
 
+bash /tests/hba/test_hba_names.sh ip4-localhost
+
 ody-stop
 
 #

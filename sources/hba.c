@@ -215,13 +215,14 @@ int od_hba_process(od_client_t *client)
 			}
 		}
 
-		if (!od_hba_validate_name(client->rule->db_name,
+		if (!od_hba_validate_name(client->startup.database.value,
 					  &rule->database,
-					  client->rule->user_name)) {
+					  client->startup.user.value)) {
 			continue;
 		}
-		if (!od_hba_validate_name(client->rule->user_name, &rule->user,
-					  client->rule->db_name)) {
+		if (!od_hba_validate_name(client->startup.user.value,
+					  &rule->user,
+					  client->startup.database.value)) {
 			continue;
 		}
 
