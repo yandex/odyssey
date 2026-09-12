@@ -38,6 +38,7 @@
 #include <extension.h>
 #include <deploy.h>
 #include <router_cancel.h>
+#include <misc.h>
 #include <server.h>
 
 static inline void od_frontend_close(od_client_t *client)
@@ -332,6 +333,24 @@ static int od_frontend_startup(od_client_t *client)
 	if (client->startup.is_cancel) {
 		/* no need to proceed any further */
 		return 0;
+	}
+
+	/* parse repl options */
+	if (client->startup.replication.value_len != 0) {
+		if (strcmp(client->startup.replication.value, "database") ==
+		    0) {
+			client->logical_rep = true;
+		} else if (!parse_bool(client->startup.replication.value,
+				       &client->physical_rep)) {
+			od_error(
+				&instance->logger, "startup", client, NULL,
+				"invalid value for parameter \"replication\" for client '%s'",
+				client->peer);
+			od_frontend_error(
+				client, KIWI_CONNECTION_FAILURE,
+				"invalid value for parameter \"replication\"");
+			goto error;
+		}
 	}
 
 	if (client->source->config->tls_opts->tls_mode >=
@@ -2450,7 +2469,7 @@ static od_frontend_status_t process_server_async(od_client_t *client,
 
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
-	if (client->route->id.logical_rep || client->route->id.physical_rep) {
+	if (client->logical_rep || client->physical_rep) {
 		return od_frontend_remote_replication(client);
 	}
 

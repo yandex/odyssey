@@ -701,8 +701,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 			     .user = startup->user.value,
 			     .database_len = startup->database.value_len,
 			     .user_len = startup->user.value_len,
-			     .physical_rep = false,
-			     .logical_rep = false };
+			     .physical_rep = client->physical_rep,
+			     .logical_rep = client->logical_rep };
 	if (rule->storage_db) {
 		id.database = rule->storage_db;
 		id.database_len = strlen(rule->storage_db) + 1;
@@ -710,15 +710,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	if (rule->storage_user) {
 		id.user = rule->storage_user;
 		id.user_len = strlen(rule->storage_user) + 1;
-	}
-	if (startup->replication.value_len != 0) {
-		if (strcmp(startup->replication.value, "database") == 0) {
-			id.logical_rep = true;
-		} else if (!parse_bool(startup->replication.value,
-				       &id.physical_rep)) {
-			od_router_unlock(router);
-			return OD_ROUTER_ERROR_REPLICATION;
-		}
 	}
 #ifdef LDAP_FOUND
 	if (rule->ldap_storage_credentials_attr) {
@@ -1018,7 +1009,7 @@ od_router_try_attach(od_router_t *router, od_client_t *client,
 	 * walsender connections are in "graceful shutdown" mode since we cannot
 	 * reuse it.
 	 *
-	if (route->id.physical_rep || route->id.logical_rep)
+	if (client->physical_rep || client->logical_rep)
 		server->offline = 1;
 	*/
 
@@ -1174,7 +1165,7 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	od_route_lock(route);
 
-	int is_repl = route->id.physical_rep || route->id.logical_rep;
+	int is_repl = client->physical_rep || client->logical_rep;
 	int offline = server->offline;
 
 	/* also sets server to IDLE */
