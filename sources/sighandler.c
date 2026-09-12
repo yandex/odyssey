@@ -116,7 +116,6 @@ static void shutdown_worker(void *arg)
 	shutdown_servers(router);
 
 	od_rules_stop_checkers(&router->rules);
-	od_rules_stop_watchdogs(&router->rules);
 
 	od_cron_stop(global->cron);
 

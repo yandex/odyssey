@@ -94,15 +94,9 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	}
 	memset(watchdog, 0, sizeof(od_storage_watchdog_t));
 	watchdog->global = global;
-	watchdog->is_finished = machine_wait_flag_create();
-	if (watchdog->is_finished == NULL) {
-		od_free(watchdog);
-		return NULL;
-	}
 
 	watchdog->online = machine_wait_flag_create();
 	if (watchdog->online == NULL) {
-		machine_wait_flag_destroy(watchdog->is_finished);
 		od_free(watchdog);
 		return NULL;
 	}
@@ -117,17 +111,6 @@ od_storage_watchdog_set_offline(od_storage_watchdog_t *watchdog)
 	return OK_RESPONSE;
 }
 
-void od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog)
-{
-	od_storage_watchdog_set_offline(watchdog);
-	/*
-	 * can't wait the coroutine to finish,
-	 * it can be run on other thread
-	 */
-	machine_wait_flag_wait(watchdog->is_finished, UINT32_MAX);
-	od_storage_watchdog_free(watchdog);
-}
-
 int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 {
 	if (watchdog == NULL) {
@@ -138,7 +121,6 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 		od_free(watchdog->query);
 	}
 
-	machine_wait_flag_destroy(watchdog->is_finished);
 	machine_wait_flag_destroy(watchdog->online);
 
 	od_free(watchdog);
@@ -169,18 +151,8 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 	return storage;
 }
 
-void od_rules_storage_free(od_rule_storage_t *storage)
+static void storage_free_now(od_rule_storage_t *storage)
 {
-	int64_t r = atomic_fetch_sub(&storage->refs, 1);
-
-	if (od_unlikely(r < 1)) {
-		abort();
-	}
-
-	if (r > 1) {
-		return;
-	}
-
 	if (storage->name) {
 		od_free(storage->name);
 	}
@@ -208,6 +180,52 @@ void od_rules_storage_free(od_rule_storage_t *storage)
 	od_storage_balancing_destroy(&storage->balancing);
 
 	od_free(storage);
+}
+
+void od_rules_storage_unref(od_rule_storage_t *storage)
+{
+	int64_t r = atomic_fetch_sub(&storage->refs, 1);
+	od_release_assert(r >= 1);
+
+	if (storage->watchdog != NULL && storage->watchdog_started) {
+		/*
+		 * watchdog has its own ref on storage and is running.
+		 * When the last non-watchdog ref is released (r == 2),
+		 * signal the watchdog to stop.  The watchdog coroutine
+		 * will then drop its ref and free the storage.
+		 *
+		 * We must not free storage here while the watchdog is
+		 * running — only the watchdog coroutine is allowed to
+		 * perform the final free (when r == 1 in its unref call).
+		 */
+		if (r > 2) {
+			return;
+		}
+		if (r == 2) {
+			od_storage_watchdog_set_offline(storage->watchdog);
+			storage->watchdog_started = 0;
+			return;
+		}
+		/*
+		 * r == 1: this is the watchdog coroutine dropping its
+		 * own ref.  It has already nulled storage->watchdog,
+		 * so we fall through to the no-watchdog path below.
+		 */
+	}
+
+	if (r > 1) {
+		return;
+	}
+
+	/*
+	 * r == 1: last ref.  If a watchdog was allocated but never
+	 * started, free it now (it holds no ref).
+	 */
+	if (storage->watchdog != NULL) {
+		od_storage_watchdog_free(storage->watchdog);
+		storage->watchdog = NULL;
+	}
+	storage_free_now(storage);
 }
 
 od_rule_storage_t *od_rules_storage_ref(od_rule_storage_t *s)
@@ -406,7 +424,11 @@ void od_storage_watchdog_watch(void *arg)
 
 	od_log(&instance->logger, "watchdog", NULL, NULL,
 	       "finishing watchdog for storage '%s'", watchdog->storage->name);
-	machine_wait_flag_set(watchdog->is_finished);
+
+	od_rule_storage_t *storage = watchdog->storage;
+	storage->watchdog = NULL;
+	od_storage_watchdog_free(watchdog);
+	od_rules_storage_unref(storage);
 }
 
 int od_storage_parse_endpoints(const char *host_str,

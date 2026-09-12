@@ -544,29 +544,6 @@ static inline int od_config_listen_host_cmp(char *host_listen,
 	return strcmp(host_listen, host_server);
 }
 
-static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
-{
-	od_list_t *i, *n;
-
-	od_rules_lock(&router->rules);
-	od_rules_lock(rules);
-
-	od_list_foreach_safe (&rules->storages, i, n) {
-		od_rule_storage_t *storage;
-		storage = od_container_of(i, od_rule_storage_t, link);
-
-		od_rule_storage_t *s = od_rules_storage_ref(storage);
-
-		od_list_unlink(&storage->link);
-		od_rules_storage_free(storage);
-
-		od_rules_storage_add(&router->rules, s);
-	}
-
-	od_rules_unlock(rules);
-	od_rules_unlock(&router->rules);
-}
-
 void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
@@ -580,8 +557,6 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_lock(&router->rules);
 
 	od_rules_stop_checkers(&router->rules);
-	od_rules_stop_watchdogs(&router->rules);
-	od_rules_cleanup(&router->rules);
 
 	od_config_t config;
 	od_config_init(&config);
@@ -620,6 +595,18 @@ void od_system_config_reload(od_system_t *system)
 	if (rc == -1) {
 		goto error;
 	}
+
+	/*
+	 * Merge storages: reuse unchanged storages (keeping their watchdogs
+	 * and endpoint statuses alive), move new/changed storages into
+	 * router->rules, and unref removed/changed ones.  Running
+	 * watchdogs keep their storages alive via refcount and stop
+	 * automatically when the last non-watchdog ref is dropped.  After
+	 * this, rules in the freshly parsed config reference the correct
+	 * storages, so od_rules_merge can compare origin->storage and
+	 * rule->storage by pointer.
+	 */
+	od_rules_storage_merge(&router->rules, &rules);
 
 	od_rules_unlock(&router->rules);
 
@@ -734,9 +721,7 @@ void od_system_config_reload(od_system_t *system)
 
 	od_log(&instance->logger, "rules", NULL, NULL,
 	       "dispatching storage watchdogs");
-	od_rules_storages_watchdogs_run(&instance->logger, &rules);
-
-	od_move_storages(router, &rules);
+	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
 
 	/* free unused rules */
 	od_rules_free(&rules);
