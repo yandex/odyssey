@@ -130,5 +130,71 @@ do_physical_repl_test() {
     psql $CONN -Atqc "select slot_name from pg_replication_slots where slot_name = '$REPLSLOTNAME' and slot_type = 'physical'" | grep -q "^$REPLSLOTNAME$"
 }
 
+reload() {
+    kill -s HUP "$(pidof odyssey)"
+    sleep 1
+}
+
+use_config() {
+    local name="$1"
+    cp /conf/odyssey.conf /conf/odyssey.conf.bak
+    cp "/conf/$name" /conf/odyssey.conf
+    reload
+}
+
+restore_config() {
+    cp /conf/odyssey.conf.bak /conf/odyssey.conf
+    rm /conf/odyssey.conf.bak
+    reload
+}
+
+pool_mode() {
+    psql -h odyssey -p 6432 -U console -d console -Atqc 'show pools' |
+        grep '^replication|repl_user|' | grep -o '[a-z]*$'
+}
+
+do_replication_db_test() {
+    # a database named "replication" must not be mistaken for the replication parameter
+    psql -h primary -p 5432 -U postgres -d postgres -c 'drop database if exists replication' || true
+    psql -h primary -p 5432 -U postgres -d postgres -c 'create database replication'
+    psql -h primary -p 5432 -U postgres -d postgres -c 'drop role if exists repl_user' || true
+    psql -h primary -p 5432 -U postgres -d postgres -c 'create role repl_user login'
+
+    [ "$(psql -h odyssey -p 6432 -U repl_user -d replication -Atqc 'select current_database()')" = "replication" ]
+    psql -h odyssey -p 6432 -U repl_user -d replication -Atqc 'select 1' | grep -qx '1'
+    [ "$(pool_mode)" = "transaction" ] # base config routes it via default rule
+
+    use_config odyssey_replication.conf
+
+    psql -h odyssey -p 6432 -U repl_user -d replication -Atqc 'select 1' | grep -qx '1'
+    [ "$(pool_mode)" = "session" ] # dedicated route applied after reload
+
+    restore_config
+}
+
+do_replication_blocked_test() {
+    # only db1 allowed; everything else (incl. replication) is blocked
+    psql -h primary -p 5432 -U postgres -d postgres -c 'drop database if exists db1' || true
+    psql -h primary -p 5432 -U postgres -d postgres -c 'create database db1'
+
+    use_config odyssey_blocked.conf
+
+    psql -h odyssey -p 6432 -U postgres -d db1 -Atqc 'select 1' | grep -qx '1'
+
+    if psql -h odyssey -p 6432 -U postgres -d postgres -Atqc 'select 1' 2>/dev/null; then
+        echo "non-db1 database should be blocked"
+        exit 1
+    fi
+
+    if psql "host=odyssey port=6432 user=postgres dbname=replication replication=true" 2>/dev/null; then
+        echo "replication connection should be blocked"
+        exit 1
+    fi
+
+    restore_config
+}
+
 do_logical_repl_test
 do_physical_repl_test
+do_replication_db_test
+do_replication_blocked_test

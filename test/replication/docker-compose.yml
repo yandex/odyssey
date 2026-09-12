@@ -32,7 +32,7 @@ services:
   odyssey:
     image: odyssey
     volumes:
-      - ./test.conf:/etc/odyssey/odyssey.conf
+      - ./conf:/etc/odyssey
     networks:
       - od_replication_test
     depends_on:
@@ -43,6 +43,9 @@ services:
     build:
       context: ../../ # odyssey root dir
       dockerfile: ./test/replication/Dockerfile
+    pid: "service:odyssey"
+    volumes:
+      - ./conf:/conf
     networks:
       - od_replication_test
     depends_on:
