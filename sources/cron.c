@@ -243,6 +243,11 @@ static inline void od_cron_expire(od_cron_t *cron)
 	od_router_gc(router);
 }
 
+void od_cron_expire_now(od_cron_t *cron)
+{
+	od_cron_expire(cron);
+}
+
 static void od_cron_err_stat(od_cron_t *cron)
 {
 	od_router_t *router = cron->global->router;

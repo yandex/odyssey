@@ -42,6 +42,7 @@ void od_system_server_shutdown(od_system_server_t *server);
 struct od_system {
 	int64_t machine;
 	int64_t sighandler_machine;
+	machine_channel_t *system_channel;
 	od_global_t *global;
 };
 
@@ -50,3 +51,5 @@ void od_system_init(od_system_t *);
 int od_system_start(od_system_t *, od_global_t *);
 void od_system_config_reload(od_system_t *);
 void od_system_free(od_system_t *system);
+
+int od_system_send_msg(od_system_t *system, int msg_type, void *arg);

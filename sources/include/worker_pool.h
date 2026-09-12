@@ -61,10 +61,9 @@ od_worker_pool_wait_gracefully_shutdown(od_worker_pool_t *pool)
 {
 	for (uint32_t i = 0; i < pool->count; i++) {
 		od_worker_t *worker = &pool->pool[i];
-		int rc = machine_wait(worker->machine);
-		if (rc != MM_OK_RETCODE) {
-			return;
-		}
+
+		/* return code is not checked - the worker thread might already finished */
+		machine_wait_nb(worker->machine);
 
 		machine_channel_free(worker->task_channel);
 	}

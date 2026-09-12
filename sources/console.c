@@ -29,6 +29,7 @@
 #include <extension.h>
 #include <cron.h>
 #include <option.h>
+#include <msg.h>
 
 typedef enum {
 	OD_LKILL_CLIENT,
@@ -64,6 +65,7 @@ typedef enum {
 	OD_LHOST_UTILIZATION,
 	OD_LRULES,
 	OD_LCONFIG,
+	OD_LGC,
 } od_console_keywords_t;
 
 static od_keyword_t od_console_keywords[] = {
@@ -100,6 +102,7 @@ static od_keyword_t od_console_keywords[] = {
 	od_keyword("host_utilization", OD_LHOST_UTILIZATION),
 	od_keyword("rules", OD_LRULES),
 	od_keyword("config", OD_LCONFIG),
+	od_keyword("gc", OD_LGC),
 	{ 0, 0, 0 }
 };
 
@@ -276,6 +279,7 @@ static inline int od_console_show_help(machine_msg_t *stream)
 		"\tSHOW CONFIG|RULES|FDS|IS_PAUSED|GLOBAL_PREPARED_STATEMENTS\n"
 		"\tKILL_CLIENT <client_id>\n"
 		"\tRELOAD\n"
+		"\tGC\n"
 		"\tPAUSE\n"
 		"\tRESUME\n"
 		"\tSET key=arg\n"
@@ -2468,11 +2472,6 @@ static inline int od_console_kill_client(od_client_t *client,
 	return 0;
 }
 
-static void od_console_reload_coroutine(void *arg)
-{
-	od_system_config_reload(arg);
-}
-
 static inline int od_console_reload(od_client_t *client, machine_msg_t *stream)
 {
 	od_instance_t *instance = client->global->instance;
@@ -2480,24 +2479,58 @@ static inline int od_console_reload(od_client_t *client, machine_msg_t *stream)
 	od_log(&instance->logger, "console", NULL, NULL,
 	       "RELOAD command received");
 
-	/*
-	 * reloading could use large amount of stack, due to config parsing
-	 * current function was run as client from od_frontend and have little stack
-	 */
-	int64_t id =
-		machine_coroutine_create_system(od_console_reload_coroutine,
-						client->global->system,
-						"reload_cmd");
-	if (id == -1) {
+	/* send reload request to system thread and wait for completion */
+	od_system_t *system = client->global->system;
+	mm_wait_flag_t *done = mm_wait_flag_create();
+	if (done == NULL) {
 		od_error(&instance->logger, "console", client, NULL,
-			 "failed to create reload coroutine, errno=%d (%s)",
-			 mm_errno_get(), strerror(mm_errno_get()));
+			 "failed to create wait flag for reload");
 		return -1;
 	}
 
-	machine_join(id);
+	int rc = od_system_send_msg(system, OD_MSG_RELOAD, done);
+	if (rc != 0) {
+		mm_wait_flag_destroy(done);
+		od_error(&instance->logger, "console", client, NULL,
+			 "failed to send reload request to system thread");
+		return -1;
+	}
+
+	/* wait for system thread to finish reload */
+	mm_wait_flag_wait(done, UINT32_MAX);
+	mm_wait_flag_destroy(done);
 
 	return kiwi_be_write_complete(stream, "RELOAD", 7);
+}
+
+static inline int od_console_gc(od_client_t *client, machine_msg_t *stream)
+{
+	od_instance_t *instance = client->global->instance;
+
+	od_log(&instance->logger, "console", NULL, NULL, "GC command received");
+
+	/* send GC request to system thread and wait for completion */
+	od_system_t *system = client->global->system;
+	mm_wait_flag_t *done = mm_wait_flag_create();
+	if (done == NULL) {
+		od_error(&instance->logger, "console", client, NULL,
+			 "failed to create wait flag for GC");
+		return -1;
+	}
+
+	int rc = od_system_send_msg(system, OD_MSG_GC, done);
+	if (rc != 0) {
+		mm_wait_flag_destroy(done);
+		od_error(&instance->logger, "console", client, NULL,
+			 "failed to send GC request to system thread");
+		return -1;
+	}
+
+	/* wait for system thread to finish GC */
+	mm_wait_flag_wait(done, UINT32_MAX);
+	mm_wait_flag_destroy(done);
+
+	return kiwi_be_write_complete(stream, "GC", 3);
 }
 
 static inline int od_console_set(od_client_t *client, machine_msg_t *stream)
@@ -2757,6 +2790,15 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 			goto incorrect_role;
 		}
 		rc = od_console_reload(client, stream);
+		if (rc == NOT_OK_RESPONSE) {
+			goto bad_query;
+		}
+		break;
+	case OD_LGC:
+		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+			goto incorrect_role;
+		}
+		rc = od_console_gc(client, stream);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}

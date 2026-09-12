@@ -249,9 +249,9 @@ int od_rules_merge(od_rules_t *, od_rules_t *, od_list_t *added,
 		   od_list_t *deleted, od_list_t *drop, od_list_t *not_changed);
 void od_rules_print(od_rules_t *, od_logger_t *);
 
-void od_rules_stop_watchdogs(od_rules_t *rules);
 void od_rules_stop_checkers(od_rules_t *rules);
 int od_rules_cleanup(od_rules_t *rules);
+int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src);
 
 int od_rules_sort_for_matching(od_rules_t *rules);
 
@@ -286,6 +286,8 @@ void od_rules_rule_free(od_rule_t *rule);
 od_rule_storage_t *od_rules_storage_match(od_rules_t *, const char *);
 od_rule_storage_t *od_rules_storage_add(od_rules_t *rules,
 					od_rule_storage_t *storage);
+
+int od_rules_storage_compare(od_rule_storage_t *a, od_rule_storage_t *b);
 
 od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
 					     od_rules_t *rules);

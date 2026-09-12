@@ -131,12 +131,16 @@ do_physical_repl_test() {
 }
 
 reload() {
-    kill -s HUP "$(pidof odyssey)"
-    sleep 1
+    psql -h odyssey -p 6432 -U console -d console -c 'reload' || exit 1
+    psql -h odyssey -p 6432 -U console -d console -c 'gc' || exit 1
 }
 
 use_config() {
     local name="$1"
+
+    echo "Doing config $name.."
+    diff "/conf/$name" /conf/odyssey.conf || true
+
     cp /conf/odyssey.conf /conf/odyssey.conf.bak
     cp "/conf/$name" /conf/odyssey.conf
     reload
@@ -162,12 +166,22 @@ do_replication_db_test() {
 
     [ "$(psql -h odyssey -p 6432 -U repl_user -d replication -Atqc 'select current_database()')" = "replication" ]
     psql -h odyssey -p 6432 -U repl_user -d replication -Atqc 'select 1' | grep -qx '1'
-    [ "$(pool_mode)" = "transaction" ] # base config routes it via default rule
+    # base config routes it via default rule
+    [ "$(pool_mode)" = "transaction" ] || {
+        psql -h odyssey -p 6432 -U console -d console -c 'show pools'
+        psql -h odyssey -p 6432 -U console -d console -c 'show rules'
+        exit 1
+    }
 
     use_config odyssey_replication.conf
 
     psql -h odyssey -p 6432 -U repl_user -d replication -Atqc 'select 1' | grep -qx '1'
-    [ "$(pool_mode)" = "session" ] # dedicated route applied after reload
+     # dedicated route applied after reload
+    [ "$(pool_mode)" = "session" ] || {
+        psql -h odyssey -p 6432 -U console -d console -c 'show pools'
+        psql -h odyssey -p 6432 -U console -d console -c 'show rules'
+        exit 1
+    }
 
     restore_config
 }

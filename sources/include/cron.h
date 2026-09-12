@@ -33,3 +33,4 @@ struct od_cron {
 od_retcode_t od_cron_init(od_cron_t *);
 int od_cron_start(od_cron_t *, od_global_t *);
 od_retcode_t od_cron_stop(od_cron_t *cron);
+void od_cron_expire_now(od_cron_t *cron);

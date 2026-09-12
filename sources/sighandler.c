@@ -24,154 +24,6 @@
 #include <restart_sync.h>
 #include <systemd_notify.h>
 
-typedef struct {
-	od_system_t *system;
-	machine_channel_t *channel;
-} shutdown_worker_arg_t;
-
-static void *killer(void *arg)
-{
-	uint64_t timeout_ms = (uint64_t)(uintptr_t)arg;
-
-	struct timespec duration;
-	memset(&duration, 0, sizeof(duration));
-	duration.tv_sec = timeout_ms / 1000;
-	duration.tv_nsec = (timeout_ms % 1000) * 1000000;
-
-	struct timespec rem;
-	memset(&rem, 0, sizeof(rem));
-
-	while (1) {
-		int rc = nanosleep(&duration, &rem);
-		if (rc == 0 || errno != EINTR) {
-			break;
-		}
-
-		duration = rem;
-	}
-
-	exit(124);
-}
-
-static void start_timeout_thread(uint64_t timeout_ms)
-{
-	/*
-	 * start the detached plain pthread
-	 * because we dont want mess with machinarium
-	 * internals destroy
-	 */
-
-	pthread_t th;
-	int rc = pthread_create(&th, NULL, killer,
-				(void *)(uintptr_t)timeout_ms);
-	if (rc == 0) {
-		pthread_detach(th);
-	} else {
-		od_gerror("shutdown", NULL, NULL,
-			  "can't start shutdown timeout killer: %d (%s)", rc,
-			  strerror(rc));
-	}
-}
-
-static void shutdown_servers(od_router_t *router)
-{
-	od_list_t *i;
-	od_list_foreach (&router->servers, i) {
-		od_system_server_t *server;
-		server = od_container_of(i, od_system_server_t, link);
-		od_system_server_shutdown(server);
-	}
-}
-
-static void shutdown_worker(void *arg)
-{
-	shutdown_worker_arg_t *warg = arg;
-
-	od_system_t *system = warg->system;
-	machine_channel_t *channel = warg->channel;
-
-	od_global_t *global = system->global;
-	od_worker_pool_t *worker_pool = global->worker_pool;
-	od_instance_t *instance = global->instance;
-	od_router_t *router = global->router;
-
-	od_free(warg);
-
-#ifdef ODYSSEY_VERSION_GIT
-	od_setproctitlef(&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
-			 "%s %s (git %s) stop accepting any connections",
-			 ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER,
-			 ODYSSEY_VERSION_GIT);
-#else
-	od_setproctitlef(&instance->orig_argv_ptr, instance->orig_argv_ptr_len,
-			 "%s %s stop accepting any connections", ODYSSEY_NAME,
-			 ODYSSEY_VERSION_NUMBER);
-#endif
-
-	if (instance->config.graceful_shutdown_timeout_ms != 0) {
-		start_timeout_thread(
-			instance->config.graceful_shutdown_timeout_ms);
-	}
-
-	shutdown_servers(router);
-
-	od_rules_stop_checkers(&router->rules);
-	od_rules_stop_watchdogs(&router->rules);
-
-	od_cron_stop(global->cron);
-
-	od_worker_pool_shutdown(worker_pool);
-	od_worker_pool_wait_gracefully_shutdown(worker_pool);
-
-	machine_msg_t *msg = machine_msg_create(0);
-	if (msg == NULL) {
-		od_fatal(&instance->logger, "system", NULL, NULL,
-			 "failed to create a message in grac_shutdown_worker");
-	}
-
-	machine_msg_set_type(msg, OD_MSG_GRAC_SHUTDOWN_FINISHED);
-	machine_channel_write(channel, msg);
-}
-
-static inline od_retcode_t run_shutdown_thread(od_system_t *system,
-					       machine_channel_t *channel)
-{
-	/*
-	 * run servers and workers closing in separated thread
-	 * to still have an ability to receive signals
-	 *
-	 * all other cleanup will be done in system thread
-	 */
-
-	od_instance_t *instance = system->global->instance;
-	int64_t shut_worker_id = od_instance_get_shutdown_worker_id(instance);
-	if (shut_worker_id != INVALID_COROUTINE_ID) {
-		return OK_RESPONSE;
-	}
-
-	/* freed in od_grac_shutdown_worker */
-	shutdown_worker_arg_t *arg = od_malloc(sizeof(shutdown_worker_arg_t));
-	if (arg == NULL) {
-		od_fatal(&instance->logger, "gracefully_killer", NULL, NULL,
-			 "failed to allocate shutdown_worker_arg");
-		return NOT_OK_RESPONSE;
-	}
-	arg->system = system;
-	arg->channel = channel;
-
-	int64_t mid;
-	mid = machine_create("shutdowner", shutdown_worker, arg);
-	if (mid == -1) {
-		od_fatal(&instance->logger, "gracefully_killer", NULL, NULL,
-			 "failed to invoke gracefully killer coroutine");
-		od_free(arg);
-		return NOT_OK_RESPONSE;
-	}
-	od_instance_set_shutdown_worker_id(instance, mid);
-
-	return OK_RESPONSE;
-}
-
 typedef struct waiter_arg {
 	od_system_t *system;
 	machine_channel_t *channel;
@@ -255,29 +107,23 @@ void od_system_signal_handler(void *arg)
 	}
 
 	int term_count = 0;
-
-	bool graceful_shutdown_finished = false;
-	while (!graceful_shutdown_finished) {
+	bool shutting_down = false;
+	while (!shutting_down) {
 		machine_msg_t *msg = machine_channel_read(channel, UINT32_MAX);
 
 		/* canceled */
 		if (msg == NULL) {
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "NULL message in sighandler");
-			return;
+			break;
 		}
 
 		int type = machine_msg_type(msg);
-		switch (type) {
-		case OD_MSG_SIGNAL_RECEIVED:
-			break;
-		case OD_MSG_GRAC_SHUTDOWN_FINISHED:
-			graceful_shutdown_finished = true;
+		if (type != OD_MSG_SIGNAL_RECEIVED) {
+			od_assert(0);
 			machine_msg_free(msg);
 			continue;
-		default:
-			od_assert(0);
-		};
+		}
 
 		int sig = *(int *)machine_msg_data(msg);
 		machine_msg_free(msg);
@@ -293,7 +139,7 @@ void od_system_signal_handler(void *arg)
 				exit(1);
 			}
 
-			/* 
+			/*
 			 * If we're being replaced by a new process (online restart),
 			 * notify systemd of the new main PID before shutting down.
 			 */
@@ -307,7 +153,15 @@ void od_system_signal_handler(void *arg)
 				od_systemd_notify_stopping();
 			}
 
-			run_shutdown_thread(system, channel);
+			if (od_system_send_msg(system, OD_MSG_SHUTDOWN, NULL) !=
+			    0) {
+				od_error(&instance->logger, "system", NULL,
+					 NULL,
+					 "failed to send shutdown request, "
+					 "forcing exit");
+				exit(1);
+			}
+			shutting_down = true;
 			break;
 		case SIGWINCH:
 			/*
@@ -332,7 +186,27 @@ void od_system_signal_handler(void *arg)
 				break;
 			}
 			od_systemd_notify_reloading("Reloading configuration");
-			od_system_config_reload(system);
+			mm_wait_flag_t *reload_done = mm_wait_flag_create();
+			if (reload_done == NULL) {
+				od_error(&instance->logger, "system", NULL,
+					 NULL,
+					 "failed to create wait flag for "
+					 "reload, notifying ready anyway");
+				od_systemd_notify_ready();
+				break;
+			}
+			if (od_system_send_msg(system, OD_MSG_RELOAD,
+					       reload_done) != 0) {
+				mm_wait_flag_destroy(reload_done);
+				od_error(&instance->logger, "system", NULL,
+					 NULL,
+					 "failed to send reload request, "
+					 "notifying ready anyway");
+				od_systemd_notify_ready();
+				break;
+			}
+			mm_wait_flag_wait(reload_done, UINT32_MAX);
+			mm_wait_flag_destroy(reload_done);
 			od_systemd_notify_ready();
 			break;
 		case OD_SIG_LOG_ROTATE:
@@ -421,8 +295,6 @@ void od_system_signal_handler(void *arg)
 			break;
 		}
 	}
-
-	machine_wait(od_instance_get_shutdown_worker_id(instance));
 
 	machine_cancel(sigwaiter_id);
 	machine_join(sigwaiter_id);
