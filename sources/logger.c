@@ -372,17 +372,13 @@ static char od_logger_escape_tab[256] = {
 	['\r'] = 'r', ['\\'] = '\\', ['='] = '='
 };
 
-__attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
-							char *fmt, va_list args)
+__attribute__((hot)) static inline int
+od_logger_escape(char *dest, int size, const char *src, int len)
 {
-	char prefmt[512];
-	int prefmt_len;
-	prefmt_len = od_vsnprintf(prefmt, sizeof(prefmt), fmt, args);
-
 	char *dst_pos = dest;
 	char *dst_end = dest + size;
-	char *msg_pos = prefmt;
-	char *msg_end = prefmt + prefmt_len;
+	const char *msg_pos = src;
+	const char *msg_end = src + len;
 
 	while (msg_pos < msg_end) {
 		char escaped_char;
@@ -404,6 +400,14 @@ __attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
 		msg_pos++;
 	}
 	return dst_pos - dest;
+}
+
+__attribute__((hot)) static inline int
+od_logger_escape_message(char *dest, int size, char *fmt, va_list args)
+{
+	char prefmt[512];
+	int len = od_vsnprintf(prefmt, sizeof(prefmt), fmt, args);
+	return od_logger_escape(dest, size, prefmt, len);
 }
 
 /* should be faster than od_snprintf("%s") */
@@ -516,7 +520,8 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 		 va_list args, char *output, int output_len)
 {
 	char *dst_pos = output;
-	char *dst_end = output + output_len;
+	/* Reserve space for the final newline and the async slot's NUL. */
+	char *dst_end = output + output_len - 2;
 	char peer[128];
 
 	/* Fast path: iterate over pre-compiled tokens. */
@@ -530,6 +535,9 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 	int tm_parsed = 0;
 
 	for (int i = 0; i < n; i++) {
+		if (dst_pos == dst_end) {
+			goto format_done;
+		}
 		od_fmt_token_t *tok = &tokens[i];
 		switch (tok->type) {
 		case OD_FMT_LITERAL: {
@@ -634,8 +642,8 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 						args);
 			break;
 		case OD_FMT_MESSAGE_ESC:
-			dst_pos += od_logger_escape(dst_pos, dst_end - dst_pos,
-						    fmt, args);
+			dst_pos += od_logger_escape_message(
+				dst_pos, dst_end - dst_pos, fmt, args);
 			break;
 		case OD_FMT_CLIENT_ID:
 			if (client && client->id.id_prefix != NULL) {
@@ -661,9 +669,10 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 			break;
 		case OD_FMT_USER:
 			if (client && client->startup.user.value_len) {
-				dst_pos += od_logger_append_str(
-					dst_pos, dst_end,
-					client->startup.user.value);
+				dst_pos += od_logger_escape(
+					dst_pos, dst_end - dst_pos,
+					client->startup.user.value,
+					client->startup.user.value_len - 1);
 			} else {
 				dst_pos += od_logger_append_str(
 					dst_pos, dst_end, "none");
@@ -671,9 +680,10 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 			break;
 		case OD_FMT_DATABASE:
 			if (client && client->startup.database.value_len) {
-				dst_pos += od_logger_append_str(
-					dst_pos, dst_end,
-					client->startup.database.value);
+				dst_pos += od_logger_escape(
+					dst_pos, dst_end - dst_pos,
+					client->startup.database.value,
+					client->startup.database.value_len - 1);
 			} else {
 				dst_pos += od_logger_append_str(
 					dst_pos, dst_end, "none");
@@ -685,14 +695,23 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 				var = kiwi_vars_get(&client->vars,
 						    KIWI_VAR_APPLICATION_NAME);
 			}
-			dst_pos += od_logger_append_str(
-				dst_pos, dst_end, var ? var->value : "none");
+			if (var && var->value_len) {
+				dst_pos += od_logger_escape(dst_pos,
+							    dst_end - dst_pos,
+							    var->value,
+							    var->value_len - 1);
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
 			break;
 		}
 		case OD_FMT_EXTERNAL_ID:
 			if (client && client->external_id != NULL) {
-				dst_pos += od_logger_append_str(
-					dst_pos, dst_end, client->external_id);
+				dst_pos += od_logger_escape(
+					dst_pos, dst_end - dst_pos,
+					client->external_id,
+					strlen(client->external_id));
 			} else {
 				dst_pos += od_logger_append_str(
 					dst_pos, dst_end, "none");
@@ -742,7 +761,7 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 
 format_done:
 	/* append new line, if format string doesn't have it */
-	if (dst_pos < dst_end && dst_pos > output && *(dst_pos - 1) != '\n') {
+	if (dst_pos > output && *(dst_pos - 1) != '\n') {
 		*dst_pos = '\n';
 		++dst_pos;
 	}
