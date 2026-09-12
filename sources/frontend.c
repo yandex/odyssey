@@ -539,6 +539,18 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 				continue;
 			}
 		}
+		if (!od_backend_need_startup(server) && route_params == NULL &&
+		    client->rule->maintain_params &&
+		    client->rule->pool->pool_type == OD_RULE_POOL_SESSION &&
+		    !kiwi_var_compare(&client->startup_application_name,
+				      &server->startup_application_name)) {
+			od_debug(
+				&instance->logger, context, client, server,
+				"startup application_name differs, reconnecting");
+			od_router_close(router, client);
+			wait_for_idle = false;
+			continue;
+		}
 		od_debug(&instance->logger, context, client, server,
 			 "client %s%.*s attached to %s%.*s",
 			 client->id.id_prefix, (int)sizeof(client->id.id),
@@ -2985,6 +2997,8 @@ void od_frontend(void *arg)
 		if (rc == -1) {
 			goto cleanup;
 		}
+		client->startup_application_name =
+			*kiwi_vars_of(&client->vars, KIWI_VAR_APPLICATION_NAME);
 
 		/* set network options */
 		od_rule_t *rule = route->rule;
