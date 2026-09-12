@@ -1270,7 +1270,7 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 	return 0;
 
 error:
-	od_rules_storage_free(storage);
+	od_rules_storage_unref(storage);
 	return -1;
 }
 

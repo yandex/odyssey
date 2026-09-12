@@ -898,7 +898,7 @@ static od_frontend_status_t attach_impl(od_client_t *client, char *context,
 					NULL,
 					"storage '%s' has mismatched storage_type, skipping",
 					name);
-				od_rules_storage_free(storage);
+				od_rules_storage_unref(storage);
 				continue;
 			}
 
@@ -910,7 +910,7 @@ static od_frontend_status_t attach_impl(od_client_t *client, char *context,
 						     route_params, storage,
 						     is_deploy);
 
-			od_rules_storage_free(storage);
+			od_rules_storage_unref(storage);
 
 			if (status == OD_OK) {
 				return OD_OK;

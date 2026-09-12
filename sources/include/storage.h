@@ -39,12 +39,10 @@ struct od_storage_watchdog {
 	od_rule_storage_t *storage;
 
 	machine_wait_flag_t *online;
-	machine_wait_flag_t *is_finished;
 };
 
 od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *);
 int od_storage_watchdog_free(od_storage_watchdog_t *watchdog);
-void od_storage_watchdog_soft_exit(od_storage_watchdog_t *watchdog);
 
 typedef struct {
 	uint64_t last_update_time_ms;
@@ -90,6 +88,7 @@ struct od_rule_storage {
 
 	int server_max_routing;
 	od_storage_watchdog_t *watchdog;
+	int watchdog_started;
 
 	od_list_t link;
 
@@ -97,6 +96,8 @@ struct od_rule_storage {
 	od_storage_balancing_t balancing;
 
 	atomic_int_fast64_t refs;
+
+	int mark; /* transient flag used during storage merge */
 };
 
 /* storage API */
@@ -104,7 +105,7 @@ od_rule_storage_t *od_rules_storage_allocate(void);
 
 od_rule_storage_t *od_rules_storage_ref(od_rule_storage_t *s);
 
-void od_rules_storage_free(od_rule_storage_t *);
+void od_rules_storage_unref(od_rule_storage_t *);
 
 od_storage_endpoint_t *od_storage_find_endpoint(od_rule_storage_t *storage,
 						const od_address_t *address);

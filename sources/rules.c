@@ -123,15 +123,19 @@ od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
 	od_list_foreach (&rules->storages, i) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
-		if (storage->watchdog) {
+		if (storage->watchdog && !storage->watchdog_started) {
 			int64_t coroutine_id;
+			/* the ref is held by watchdog */
+			od_rules_storage_ref(storage);
 			coroutine_id = machine_coroutine_create(
 				od_storage_watchdog_watch, storage->watchdog);
 			if (coroutine_id == INVALID_COROUTINE_ID) {
+				od_rules_storage_unref(storage);
 				od_error(logger, "system", NULL, NULL,
 					 "failed to start watchdog coroutine");
 				return NOT_OK_RESPONSE;
 			}
+			storage->watchdog_started = 1;
 		}
 	}
 	return OK_RESPONSE;
@@ -658,7 +662,7 @@ static void od_rules_rule_free_now(od_rule_t *rule)
 		od_free(rule->auth_query_user);
 	}
 	if (rule->storage) {
-		od_rules_storage_free(rule->storage);
+		od_rules_storage_unref(rule->storage);
 	}
 	if (rule->storage_name) {
 		od_free(rule->storage_name);
@@ -1212,8 +1216,7 @@ od_rules_match_active(od_rules_t *rules, char *db_name, char *user_name,
 	return NULL;
 }
 
-static inline int od_rules_storage_compare(od_rule_storage_t *a,
-					   od_rule_storage_t *b)
+int od_rules_storage_compare(od_rule_storage_t *a, od_rule_storage_t *b)
 {
 	/* type */
 	if (a->storage_type != b->storage_type) {
@@ -1281,6 +1284,89 @@ static inline int od_rules_storage_compare(od_rule_storage_t *a,
 			return 0;
 		}
 	} else if (a->tls_opts->tls_protocols || b->tls_opts->tls_protocols) {
+		return 0;
+	}
+
+	/* endpoints_status_poll_interval_ms */
+	if (a->endpoints_status_poll_interval_ms !=
+	    b->endpoints_status_poll_interval_ms) {
+		return 0;
+	}
+
+	/* endpoints count */
+	if (a->endpoints_count != b->endpoints_count) {
+		return 0;
+	}
+
+	/* endpoints addresses */
+	for (size_t k = 0; k < a->endpoints_count; k++) {
+		if (od_address_cmp(&a->endpoints[k].address,
+				   &b->endpoints[k].address) != 0) {
+			return 0;
+		}
+	}
+
+	/* balancing */
+	if (a->balancing.method.type != b->balancing.method.type) {
+		return 0;
+	}
+	if (a->balancing.method.az_aware != b->balancing.method.az_aware) {
+		return 0;
+	}
+	if (a->balancing.debug_notice != b->balancing.debug_notice) {
+		return 0;
+	}
+
+	/* balancing: weighted */
+	if (a->balancing.method.weighted.nweights !=
+	    b->balancing.method.weighted.nweights) {
+		return 0;
+	}
+	for (size_t k = 0; k < a->balancing.method.weighted.nweights; k++) {
+		od_balancing_host_weight_t *aw =
+			&a->balancing.method.weighted.weights[k];
+		od_balancing_host_weight_t *bw =
+			&b->balancing.method.weighted.weights[k];
+		if (aw->weight != bw->weight) {
+			return 0;
+		}
+		if ((aw->host == NULL) != (bw->host == NULL)) {
+			return 0;
+		}
+		if (aw->host && bw->host && strcmp(aw->host, bw->host) != 0) {
+			return 0;
+		}
+	}
+
+	/* balancing: weighted_leastconn */
+	if (a->balancing.method.weighted_leastconn.nweights !=
+	    b->balancing.method.weighted_leastconn.nweights) {
+		return 0;
+	}
+	for (size_t k = 0; k < a->balancing.method.weighted_leastconn.nweights;
+	     k++) {
+		od_balancing_host_weight_t *aw =
+			&a->balancing.method.weighted_leastconn.weights[k];
+		od_balancing_host_weight_t *bw =
+			&b->balancing.method.weighted_leastconn.weights[k];
+		if (aw->weight != bw->weight) {
+			return 0;
+		}
+		if ((aw->host == NULL) != (bw->host == NULL)) {
+			return 0;
+		}
+		if (aw->host && bw->host && strcmp(aw->host, bw->host) != 0) {
+			return 0;
+		}
+	}
+
+	/* balancing: responsetime */
+	if (a->balancing.method.responsetime.time_weight !=
+	    b->balancing.method.responsetime.time_weight) {
+		return 0;
+	}
+	if (a->balancing.method.responsetime.conn_weight !=
+	    b->balancing.method.responsetime.conn_weight) {
 		return 0;
 	}
 
@@ -1606,12 +1692,17 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 					       &rule->address_range,
 					       rule->conn_type);
 		if (origin) {
-			/* force drop rules with shared pools */
-
-			/* TODO: temporary disable not changing rules */
-			(void)not_changed;
-
-			/* if (origin->shared_pool == NULL &&
+			/*
+			 * If the rule is unchanged (same settings, same
+			 * storage), keep the origin alive and drop the
+			 * freshly parsed copy.  Since od_rules_storage_merge
+			 * already re-pointed rule->storage to the origin's
+			 * storage (when the storage is unchanged), the
+			 * pointer comparison inside od_rules_rule_compare
+			 * will succeed and the origin keeps its backend
+			 * connections, watchdog and endpoint statuses.
+			 */
+			if (origin->shared_pool == NULL &&
 			    rule->shared_pool == NULL &&
 			    od_rules_rule_compare(origin, rule)) {
 				origin->mark = 0;
@@ -1622,7 +1713,7 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 				od_list_append(not_changed, &rk->link);
 
 				continue;
-			} else */
+			}
 
 			if (!od_rules_rule_compare_to_drop(origin, rule)) {
 				od_rule_key_t *rk = rk_of(origin);
@@ -2226,17 +2317,122 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 	return 0;
 }
 
-void od_rules_stop_watchdogs(od_rules_t *rules)
+int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 {
-	od_list_t *n, *i;
-	od_list_foreach_safe (&rules->storages, i, n) {
-		od_rule_storage_t *storage;
-		storage = od_container_of(i, od_rule_storage_t, link);
-		if (storage->watchdog) {
-			od_storage_watchdog_soft_exit(storage->watchdog);
-			storage->watchdog = NULL;
+	/*
+	 * Diff-based merge of storages from src into dst.
+	 *
+	 * For each storage in src, look for an equivalent storage in dst
+	 * (matched by name).  If found and contents are identical, reuse
+	 * the old storage: re-point every rule in src that references the
+	 * new storage to the old one, then free the new copy.  This keeps
+	 * the old storage's watchdog and endpoint statuses alive, avoiding
+	 * unnecessary reconnection churn.
+	 *
+	 * Storages in dst that are not present in src (or whose contents
+	 * changed) are unlinked from dst and unref'd.  If a watchdog is
+	 * running it keeps the storage alive via its own ref until it
+	 * finishes; od_rules_storage_unref signals it to stop.
+	 *
+	 * New storages (present in src but not in dst) are moved into dst.
+	 *
+	 * After this call, rules in src->rules reference storages that are
+	 * either in dst->storages (reused) or in src->storages (new), so
+	 * od_rules_merge which follows can safely compare origin->storage
+	 * and rule->storage.
+	 */
+
+	/* mark all dst storages as not-yet-matched */
+	od_list_t *i;
+	od_list_foreach (&dst->storages, i) {
+		od_rule_storage_t *s;
+		s = od_container_of(i, od_rule_storage_t, link);
+		s->mark = 0;
+	}
+
+	od_list_t *n;
+	od_list_foreach_safe (&src->storages, i, n) {
+		od_rule_storage_t *new_storage;
+		new_storage = od_container_of(i, od_rule_storage_t, link);
+
+		/* find equivalent storage in dst by name */
+		od_rule_storage_t *old_storage = NULL;
+		od_list_t *j;
+		od_list_foreach (&dst->storages, j) {
+			od_rule_storage_t *s;
+			s = od_container_of(j, od_rule_storage_t, link);
+			if (strcmp(s->name, new_storage->name) == 0) {
+				old_storage = s;
+				break;
+			}
+		}
+
+		if (old_storage &&
+		    od_rules_storage_compare(old_storage, new_storage)) {
+			/*
+			 * Storage is unchanged: reuse old storage.
+			 * Re-point all rules in src that reference
+			 * new_storage to old_storage.
+			 */
+			od_list_t *k;
+			od_list_foreach (&src->rules, k) {
+				od_rule_t *rule;
+				rule = od_container_of(k, od_rule_t, link);
+				if (rule->storage == new_storage) {
+					od_rules_storage_unref(new_storage);
+					rule->storage = od_rules_storage_ref(
+						old_storage);
+				}
+			}
+
+			/*
+			 * The new storage has a freshly allocated watchdog
+			 * that we don't need — the old storage already has
+			 * a running one.  Free it.
+			 */
+			if (new_storage->watchdog) {
+				od_storage_watchdog_free(new_storage->watchdog);
+				new_storage->watchdog = NULL;
+			}
+
+			/* free the new copy and drop it from src */
+			od_list_unlink(&new_storage->link);
+			od_rules_storage_unref(new_storage);
+
+			/* mark old storage as matched */
+			old_storage->mark = 1;
+		} else {
+			/*
+			 * Storage is new or changed: move new into dst.
+			 * Unlink old from dst and unref — watchdog (if
+			 * running) will stop via refcount.
+			 */
+			if (old_storage) {
+				od_list_unlink(&old_storage->link);
+				od_rules_storage_unref(old_storage);
+			}
+
+			od_list_unlink(&new_storage->link);
+			od_rules_storage_add(dst, new_storage);
 		}
 	}
+
+	/*
+	 * Unlink storages in dst that were not matched (not present in
+	 * new config) and unref them.
+	 */
+	od_list_foreach_safe (&dst->storages, i, n) {
+		od_rule_storage_t *s;
+		s = od_container_of(i, od_rule_storage_t, link);
+		if (!s->mark) {
+			od_list_unlink(&s->link);
+			od_rules_storage_unref(s);
+		} else {
+			s->mark = 0;
+		}
+	}
+
+	return 0;
 }
 
 int od_rules_cleanup(od_rules_t *rules)
@@ -2247,7 +2443,7 @@ int od_rules_cleanup(od_rules_t *rules)
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 		od_list_unlink(&storage->link);
-		od_rules_storage_free(storage);
+		od_rules_storage_unref(storage);
 	}
 	od_list_init(&rules->storages);
 #ifdef LDAP_FOUND
