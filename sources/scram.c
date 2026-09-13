@@ -306,7 +306,7 @@ error:
 int read_server_first_message(od_scram_state_t *scram_state, char *auth_data,
 			      size_t auth_data_size, char **server_nonce_ptr,
 			      size_t *server_nonce_size_ptr, uint8_t **salt_ptr,
-			      int *iterations_ptr)
+			      int *salt_len_ptr, int *iterations_ptr)
 {
 	scram_state->server_first_message =
 		od_strdup_from_buf(auth_data, auth_data_size);
@@ -368,6 +368,7 @@ int read_server_first_message(od_scram_state_t *scram_state, char *auth_data,
 	*server_nonce_ptr = server_nonce;
 	*server_nonce_size_ptr = server_nonce_size;
 	*salt_ptr = salt;
+	*salt_len_ptr = salt_len;
 	*iterations_ptr = iterations;
 
 	return 0;
@@ -381,7 +382,7 @@ error:
 
 static int calculate_client_proof(od_scram_state_t *scram_state,
 				  const char *password, const uint8_t *salt,
-				  int iterations,
+				  int salt_len, int iterations,
 				  const char *client_final_message,
 				  uint8_t *client_proof)
 {
@@ -411,8 +412,8 @@ static int calculate_client_proof(od_scram_state_t *scram_state,
 			return -1;
 		}
 
-		od_scram_SaltedPassword(prepared_password, salt,
-					SCRAM_DEFAULT_SALT_LEN, iterations,
+		od_scram_SaltedPassword(prepared_password, salt, salt_len,
+					iterations,
 					scram_state->salted_password, &errstr);
 		od_scram_ClientKey(scram_state->salted_password, client_key,
 				   &errstr);
@@ -486,11 +487,12 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	char *server_nonce;
 	size_t server_nonce_size;
 	uint8_t *salt;
+	int salt_len;
 	int iterations;
 
 	int rc = read_server_first_message(scram_state, auth_data,
 					   auth_data_size, &server_nonce,
-					   &server_nonce_size, &salt,
+					   &server_nonce_size, &salt, &salt_len,
 					   &iterations);
 	if (rc == -1) {
 		return NULL;
@@ -515,8 +517,8 @@ od_scram_create_client_final_message(od_scram_state_t *scram_state,
 	}
 
 	uint8_t client_proof[OD_SCRAM_MAX_KEY_LEN];
-	rc = calculate_client_proof(scram_state, password, salt, iterations,
-				    result, client_proof);
+	rc = calculate_client_proof(scram_state, password, salt, salt_len,
+				    iterations, result, client_proof);
 	od_free(salt);
 	if (rc == -1) {
 		goto error;
