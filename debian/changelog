@@ -1,3 +1,12 @@
+odyssey (1.5.2-1) unstable; urgency=medium
+
+  * SCRAM fixes
+  * COPY protocol minor fixes
+  * performance improvements
+  * LDAP auth in separated thread pool
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Sun, 13 Sep 2026 16:39:17 +0500
+
 odyssey (1.5.2-rc2-1) unstable; urgency=medium
 
   * ref counters for global pstmts map (#1515)
@@ -17,12 +26,6 @@ odyssey (1.5.2-rc1-1) unstable; urgency=medium
   * preserve endpoint in server (#1383)
 
  -- Yandex Database Team <mdb-admin@yandex-team.ru>  Thu, 16 Jul 2026 08:26:24 +0000
-
-odyssey (1.5.2-1) unstable; urgency=medium
-
-  * New upstream release 1.5.2
-
- -- Yandex Database Team <mdb-admin@yandex-team.ru>  Tue, 14 Jul 2026 05:44:16 +0000
 
 odyssey (1.5.1-rc9-1) unstable; urgency=medium
 
