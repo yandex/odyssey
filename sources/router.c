@@ -141,11 +141,6 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		od_rule_key_free(rk);
 	}
 
-	if (updates == 0) {
-		od_router_unlock(router);
-		return 0;
-	}
-
 	od_extension_t *extensions = router->global->extensions;
 	od_module_t *modules = extensions->modules;
 
@@ -153,7 +148,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		od_rule_key_t *rk;
 		rk = od_container_of(i, od_rule_key_t, link);
 		od_log(&instance->logger, "reload", NULL, NULL,
-		       "rule %s.%s %s %s was added", rk->usr_name, rk->db_name,
+		       "rule %s.%s %s %s was added", rk->db_name, rk->usr_name,
 		       rk->address_range.string_value,
 		       od_rule_conn_type_to_str(rk->conn_type));
 	}
@@ -162,12 +157,12 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		od_rule_key_t *rk;
 		rk = od_container_of(i, od_rule_key_t, link);
 		od_log(&instance->logger, "reload", NULL, NULL,
-		       "rule %s %s %s %s was deleted", rk->usr_name,
-		       rk->db_name, rk->address_range.string_value,
+		       "rule %s %s %s %s was deleted", rk->db_name,
+		       rk->usr_name, rk->address_range.string_value,
 		       od_rule_conn_type_to_str(rk->conn_type));
 	}
 
-	{
+	if (updates != 0) {
 		void *argv[] = { &to_drop };
 		od_route_pool_foreach(&router->route_pool,
 				      od_drop_obsolete_rule_connections_cb,

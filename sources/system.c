@@ -46,6 +46,60 @@
 #include <restart_sync.h>
 #include <od_ldap.h>
 
+int od_system_send_msg(od_system_t *system, int msg_type, void *arg)
+{
+	od_instance_t *instance = system->global->instance;
+	machine_msg_t *msg = machine_msg_create(arg != NULL ? sizeof(arg) : 0);
+	if (msg == NULL) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to create message for system channel");
+		return -1;
+	}
+	machine_msg_set_type(msg, msg_type);
+	if (arg) {
+		memcpy(machine_msg_data(msg), &arg, sizeof(arg));
+	}
+	machine_channel_write(system->system_channel, msg);
+	return 0;
+}
+
+static void *killer(void *arg)
+{
+	uint64_t timeout_ms = (uint64_t)(uintptr_t)arg;
+
+	struct timespec duration;
+	memset(&duration, 0, sizeof(duration));
+	duration.tv_sec = timeout_ms / 1000;
+	duration.tv_nsec = (timeout_ms % 1000) * 1000000;
+
+	struct timespec rem;
+	memset(&rem, 0, sizeof(rem));
+
+	while (1) {
+		int rc = nanosleep(&duration, &rem);
+		if (rc == 0 || errno != EINTR) {
+			break;
+		}
+		duration = rem;
+	}
+
+	exit(124);
+}
+
+static void start_timeout_thread(uint64_t timeout_ms)
+{
+	pthread_t th;
+	int rc = pthread_create(&th, NULL, killer,
+				(void *)(uintptr_t)timeout_ms);
+	if (rc == 0) {
+		pthread_detach(th);
+	} else {
+		od_gerror("shutdown", NULL, NULL,
+			  "can't start shutdown timeout killer: %d (%s)", rc,
+			  strerror(rc));
+	}
+}
+
 void od_system_server_shutdown(od_system_server_t *server)
 {
 	atomic_store(&server->closed, 1);
@@ -544,29 +598,6 @@ static inline int od_config_listen_host_cmp(char *host_listen,
 	return strcmp(host_listen, host_server);
 }
 
-static inline void od_move_storages(od_router_t *router, od_rules_t *rules)
-{
-	od_list_t *i, *n;
-
-	od_rules_lock(&router->rules);
-	od_rules_lock(rules);
-
-	od_list_foreach_safe (&rules->storages, i, n) {
-		od_rule_storage_t *storage;
-		storage = od_container_of(i, od_rule_storage_t, link);
-
-		od_rule_storage_t *s = od_rules_storage_ref(storage);
-
-		od_list_unlink(&storage->link);
-		od_rules_storage_free(storage);
-
-		od_rules_storage_add(&router->rules, s);
-	}
-
-	od_rules_unlock(rules);
-	od_rules_unlock(&router->rules);
-}
-
 void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
@@ -580,8 +611,6 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_lock(&router->rules);
 
 	od_rules_stop_checkers(&router->rules);
-	od_rules_stop_watchdogs(&router->rules);
-	od_rules_cleanup(&router->rules);
 
 	od_config_t config;
 	od_config_init(&config);
@@ -620,6 +649,18 @@ void od_system_config_reload(od_system_t *system)
 	if (rc == -1) {
 		goto error;
 	}
+
+	/*
+	 * Merge storages: reuse unchanged storages (keeping their watchdogs
+	 * and endpoint statuses alive), move new/changed storages into
+	 * router->rules, and unref removed/changed ones.  Running
+	 * watchdogs keep their storages alive via refcount and stop
+	 * automatically when the last non-watchdog ref is dropped.  After
+	 * this, rules in the freshly parsed config reference the correct
+	 * storages, so od_rules_merge can compare origin->storage and
+	 * rule->storage by pointer.
+	 */
+	od_rules_storage_merge(&router->rules, &rules);
 
 	od_rules_unlock(&router->rules);
 
@@ -729,22 +770,23 @@ void od_system_config_reload(od_system_t *system)
 	 * Force obsolete clients to disconnect.
 	 */
 	od_log(&instance->logger, "rules", NULL, NULL, "reconfigure rules");
-	int updates;
-	updates = od_router_reconfigure(router, &rules);
+	int updates = od_router_reconfigure(router, &rules);
 
-	od_log(&instance->logger, "rules", NULL, NULL,
-	       "dispatching storage watchdogs");
-	od_rules_storages_watchdogs_run(&instance->logger, &rules);
+	/* start watchdogs and group checkers for new/changed storages
+	 * and rules — directly in system thread scheduler */
+	od_rules_lock(&router->rules);
+	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
+	od_rules_unlock(&router->rules);
 
-	od_move_storages(router, &rules);
+	od_router_lock(router);
+	od_rules_groups_checkers_run(&instance->logger, &router->rules);
+	od_router_unlock(router);
 
 	/* free unused rules */
 	od_rules_free(&rules);
 
 	od_log(&instance->logger, "rules", NULL, NULL,
 	       "%d routes created/deleted and scheduled for removal", updates);
-
-	od_rules_groups_checkers_run(&instance->logger, &router->rules);
 
 	/* the file on disk loaded, so a restart would come up on it */
 	atomic_store(&instance->config_load_failed, 0);
@@ -772,6 +814,13 @@ static inline void od_system(void *arg)
 	od_global_t *global = system->global;
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
+
+	system->system_channel = machine_channel_create();
+	if (system->system_channel == NULL) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to create system channel");
+		return;
+	}
 
 	instance->pstmts = od_global_pstmts_map_create(
 		4 * (size_t)instance->config.workers);
@@ -802,13 +851,8 @@ static inline void od_system(void *arg)
 		global->accept_rate_limiter = NULL;
 	}
 
-	/* start cron coroutine */
-	od_cron_t *cron = system->global->cron;
+	/* start worker threads */
 	int rc;
-	rc = od_cron_start(cron, system->global);
-	if (rc == -1) {
-		return;
-	}
 
 #ifdef LDAP_FOUND
 	rc = od_ldap_workers_init(instance->config.workers);
@@ -848,17 +892,137 @@ static inline void od_system(void *arg)
 		exit(1);
 	}
 
-	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
+	od_cron_start(global->cron, global);
 
+	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
 
-	machine_wait_nb(system->sighandler_machine);
+	/* event loop: handle reload and shutdown requests */
+	bool shutdown = false;
+	while (!shutdown) {
+		machine_msg_t *msg = machine_channel_read(
+			system->system_channel, UINT32_MAX);
+		if (msg == NULL) {
+			od_log(&instance->logger, "system", NULL, NULL,
+			       "NULL message in system channel");
+			break;
+		}
+
+		int type = machine_msg_type(msg);
+		void *msg_arg = NULL;
+		if (machine_msg_size(msg) >= (int)sizeof(msg_arg)) {
+			memcpy(&msg_arg, machine_msg_data(msg),
+			       sizeof(msg_arg));
+		}
+		machine_msg_free(msg);
+
+		switch (type) {
+		case OD_MSG_RELOAD:
+			od_system_config_reload(system);
+
+			if (msg_arg != NULL) {
+				mm_wait_flag_set((mm_wait_flag_t *)msg_arg);
+			}
+			break;
+		case OD_MSG_GC:
+			od_log(&instance->logger, "system", NULL, NULL,
+			       "GC request");
+			od_cron_expire_now(global->cron);
+
+			if (msg_arg != NULL) {
+				mm_wait_flag_set((mm_wait_flag_t *)msg_arg);
+			}
+			break;
+		case OD_MSG_SHUTDOWN:
+			od_log(&instance->logger, "system", NULL, NULL,
+			       "shutdown request");
+			shutdown = true;
+			break;
+		default:
+			od_log(&instance->logger, "system", NULL, NULL,
+			       "unexpected message type %d in system channel",
+			       type);
+			break;
+		}
+	}
+
+	if (instance->config.graceful_shutdown_timeout_ms != 0) {
+		start_timeout_thread(
+			instance->config.graceful_shutdown_timeout_ms);
+	}
 
 	od_list_t *i, *n;
 	od_list_foreach_safe (&router->servers, i, n) {
 		od_system_server_t *server;
 		server = od_container_of(i, od_system_server_t, link);
+		od_system_server_shutdown(server);
+	}
+
+	od_rules_stop_checkers(&router->rules);
+
+	od_cron_stop(global->cron);
+
+	/* stop workers first so client/server coroutines release
+	 * their storage refs — otherwise od_rules_cleanup won't
+	 * reach r==2 and watchdogs won't get set_offline */
+	od_worker_pool_shutdown(worker_pool);
+	od_worker_pool_wait_gracefully_shutdown(worker_pool);
+
+	machine_wait_nb(system->sighandler_machine);
+
+	od_list_foreach_safe (&router->servers, i, n) {
+		od_system_server_t *server;
+		server = od_container_of(i, od_system_server_t, link);
 		machine_join(server->coro_id);
+	}
+
+	/* free router: closes backend connections and drops rule refs
+	 * on storages, so that od_rules_cleanup can reach r==2 and
+	 * signal watchdogs to stop via refcount */
+	od_router_free(router);
+
+	/* collect watchdog coroutine IDs before od_rules_cleanup
+	 * unlinks storages from the list */
+	int watchdog_count = 0;
+	{
+		od_list_t *j;
+		od_list_foreach (&router->rules.storages, j) {
+			od_rule_storage_t *s;
+			s = od_container_of(j, od_rule_storage_t, link);
+			if (s->watchdog_coro_id != -1) {
+				watchdog_count++;
+			}
+		}
+	}
+
+	int64_t *watchdog_ids = NULL;
+	if (watchdog_count > 0) {
+		watchdog_ids = od_malloc(sizeof(int64_t) * watchdog_count);
+		if (watchdog_ids) {
+			int k = 0;
+			od_list_t *j;
+			od_list_foreach (&router->rules.storages, j) {
+				od_rule_storage_t *s;
+				s = od_container_of(j, od_rule_storage_t, link);
+				if (s->watchdog_coro_id != -1) {
+					watchdog_ids[k++] = s->watchdog_coro_id;
+				}
+			}
+		}
+	}
+
+	/* unref storages: with rule refs already dropped by
+	 * od_router_free, r reaches 2 (storage list + watchdog)
+	 * and set_offline is called */
+	od_rules_cleanup(&router->rules);
+
+	/* join watchdog coroutines: machine_join yields to scheduler,
+	 * giving each watchdog a chance to see set_offline and exit */
+	if (watchdog_ids) {
+		for (int k = 0; k < watchdog_count; k++) {
+			machine_join(watchdog_ids[k]);
+		}
+		od_free(watchdog_ids);
 	}
 
 	od_soft_oom_stop_checker(&global->soft_oom);
@@ -871,21 +1035,19 @@ static inline void od_system(void *arg)
 		od_host_watcher_destroy(&global->host_watcher);
 	}
 
-	od_rules_cleanup(&global->router->rules);
-
 	if (instance->config.hba_file != NULL) {
 		od_hba_free(global->hba);
 	}
 
 	od_extension_free(&instance->logger, global->extensions);
 
-	od_router_free(router);
-
 	od_logger_shutdown(&instance->logger);
 	od_logger_wait_finish(&instance->logger);
 
 	mm_sem_destroy(&global->cancel_sem);
 	mm_sem_destroy(&global->routing_sem);
+
+	machine_channel_free(system->system_channel);
 
 	od_instance_free(instance);
 	od_global_destroy(global);
@@ -896,6 +1058,7 @@ void od_system_init(od_system_t *system)
 {
 	system->machine = -1;
 	system->sighandler_machine = -1;
+	system->system_channel = NULL;
 	system->global = NULL;
 }
 
