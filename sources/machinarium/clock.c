@@ -106,11 +106,11 @@ static uint64_t mm_clock_gettime(void)
 	return t.tv_sec * (uint64_t)1e9 + t.tv_nsec;
 }
 
-static uint32_t mm_clock_gettimeofday(void)
+static int64_t mm_clock_gettimeofday(void)
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	return tv.tv_sec;
+	return (int64_t)tv.tv_sec;
 }
 
 void mm_clock_update(mm_clock_t *clock)

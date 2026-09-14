@@ -545,6 +545,10 @@ static int check_lag(uint32_t timeout, int64_t lag)
 		return 1;
 	}
 
+	if (lag < 0) {
+		lag = 0;
+	}
+
 	return lag <= (int64_t)timeout;
 }
 
@@ -1453,7 +1457,7 @@ static inline od_retcode_t od_frontend_log_bind(od_instance_t *instance,
 
 static inline int od_frontend_poll_catchup(od_client_t *client,
 					   od_route_t *route, uint32_t timeout,
-					   int *lag_out)
+					   int64_t *lag_out)
 {
 	od_instance_t *instance = client->global->instance;
 	od_rule_storage_t *storage = route->rule->storage;
@@ -2535,7 +2539,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		/* close client connection and close server
 			 * connection in case of server errors */
 		od_log(&instance->logger, context, client, server,
-		       "replication lag is too big (%d sec), failed to wait replica for catchup: status %s",
+		       "replication lag is too big (%" PRId64 " sec), failed to wait replica for catchup: status %s",
 		       client->last_catchup_lag,
 		       od_frontend_status_to_str(status));
 
@@ -2543,7 +2547,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			client, KIWI_CONNECTION_FAILURE,
 			"replication lag of the node you are trying to connect is too big, connection rejected",
 			"wait until the replica catches up with the primary",
-			"replication lag too big (%d seconds), connection rejected: %s %s",
+			"replication lag too big (%" PRId64 " seconds), connection rejected: %s %s",
 			client->last_catchup_lag,
 			client->startup.database.value,
 			client->startup.user.value);
@@ -2889,7 +2893,7 @@ void od_frontend(void *arg)
 		if (od_frontend_status_is_err(catchup_status)) {
 			od_error(
 				&instance->logger, "catchup", client, NULL,
-				"replication lag too big (%d), connection rejected: %s %s",
+				"replication lag too big (%" PRId64 "), connection rejected: %s %s",
 				client->last_catchup_lag,
 				client->startup.database.value,
 				client->startup.user.value);
@@ -2898,10 +2902,10 @@ void od_frontend(void *arg)
 				client, KIWI_CONNECTION_FAILURE,
 				"replication lag of the node you are trying to connect is too big, connection rejected",
 				"wait until the replica catches up with the primary",
-				"replication lag too big (%d seconds), connection rejected: %s %s",
-				client->last_catchup_lag,
-				client->startup.database.value,
-				client->startup.user.value);
+			"replication lag too big (%" PRId64 " seconds), connection rejected: %s %s",
+			client->last_catchup_lag,
+			client->startup.database.value,
+			client->startup.user.value);
 			rc = NOT_OK_RESPONSE;
 		} else {
 			rc = od_auth_frontend(client);
