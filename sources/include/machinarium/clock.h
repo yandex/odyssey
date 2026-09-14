@@ -20,7 +20,7 @@ struct mm_clock {
 	uint64_t time_ms;
 	uint64_t time_us;
 	uint64_t time_ns;
-	uint32_t time_sec;
+	int64_t time_sec;
 
 	mm_heap_t timers;
 	int timers_seq;

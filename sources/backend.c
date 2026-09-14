@@ -795,16 +795,22 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-static inline int strtol_safe(const char *s, int len)
+static inline int64_t strtol_safe(const char *s, int len)
 {
 	char buff[32];
 	memset(buff, 0, sizeof(buff));
+	if (len <= 0) {
+		return 0;
+	}
+	if (len >= (int)sizeof(buff)) {
+		len = sizeof(buff) - 1;
+	}
 	memcpy(buff, s, len);
 
-	return strtol(buff, NULL, 0);
+	return strtoll(buff, NULL, 0);
 }
 
-static inline int parse_lag_from_datarow(machine_msg_t *msg, int *repl_lag)
+static inline int parse_lag_from_datarow(machine_msg_t *msg, int64_t *repl_lag)
 {
 	char *pos = (char *)machine_msg_data(msg) + 1;
 	uint32_t pos_size = machine_msg_size(msg) - 1;
@@ -832,6 +838,12 @@ static inline int parse_lag_from_datarow(machine_msg_t *msg, int *repl_lag)
 	rc = kiwi_read32(&lag_len, &pos, &pos_size);
 	if (kiwi_unlikely(rc == -1)) {
 		goto error;
+	}
+
+	/* SQL NULL is encoded as length = -1 (0xFFFFFFFF in uint32_t) */
+	if (lag_len == (uint32_t)-1) {
+		*repl_lag = 0;
+		return OK_RESPONSE;
 	}
 
 	*repl_lag = strtol_safe(pos, (int)lag_len);
@@ -863,14 +875,17 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 			return NOT_OK_RESPONSE;
 		}
 
-		int last_heartbeat;
+		int64_t last_heartbeat;
 		int rc = parse_lag_from_datarow(msg, &last_heartbeat);
 		machine_msg_free(msg);
 		msg = NULL;
 
 		if (rc == 0) {
-			status.repl_lag_sec = (int64_t)machine_timeofday_sec() -
-					      (int64_t)last_heartbeat;
+		int64_t lag = machine_timeofday_sec() - last_heartbeat;
+			if (lag < 0) {
+				lag = 0;
+			}
+			status.repl_lag_sec = lag;
 
 			od_debug(
 				&instance->logger, context, client, server,
