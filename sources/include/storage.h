@@ -112,3 +112,5 @@ od_storage_endpoint_t *od_storage_find_endpoint(od_rule_storage_t *storage,
 
 /* watchdog */
 void od_storage_watchdog_watch(void *arg);
+
+int od_storage_watchdog_set_offline(od_storage_watchdog_t *watchdog);

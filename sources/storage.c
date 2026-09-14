@@ -104,8 +104,7 @@ od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)
 	return watchdog;
 }
 
-static inline int
-od_storage_watchdog_set_offline(od_storage_watchdog_t *watchdog)
+int od_storage_watchdog_set_offline(od_storage_watchdog_t *watchdog)
 {
 	machine_wait_flag_set(watchdog->online);
 	return OK_RESPONSE;
@@ -188,40 +187,18 @@ void od_rules_storage_unref(od_rule_storage_t *storage)
 	int64_t r = atomic_fetch_sub(&storage->refs, 1);
 	od_release_assert(r >= 1);
 
-	if (storage->watchdog != NULL && storage->watchdog_coro_id != -1) {
-		/*
-		 * watchdog has its own ref on storage and is running.
-		 * When the last non-watchdog ref is released (r == 2),
-		 * signal the watchdog to stop.  The watchdog coroutine
-		 * will then drop its ref and free the storage.
-		 *
-		 * We must not free storage here while the watchdog is
-		 * running — only the watchdog coroutine is allowed to
-		 * perform the final free (when r == 1 in its unref call).
-		 */
-		if (r > 2) {
-			return;
-		}
-		if (r == 2) {
-			od_storage_watchdog_set_offline(storage->watchdog);
-			storage->watchdog_coro_id = -1;
-			return;
-		}
-		/*
-		 * r == 1: this is the watchdog coroutine dropping its
-		 * own ref.  It has already nulled storage->watchdog,
-		 * so we fall through to the no-watchdog path below.
-		 */
-	}
-
 	if (r > 1) {
 		return;
 	}
 
-	/*
-	 * r == 1: last ref.  If a watchdog was allocated but never
-	 * started, free it now (it holds no ref).
-	 */
+	/* r == 1: last ref.  If a watchdog was allocated but never
+	 * started, free it now (it holds no coroutine ref).
+	 *
+	 * If the watchdog was started, it has already been joined by
+	 * the caller (shutdown or reload path) before dropping the
+	 * last non-watchdog ref.  By the time we get here, the watchdog
+	 * coroutine has already exited, nulled storage->watchdog, and
+	 * dropped its own ref.  So storage->watchdog is NULL here. */
 	if (storage->watchdog != NULL) {
 		od_storage_watchdog_free(storage->watchdog);
 		storage->watchdog = NULL;
@@ -428,6 +405,7 @@ void od_storage_watchdog_watch(void *arg)
 
 	od_rule_storage_t *storage = watchdog->storage;
 	storage->watchdog = NULL;
+	storage->watchdog_coro_id = -1;
 	od_storage_watchdog_free(watchdog);
 	od_rules_storage_unref(storage);
 }
