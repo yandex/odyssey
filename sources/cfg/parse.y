@@ -921,9 +921,18 @@ top_item:
 	| query_parsing_section
 	| INCLUDE STRING
 		{
+			if (!ctx->allow_include) {
+				
+				od_cfg_diag_error(ctx->diags, @1,
+								  "includes are forbidden in this context");
+				od_free($2);
+				$2 = NULL;
+				YYERROR;
+			}
+
 			int rc = od_cfg_parse_file_depth($2, ctx->model,
 							 ctx->diags,
-							 ctx->include_depth + 1);
+							 ctx->include_depth + 1, ctx->allow_include);
 			od_free($2);
 			if (rc != 0) {
 				YYABORT;

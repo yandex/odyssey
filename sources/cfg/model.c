@@ -544,6 +544,12 @@ void od_cfg_seen_free(od_cfg_seen_t *seen)
 	od_cfg_location_free(&seen->location);
 }
 
+void od_cfg_seen_reset(od_cfg_seen_t *seen)
+{
+	od_cfg_location_free(&seen->location);
+	seen->is_set = 0;
+}
+
 od_cfg_listen_storage_t *od_cfg_listen_add_storage(od_cfg_listen_t *listen,
 						   od_cfg_location_t location,
 						   const char *name)
@@ -849,71 +855,80 @@ static void od_cfg_database_free(od_cfg_database_t *db)
 	od_free(db);
 }
 
-void od_cfg_model_free(od_cfg_model_t *model)
+void od_cfg_global_free(od_cfg_global_t *g)
 {
 	/* global bool fields */
-	od_cfg_bool_field_free(&model->global.daemonize);
-	od_cfg_bool_field_free(&model->global.sequential_routing);
-	od_cfg_bool_field_free(&model->global.enable_online_restart);
-	od_cfg_bool_field_free(&model->global.virtual_processing);
-	od_cfg_bool_field_free(&model->global.bindwith_reuseport);
-	od_cfg_bool_field_free(&model->global.enable_host_watcher);
-	od_cfg_bool_field_free(&model->global.log_debug);
-	od_cfg_bool_field_free(&model->global.log_to_stdout);
-	od_cfg_bool_field_free(&model->global.log_config);
-	od_cfg_bool_field_free(&model->global.log_session);
-	od_cfg_bool_field_free(&model->global.log_query);
-	od_cfg_bool_field_free(&model->global.log_stats);
-	od_cfg_bool_field_free(&model->global.log_async);
-	od_cfg_bool_field_free(&model->global.log_syslog);
-	od_cfg_bool_field_free(&model->global.smart_search_path_enquoting);
-	od_cfg_bool_field_free(&model->global.nodelay);
-	od_cfg_bool_field_free(&model->global.disable_nolinger);
-	od_cfg_bool_field_free(&model->global.log_general_stats_prom);
-	od_cfg_bool_field_free(&model->global.log_route_stats_prom);
+	od_cfg_bool_field_free(&g->daemonize);
+	od_cfg_bool_field_free(&g->sequential_routing);
+	od_cfg_bool_field_free(&g->enable_online_restart);
+	od_cfg_bool_field_free(&g->virtual_processing);
+	od_cfg_bool_field_free(&g->virtual_transaction);
+	od_cfg_bool_field_free(&g->bindwith_reuseport);
+	od_cfg_bool_field_free(&g->enable_host_watcher);
+	od_cfg_bool_field_free(&g->log_debug);
+	od_cfg_bool_field_free(&g->log_to_stdout);
+	od_cfg_bool_field_free(&g->log_config);
+	od_cfg_bool_field_free(&g->log_session);
+	od_cfg_bool_field_free(&g->log_query);
+	od_cfg_bool_field_free(&g->log_stats);
+	od_cfg_bool_field_free(&g->log_async);
+	od_cfg_bool_field_free(&g->log_syslog);
+	od_cfg_bool_field_free(&g->smart_search_path_enquoting);
+	od_cfg_bool_field_free(&g->nodelay);
+	od_cfg_bool_field_free(&g->disable_nolinger);
+	od_cfg_bool_field_free(&g->log_general_stats_prom);
+	od_cfg_bool_field_free(&g->log_route_stats_prom);
 
 	/* global string fields */
-	od_cfg_string_field_free(&model->global.pid_file);
-	od_cfg_string_field_free(&model->global.unix_socket_dir);
-	od_cfg_string_field_free(&model->global.unix_socket_mode);
-	od_cfg_string_field_free(&model->global.locks_dir);
-	od_cfg_string_field_free(&model->global.external_auth_socket_path);
-	od_cfg_string_field_free(&model->global.availability_zone);
-	od_cfg_string_field_free(&model->global.log_file);
-	od_cfg_string_field_free(&model->global.log_format);
-	od_cfg_string_field_free(&model->global.log_syslog_ident);
-	od_cfg_string_field_free(&model->global.log_syslog_facility);
-	od_cfg_string_field_free(&model->global.cpu_affinity);
-	od_cfg_string_field_free(&model->global.hba_file);
+	od_cfg_string_field_free(&g->pid_file);
+	od_cfg_string_field_free(&g->unix_socket_dir);
+	od_cfg_string_field_free(&g->unix_socket_mode);
+	od_cfg_string_field_free(&g->locks_dir);
+	od_cfg_string_field_free(&g->external_auth_socket_path);
+	od_cfg_string_field_free(&g->availability_zone);
+	od_cfg_string_field_free(&g->log_file);
+	od_cfg_string_field_free(&g->log_format);
+	od_cfg_string_field_free(&g->log_syslog_ident);
+	od_cfg_string_field_free(&g->log_syslog_facility);
+	od_cfg_string_field_free(&g->cpu_affinity);
+	od_cfg_string_field_free(&g->hba_file);
 
 	/* global int fields */
-	od_cfg_int_field_free(&model->global.priority);
-	od_cfg_int_field_free(&model->global.graceful_shutdown_timeout_ms);
-	od_cfg_int_field_free(&model->global.log_queue_depth);
-	od_cfg_int_field_free(&model->global.stats_interval);
-	od_cfg_int_field_free(&model->global.client_max);
-	od_cfg_int_field_free(&model->global.client_max_routing);
-	od_cfg_int_field_free(&model->global.server_login_retry);
-	od_cfg_int_field_free(&model->global.readahead);
-	od_cfg_int_field_free(&model->global.keepalive);
-	od_cfg_int_field_free(&model->global.keepalive_keep_interval);
-	od_cfg_int_field_free(&model->global.keepalive_probes);
-	od_cfg_int_field_free(&model->global.keepalive_usr_timeout);
-	od_cfg_int_field_free(&model->global.max_sigterms_to_die);
-	od_cfg_int_field_free(&model->global.backend_connect_timeout_ms);
-	od_cfg_int_field_free(&model->global.cancel_timeout_ms);
-	od_cfg_int_field_free(&model->global.cancel_queue_timeout_ms);
-	od_cfg_int_field_free(&model->global.cancel_max_inflight);
-	od_cfg_int_field_free(&model->global.resolvers);
-	od_cfg_int_field_free(&model->global.dns_cache_ttl);
-	od_cfg_int_field_free(&model->global.cache_msg_gc_size);
-	od_cfg_int_field_free(&model->global.cache_msg_gc_count);
-	od_cfg_int_field_free(&model->global.cache_coroutine);
-	od_cfg_int_field_free(&model->global.coroutine_stack_size);
-	od_cfg_int_field_free(&model->global.system_coroutine_stack_size);
-	od_cfg_int_field_free(&model->global.promhttp_server_port);
-	od_cfg_int_field_free(&model->global.group_checker_interval);
-	od_cfg_int_field_free(&model->global.workers);
+	od_cfg_int_field_free(&g->priority);
+	od_cfg_int_field_free(&g->graceful_shutdown_timeout_ms);
+	od_cfg_int_field_free(&g->log_queue_depth);
+	od_cfg_int_field_free(&g->stats_interval);
+	od_cfg_int_field_free(&g->client_max);
+	od_cfg_int_field_free(&g->client_max_routing);
+	od_cfg_int_field_free(&g->accept_rate_limit);
+	od_cfg_int_field_free(&g->server_login_retry);
+	od_cfg_int_field_free(&g->readahead);
+	od_cfg_int_field_free(&g->keepalive);
+	od_cfg_int_field_free(&g->keepalive_keep_interval);
+	od_cfg_int_field_free(&g->keepalive_probes);
+	od_cfg_int_field_free(&g->keepalive_usr_timeout);
+	od_cfg_int_field_free(&g->max_sigterms_to_die);
+	od_cfg_int_field_free(&g->backend_connect_timeout_ms);
+	od_cfg_int_field_free(&g->cancel_timeout_ms);
+	od_cfg_int_field_free(&g->cancel_queue_timeout_ms);
+	od_cfg_int_field_free(&g->cancel_max_inflight);
+	od_cfg_int_field_free(&g->resolvers);
+	od_cfg_int_field_free(&g->dns_cache_ttl);
+	od_cfg_int_field_free(&g->cache_msg_gc_size);
+	od_cfg_int_field_free(&g->cache_msg_gc_count);
+	od_cfg_int_field_free(&g->cache_coroutine);
+	od_cfg_int_field_free(&g->coroutine_stack_size);
+	od_cfg_int_field_free(&g->system_coroutine_stack_size);
+	od_cfg_int_field_free(&g->promhttp_server_port);
+	od_cfg_int_field_free(&g->group_checker_interval);
+	od_cfg_int_field_free(&g->workers);
+
+	memset(g, 0, sizeof(*g));
+}
+
+void od_cfg_model_free(od_cfg_model_t *model)
+{
+	od_cfg_global_free(&model->global);
 
 	od_cfg_seen_free(&model->conn_drop_options.seen);
 	od_cfg_location_free(&model->conn_drop_options.location);
