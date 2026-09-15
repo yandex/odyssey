@@ -15,7 +15,6 @@
 #include <xplan.h>
 #include <misc.h>
 #include <util.h>
-#include <parser.h>
 #include <worker.h>
 
 static inline kiwi_be_type_t msg_be_type(machine_msg_t *msg)

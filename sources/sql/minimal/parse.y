@@ -132,12 +132,6 @@ typedef int od_sql_minimal_yyltype_t;
 %token KW_OFF
 %token KW_BEGIN
 
-%token KW_KILL_CLIENT
-%token KW_RELOAD
-%token KW_PAUSE
-%token KW_RESUME
-%token KW_DROP
-
 /* transaction control (only BEGIN) */
 %token KW_WORK
 %token KW_TRANSACTION
@@ -157,11 +151,6 @@ typedef int od_sql_minimal_yyltype_t;
 %type <node> stmt
 %type <node> set_stmt
 %type <node> show_stmt
-%type <node> kill_client_stmt
-%type <node> reload_stmt
-%type <node> pause_stmt
-%type <node> resume_stmt
-%type <node> drop_stmt
 %type <node> begin_stmt
 %type <node> deallocate_stmt
 %type <node> discard_stmt
@@ -189,11 +178,6 @@ opt_semicolon:
 stmt:
 	  set_stmt
 	| show_stmt
-	| kill_client_stmt
-	| reload_stmt
-	| pause_stmt
-	| resume_stmt
-	| drop_stmt
 	| begin_stmt
 	| deallocate_stmt
 	| discard_stmt
@@ -362,64 +346,6 @@ unlisten_stmt:
 			if (n == NULL) YYABORT;
 			n->name   = $2; $2 = NULL;
 			n->is_all = 0;
-			$$ = (od_sql_minimal_node_t *)n;
-		}
-	;
-
-kill_client_stmt:
-	  KW_KILL_CLIENT IDENT
-		{
-			if ($2 == NULL ||
-			    strlen($2) != (size_t)(OD_ID_LEN + 1)) {
-				od_sql_minimal_yyerror(&yylloc, scanner, ctx,
-					       "invalid client id");
-				YYABORT;
-			}
-			od_sql_minimal_kill_client_stmt_t *n = ALLOC_NODE(ctx,
-				kill_client, OD_SQL_MINIMAL_NODE_TYPE_KILL_CLIENT_STMT);
-			if (n == NULL) YYABORT;
-			n->id = $2; $2 = NULL;
-			$$ = (od_sql_minimal_node_t *)n;
-		}
-	;
-
-reload_stmt:
-	  KW_RELOAD
-		{
-			od_sql_minimal_reload_stmt_t *n = ALLOC_NODE(ctx, reload,
-				OD_SQL_MINIMAL_NODE_TYPE_RELOAD_STMT);
-			if (n == NULL) YYABORT;
-			$$ = (od_sql_minimal_node_t *)n;
-		}
-	;
-
-pause_stmt:
-	  KW_PAUSE
-		{
-			od_sql_minimal_pause_stmt_t *n = ALLOC_NODE(ctx, pause,
-				OD_SQL_MINIMAL_NODE_TYPE_PAUSE_STMT);
-			if (n == NULL) YYABORT;
-			$$ = (od_sql_minimal_node_t *)n;
-		}
-	;
-
-resume_stmt:
-	  KW_RESUME
-		{
-			od_sql_minimal_resume_stmt_t *n = ALLOC_NODE(ctx, resume,
-				OD_SQL_MINIMAL_NODE_TYPE_RESUME_STMT);
-			if (n == NULL) YYABORT;
-			$$ = (od_sql_minimal_node_t *)n;
-		}
-	;
-
-drop_stmt:
-	  KW_DROP var_name
-		{
-			od_sql_minimal_drop_stmt_t *n = ALLOC_NODE(ctx, drop,
-				OD_SQL_MINIMAL_NODE_TYPE_DROP_STMT);
-			if (n == NULL) YYABORT;
-			n->name = $2; $2 = NULL;
 			$$ = (od_sql_minimal_node_t *)n;
 		}
 	;
