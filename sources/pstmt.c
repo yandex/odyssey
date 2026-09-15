@@ -601,11 +601,24 @@ static int pstmt_desc_cmp(const void *k1, const void *k2)
 	return memcmp(d1->data, d2->data, d1->len);
 }
 
+static inline int pstmt_is_correct_deletion(od_pstmt_t *p)
+{
+	/*
+	 * need to check ref correctly because pstmt has a race on creation
+	 * (can be created and then deleted immediately because some other
+	 * thread created same pstmt)
+	 *
+	 * so either it is the last ref (ref == 1)
+	 * or it is not initialized pstmt (ref == 0 and empty description)
+	 */
+	uint64_t r = atomic_load_explicit(&p->refs, memory_order_acquire);
+	return r == 1 || (r == 0 && p->desc.data == NULL);
+}
+
 static void pstmt_desc_val_dtor(void *val)
 {
 	od_pstmt_t *pstmt = val;
-	od_assert(atomic_load_explicit(&pstmt->refs, memory_order_acquire) ==
-		  1);
+	od_assert(pstmt_is_correct_deletion(pstmt));
 	od_free(pstmt->desc.data);
 }
 
