@@ -396,6 +396,7 @@ set(od_test_src
     tests/odyssey/test_attribute.c
     tests/odyssey/test_tdigest.c
     tests/odyssey/test_util.c
+    tests/odyssey/test_logger_escape.c
     tests/odyssey/test_hba_parse.c
     tests/odyssey/test_address.c
     tests/odyssey/test_affinity.c

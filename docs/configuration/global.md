@@ -175,6 +175,7 @@ Supported flags:
 %u = user name
 %d = database name
 %a = application_name
+%x = external user ID
 %c = context
 %l = level (error, warning, debug)
 %m = message

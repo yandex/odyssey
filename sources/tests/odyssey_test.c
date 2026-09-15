@@ -117,6 +117,8 @@ extern void machinarium_test_mutex_timeout(void);
 extern void odyssey_test_tdigest(void);
 extern void odyssey_test_attribute(void);
 extern void odyssey_test_util(void);
+extern void odyssey_test_logger_escape(void);
+extern void odyssey_test_logger_escape_truncation(void);
 extern void odyssey_test_hba(void);
 extern void odyssey_test_address_parse(void);
 extern void odyssey_test_address_cmp(void);
@@ -237,6 +239,8 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_tdigest);
 	odyssey_test(odyssey_test_attribute);
 	odyssey_test(odyssey_test_util);
+	odyssey_test(odyssey_test_logger_escape);
+	odyssey_test(odyssey_test_logger_escape_truncation);
 	odyssey_test(odyssey_test_hba);
 	odyssey_test(odyssey_test_address_parse);
 	odyssey_test(odyssey_test_address_cmp);
