@@ -2349,9 +2349,9 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 	 * unnecessary reconnection churn.
 	 *
 	 * Storages in dst that are not present in src (or whose contents
-	 * changed) are unlinked from dst and unref'd.  If a watchdog is
-	 * running it keeps the storage alive via its own ref until it
-	 * finishes; od_rules_storage_unref signals it to stop.
+	 * changed) are unlinked from dst.  Their watchdog (if running) is
+	 * signalled offline and joined before unref, so the coroutine
+	 * exits cleanly and drops its own ref.
 	 *
 	 * New storages (present in src but not in dst) are moved into dst.
 	 *
@@ -2426,10 +2426,19 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 		} else {
 			/*
 			 * Storage is new or changed: move new into dst.
-			 * Unlink old from dst and unref — watchdog (if
-			 * running) will stop via refcount.
+			 * Stop and join the old watchdog (if running) before
+			 * unref, so the watchdog coroutine exits cleanly
+			 * and drops its own ref.  od_rules_storage_unref
+			 * no longer signals set_offline via refcount.
 			 */
 			if (old_storage) {
+				if (old_storage->watchdog != NULL &&
+				    old_storage->watchdog_coro_id != -1) {
+					od_storage_watchdog_set_offline(
+						old_storage->watchdog);
+					machine_join(
+						old_storage->watchdog_coro_id);
+				}
 				od_list_unlink(&old_storage->link);
 				od_rules_storage_unref(old_storage);
 			}
@@ -2441,12 +2450,16 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 
 	/*
 	 * Unlink storages in dst that were not matched (not present in
-	 * new config) and unref them.
+	 * new config), stop their watchdogs and unref them.
 	 */
 	od_list_foreach_safe (&dst->storages, i, n) {
 		od_rule_storage_t *s;
 		s = od_container_of(i, od_rule_storage_t, link);
 		if (!s->mark) {
+			if (s->watchdog != NULL && s->watchdog_coro_id != -1) {
+				od_storage_watchdog_set_offline(s->watchdog);
+				machine_join(s->watchdog_coro_id);
+			}
 			od_list_unlink(&s->link);
 			od_rules_storage_unref(s);
 		} else {

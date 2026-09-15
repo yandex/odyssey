@@ -976,13 +976,7 @@ static inline void od_system(void *arg)
 		machine_join(server->coro_id);
 	}
 
-	/* free router: closes backend connections and drops rule refs
-	 * on storages, so that od_rules_cleanup can reach r==2 and
-	 * signal watchdogs to stop via refcount */
-	od_router_free(router);
-
-	/* collect watchdog coroutine IDs before od_rules_cleanup
-	 * unlinks storages from the list */
+	/* collect watchdog coroutine IDs before rules are freed */
 	int watchdog_count = 0;
 	{
 		od_list_t *j;
@@ -1011,19 +1005,44 @@ static inline void od_system(void *arg)
 		}
 	}
 
-	/* unref storages: with rule refs already dropped by
-	 * od_router_free, r reaches 2 (storage list + watchdog)
-	 * and set_offline is called */
+	/* signal all watchdogs to stop before dropping storage refs.
+	 *
+	 * od_rules_storage_unref no longer signals set_offline via
+	 * refcount — the caller must do it explicitly.  Here we
+	 * signal every running watchdog, then join it (below) so it
+	 * exits and drops its own storage ref before od_router_free
+	 * frees the routes and rules. */
+	{
+		od_list_t *j;
+		od_list_foreach (&router->rules.storages, j) {
+			od_rule_storage_t *s;
+			s = od_container_of(j, od_rule_storage_t, link);
+			if (s->watchdog != NULL && s->watchdog_coro_id != -1) {
+				od_storage_watchdog_set_offline(s->watchdog);
+			}
+		}
+	}
+
+	/* unref storages: drop the storage list refs. Rules and routes
+	 * are still alive, so storage refcount stays above 1.  The
+	 * storage will be freed later when od_router_free drops route
+	 * rule refs and the watchdog's own ref is already gone. */
 	od_rules_cleanup(&router->rules);
 
 	/* join watchdog coroutines: machine_join yields to scheduler,
-	 * giving each watchdog a chance to see set_offline and exit */
+	 * giving each watchdog a chance to see set_offline (signalled
+	 * above) and exit.  Routes and rules are still alive, so the
+	 * watchdog can safely access them during its final polling step. */
 	if (watchdog_ids) {
 		for (int k = 0; k < watchdog_count; k++) {
 			machine_join(watchdog_ids[k]);
 		}
 		od_free(watchdog_ids);
 	}
+
+	/* now safe to free router: all watchdogs are dead, so no one
+	 * will access routes or rules after this point */
+	od_router_free(router);
 
 	od_soft_oom_stop_checker(&global->soft_oom);
 
