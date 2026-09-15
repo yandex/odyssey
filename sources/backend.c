@@ -338,7 +338,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 
 #define DEFAULT_ARGV_SIZE 6
 
-	kiwi_fe_arg_t argv[DEFAULT_ARGV_SIZE +
+	kiwi_fe_arg_t argv[DEFAULT_ARGV_SIZE + 2 +
 			   2 * route->rule->backend_startup_vars_sz];
 
 	kiwi_fe_arg_t default_argv[] = {
@@ -380,6 +380,22 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 		argv[argc + 1].name = "database";
 		argv[argc + 1].len = 9;
 		argc += 2;
+	}
+
+	kiwi_var_unset(&server->startup_application_name);
+	if (route_params == NULL && client != NULL &&
+	    client->type == OD_POOL_CLIENT_EXTERNAL &&
+	    client->rule->maintain_params &&
+	    client->rule->pool->pool_type == OD_RULE_POOL_SESSION) {
+		kiwi_var_t *app = &client->startup_application_name;
+		if (app->value_len > 0) {
+			argv[argc].name = app->name;
+			argv[argc].len = app->name_len;
+			argv[argc + 1].name = app->value;
+			argv[argc + 1].len = app->value_len;
+			argc += 2;
+			server->startup_application_name = *app;
+		}
 	}
 
 	machine_msg_t *msg;

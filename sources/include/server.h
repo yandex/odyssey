@@ -71,6 +71,7 @@ struct od_server {
 	kiwi_key_t key;
 	kiwi_key_t key_client;
 	kiwi_vars_t vars;
+	kiwi_var_t startup_application_name;
 
 	machine_msg_t *error_connect;
 	/* do not set this field directly, use od_server_attach_client */
@@ -130,6 +131,8 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	kiwi_key_init(&server->key);
 	kiwi_key_init(&server->key_client);
 	kiwi_vars_init(&server->vars);
+	kiwi_var_init(&server->startup_application_name, "application_name",
+		      sizeof("application_name"));
 
 	od_io_init(&server->io);
 	od_list_init(&server->link);
