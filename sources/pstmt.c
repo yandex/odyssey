@@ -601,7 +601,8 @@ static int pstmt_desc_cmp(const void *k1, const void *k2)
 	return memcmp(d1->data, d2->data, d1->len);
 }
 
-static inline int pstmt_is_correct_deletion(od_pstmt_t *p)
+static inline __attribute__((unused)) int
+pstmt_is_correct_deletion(od_pstmt_t *p)
 {
 	/*
 	 * need to check ref correctly because pstmt has a race on creation
