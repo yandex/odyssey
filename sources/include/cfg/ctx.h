@@ -24,6 +24,7 @@ typedef struct od_cfg_parse_ctx {
 	od_cfg_model_t *model;
 	od_cfg_diag_list_t *diags;
 	int include_depth;
+	int allow_include;
 
 	/*
 	 * bison scopes
