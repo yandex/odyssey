@@ -881,7 +881,7 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 		msg = NULL;
 
 		if (rc == 0) {
-		int64_t lag = machine_timeofday_sec() - last_heartbeat;
+			int64_t lag = machine_timeofday_sec() - last_heartbeat;
 			if (lag < 0) {
 				lag = 0;
 			}
