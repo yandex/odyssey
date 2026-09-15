@@ -169,147 +169,6 @@ static void test_set_with_semicolon(void)
 		    "(set search_path=public)") == 0);
 }
 
-static void test_console_show_stats(void)
-{
-	test(strcmp(parse_ok("SHOW STATS"), "(show stats)") == 0);
-}
-
-static void test_console_show_servers(void)
-{
-	test(strcmp(parse_ok("SHOW SERVERS"), "(show servers)") == 0);
-}
-
-static void test_console_show_server_prep_stmts(void)
-{
-	test(strcmp(parse_ok("SHOW SERVER_PREP_STMTS"),
-		    "(show server_prep_stmts)") == 0);
-}
-
-static void test_console_show_clients(void)
-{
-	test(strcmp(parse_ok("SHOW CLIENTS"), "(show clients)") == 0);
-}
-
-static void test_console_show_lists(void)
-{
-	test(strcmp(parse_ok("SHOW LISTS"), "(show lists)") == 0);
-}
-
-static void test_console_show_help(void)
-{
-	test(strcmp(parse_ok("SHOW HELP"), "(show help)") == 0);
-}
-
-static void test_console_show_pools(void)
-{
-	test(strcmp(parse_ok("SHOW POOLS"), "(show pools)") == 0);
-}
-
-static void test_console_show_pools_extended(void)
-{
-	test(strcmp(parse_ok("SHOW POOLS_EXTENDED"), "(show pools_extended)") ==
-	     0);
-}
-
-static void test_console_show_databases(void)
-{
-	test(strcmp(parse_ok("SHOW DATABASES"), "(show databases)") == 0);
-}
-
-static void test_console_show_errors(void)
-{
-	test(strcmp(parse_ok("SHOW ERRORS"), "(show errors)") == 0);
-}
-
-static void test_console_show_errors_per_route(void)
-{
-	test(strcmp(parse_ok("SHOW ERRORS_PER_ROUTE"),
-		    "(show errors_per_route)") == 0);
-}
-
-static void test_console_show_version(void)
-{
-	test(strcmp(parse_ok("SHOW VERSION"), "(show version)") == 0);
-	test(strcmp(parse_ok("SHOW VERSION_EXTENDED"),
-		    "(show version_extended)") == 0);
-}
-
-static void test_console_show_misc(void)
-{
-	test(strcmp(parse_ok("SHOW FRONTEND"), "(show frontend)") == 0);
-	test(strcmp(parse_ok("SHOW ROUTER"), "(show router)") == 0);
-	test(strcmp(parse_ok("SHOW LISTEN"), "(show listen)") == 0);
-	test(strcmp(parse_ok("SHOW STORAGES"), "(show storages)") == 0);
-	test(strcmp(parse_ok("SHOW FDS"), "(show fds)") == 0);
-	test(strcmp(parse_ok("SHOW IS_PAUSED"), "(show is_paused)") == 0);
-	test(strcmp(parse_ok("SHOW HOST_UTILIZATION"),
-		    "(show host_utilization)") == 0);
-	test(strcmp(parse_ok("SHOW RULES"), "(show rules)") == 0);
-}
-
-static void test_console_show_case_insensitive(void)
-{
-	test(strcmp(parse_ok("show stats"), "(show stats)") == 0);
-	test(strcmp(parse_ok("Show Stats"), "(show stats)") == 0);
-	test(strcmp(parse_ok("SHOW STATS;"), "(show stats)") == 0);
-}
-
-static void test_kill_client_basic(void)
-{
-	const char *res = parse_ok("KILL_CLIENT c3f1a2b4e890c");
-	test(strcmp(res, "(kill-client c3f1a2b4e890c)") == 0);
-}
-
-static void test_kill_client_case_insensitive_cmd(void)
-{
-	test(strcmp(parse_ok("kill_client c3f1a2b4e890c"),
-		    "(kill-client c3f1a2b4e890c)") == 0);
-}
-
-static void test_kill_client_with_semicolon(void)
-{
-	test(strcmp(parse_ok("KILL_CLIENT c3f1a2b4e890c;"),
-		    "(kill-client c3f1a2b4e890c)") == 0);
-}
-
-static void test_kill_client_bad_id_length(void)
-{
-	parse_fail("KILL_CLIENT c3f1");
-	parse_fail("KILL_CLIENT c3f1a2b4e890cd");
-	parse_fail("KILL_CLIENT");
-}
-
-/*
- * Admin command tests
- */
-static void test_reload(void)
-{
-	test(strcmp(parse_ok("RELOAD"), "(reload)") == 0);
-	test(strcmp(parse_ok("reload"), "(reload)") == 0);
-	test(strcmp(parse_ok("RELOAD;"), "(reload)") == 0);
-}
-
-static void test_pause(void)
-{
-	test(strcmp(parse_ok("PAUSE"), "(pause)") == 0);
-	test(strcmp(parse_ok("pause"), "(pause)") == 0);
-	test(strcmp(parse_ok("PAUSE;"), "(pause)") == 0);
-}
-
-static void test_resume(void)
-{
-	test(strcmp(parse_ok("RESUME"), "(resume)") == 0);
-	test(strcmp(parse_ok("resume"), "(resume)") == 0);
-	test(strcmp(parse_ok("RESUME;"), "(resume)") == 0);
-}
-
-static void test_drop_servers(void)
-{
-	test(strcmp(parse_ok("DROP SERVERS"), "(drop servers)") == 0);
-	test(strcmp(parse_ok("drop servers"), "(drop servers)") == 0);
-	test(strcmp(parse_ok("DROP SERVERS;"), "(drop servers)") == 0);
-}
-
 static void test_begin_basic(void)
 {
 	test(strcmp(parse_ok("BEGIN"), "(begin)") == 0);
@@ -501,8 +360,6 @@ static void test_parse_errors(void)
 	parse_fail("SELECT 1");
 	parse_fail("SHOW");
 	parse_fail("SET foo =");
-	parse_fail("DROP");
-	parse_fail("CREATE MODULE");
 	parse_fail("DEALLOCATE");
 	parse_fail("DEALLOCATE PREPARE");
 	parse_fail("DEALLOCATE PREPARE;");
@@ -662,32 +519,6 @@ void odyssey_test_sql_minimal_parser(void)
 	test_set_boolean_values();
 	test_set_integer();
 	test_set_with_semicolon();
-
-	test_console_show_stats();
-	test_console_show_servers();
-	test_console_show_server_prep_stmts();
-	test_console_show_clients();
-	test_console_show_lists();
-	test_console_show_help();
-	test_console_show_pools();
-	test_console_show_pools_extended();
-	test_console_show_databases();
-	test_console_show_errors();
-	test_console_show_errors_per_route();
-	test_console_show_version();
-	test_console_show_misc();
-	test_console_show_case_insensitive();
-
-	test_kill_client_basic();
-	test_kill_client_case_insensitive_cmd();
-	test_kill_client_with_semicolon();
-	test_kill_client_bad_id_length();
-
-	test_reload();
-	test_pause();
-	test_resume();
-
-	test_drop_servers();
 
 	test_begin_basic();
 	test_begin_work();

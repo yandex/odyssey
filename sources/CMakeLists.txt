@@ -203,6 +203,33 @@ list(APPEND od_src
     sql/minimal/parser.c
 )
 
+set(CONSOLE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/console)
+file(MAKE_DIRECTORY ${CONSOLE_GEN_DIR})
+
+BISON_TARGET(console_parser
+    console/parse.y
+    ${CONSOLE_GEN_DIR}/parse.tab.c
+    DEFINES_FILE ${CONSOLE_GEN_DIR}/parse.tab.h
+    COMPILE_FLAGS "-Werror -Wall"
+)
+FLEX_TARGET(console_scanner
+    console/scan.l
+    ${CONSOLE_GEN_DIR}/scan.c
+    COMPILE_FLAGS "--header-file=${CONSOLE_GEN_DIR}/scan.h"
+)
+ADD_FLEX_BISON_DEPENDENCY(console_scanner console_parser)
+set_source_files_properties(${FLEX_console_scanner_OUTPUTS} PROPERTIES
+    COMPILE_FLAGS "-Wno-unused-function"
+)
+list(APPEND od_src
+    ${FLEX_console_scanner_OUTPUTS}
+    ${BISON_console_parser_OUTPUTS}
+    console/ast.c
+    console/ctx.c
+    console/keywords.c
+    console/parser.c
+)
+
 if (USE_TCMALLOC)
     find_library(TCMALLOC_STATIC_LIB
         NAMES libtcmalloc.a
@@ -278,7 +305,7 @@ include_directories("${PROJECT_BINARY_DIR}/sources/include")
 add_executable(${od_binary} ${od_src} main.c)
 add_dependencies(${od_binary} build_libs)
 
-target_include_directories(${od_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR})
+target_include_directories(${od_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR} ${CONSOLE_GEN_DIR})
 
 if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_binary} PROPERTY COMPILE_OPTIONS "-pthread")
@@ -403,7 +430,8 @@ set(od_test_src
     tests/odyssey/test_duration_parse.c
     tests/odyssey/test_thread_pool.c
     tests/odyssey/test_linear_alloc.c
-    tests/odyssey/test_sql_parser.c)
+    tests/odyssey/test_sql_parser.c
+    tests/odyssey/test_console_parser.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")
@@ -422,7 +450,7 @@ if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_test_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
 endif()
 
-target_include_directories(${od_test_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR})
+target_include_directories(${od_test_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR} ${CONSOLE_GEN_DIR})
 
 target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
 

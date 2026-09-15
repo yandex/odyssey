@@ -29,12 +29,6 @@ static const od_sql_minimal_keyword_t keywords[] = {
 	{ "off", KW_OFF },
 	{ "begin", KW_BEGIN },
 
-	{ "kill_client", KW_KILL_CLIENT },
-	{ "reload", KW_RELOAD },
-	{ "pause", KW_PAUSE },
-	{ "resume", KW_RESUME },
-	{ "drop", KW_DROP },
-
 	/* transaction control */
 	{ "work", KW_WORK },
 	{ "transaction", KW_TRANSACTION },

@@ -15,11 +15,6 @@ typedef enum {
 	OD_SQL_MINIMAL_NODE_TYPE_INVALID = 0,
 	OD_SQL_MINIMAL_NODE_TYPE_SHOW_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_SET_STMT,
-	OD_SQL_MINIMAL_NODE_TYPE_KILL_CLIENT_STMT,
-	OD_SQL_MINIMAL_NODE_TYPE_RELOAD_STMT,
-	OD_SQL_MINIMAL_NODE_TYPE_PAUSE_STMT,
-	OD_SQL_MINIMAL_NODE_TYPE_RESUME_STMT,
-	OD_SQL_MINIMAL_NODE_TYPE_DROP_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT,
@@ -40,28 +35,6 @@ typedef struct {
 	char *key;
 	char *value;
 } od_sql_minimal_set_stmt_t;
-
-typedef struct {
-	od_sql_minimal_node_tag_t type;
-	char *id;
-} od_sql_minimal_kill_client_stmt_t;
-
-typedef struct {
-	od_sql_minimal_node_tag_t type;
-} od_sql_minimal_reload_stmt_t;
-
-typedef struct {
-	od_sql_minimal_node_tag_t type;
-} od_sql_minimal_pause_stmt_t;
-
-typedef struct {
-	od_sql_minimal_node_tag_t type;
-} od_sql_minimal_resume_stmt_t;
-
-typedef struct {
-	od_sql_minimal_node_tag_t type;
-	char *name;
-} od_sql_minimal_drop_stmt_t;
 
 typedef struct {
 	od_sql_minimal_node_tag_t type;

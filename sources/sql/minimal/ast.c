@@ -55,28 +55,6 @@ int od_sql_minimal_node_print(const od_sql_minimal_node_t *node, char *buf,
 				n->key ? n->key : "");
 	}
 
-	case OD_SQL_MINIMAL_NODE_TYPE_KILL_CLIENT_STMT: {
-		const od_sql_minimal_kill_client_stmt_t *n =
-			(const od_sql_minimal_kill_client_stmt_t *)node;
-		return snprintf(buf, buflen, "(kill-client %s)", n->id);
-	}
-
-	case OD_SQL_MINIMAL_NODE_TYPE_RELOAD_STMT:
-		return snprintf(buf, buflen, "(reload)");
-
-	case OD_SQL_MINIMAL_NODE_TYPE_PAUSE_STMT:
-		return snprintf(buf, buflen, "(pause)");
-
-	case OD_SQL_MINIMAL_NODE_TYPE_RESUME_STMT:
-		return snprintf(buf, buflen, "(resume)");
-
-	case OD_SQL_MINIMAL_NODE_TYPE_DROP_STMT: {
-		const od_sql_minimal_drop_stmt_t *n =
-			(const od_sql_minimal_drop_stmt_t *)node;
-		return snprintf(buf, buflen, "(drop %s)",
-				n->name ? n->name : "");
-	}
-
 	case OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT:
 		return snprintf(buf, buflen, "(begin)");
 

@@ -12,7 +12,6 @@
 #include <kiwi/kiwi.h>
 
 #include <types.h>
-#include <parser.h>
 #include <rules.h>
 #include <stat.h>
 #include <status.h>
@@ -24,87 +23,13 @@
 #include <config.h>
 #include <instance.h>
 #include <system.h>
-#include <module.h>
 #include <frontend.h>
 #include <extension.h>
 #include <cron.h>
 #include <option.h>
 #include <msg.h>
-
-typedef enum {
-	OD_LKILL_CLIENT,
-	OD_LRELOAD,
-	OD_LSHOW,
-	OD_LSTATS,
-	OD_LSERVERS,
-	OD_LSERVER_PREP_STMTS,
-	OD_LPREPARED_STMTS,
-	OD_LCLIENTS,
-	OD_LLISTS,
-	OD_LINSTANCE,
-	OD_LHELP,
-	OD_LSET,
-	OD_LCREATE,
-	OD_LDROP,
-	OD_LPOOLS,
-	OD_LPOOLS_EXTENDED,
-	OD_LDATABASES,
-	OD_LMODULE,
-	OD_LERRORS,
-	OD_LERRORS_PER_ROUTE,
-	OD_LFRONTEND,
-	OD_LROUTER,
-	OD_LVERSION,
-	OD_LVERSION_EXTENDED,
-	OD_LLISTEN,
-	OD_LSTORAGES,
-	OD_LFDS,
-	OD_LPAUSE,
-	OD_LRESUME,
-	OD_LIS_PAUSED,
-	OD_LHOST_UTILIZATION,
-	OD_LRULES,
-	OD_LCONFIG,
-	OD_LGC,
-} od_console_keywords_t;
-
-static od_keyword_t od_console_keywords[] = {
-	od_keyword("kill_client", OD_LKILL_CLIENT),
-	od_keyword("reload", OD_LRELOAD),
-	od_keyword("help", OD_LHELP),
-	od_keyword("show", OD_LSHOW),
-	od_keyword("stats", OD_LSTATS),
-	od_keyword("servers", OD_LSERVERS),
-	od_keyword("server_prep_stmts", OD_LSERVER_PREP_STMTS),
-	od_keyword("global_prepared_statements", OD_LPREPARED_STMTS),
-	od_keyword("clients", OD_LCLIENTS),
-	od_keyword("lists", OD_LLISTS),
-	od_keyword("instance", OD_LINSTANCE),
-	od_keyword("set", OD_LSET),
-	od_keyword("pools", OD_LPOOLS),
-	od_keyword("pools_extended", OD_LPOOLS_EXTENDED),
-	od_keyword("databases", OD_LDATABASES),
-	od_keyword("create", OD_LCREATE),
-	od_keyword("module", OD_LMODULE),
-	od_keyword("errors", OD_LERRORS),
-	od_keyword("errors_per_route", OD_LERRORS_PER_ROUTE),
-	od_keyword("frontend", OD_LFRONTEND),
-	od_keyword("router", OD_LROUTER),
-	od_keyword("drop", OD_LDROP),
-	od_keyword("version", OD_LVERSION),
-	od_keyword("version_extended", OD_LVERSION_EXTENDED),
-	od_keyword("listen", OD_LLISTEN),
-	od_keyword("storages", OD_LSTORAGES),
-	od_keyword("fds", OD_LFDS),
-	od_keyword("pause", OD_LPAUSE),
-	od_keyword("resume", OD_LRESUME),
-	od_keyword("is_paused", OD_LIS_PAUSED),
-	od_keyword("host_utilization", OD_LHOST_UTILIZATION),
-	od_keyword("rules", OD_LRULES),
-	od_keyword("config", OD_LCONFIG),
-	od_keyword("gc", OD_LGC),
-	{ 0, 0, 0 }
-};
+#include <worker.h>
+#include <console/parser.h>
 
 static inline int od_console_show_stats_add(machine_msg_t *stream,
 					    char *database, int database_len,
@@ -2361,72 +2286,128 @@ error:
 	return rc;
 }
 
+typedef enum {
+	OD_SHOW_INVALID = 0,
+	OD_SHOW_STATS,
+	OD_SHOW_HELP,
+	OD_SHOW_POOLS,
+	OD_SHOW_POOLS_EXTENDED,
+	OD_SHOW_DATABASES,
+	OD_SHOW_SERVERS,
+	OD_SHOW_SERVER_PREP_STMTS,
+	OD_SHOW_GLOBAL_PREPARED_STMTS,
+	OD_SHOW_CLIENTS,
+	OD_SHOW_LISTS,
+	OD_SHOW_INSTANCE,
+	OD_SHOW_ERRORS,
+	OD_SHOW_ERRORS_PER_ROUTE,
+	OD_SHOW_VERSION,
+	OD_SHOW_VERSION_EXTENDED,
+	OD_SHOW_LISTEN,
+	OD_SHOW_STORAGES,
+	OD_SHOW_FDS,
+	OD_SHOW_IS_PAUSED,
+	OD_SHOW_HOST_UTILIZATION,
+	OD_SHOW_RULES,
+	OD_SHOW_CONFIG,
+} od_show_target_id_t;
+
+static od_show_target_id_t od_console_show_target_lookup(const char *name)
+{
+	static const struct {
+		const char *name;
+		od_show_target_id_t id;
+	} map[] = {
+		{ "stats", OD_SHOW_STATS },
+		{ "help", OD_SHOW_HELP },
+		{ "pools", OD_SHOW_POOLS },
+		{ "pools_extended", OD_SHOW_POOLS_EXTENDED },
+		{ "databases", OD_SHOW_DATABASES },
+		{ "servers", OD_SHOW_SERVERS },
+		{ "server_prep_stmts", OD_SHOW_SERVER_PREP_STMTS },
+		{ "global_prepared_statements", OD_SHOW_GLOBAL_PREPARED_STMTS },
+		{ "clients", OD_SHOW_CLIENTS },
+		{ "lists", OD_SHOW_LISTS },
+		{ "instance", OD_SHOW_INSTANCE },
+		{ "errors", OD_SHOW_ERRORS },
+		{ "errors_per_route", OD_SHOW_ERRORS_PER_ROUTE },
+		{ "version", OD_SHOW_VERSION },
+		{ "version_extended", OD_SHOW_VERSION_EXTENDED },
+		{ "listen", OD_SHOW_LISTEN },
+		{ "storages", OD_SHOW_STORAGES },
+		{ "fds", OD_SHOW_FDS },
+		{ "is_paused", OD_SHOW_IS_PAUSED },
+		{ "host_utilization", OD_SHOW_HOST_UTILIZATION },
+		{ "rules", OD_SHOW_RULES },
+		{ "config", OD_SHOW_CONFIG },
+	};
+
+	for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
+		if (strcmp(name, map[i].name) == 0) {
+			return map[i].id;
+		}
+	}
+	return OD_SHOW_INVALID;
+}
+
 static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
-				  od_parser_t *parser)
+				  const char *name)
 {
 	od_assert(stream);
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_KEYWORD:
-		break;
-	case OD_PARSER_EOF:
-	default:
+	if (name == NULL) {
 		return NOT_OK_RESPONSE;
 	}
-	od_keyword_t *keyword;
-	keyword = od_keyword_match(od_console_keywords, &token);
-	if (keyword == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-	switch (keyword->id) {
-	case OD_LSTATS:
+
+	switch (od_console_show_target_lookup(name)) {
+	case OD_SHOW_STATS:
 		return od_console_show_stats(client, stream);
-	case OD_LHELP:
+	case OD_SHOW_HELP:
 		return od_console_show_help(stream);
-	case OD_LPOOLS:
+	case OD_SHOW_POOLS:
 		return od_console_show_pools(client, stream, false);
-	case OD_LPOOLS_EXTENDED:
+	case OD_SHOW_POOLS_EXTENDED:
 		return od_console_show_pools(client, stream, true);
-	case OD_LDATABASES:
+	case OD_SHOW_DATABASES:
 		return od_console_show_databases(client, stream);
-	case OD_LSERVER_PREP_STMTS:
-		return od_console_show_server_prep_stmts(client, stream);
-	case OD_LPREPARED_STMTS:
-		return od_console_show_prep_stmts(client, stream);
-	case OD_LSERVERS:
+	case OD_SHOW_SERVERS:
 		return od_console_show_servers(client, stream);
-	case OD_LCLIENTS:
+	case OD_SHOW_SERVER_PREP_STMTS:
+		return od_console_show_server_prep_stmts(client, stream);
+	case OD_SHOW_GLOBAL_PREPARED_STMTS:
+		return od_console_show_prep_stmts(client, stream);
+	case OD_SHOW_CLIENTS:
 		return od_console_show_clients(client, stream);
-	case OD_LLISTS:
+	case OD_SHOW_LISTS:
 		return od_console_show_lists(client, stream);
-	case OD_LINSTANCE:
+	case OD_SHOW_INSTANCE:
 		return od_console_show_instance(client, stream);
-	case OD_LERRORS:
+	case OD_SHOW_ERRORS:
 		return od_console_show_errors(client, stream);
-	case OD_LERRORS_PER_ROUTE:
+	case OD_SHOW_ERRORS_PER_ROUTE:
 		return od_console_show_errors_per_route(client, stream);
-	case OD_LVERSION:
+	case OD_SHOW_VERSION:
 		return od_console_show_version(stream);
-	case OD_LVERSION_EXTENDED:
+	case OD_SHOW_VERSION_EXTENDED:
 		return od_console_show_version_extended(stream);
-	case OD_LLISTEN:
+	case OD_SHOW_LISTEN:
 		return od_console_show_listen(client, stream);
-	case OD_LSTORAGES:
+	case OD_SHOW_STORAGES:
 		return od_console_show_storages(client, stream);
-	case OD_LFDS:
+	case OD_SHOW_FDS:
 		return od_console_show_fds(client, stream);
-	case OD_LIS_PAUSED:
+	case OD_SHOW_IS_PAUSED:
 		return od_console_show_is_paused(client, stream);
-	case OD_LHOST_UTILIZATION:
+	case OD_SHOW_HOST_UTILIZATION:
 		return od_console_show_host_utilization(client, stream);
-	case OD_LRULES:
+	case OD_SHOW_RULES:
 		return od_console_show_rules(stream);
-	case OD_LCONFIG:
+	case OD_SHOW_CONFIG:
 		return od_console_show_config(client, stream);
+	default:
+		od_frontend_errorf(client, stream, KIWI_SYNTAX_ERROR,
+				   "unknown show target: %s", name);
+		return 0;
 	}
-	return NOT_OK_RESPONSE;
 }
 
 static inline int od_console_pause(od_client_t *client, machine_msg_t *stream)
@@ -2453,20 +2434,14 @@ static inline int od_console_resume(od_client_t *client, machine_msg_t *stream)
 
 static inline int od_console_kill_client(od_client_t *client,
 					 machine_msg_t *stream,
-					 od_parser_t *parser)
+					 const char *id_str)
 {
 	(void)stream;
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(parser, &token);
-	if (rc != OD_PARSER_KEYWORD) {
-		return NOT_OK_RESPONSE;
-	}
 	od_id_t id;
-	if (token.value.string.size != (sizeof(id.id) + 1)) {
+	if (strlen(id_str) != (sizeof(id.id) + 1)) {
 		return NOT_OK_RESPONSE;
 	}
-	memcpy(id.id, token.value.string.pointer + 1, sizeof(id.id));
+	memcpy(id.id, id_str + 1, sizeof(id.id));
 
 	od_router_kill(client->global->router, &id);
 	return 0;
@@ -2540,108 +2515,6 @@ static inline int od_console_set(od_client_t *client, machine_msg_t *stream)
 	return kiwi_be_write_complete(stream, "SET", 4);
 }
 
-static inline int od_console_add_module(od_client_t *client,
-					machine_msg_t *stream,
-					od_parser_t *parser)
-{
-	od_assert(stream);
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(parser, &token);
-	od_instance_t *instance = client->global->instance;
-
-	switch (rc) {
-	case OD_PARSER_STRING: {
-		char module_path[MAX_MODULE_PATH_LEN];
-		od_token_to_string_dest(&token, module_path);
-
-		od_log(&instance->logger, "od module dynamic load", NULL, NULL,
-		       "loading module with path %s", module_path);
-		int retcode = od_target_module_add(
-			&instance->logger,
-			((od_extension_t *)client->global->extensions)->modules,
-			module_path);
-		if (retcode == 0) {
-			od_frontend_infof(client, stream,
-					  "module was successfully loaded!");
-		} else {
-			od_frontend_errorf(
-				client, stream, KIWI_SYSTEM_ERROR,
-				"module was NOT successfully loaded! Check logs for details");
-		}
-		return retcode;
-	}
-	case OD_PARSER_EOF:
-	default:
-		return NOT_OK_RESPONSE;
-	}
-}
-
-static inline int od_console_unload_module(od_client_t *client,
-					   machine_msg_t *stream,
-					   od_parser_t *parser)
-{
-	od_assert(stream);
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(parser, &token);
-	od_instance_t *instance = client->global->instance;
-
-	switch (rc) {
-	case OD_PARSER_STRING: {
-		char module_path[MAX_MODULE_PATH_LEN];
-		od_token_to_string_dest(&token, module_path);
-
-		od_log(&instance->logger, "od module dynamic unload", NULL,
-		       NULL, "unloading module with path %s", module_path);
-		int retcode = od_target_module_unload(
-			&instance->logger,
-			((od_extension_t *)client->global->extensions)->modules,
-			module_path);
-		if (retcode == 0) {
-			od_frontend_infof(client, stream,
-					  "module was successfully unloaded!");
-		} else {
-			od_frontend_errorf(client, stream, KIWI_SYSTEM_ERROR,
-					   "module was NOT successfully "
-					   "unloaded! Check logs for details");
-		}
-		return retcode;
-	}
-	case OD_PARSER_EOF:
-	default:
-		return NOT_OK_RESPONSE;
-	}
-}
-
-static inline int od_console_create(od_client_t *client, machine_msg_t *stream,
-				    od_parser_t *parser)
-{
-	od_assert(stream);
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_KEYWORD:
-		break;
-	case OD_PARSER_EOF:
-	default:
-		return NOT_OK_RESPONSE;
-	}
-	od_keyword_t *keyword;
-	keyword = od_keyword_match(od_console_keywords, &token);
-	if (keyword == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-
-	switch (keyword->id) {
-	case OD_LMODULE:
-		return od_console_add_module(client, stream, parser);
-	}
-
-	return NOT_OK_RESPONSE;
-}
-
 static inline int od_console_drop_server_cb(od_server_t *server, void **argv)
 {
 	(void)argv;
@@ -2665,21 +2538,10 @@ static inline od_retcode_t od_console_drop_server(od_route_t *route,
 }
 
 static inline od_retcode_t od_console_drop_servers(od_client_t *client,
-						   machine_msg_t *stream,
-						   od_parser_t *parser)
+						   machine_msg_t *stream)
 {
 	(void)client;
 	od_assert(stream);
-
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_EOF:
-		break;
-	default:
-		return NOT_OK_RESPONSE;
-	}
 
 	od_router_t *router = client->global->router;
 
@@ -2688,36 +2550,13 @@ static inline od_retcode_t od_console_drop_servers(od_client_t *client,
 	return OK_RESPONSE;
 }
 
-static inline od_retcode_t
-od_console_drop(od_client_t *client, machine_msg_t *stream, od_parser_t *parser)
+static void od_console_error_cb(const char *msg, void *userdata)
 {
-	od_assert(stream);
-	od_token_t token;
-	int rc;
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_KEYWORD:
-		break;
-	case OD_PARSER_EOF:
-	default:
-		return NOT_OK_RESPONSE;
+	char *buf = (char *)userdata;
+	if (buf == NULL || msg == NULL) {
+		return;
 	}
-	od_keyword_t *keyword;
-	keyword = od_keyword_match(od_console_keywords, &token);
-	if (keyword == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-
-	switch (keyword->id) {
-	case OD_LSERVERS:
-		return od_console_drop_servers(client, stream, parser);
-	case OD_LMODULE:
-		return od_console_unload_module(client, stream, parser);
-	default:
-		return NOT_OK_RESPONSE;
-	}
-
-	return NOT_OK_RESPONSE;
+	snprintf(buf, 255, "%s", msg);
 }
 
 int od_console_query(od_client_t *client, machine_msg_t *stream,
@@ -2752,41 +2591,56 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 			 query_len, query);
 	}
 
-	od_parser_t parser;
-	od_parser_init(&parser, query, query_len);
+	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
+	char parse_err[256] = { 0 };
+	od_console_node_t *ast = od_console_parse(
+		query, query_len - 1, arena, od_console_error_cb, parse_err);
+	if (ast == NULL) {
+		od_error(&instance->logger, "console", client, NULL,
+			 "console command error: %.*s", query_len - 1, query);
+		if (parse_err[0] != '\0') {
+			msg = od_frontend_errorf(client, stream,
+						 KIWI_SYNTAX_ERROR,
+						 "console command error: %s",
+						 parse_err);
+		} else {
+			msg = od_frontend_errorf(client, stream,
+						 KIWI_SYNTAX_ERROR,
+						 "console command error: %.*s",
+						 query_len - 1, query);
+		}
+		if (msg == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+		return 0;
+	}
 
-	od_token_t token;
-	rc = od_parser_next(&parser, &token);
-	switch (rc) {
-	case OD_PARSER_KEYWORD:
-		break;
-	case OD_PARSER_EOF:
-	default:
-		goto bad_query;
-	}
-	od_keyword_t *keyword;
-	keyword = od_keyword_match(od_console_keywords, &token);
-	if (keyword == NULL) {
-		goto bad_query;
-	}
-	switch (keyword->id) {
-	case OD_LSHOW:
-		rc = od_console_show(client, stream, &parser);
+	int is_admin = (client->rule->user_role == OD_RULE_ROLE_ADMIN);
+	int is_stat = (client->rule->user_role == OD_RULE_ROLE_STAT);
+
+	switch (ast->type) {
+	case OD_CONSOLE_NODE_TYPE_SHOW_STMT: {
+		od_console_show_stmt_t *n = (od_console_show_stmt_t *)ast;
+		rc = od_console_show(client, stream, n->name);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
 		break;
-	case OD_LKILL_CLIENT:
-		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+	}
+	case OD_CONSOLE_NODE_TYPE_KILL_CLIENT_STMT: {
+		if (!is_admin) {
 			goto incorrect_role;
 		}
-		rc = od_console_kill_client(client, stream, &parser);
+		od_console_kill_client_stmt_t *n =
+			(od_console_kill_client_stmt_t *)ast;
+		rc = od_console_kill_client(client, stream, n->id);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
 		break;
-	case OD_LRELOAD:
-		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+	}
+	case OD_CONSOLE_NODE_TYPE_RELOAD_STMT:
+		if (!is_admin) {
 			goto incorrect_role;
 		}
 		rc = od_console_reload(client, stream);
@@ -2794,8 +2648,8 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 			goto bad_query;
 		}
 		break;
-	case OD_LGC:
-		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+	case OD_CONSOLE_NODE_TYPE_GC_STMT:
+		if (!is_admin) {
 			goto incorrect_role;
 		}
 		rc = od_console_gc(client, stream);
@@ -2803,8 +2657,8 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 			goto bad_query;
 		}
 		break;
-	case OD_LSET:
-		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+	case OD_CONSOLE_NODE_TYPE_SET_STMT:
+		if (!is_admin) {
 			goto incorrect_role;
 		}
 		rc = od_console_set(client, stream);
@@ -2812,26 +2666,25 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 			goto bad_query;
 		}
 		break;
-	case OD_LCREATE:
-		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+	case OD_CONSOLE_NODE_TYPE_DROP_STMT: {
+		if (!is_admin) {
 			goto incorrect_role;
 		}
-		rc = od_console_create(client, stream, &parser);
+		od_console_drop_stmt_t *n = (od_console_drop_stmt_t *)ast;
+		switch (n->target) {
+		case OD_CONSOLE_DROP_SERVERS:
+			rc = od_console_drop_servers(client, stream);
+			break;
+		default:
+			goto bad_query;
+		}
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
 		break;
-	case OD_LDROP:
-		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
-			goto incorrect_role;
-		}
-		rc = od_console_drop(client, stream, &parser);
-		if (rc == NOT_OK_RESPONSE) {
-			goto bad_query;
-		}
-		break;
-	case OD_LPAUSE:
-		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+	}
+	case OD_CONSOLE_NODE_TYPE_PAUSE_STMT:
+		if (!is_admin) {
 			goto incorrect_role;
 		}
 		rc = od_console_pause(client, stream);
@@ -2839,8 +2692,8 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 			goto bad_query;
 		}
 		break;
-	case OD_LRESUME:
-		if (client->rule->user_role != OD_RULE_ROLE_ADMIN) {
+	case OD_CONSOLE_NODE_TYPE_RESUME_STMT:
+		if (!is_admin) {
 			goto incorrect_role;
 		}
 		rc = od_console_resume(client, stream);
@@ -2851,6 +2704,8 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	default:
 		goto bad_query;
 	}
+
+	(void)is_stat;
 
 	return 0;
 
