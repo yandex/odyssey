@@ -87,7 +87,10 @@ int od_rate_limiter_waitn(od_rate_limiter_t *lim, uint64_t n,
 			  uint32_t timeout_ms)
 {
 	od_assert(lim);
-	od_assert(lim->limit);
+
+	if (lim->limit == 0) {
+		return -1;
+	}
 
 	int64_t end_us;
 	if (timeout_ms == UINT32_MAX) {
@@ -132,7 +135,7 @@ int od_rate_limiter_waitn(od_rate_limiter_t *lim, uint64_t n,
 		}
 
 		uint64_t remaining_ms = (end_us - now_us) / 1000;
-		if (wait_ms > remaining_ms) {
+		if (wait_ms >= remaining_ms) {
 			return -1;
 		}
 

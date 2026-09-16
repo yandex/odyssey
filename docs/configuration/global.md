@@ -62,10 +62,9 @@ for all Odyssey rules.
 | `external_auth_socket_path`                | string           | unset       | restart | Unix socket path for external auth module                         |
 | `cpu_affinity`                             | string           | unset       | restart | CPU affinity mask for Odyssey threads                             |
 | `cancel_timeout_ms`                        | int (ms)         | `1000`      | SIGHUP  | Timeout for cancel request to backend                             |
-| `cancel_queue_timeout_ms`                  | int (ms)         | `-1` (none) | SIGHUP  | Timeout for queued cancel requests; -1 = no timeout               |
-| `cancel_max_inflight`                      | int              | `-1` (none) | SIGHUP  | Max concurrent in-flight cancel requests; -1 = unlimited          |
-| `cancel_rate_limit`                        | int              | `-1` (none) | restart | Max cancels per second,
--1 = unlimited     |
+| `cancel_queue_timeout_ms`                  | int (ms)         | `-1` (2 × cancel_timeout_ms) | SIGHUP  | Timeout for queued cancel requests; -1 = 2 × cancel_timeout_ms  |
+| `cancel_max_inflight`                      | int              | `-1` (2 × workers) | SIGHUP  | Max concurrent in-flight cancel requests; -1 = 2 × workers       |
+| `cancel_rate_limit`                        | int              | `0` (none)  | restart | Max cancels per second; 0 = unlimited                              |
 | `virtual_transaction`                           | int (bool)       | `yes`       | restart  | Enable virtual transaction features    |
 | `dns_cache_ttl`                            | int (ms)         | `30000`     | SIGHUP  | TTL for DNS cache entries                                         |
 | `cache_msg_gc_size`                        | int (bytes)      | `0`         | SIGHUP  | Max single message buffer size for caching; 0 = caching disabled   |
@@ -680,9 +679,9 @@ Conflicts with `cancel_rate_limit`.
 *integer*
 
 Maximum number of cancel request processed per second.
-Default: -1 (unlimited)
+Default: 0 (unlimited)
 
-Conflicts with **cancel\_queue\_timeout\_ms** and **cancel\_max\_inflight**.
+Conflicts with **cancel\_max\_inflight**.
 
 `cancel_rate_limit 10`
 
