@@ -21,7 +21,6 @@
 #include <frontend.h>
 #include <instance.h>
 #include <global.h>
-#include <parser.h>
 #include <stream.h>
 #include <xplan.h>
 #include <pstmt.h>
