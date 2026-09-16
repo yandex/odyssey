@@ -735,6 +735,7 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 		  rule->application_name_add_host);
 	COPY_BOOL(cfg->server_drop_on_backend_plan_error,
 		  rule->server_drop_on_cached_plan_error);
+	COPY_BOOL(cfg->server_drop_on_oom, rule->server_drop_on_oom);
 	if (cfg->server_lifetime.seen.is_set) {
 		rule->server_lifetime_us =
 			cfg->server_lifetime.value * 1000000L;

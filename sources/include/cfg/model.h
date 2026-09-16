@@ -349,6 +349,7 @@ struct od_cfg_route {
 	od_cfg_string_field_t quantiles;
 	od_cfg_bool_field_t application_name_add_host;
 	od_cfg_bool_field_t server_drop_on_backend_plan_error;
+	od_cfg_bool_field_t server_drop_on_oom;
 	od_cfg_u64_field_t server_lifetime;
 	od_cfg_int_field_t ldap_pool_size;
 	od_cfg_int_field_t ldap_pool_timeout;

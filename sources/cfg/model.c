@@ -283,6 +283,7 @@ static void dump_user(FILE *file, const char *type, const od_cfg_route_t *user)
 		  &user->application_name_add_host);
 	dump_bool(file, "server_drop_on_backend_plan_error", 2,
 		  &user->server_drop_on_backend_plan_error);
+	dump_bool(file, "server_drop_on_oom", 2, &user->server_drop_on_oom);
 	dump_uint64(file, "server_lifetime", 2, &user->server_lifetime);
 
 	if (user->ldap_pool_size.seen.is_set) {
@@ -771,6 +772,7 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 	od_cfg_string_field_free(&user->quantiles);
 	od_cfg_bool_field_free(&user->application_name_add_host);
 	od_cfg_bool_field_free(&user->server_drop_on_backend_plan_error);
+	od_cfg_bool_field_free(&user->server_drop_on_oom);
 	od_cfg_u64_field_free(&user->server_lifetime);
 	od_cfg_int_field_free(&user->ldap_pool_size);
 	od_cfg_int_field_free(&user->ldap_pool_timeout);

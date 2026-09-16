@@ -58,6 +58,7 @@ A special `user default` is used when no user is matched.
 | reserve_session_server_connection | boolean                                | yes (1)       | runtime (new connections) | Immediately establish backend connection when client connects.                                                                                                             |
 | server_lifetime                   | integer (sec)                          | 3600          | runtime (new connections) | Maximum lifetime for backend connections (1 hour default).                                                                                                                 |
 | server_drop_on_cached_plan_error  | boolean(yes/no)                        | no          | runtime (new connections) | Do drop server connection on ERROR 0A000 cached plan must not change result type |
+| server_drop_on_oom                | boolean (yes/no)                       | yes (1)       | runtime (new connections) | Drop the client and server connections when the server process reports OOM.                                                |
 | pool_client_idle_timeout          | integer (sec)                        | 0             | runtime (new connections) | Timeout for idle client connections; only applies to session pooling mode.                                                                                                 |
 | pool_idle_in_transaction_timeout  | integer (sec)                          | 0             | runtime (new connections) | Timeout for idle clients with open transactions; session pooling only.                                                                                                     |
 | pool_reserve_prepared_statement   | boolean                                | yes (0)       | runtime (new connections) | Enable prepared statement support; incompatible with session pooling and certain discard modes.                                                                            |
@@ -595,6 +596,22 @@ when driver cant do Close+Prepare by itself.
 Default: no
 
 `server_drop_on_cached_plan_error yes`
+
+---
+
+## *server_drop_on_oom*
+
+*yes/no*
+
+Drop both the client connection and its attached server connection when the
+server process has entered an out-of-memory state. This prevents reuse of a
+server connection that encountered OOM.
+
+Default: yes
+
+Set `server_drop_on_oom no` to keep the previous behavior.
+
+`server_drop_on_oom yes`
 
 ---
 

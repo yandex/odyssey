@@ -275,6 +275,7 @@
 %token QUANTILES "quantiles"
 %token APPLICATION_NAME_ADD_HOST "application_name_add_host"
 %token SERVER_DROP_ON_CACHED_PLAN_ERROR "server_drop_on_cached_plan_error"
+%token SERVER_DROP_ON_OOM "server_drop_on_oom"
 %token SERVER_LIFETIME "server_lifetime"
 %token SERVER_PSTMT_CACHE_SIZE "server_pstmt_cache_size"
 %token LDAP_POOL_SIZE "ldap_pool_size"
@@ -1352,6 +1353,12 @@ route_item:
 							$2,
 							@1,
 							"server_drop_on_backend_plan_error");
+		}
+	| SERVER_DROP_ON_OOM bool_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_bool(ctx->diags, &ur->server_drop_on_oom, $2,
+						@1, "server_drop_on_oom");
 		}
 	| SERVER_LIFETIME int_value
 		{
