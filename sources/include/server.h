@@ -27,24 +27,6 @@ typedef enum {
 } od_server_state_t;
 
 struct od_server {
-	/*
-	 * reference counter for backend connection
-	 *
-	 * we consider the following as reference:
-	 * - functions od_server_create and od_server_free
-	 *   (smth like "the pool holds the ref")
-	 * - client connection that use the server
-	 *   (od_server_attach_client and od_server_dettach_client)
-	 * - each currently running cancel on the server
-	 *   (od_server_cancel_begin and od_server_cancel_end)
-	 * 
-	 * every server that have ref counter > 1
-	 * should have ACTIVE state,
-	 * to prevent sending cancel to wrong client
-	 * 
-	 * not for directly usage
-	 */
-	atomic_int_fast64_t refs;
 	od_server_state_t state;
 
 	od_scram_state_t scram_state;
@@ -102,7 +84,6 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 {
 	memset(server, 0, sizeof(od_server_t));
 	server->state = OD_SERVER_UNDEF;
-	atomic_init(&server->refs, 1);
 	server->route = NULL;
 	server->client = NULL;
 	server->global = NULL;
@@ -148,6 +129,8 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	}
 }
 
+void od_server_attach_client_locked(od_server_t *server, od_client_t *client);
+void od_server_detach_client_locked(od_server_t *server);
 void od_server_attach_client(od_server_t *server, od_client_t *client);
 void od_server_detach_client(od_server_t *server);
 
@@ -187,5 +170,3 @@ static inline int od_server_synchronized(od_server_t *server)
 od_server_pool_t *od_server_pool(od_server_t *server);
 const od_address_t *od_server_pool_address(od_server_t *server);
 void od_server_set_pool_state(od_server_t *server, od_server_state_t state);
-void od_server_cancel_begin(od_server_t *server);
-void od_server_cancel_end(od_server_t *server);

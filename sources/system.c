@@ -831,6 +831,12 @@ static inline void od_system(void *arg)
 		return;
 	}
 
+	instance->clients = mm_hashmap_create(65536, 16, sizeof(kiwi_key_t),
+					      sizeof(od_client_t *),
+					      od_instance_clients_hm_cmp,
+					      od_instance_clients_hm_hash, NULL,
+					      NULL, NULL);
+
 	uint64_t max_inflight =
 		instance->config.cancel_max_inflight > 0 ?
 			(uint64_t)instance->config.cancel_max_inflight :

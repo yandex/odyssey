@@ -2872,9 +2872,10 @@ static void od_application_name_add_host(od_client_t *client)
 		      app_name_with_host, length + 1); /* return code ignored */
 }
 
-void od_frontend(void *arg)
+void od_frontend_implementation(od_client_t *client, bool *io_attached,
+				bool *routing_slot_released, bool *routed_ok,
+				bool *client_added)
 {
-	od_client_t *client = arg;
 	od_global_t *global = client->global;
 	od_instance_t *instance = global->instance;
 	od_router_t *router = global->router;
@@ -2896,17 +2897,13 @@ void od_frontend(void *arg)
 	if (rc == -1) {
 		od_error(&instance->logger, "startup", client, NULL,
 			 "failed to transfer client io");
-		od_io_close(&client->io);
-		od_client_free(client);
-		od_routing_slot_release(global);
 		return;
 	}
+	*io_attached = true;
 
 	/* handle startup */
 	rc = od_frontend_startup(client);
 	if (rc == -1) {
-		od_frontend_close(client);
-		od_routing_slot_release(global);
 		return;
 	}
 
@@ -2916,6 +2913,7 @@ void od_frontend(void *arg)
 			 "cancel request");
 
 		od_routing_slot_release(global);
+		*routing_slot_released = true;
 
 		uint32_t queue_timeout =
 			instance->config.cancel_queue_timeout_ms >= 0 ?
@@ -2929,27 +2927,21 @@ void od_frontend(void *arg)
 				&instance->logger, "startup", client, NULL,
 				"dropping cancel request due to queue timeout %u ms",
 				queue_timeout);
-			od_frontend_close(client);
 			return;
 		}
 
 		od_router_cancel_t cancel;
 		od_router_cancel_init(&cancel);
-		rc = od_router_cancel(router, &client->startup.key, &cancel);
+		od_route_t *srv_route = NULL;
+		rc = od_router_cancel(router, &client->startup.key, &cancel,
+				      &srv_route);
 		if (rc == 0) {
-			/*
-			 * server might be free during cancel end
-			 * so need to preserve it route ptr
-			 */
-			od_route_t *srv_route = cancel.server->route;
 			od_stat_cancel(&srv_route->stats);
 
 			od_cancel(client->global, cancel.storage,
 				  cancel.address, &cancel.key, &cancel.id);
 
 			od_route_lock(srv_route);
-			od_server_cancel_end(cancel.server);
-			/* signal about possible free connection */
 			od_route_signal_locked(srv_route, NULL);
 			od_route_unlock(srv_route);
 
@@ -2958,7 +2950,6 @@ void od_frontend(void *arg)
 
 		mm_sem_post(&global->cancel_sem);
 
-		od_frontend_close(client);
 		return;
 	}
 
@@ -2979,8 +2970,19 @@ void od_frontend(void *arg)
 
 	/* routing is over */
 	od_routing_slot_release(global);
+	*routing_slot_released = true;
 
 	if (od_likely(router_status == OD_ROUTER_OK)) {
+		*routed_ok = true;
+
+		rc = od_instance_clients_add(instance, client);
+		if (rc == -1) {
+			od_error(&instance->logger, "startup", client, NULL,
+				 "failed to add client to hashmap");
+			return;
+		}
+		*client_added = true;
+
 		od_route_t *route = client->route;
 		if (route->rule->application_name_add_host) {
 			od_application_name_add_host(client);
@@ -2989,7 +2991,7 @@ void od_frontend(void *arg)
 		/* override clients pg options if configured */
 		rc = kiwi_vars_override(&client->vars, &route->rule->vars);
 		if (rc == -1) {
-			goto cleanup;
+			return;
 		}
 
 		/* set network options */
@@ -3088,7 +3090,6 @@ void od_frontend(void *arg)
 			break;
 		}
 
-		od_frontend_close(client);
 		return;
 	}
 
@@ -3099,7 +3100,7 @@ void od_frontend(void *arg)
 		module = od_container_of(i, od_module_t, link);
 		if (module->auth_attempt_cb(client) ==
 		    OD_MODULE_CB_FAIL_RETCODE) {
-			goto cleanup;
+			return;
 		}
 	}
 
@@ -3179,7 +3180,7 @@ void od_frontend(void *arg)
 			module = od_container_of(i, od_module_t, link);
 			module->auth_complete_cb(client, rc);
 		}
-		goto cleanup;
+		return;
 	}
 
 	/* auth result callback */
@@ -3189,7 +3190,7 @@ void od_frontend(void *arg)
 		rc = module->auth_complete_cb(client, rc);
 		if (rc != OD_MODULE_CB_OK_RETCODE) {
 			/* user blocked from module callback */
-			goto cleanup;
+			return;
 		}
 	}
 
@@ -3228,12 +3229,40 @@ void od_frontend(void *arg)
 		module = od_container_of(i, od_module_t, link);
 		module->disconnect_cb(client, status);
 	}
+}
 
-	/* cleanup */
+void od_frontend(void *arg)
+{
+	od_client_t *client = arg;
+	od_global_t *global = client->global;
+	od_instance_t *instance = global->instance;
+	od_router_t *router = global->router;
 
-cleanup:
-	/* detach client from its route */
-	od_router_unroute(router, client);
-	/* close frontend connection */
-	od_frontend_close(client);
+	bool io_attached = false;
+	bool routing_slot_released = false;
+	bool routed_ok = false;
+	bool client_added = false;
+	od_frontend_implementation(client, &io_attached, &routing_slot_released,
+				   &routed_ok, &client_added);
+
+	if (client_added) {
+		int rc;
+		rc = od_instance_clients_remove(instance, client);
+		if (rc == -1) {
+			od_error(&instance->logger, "cleanup", client, NULL,
+				 "failed to remove client out of hashmap");
+		}
+	}
+	if (routed_ok) {
+		od_router_unroute(router, client);
+	}
+
+	if (!io_attached) {
+		od_client_free_extended(client);
+	} else {
+		od_frontend_close(client);
+	}
+	if (!routing_slot_released) {
+		od_routing_slot_release(global);
+	}
 }
