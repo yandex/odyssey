@@ -67,6 +67,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "cancel_timeout_ms", CANCEL_TIMEOUT_MS },
 	{ "cancel_queue_timeout_ms", CANCEL_QUEUE_TIMEOUT_MS },
 	{ "cancel_max_inflight", CANCEL_MAX_INFLIGHT },
+	{ "cancel_rate_limit", CANCEL_RATE_LIMIT },
 	{ "resolvers", RESOLVERS },
 	{ "dns_cache_ttl", DNS_CACHE_TTL },
 	{ "cache_msg_gc_size", CACHE_MSG_GC_SIZE },

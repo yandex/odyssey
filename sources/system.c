@@ -162,18 +162,6 @@ static inline void od_system_server(void *arg)
 	while (!atomic_load(&server->closed)) {
 		od_global_t *global = server->global;
 
-		/* Rate lim ourselves, if any limiter configured.
-		 * XXX: Here we do not (yet) have knowledge if client is cancel request or
-		 * not, so this rate limit actually rates everything. */
-
-		if (global->accept_rate_limiter != NULL) {
-			int rc = od_rate_limiter_waitn(
-				global->accept_rate_limiter, 1);
-			if (rc != 0) {
-				continue;
-			}
-		}
-
 		/* accepted client io is not attached to epoll context yet */
 		mm_io_t *client_io;
 		int rc;
@@ -205,6 +193,33 @@ static inline void od_system_server(void *arg)
 				break;
 			}
 			continue;
+		}
+
+		/* Rate lim ourselves, if any limiter configured.
+		 * XXX: Here we do not (yet) have knowledge if client is cancel request or
+		 * not, so this rate limit actually rates everything. */
+		if (instance->config.accept_rate_limit != 0) {
+			uint32_t max_wait_ms = UINT32_MAX;
+			if (server->config->client_login_timeout > 0) {
+				max_wait_ms = (uint32_t)server->config
+						      ->client_login_timeout;
+			}
+			int rc = od_rate_limiter_waitn(
+				&global->accept_rate_limiter, 1, max_wait_ms);
+			if (rc != 0) {
+				mm_io_attach(client_io);
+				od_error(
+					&instance->logger, "server", NULL, NULL,
+					"too many tcp connections (new connections are limited to %d per sec), connection declined",
+					instance->config.accept_rate_limit);
+				od_frontend_fatal_no_startup(
+					client_io, KIWI_TOO_MANY_CONNECTIONS,
+					"too many tcp connections (new connections are limited to %d per sec)",
+					instance->config.accept_rate_limit);
+				mm_io_close(client_io);
+				mm_io_free(client_io);
+				continue;
+			}
 		}
 
 		if (check_client_max(server, global, instance)) {
@@ -838,18 +853,10 @@ static inline void od_system(void *arg)
 	mm_sem_init(&global->cancel_sem, max_inflight);
 	mm_sem_init(&global->routing_sem,
 		    (uint64_t)instance->config.client_max_routing);
-
-	if (instance->config.accept_rate_limit > 0) {
-		global->accept_rate_limiter = od_rate_limiter_create(
-			(uint64_t)instance->config.accept_rate_limit);
-		if (global->accept_rate_limiter == NULL) {
-			od_error(&instance->logger, "system", NULL, NULL,
-				 "failed to create accept rate limiter");
-			return;
-		}
-	} else {
-		global->accept_rate_limiter = NULL;
-	}
+	od_rate_limiter_init(&global->cancel_rate_limiter,
+			     (uint64_t)instance->config.cancel_rate_limit);
+	od_rate_limiter_init(&global->accept_rate_limiter,
+			     (uint64_t)instance->config.accept_rate_limit);
 
 	/* start worker threads */
 	int rc;

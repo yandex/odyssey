@@ -95,6 +95,7 @@ typedef struct od_cfg_global {
 	od_cfg_int_field_t cancel_timeout_ms;
 	od_cfg_int_field_t cancel_queue_timeout_ms;
 	od_cfg_int_field_t cancel_max_inflight;
+	od_cfg_int_field_t cancel_rate_limit;
 	od_cfg_int_field_t resolvers;
 	od_cfg_int_field_t dns_cache_ttl;
 	od_cfg_int_field_t cache_msg_gc_size;

@@ -148,6 +148,7 @@ struct od_config {
 	int cancel_timeout_ms;
 	int cancel_queue_timeout_ms;
 	int cancel_max_inflight;
+	int cancel_rate_limit;
 
 	int virtual_processing; /* enables some cases for full-virtual query processing */
 	int virtual_transaction;
