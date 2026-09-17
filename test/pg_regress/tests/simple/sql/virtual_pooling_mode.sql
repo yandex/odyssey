@@ -1,4 +1,6 @@
 
+\set VERBOSITY verbose
+
 \c postgres suser
 SHOW odyssey.pooling_mode;
 

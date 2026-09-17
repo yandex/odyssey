@@ -1,3 +1,4 @@
+\set VERBOSITY verbose
 \c postgres suser
 SHOW odyssey.pooling_mode;
 NOTICE:  processed virtually by odyssey
@@ -8,7 +9,7 @@ NOTICE:  processed virtually by odyssey
 
 SET odyssey.pooling_mode = 'transaction';
 NOTICE:  processed virtually by odyssey
-ERROR:  parameter "odyssey.pooling_mode" cannot be changed now
+ERROR:  55P02: parameter "odyssey.pooling_mode" cannot be changed now
 SHOW odyssey.pooling_mode;
 NOTICE:  processed virtually by odyssey
  odyssey.pooling_mode 
@@ -26,7 +27,7 @@ NOTICE:  processed virtually by odyssey
 
 SET odyssey.pooling_mode = 'session';
 NOTICE:  processed virtually by odyssey
-ERROR:  parameter "odyssey.pooling_mode" cannot be changed now
+ERROR:  55P02: parameter "odyssey.pooling_mode" cannot be changed now
 SHOW odyssey.pooling_mode;
 NOTICE:  processed virtually by odyssey
  odyssey.pooling_mode 

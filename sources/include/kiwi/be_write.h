@@ -574,7 +574,7 @@ KIWI_API static inline int kiwi_be_format_notice(char *out, size_t max,
 KIWI_API static inline machine_msg_t *
 kiwi_be_write_notice(machine_msg_t *msg, char type, const char *text)
 {
-	char notice[] = "NOTICE\0s";
+	char notice[] = "NOTICE";
 	int tlen = strlen(text);
 	size_t size =
 		sizeof(kiwi_header_t) + 1 + sizeof(notice) + 1 + tlen + 1 + 1;
