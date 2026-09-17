@@ -67,68 +67,63 @@ static inline int64_t od_rate_advance(od_rate_limiter_t *lim, int64_t now)
 /* Limiter capacity is single token. limit is token 
 * regenerate speed. For example, with lim = 100, two consecutive
 * waits will be trottled with 10ms. */
-od_rate_limiter_t *od_rate_limiter_create(uint64_t limit)
+void od_rate_limiter_init(od_rate_limiter_t *lim, uint64_t limit)
 {
-	od_rate_limiter_t *lim = od_malloc(sizeof(od_rate_limiter_t));
-	if (lim == NULL) {
-		return NULL;
-	}
-
 	lim->limit = limit;
 	/* Fill just-created limiter with single token */
 	lim->tokens = RATE_TOKEN_SCALE;
 	lim->last = machine_time_us();
-	lim->waiters = mm_wait_list_create(NULL);
-	if (lim->waiters == NULL) {
-		od_free(lim);
-		return NULL;
-	}
-	mm_sleeplock_init(&lim->lock);
-
-	return lim;
+	mm_spinlock_init(&lim->lock);
 }
 
 void od_rate_limiter_destroy(od_rate_limiter_t *lim)
 {
 	od_assert(lim);
-	mm_wait_list_free(lim->waiters);
-}
-
-void od_rate_limiter_free(od_rate_limiter_t *lim)
-{
-	od_assert(lim);
-	od_rate_limiter_destroy(lim);
-	od_free(lim);
+	mm_spinlock_destroy(&lim->lock);
 }
 
 /* NB: all current users call this with n == 1. */
-int od_rate_limiter_waitn(od_rate_limiter_t *lim, uint64_t n)
+int od_rate_limiter_waitn(od_rate_limiter_t *lim, uint64_t n,
+			  uint32_t timeout_ms)
 {
 	od_assert(lim);
-	od_assert(lim->limit);
 
-	int64_t now;
+	if (lim->limit == 0) {
+		return -1;
+	}
+
+	int64_t end_us;
+	if (timeout_ms == UINT32_MAX) {
+		end_us = UINT64_MAX;
+	} else {
+		end_us = machine_time_us() + timeout_ms * 1000;
+	}
+
+	int64_t now_us;
 	int64_t wait_usec = 0;
 
 	for (;;) {
 		/* XXX: check for cancellation here ? */
 
 		/* refresh and go */
-		now = machine_time_us();
+		now_us = machine_time_us();
+		if (now_us > end_us) {
+			return -1;
+		}
 
-		mm_sleeplock_lock(&lim->lock);
+		mm_spinlock_lock(&lim->lock);
 
-		int64_t tokens = od_rate_advance(lim, now);
+		int64_t tokens = od_rate_advance(lim, now_us);
 
 		/* consume n tokens */
 		int64_t remaining = tokens - (int64_t)(n * RATE_TOKEN_SCALE);
 
 		if (remaining >= 0) {
 			lim->tokens = remaining;
-			mm_sleeplock_unlock(&lim->lock);
+			mm_spinlock_unlock(&lim->lock);
 			return 0;
 		}
-		mm_sleeplock_unlock(&lim->lock);
+		mm_spinlock_unlock(&lim->lock);
 
 		/* not enough tokens: calculate how long to wait */
 		wait_usec =
@@ -139,6 +134,11 @@ int od_rate_limiter_waitn(od_rate_limiter_t *lim, uint64_t n)
 			wait_ms = 1;
 		}
 
-		(void)mm_wait_list_wait(lim->waiters, NULL, wait_ms);
+		uint64_t remaining_ms = (end_us - now_us) / 1000;
+		if (wait_ms >= remaining_ms) {
+			return -1;
+		}
+
+		machine_sleep(wait_ms);
 	}
 }

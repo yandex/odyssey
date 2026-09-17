@@ -89,6 +89,7 @@ void od_config_init(od_config_t *config)
 	config->cancel_timeout_ms = 1U * 1000U; /* 1 seconds */
 	config->cancel_queue_timeout_ms = -1;
 	config->cancel_max_inflight = -1;
+	config->cancel_rate_limit = 0;
 	config->virtual_processing = 0;
 
 	config->graceful_shutdown_timeout_ms = 30 * 1000; /* 30 seconds */
@@ -669,6 +670,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->cancel_queue_timeout_ms);
 	od_log(logger, "config", NULL, NULL, "cancel_max_inflight       %d",
 	       config->cancel_max_inflight);
+	od_log(logger, "config", NULL, NULL, "cancel_rate_limit         %d",
+	       config->cancel_rate_limit);
 	od_log(logger, "config", NULL, NULL, "dns_ttl_ms              %d",
 	       config->dns_ttl_ms);
 	od_log(logger, "config", NULL, NULL, "group_checker_interval  %d",

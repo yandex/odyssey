@@ -2886,6 +2886,25 @@ static void od_application_name_add_host(od_client_t *client)
 		      app_name_with_host, length + 1); /* return code ignored */
 }
 
+static inline int wait_cancel_allowed(od_global_t *global,
+				      od_instance_t *instance,
+				      uint32_t timeout_ms)
+{
+	if (instance->config.cancel_rate_limit != 0) {
+		return od_rate_limiter_waitn(&global->cancel_rate_limiter, 1,
+					     timeout_ms);
+	} else {
+		return mm_sem_timedwait(&global->cancel_sem, timeout_ms);
+	}
+}
+
+static inline void cancel_finished(od_global_t *global, od_instance_t *instance)
+{
+	if (instance->config.cancel_rate_limit == 0) {
+		mm_sem_post(&global->cancel_sem);
+	}
+}
+
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
@@ -2937,8 +2956,8 @@ void od_frontend(void *arg)
 					.cancel_queue_timeout_ms :
 				2 * (uint32_t)instance->config.cancel_timeout_ms;
 
-		rc = mm_sem_timedwait(&global->cancel_sem, queue_timeout);
-		if (rc == -1) {
+		rc = wait_cancel_allowed(global, instance, queue_timeout);
+		if (rc != 0) {
 			od_error(
 				&instance->logger, "startup", client, NULL,
 				"dropping cancel request due to queue timeout %u ms",
@@ -2970,7 +2989,7 @@ void od_frontend(void *arg)
 			od_router_cancel_free(&cancel);
 		}
 
-		mm_sem_post(&global->cancel_sem);
+		cancel_finished(global, instance);
 
 		od_frontend_close(client);
 		return;

@@ -187,6 +187,7 @@
 %token CANCEL_TIMEOUT_MS "cancel_timeout_ms"
 %token CANCEL_QUEUE_TIMEOUT_MS "cancel_queue_timeout_ms"
 %token CANCEL_MAX_INFLIGHT "cancel_max_inflight"
+%token CANCEL_RATE_LIMIT "cancel_rate_limit"
 %token RESOLVERS "resolvers"
 %token DNS_CACHE_TTL "dns_cache_ttl"
 %token CACHE_MSG_GC_SIZE "cache_msg_gc_size"
@@ -685,9 +686,11 @@ top_item:
 		}
 	| ACCEPT_RATE_LIMIT int_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
+			od_cfg_set_int_range_from_i64(ctx->diags,
 							&ctx->model->global.accept_rate_limit,
 							$2,
+							1,
+							INT_MAX,
 							@1,
 							"accept_rate_limit");
 		}
@@ -778,6 +781,16 @@ top_item:
 							$2,
 							@1,
 							"cancel_max_inflight");
+		}
+	| CANCEL_RATE_LIMIT int_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+							&ctx->model->global.cancel_rate_limit,
+							$2,
+							1,
+							INT_MAX,
+							@1,
+							"cancel_rate_limit");
 		}
 	| RESOLVERS int_value
 		{

@@ -487,6 +487,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_INT(cfg->cancel_timeout_ms, config->cancel_timeout_ms);
 	COPY_INT(cfg->cancel_queue_timeout_ms, config->cancel_queue_timeout_ms);
 	COPY_INT(cfg->cancel_max_inflight, config->cancel_max_inflight);
+	COPY_INT(cfg->cancel_rate_limit, config->cancel_rate_limit);
 	COPY_INT(cfg->resolvers, config->resolvers);
 	COPY_INT(cfg->dns_cache_ttl, config->dns_ttl_ms);
 	COPY_INT(cfg->cache_msg_gc_size, config->cache_msg_gc_size);
@@ -590,6 +591,14 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 		if (rc != 0) {
 			return rc;
 		}
+	}
+
+	if (cfg->cancel_max_inflight.seen.is_set &&
+	    cfg->cancel_rate_limit.seen.is_set) {
+		od_cfg_diag_error(
+			diags, cfg->cancel_rate_limit.seen.location,
+			"can't set cancel_max_inflight and cancel_rate_limit simultaneously");
+		return -1;
 	}
 
 	return 0;

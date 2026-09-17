@@ -464,6 +464,8 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 		 &model->global.cancel_queue_timeout_ms);
 	dump_int(file, "cancel_max_inflight", 0,
 		 &model->global.cancel_max_inflight);
+	dump_int(file, "cancel_rate_limit", 0,
+		 &model->global.cancel_rate_limit);
 	dump_int(file, "resolvers", 0, &model->global.resolvers);
 	dump_int(file, "dns_cache_ttl", 0, &model->global.dns_cache_ttl);
 	dump_int(file, "cache_msg_gc_size", 0,
@@ -914,6 +916,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_int_field_free(&g->cancel_timeout_ms);
 	od_cfg_int_field_free(&g->cancel_queue_timeout_ms);
 	od_cfg_int_field_free(&g->cancel_max_inflight);
+	od_cfg_int_field_free(&g->cancel_rate_limit);
 	od_cfg_int_field_free(&g->resolvers);
 	od_cfg_int_field_free(&g->dns_cache_ttl);
 	od_cfg_int_field_free(&g->cache_msg_gc_size);
