@@ -30,6 +30,7 @@ typedef struct od_console_node {
 typedef struct {
 	od_console_node_tag_t type;
 	char *name;
+	char *arg;
 } od_console_show_stmt_t;
 
 typedef struct {

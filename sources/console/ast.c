@@ -39,6 +39,10 @@ int od_console_node_print(const od_console_node_t *node, char *buf,
 	case OD_CONSOLE_NODE_TYPE_SHOW_STMT: {
 		const od_console_show_stmt_t *n =
 			(const od_console_show_stmt_t *)node;
+		if (n->arg) {
+			return snprintf(buf, buflen, "(show %s %s)",
+					n->name ? n->name : "", n->arg);
+		}
 		return snprintf(buf, buflen, "(show %s)",
 				n->name ? n->name : "");
 	}
