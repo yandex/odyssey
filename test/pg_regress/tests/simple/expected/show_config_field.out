@@ -1,24 +1,24 @@
 \c console
 SHOW CONFIG availability_zone;
-     key      |    value     |   default    | changeable 
---------------+--------------+--------------+------------
- availability_zone | (not set)   | (not set)    | no
+        key        |   value   |  default  | changeable 
+-------------------+-----------+-----------+------------
+ availability_zone | (not set) | (not set) | no
 (1 row)
 
 SHOW CONFIG log_debug;
-   key    | value | default | changeable 
-----------+--------+---------+------------
- log_debug | no     | no      | yes
+    key    | value | default | changeable 
+-----------+-------+---------+------------
+ log_debug | no    | no      | yes
 (1 row)
 
 SHOW CONFIG log_format;
-   key    |            value             |   default    | changeable 
-----------+------------------------------+--------------+------------
- log_format | %p %t %l [%i %s] (%c) %m\n | (not set)    | no
+    key     |           value            |  default  | changeable 
+------------+----------------------------+-----------+------------
+ log_format | %p %t %l [%i %s] (%c) %m\n | (not set) | no
 (1 row)
 
 SHOW CONFIG workers;
    key   | value | default | changeable 
----------+--------+---------+------------
- workers | 1      | 1       | no
+---------+-------+---------+------------
+ workers | 1     | 1       | no
 (1 row)
