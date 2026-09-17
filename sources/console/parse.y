@@ -135,6 +135,7 @@ typedef int od_console_yyltype_t;
 %type <str> set_key
 %type <str> set_value
 %type <str> col_id
+%type <str> opt_show_arg
 
 %destructor { /* arena-allocated, no-op */ } <str>
 %destructor { od_console_node_free($$); } <node>
@@ -163,17 +164,26 @@ stmt:
 	;
 
 /*
- * SHOW <name>
+ * SHOW <name> [<arg>]
+ *
+ * Currently the optional <arg> is used by SHOW CONFIG <field_name>
+ * to filter the output to a single configuration parameter.
  */
 show_stmt:
-	  KW_SHOW col_id
+	  KW_SHOW col_id opt_show_arg
 		{
 			od_console_show_stmt_t *n =
 				ALLOC_NODE(ctx, show, OD_CONSOLE_NODE_TYPE_SHOW_STMT);
 			if (n == NULL) YYABORT;
 			n->name = $2; $2 = NULL;
+			n->arg  = $3; $3 = NULL;
 			$$ = (od_console_node_t *)n;
 		}
+	;
+
+opt_show_arg:
+	  %empty    { $$ = NULL; }
+	| col_id    { $$ = $1; $1 = NULL; }
 	;
 
 /*

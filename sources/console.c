@@ -1600,7 +1600,8 @@ static inline int od_console_show_config_add(machine_msg_t *stream, char *key,
  * the parsed configuration into the running instance.
  */
 static inline int od_console_show_config(od_client_t *client,
-					 machine_msg_t *stream)
+					 machine_msg_t *stream,
+					 const char *field_name)
 {
 	od_assert(stream);
 
@@ -1618,6 +1619,9 @@ static inline int od_console_show_config(od_client_t *client,
 		const od_config_field_t *field = od_config_field_at(i);
 		if (field == NULL) {
 			return NOT_OK_RESPONSE;
+		}
+		if (field_name != NULL && strcmp(field->key, field_name) != 0) {
+			continue;
 		}
 		char value[OD_CONFIG_FIELD_VALUE_MAX];
 		char fallback[OD_CONFIG_FIELD_VALUE_MAX];
@@ -2351,7 +2355,7 @@ static od_show_target_id_t od_console_show_target_lookup(const char *name)
 }
 
 static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
-				  const char *name)
+				  const char *name, const char *arg)
 {
 	od_assert(stream);
 	if (name == NULL) {
@@ -2402,7 +2406,7 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 	case OD_SHOW_RULES:
 		return od_console_show_rules(stream);
 	case OD_SHOW_CONFIG:
-		return od_console_show_config(client, stream);
+		return od_console_show_config(client, stream, arg);
 	default:
 		od_frontend_errorf(client, stream, KIWI_SYNTAX_ERROR,
 				   "unknown show target: %s", name);
@@ -2621,7 +2625,7 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	switch (ast->type) {
 	case OD_CONSOLE_NODE_TYPE_SHOW_STMT: {
 		od_console_show_stmt_t *n = (od_console_show_stmt_t *)ast;
-		rc = od_console_show(client, stream, n->name);
+		rc = od_console_show(client, stream, n->name, n->arg);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
