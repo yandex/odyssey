@@ -156,6 +156,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "application_name_add_host", APPLICATION_NAME_ADD_HOST },
 	{ "server_drop_on_cached_plan_error",
 	  SERVER_DROP_ON_CACHED_PLAN_ERROR },
+	{ "server_drop_on_oom", SERVER_DROP_ON_OOM },
 	{ "server_lifetime", SERVER_LIFETIME },
 	{ "server_pstmt_cache_size", SERVER_PSTMT_CACHE_SIZE },
 	{ "ldap_pool_size", LDAP_POOL_SIZE },

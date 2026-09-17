@@ -566,6 +566,7 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->auth_common_names_count = 0;
 	rule->server_lifetime_us = 3600 * 1000000L;
 	rule->server_drop_on_cached_plan_error = 1;
+	rule->server_drop_on_oom = 1;
 	rule->client_show_id = 1;
 	rule->reserve_session_server_connection = 1;
 #ifdef PAM_FOUND
@@ -1548,6 +1549,10 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 
 	/* server_lifetime */
 	if (a->server_lifetime_us != b->server_lifetime_us) {
+		return 0;
+	}
+
+	if (a->server_drop_on_oom != b->server_drop_on_oom) {
 		return 0;
 	}
 
@@ -2730,6 +2735,9 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  server_drop_on_cached_plan_error  %s",
 		       od_rules_yes_no(rule->server_drop_on_cached_plan_error));
+		od_log(logger, "rules", NULL, NULL,
+		       "  server_drop_on_oom                %s",
+		       od_rules_yes_no(rule->server_drop_on_oom));
 		od_log(logger, "rules", NULL, NULL,
 		       "  password_passthrough              %s",
 		       od_rules_yes_no(rule->enable_password_passthrough));
