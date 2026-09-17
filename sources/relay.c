@@ -33,6 +33,7 @@
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
 #define ODYSSEY_PIN_BACKEND "odyssey.pin_backend"
 #define ODYSSEY_OPPORTUNISTIC_ACQUIRE "odyssey.opportunistic_acquire"
+#define ODYSSEY_POOLING_MODE "odyssey.pooling_mode"
 #define ODYSSEY_VERSION_STR "odyssey.version"
 #define PROCESSED_BY_ODYSSEY_STR "processed virtually by odyssey"
 
@@ -134,10 +135,9 @@ void od_relay_destroy(od_relay_t *relay)
 	xbuf_destroy(&relay->xbuf);
 }
 
-static od_frontend_status_t reply_reject_guc(od_client_t *client,
-					     const char *guc_name,
-					     const char *option_value,
-					     size_t option_value_len)
+static od_frontend_status_t reply_error_guc(od_client_t *client,
+					    const char *sqlstate,
+					    const char *buf, int len)
 {
 	od_server_t *server;
 
@@ -149,12 +149,8 @@ static od_frontend_status_t reply_reject_guc(od_client_t *client,
 		return OD_EOOM;
 	}
 
-	char buf[128];
-	int len = od_snprintf(buf, sizeof(buf),
-			      "invalid value for parameter \"%s\": \"%.*s\"",
-			      guc_name, (int)option_value_len, option_value);
-
-	m = kiwi_be_write_error(m, KIWI_INVALID_PARAMETER_VALUE, buf, len);
+	m = kiwi_be_write_error_as(m, "ERROR", sqlstate, NULL, 0, NULL, 0, buf,
+				   len);
 	if (m == NULL) {
 		return OD_EOOM;
 	}
@@ -178,6 +174,31 @@ static od_frontend_status_t reply_reject_guc(od_client_t *client,
 	}
 
 	return OD_SKIP;
+}
+
+static od_frontend_status_t reply_reject_guc(od_client_t *client,
+					     const char *guc_name,
+					     const char *option_value,
+					     size_t option_value_len)
+{
+	char buf[128];
+	int len = od_snprintf(buf, sizeof(buf),
+			      "invalid value for parameter \"%s\": \"%.*s\"",
+			      guc_name, (int)option_value_len, option_value);
+
+	return reply_error_guc(client, KIWI_INVALID_PARAMETER_VALUE, buf, len);
+}
+
+static od_frontend_status_t reply_cant_change_guc(od_client_t *client,
+						  const char *guc_name)
+{
+	char buf[128];
+	int len =
+		od_snprintf(buf, sizeof(buf),
+			    "parameter \"%s\" cannot be changed now", guc_name);
+
+	return reply_error_guc(client, KIWI_CANT_CHANGE_RUNTIME_PARAM, buf,
+			       len);
 }
 
 static od_frontend_status_t
@@ -415,6 +436,12 @@ static od_frontend_status_t process_vset(od_client_t *client,
 		}
 	}
 
+	if (strcmp(stmt->key, ODYSSEY_POOLING_MODE) == 0) {
+		if (instance->config.virtual_processing) {
+			return reply_cant_change_guc(client, stmt->key);
+		}
+	}
+
 	return OD_OK;
 }
 
@@ -494,6 +521,28 @@ static od_frontend_status_t process_show_bool_guc(od_client_t *client,
 	return virtual_str_ans(client, name, val ? "on" : "off");
 }
 
+static od_frontend_status_t process_show_pooling_mode(od_client_t *client)
+{
+	const char *mode;
+
+	switch (client->rule->pool->pool_type) {
+	case OD_RULE_POOL_SESSION:
+		mode = "session";
+		break;
+	case OD_RULE_POOL_TRANSACTION:
+		mode = "transaction";
+		break;
+	case OD_RULE_POOL_STATEMENT:
+		mode = "statement";
+		break;
+	default:
+		mode = "unknown";
+		break;
+	}
+
+	return virtual_str_ans(client, ODYSSEY_POOLING_MODE, mode);
+}
+
 static od_frontend_status_t process_show_version(od_client_t *client)
 {
 	char data[128];
@@ -524,6 +573,12 @@ process_vshow(od_client_t *client, const od_sql_minimal_show_stmt_t *stmt)
 			return process_show_bool_guc(
 				client, stmt->name,
 				client->opportunistic_acquire);
+		}
+	}
+
+	if (strcmp(stmt->name, ODYSSEY_POOLING_MODE) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_show_pooling_mode(client);
 		}
 	}
 

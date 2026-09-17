@@ -1,0 +1,52 @@
+\c postgres suser
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ session
+(1 row)
+
+SET odyssey.pooling_mode = 'transaction';
+NOTICE:  processed virtually by odyssey
+ERROR:  parameter "odyssey.pooling_mode" cannot be changed now
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ session
+(1 row)
+
+\c postgres tuser
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ transaction
+(1 row)
+
+SET odyssey.pooling_mode = 'session';
+NOTICE:  processed virtually by odyssey
+ERROR:  parameter "odyssey.pooling_mode" cannot be changed now
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ transaction
+(1 row)
+
+\c postgres stuser
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ statement
+(1 row)
+
+\c postgres suser
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ session
+(1 row)
+

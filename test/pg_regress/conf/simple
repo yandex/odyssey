@@ -93,6 +93,28 @@ database "postgres" {
 		client_max 200000
 		pool_pin_on_listen yes
 	}
+
+	user "stuser" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "statement"
+		pool_size 32
+		pool_timeout 0
+		pool_ttl 1201
+		pool_discard yes
+		pool_cancel yes
+		pool_rollback yes
+		pool_reserve_prepared_statement yes
+		pool_client_idle_timeout 4
+		pool_idle_in_transaction_timeout 5
+		client_fwd_error yes
+		client_show_id no
+		application_name_add_host yes
+		server_lifetime 1901
+		log_debug no
+		client_max 200000
+	}
 }
 
 database "broken_collation" {
