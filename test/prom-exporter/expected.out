@@ -29,6 +29,7 @@ odyssey_errors_total{type="OD_EIDLE_IN_TRANSACTION_TIMEOUT"} 0
 odyssey_errors_total{type="OD_EIDLE_TIMEOUT"} 0
 odyssey_errors_total{type="OD_EOOM"} 0
 odyssey_errors_total{type="OD_ESERVER_CONNECT"} 0
+odyssey_errors_total{type="OD_ESERVER_OOM"} 0
 odyssey_errors_total{type="OD_ESERVER_READ"} 0
 odyssey_errors_total{type="OD_ESERVER_READAHEAD_FULL"} 0
 odyssey_errors_total{type="OD_ESERVER_WRITE"} 0
