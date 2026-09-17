@@ -22,3 +22,4 @@ SHOW CONFIG workers;
 ---------+-------+---------+------------
  workers | 1     | 1       | no
 (1 row)
+
