@@ -2968,21 +2968,15 @@ void od_frontend(void *arg)
 
 		od_router_cancel_t cancel;
 		od_router_cancel_init(&cancel);
-		rc = od_router_cancel(router, &client->startup.key, &cancel);
+		od_route_t *srv_route = NULL;
+		rc = od_router_cancel(router, &client->startup.key, &cancel, &srv_route);
 		if (rc == 0) {
-			/*
-			 * server might be free during cancel end
-			 * so need to preserve it route ptr
-			 */
-			od_route_t *srv_route = cancel.server->route;
 			od_stat_cancel(&srv_route->stats);
 
 			od_cancel(client->global, cancel.storage,
 				  cancel.address, &cancel.key, &cancel.id);
 
 			od_route_lock(srv_route);
-			od_server_cancel_end(cancel.server);
-			/* signal about possible free connection */
 			od_route_signal_locked(srv_route, NULL);
 			od_route_unlock(srv_route);
 
