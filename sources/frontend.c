@@ -2969,7 +2969,8 @@ void od_frontend(void *arg)
 		od_router_cancel_t cancel;
 		od_router_cancel_init(&cancel);
 		od_route_t *srv_route = NULL;
-		rc = od_router_cancel(router, &client->startup.key, &cancel, &srv_route);
+		rc = od_router_cancel(router, &client->startup.key, &cancel,
+				      &srv_route);
 		if (rc == 0) {
 			od_stat_cancel(&srv_route->stats);
 
