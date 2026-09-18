@@ -846,6 +846,15 @@ static inline void od_system(void *arg)
 		return;
 	}
 
+	int rc;
+	rc = od_instance_clients_create_map(instance);
+	if (rc == -1) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to create clients map, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+		return;
+	}
+
 	uint64_t max_inflight =
 		instance->config.cancel_max_inflight > 0 ?
 			(uint64_t)instance->config.cancel_max_inflight :
@@ -859,7 +868,6 @@ static inline void od_system(void *arg)
 			     (uint64_t)instance->config.accept_rate_limit);
 
 	/* start worker threads */
-	int rc;
 
 #ifdef LDAP_FOUND
 	rc = od_ldap_workers_init(instance->config.workers);

@@ -208,6 +208,10 @@ void od_instance_free(od_instance_t *instance)
 	if (instance->pstmts != NULL) {
 		od_global_pstmts_map_free(instance->pstmts);
 	}
+	if (instance->clients_by_key != NULL) {
+		mm_hashmap_free(instance->clients_by_key->hm);
+		od_free(instance->clients_by_key);
+	}
 
 	/* as mallocd on start */
 	od_free(instance->config_file);
@@ -633,4 +637,96 @@ int64_t od_instance_get_shutdown_worker_id(od_instance_t *instance)
 od_global_pstmt_map_t *od_instance_get_pstmts_map(od_instance_t *instance)
 {
 	return instance->pstmts;
+}
+
+static inline mm_hash_t od_instance_clients_hm_hash(const void *a)
+{
+	const kiwi_key_t *key = a;
+	uint32_t buf[2] = { key->key_pid, key->key };
+	return (mm_hash_t)mm_xxh64_hash(buf, sizeof(buf), 0);
+}
+
+static inline int od_instance_clients_hm_cmp(const void *a, const void *b)
+{
+	const kiwi_key_t *x = a, *y = b;
+	return !(x->key_pid == y->key_pid && x->key == y->key);
+}
+
+int od_instance_clients_create_map(od_instance_t *instance)
+{
+	instance->clients_by_key = od_malloc(sizeof(od_global_clients_map_t));
+	if (instance->clients_by_key == NULL) {
+		return -1;
+	}
+
+	instance->clients_by_key->hm =
+		mm_hashmap_create(32768, 16 * (size_t)instance->config.workers,
+				  sizeof(kiwi_key_t), sizeof(od_client_t *),
+				  od_instance_clients_hm_cmp,
+				  od_instance_clients_hm_hash, NULL, NULL,
+				  NULL);
+	if (instance->clients_by_key->hm == NULL) {
+		od_free(instance->clients_by_key);
+		return -1;
+	}
+
+	return 0;
+}
+
+int od_instance_clients_lock(od_instance_t *instance, const kiwi_key_t *key,
+			     mm_hashmap_keylock_t *klock)
+{
+	int rc = mm_hashmap_lock_key(instance->clients_by_key->hm, klock, key,
+				     0);
+	if (rc == -1) {
+		return rc;
+	}
+	return 0;
+}
+
+void od_instance_clients_unlock(od_instance_t *instance,
+				mm_hashmap_keylock_t *klock)
+{
+	mm_hashmap_unlock_key(instance->clients_by_key->hm, klock);
+}
+
+int od_instance_clients_add(od_instance_t *instance, od_client_t *client)
+{
+	mm_hashmap_keylock_t klock;
+	int rc = mm_hashmap_lock_key(instance->clients_by_key->hm, &klock,
+				     &client->key, 1);
+	if (rc == -1) {
+		return rc;
+	}
+	void *val = mm_hashmap_kvp_val(instance->clients_by_key->hm, klock.kvp);
+	memcpy(val, &client, sizeof(od_client_t *));
+	od_instance_clients_unlock(instance, &klock);
+	return 0;
+}
+
+int od_instance_clients_remove(od_instance_t *instance, od_client_t *client)
+{
+	mm_hashmap_keylock_t klock;
+	int rc = od_instance_clients_lock(instance, &client->key, &klock);
+	if (rc == -1 || klock.kvp == NULL) {
+		return -1;
+	}
+	mm_hashmap_remove(instance->clients_by_key->hm, &klock);
+	return 0;
+}
+
+int od_instance_clients_find(od_instance_t *instance, const kiwi_key_t *key,
+			     mm_hashmap_keylock_t *klock, od_client_t **result)
+{
+	int rc = od_instance_clients_lock(instance, key, klock);
+	if (rc == -1) {
+		return rc;
+	}
+	if (klock->found) {
+		*result = *(od_client_t **)mm_hashmap_kvp_val(
+			instance->clients_by_key->hm, klock->kvp);
+	} else {
+		*result = NULL;
+	}
+	return 0;
 }

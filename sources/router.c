@@ -762,6 +762,8 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_rules_ref(rule);
 	client->rule = rule;
 
+	mm_hashmap_keylock_t client_klock;
+	od_instance_clients_lock(instance, &client->key, &client_klock);
 	od_route_lock(route);
 
 	/* increase counter of new tot tcp connections */
@@ -772,6 +774,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	    od_client_pool_total(&route->client_pool) >= rule->client_max) {
 		od_route_unlock(route);
 		od_router_unlock(router);
+		od_instance_clients_unlock(instance, &client_klock);
 
 		od_router_status_t ret = OD_ROUTER_ERROR_LIMIT_ROUTE;
 		if (route->extra_logging_enabled) {
@@ -786,21 +789,26 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	client->route = route;
 
 	od_route_unlock(route);
+	od_instance_clients_unlock(instance, &client_klock);
 	return OD_ROUTER_OK;
 }
 
 void od_router_unroute(od_router_t *router, od_client_t *client)
 {
-	(void)router;
+	od_instance_t *instance = router->global->instance;
+
 	/* detach client from route */
 	od_assert(client->route);
 	od_assert(client->server == NULL);
 
 	od_route_t *route = client->route;
+	mm_hashmap_keylock_t client_klock;
+	od_instance_clients_lock(instance, &client->key, &client_klock);
 	od_route_lock(route);
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_UNDEF);
 	client->route = NULL;
 	od_route_unlock(route);
+	od_instance_clients_unlock(instance, &client_klock);
 }
 
 bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
@@ -1145,10 +1153,14 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 void od_router_detach(od_router_t *router, od_client_t *client)
 {
 	(void)router;
-	od_route_t *route = client->route;
-	od_assert(route != NULL);
 
 	od_instance_t *instance = client->global->instance;
+
+	mm_hashmap_keylock_t client_klock;
+	od_instance_clients_lock(instance, &client->key, &client_klock);
+
+	od_route_t *route = client->route;
+	od_assert(route != NULL);
 
 	/* detach from current machine event loop */
 	od_server_t *server = client->server;
@@ -1177,6 +1189,7 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	od_route_signal_locked(route, server);
 
 	od_route_unlock(route);
+	od_instance_clients_unlock(instance, &client_klock);
 
 	if (to_close != NULL) {
 		if (is_repl) {
@@ -1195,6 +1208,12 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 void od_router_close(od_router_t *router, od_client_t *client)
 {
 	(void)router;
+
+	od_instance_t *instance = client->global->instance;
+
+	mm_hashmap_keylock_t client_klock;
+	od_instance_clients_lock(instance, &client->key, &client_klock);
+
 	od_route_t *route = client->route;
 	od_assert(route != NULL);
 
@@ -1212,53 +1231,46 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	od_route_signal_locked(route, NULL);
 
 	od_route_unlock(route);
+	od_instance_clients_unlock(instance, &client_klock);
 
 	od_assert(server->io.io == NULL);
 	od_server_free(server);
 }
 
-static inline int od_router_cancel_cmp(od_server_t *server, void **argv)
-{
-	/* check that server is attached and has corresponding cancellation key */
-	return (server->client != NULL) &&
-	       kiwi_key_cmp(&server->key_client, argv[0]);
-}
-
-static inline int od_router_cancel_cb(od_route_t *route, void **argv)
-{
-	od_route_lock(route);
-
-	od_server_t *server;
-	server = od_route_server_pool_foreach_locked(
-		route, OD_SERVER_ACTIVE, od_router_cancel_cmp, argv);
-
-	if (server) {
-		od_router_cancel_t *cancel = argv[1];
-		cancel->id = server->id;
-		cancel->key = server->key;
-		cancel->storage =
-			od_rules_storage_ref(server->endpoint->storage);
-		cancel->address = od_server_pool_address(server);
-		cancel->server = server;
-		od_server_cancel_begin(server);
-		od_route_unlock(route);
-		return 1;
-	}
-
-	od_route_unlock(route);
-	return 0;
-}
-
 od_router_status_t od_router_cancel(od_router_t *router, kiwi_key_t *key,
-				    od_router_cancel_t *cancel)
+				    od_router_cancel_t *cancel,
+				    od_route_t **route_out)
 {
-	/* match server by client forged key */
-	void *argv[] = { key, cancel };
-	int rc;
-	rc = od_router_foreach(router, od_router_cancel_cb, argv);
-	if (rc <= 0) {
+	od_instance_t *instance = router->global->instance;
+
+	od_client_t *client = NULL;
+	mm_hashmap_keylock_t client_klock;
+	int rc =
+		od_instance_clients_find(instance, key, &client_klock, &client);
+	if (rc == -1) {
 		return OD_ROUTER_ERROR_NOT_FOUND;
 	}
+	if (client == NULL) {
+		od_instance_clients_unlock(instance, &client_klock);
+		return OD_ROUTER_ERROR_NOT_FOUND;
+	}
+
+	od_server_t *server = client->server;
+	if (server == NULL) {
+		od_instance_clients_unlock(instance, &client_klock);
+		return OD_ROUTER_ERROR_NOT_FOUND;
+	}
+
+	od_route_t *route = client->route;
+	cancel->id = server->id;
+	cancel->key = server->key;
+	cancel->storage = od_rules_storage_ref(route->rule->storage);
+	cancel->address = od_server_pool_address(server);
+	cancel->server = server;
+	*route_out = route;
+
+	od_instance_clients_unlock(instance, &client_klock);
+
 	return OD_ROUTER_OK;
 }
 
