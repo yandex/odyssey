@@ -30,6 +30,7 @@
 #include <msg.h>
 #include <worker.h>
 #include <console/parser.h>
+#include <console_databases.h>
 
 static inline int od_console_show_stats_add(machine_msg_t *stream,
 					    char *database, int database_len,
@@ -741,127 +742,121 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-static inline int od_console_show_databases_add_cb(od_route_t *route,
-						   void **argv)
+static inline int od_console_show_databases_collect_cb(od_route_t *route,
+						       void **argv)
+{
+	od_console_database_rows_t *rows = argv[0];
+	od_route_lock(route);
+
+	int name_len;
+	int current_connections;
+	name_len = route->id.database_len > 0 ? route->id.database_len - 1 : 0;
+	current_connections = od_client_pool_total(&route->client_pool);
+
+	int rc;
+	rc = od_console_database_rows_add(rows, route->rule, route->id.database,
+					  name_len, current_connections);
+	od_route_unlock(route);
+	return rc;
+}
+
+static inline int
+od_console_show_databases_write_row(machine_msg_t *stream,
+				    const od_console_database_row_t *row)
 {
 	int offset;
-	machine_msg_t *stream = argv[0];
 	machine_msg_t *msg;
 	msg = kiwi_be_write_data_row(stream, &offset);
 	if (msg == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
-	od_route_lock(route);
 	int rc;
-	rc = kiwi_be_write_data_row_add(stream, offset, route->id.database,
-					route->id.database_len - 1);
+	rc = kiwi_be_write_data_row_add(stream, offset, row->name,
+					row->name_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
-	}
-	od_rule_t *rule = route->rule;
-	od_rule_storage_t *storage = rule->storage;
-
-	/* host */
-	char *host = storage->host;
-	if (!host) {
-		host = "";
+		return NOT_OK_RESPONSE;
 	}
 
-	rc = kiwi_be_write_data_row_add(stream, offset, host, strlen(host));
+	rc = kiwi_be_write_data_row_add(stream, offset, row->host,
+					row->host_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
 	char data[64];
 	int data_len;
 
-	/* port */
-	data_len = od_snprintf(data, sizeof(data), "%d", storage->port);
+	data_len = od_snprintf(data, sizeof(data), "%d", row->port);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
-	/* database */
-	rc = kiwi_be_write_data_row_add(stream, offset, rule->db_name,
-					rule->db_name_len);
+	rc = kiwi_be_write_data_row_add(stream, offset, row->database,
+					row->database_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
-	/* force_user */
-	rc = kiwi_be_write_data_row_add(stream, offset, rule->user_name,
-					rule->user_name_len);
+	rc = kiwi_be_write_data_row_add(stream, offset, row->force_user,
+					row->force_user_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
-	/* pool size */
-	data_len = od_snprintf(data, sizeof(data), "%d", rule->pool->size);
+	data_len = od_snprintf(data, sizeof(data), "%d", row->pool_size);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
-	/* reserve_pool */
 	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
-	/* pool mode */
 	rc = NOT_OK_RESPONSE;
-	if (rule->pool->pool_type == OD_RULE_POOL_SESSION) {
+	switch (row->pool_type) {
+	case OD_RULE_POOL_SESSION:
 		rc = kiwi_be_write_data_row_add(stream, offset, "session", 7);
-	}
-	if (rule->pool->pool_type == OD_RULE_POOL_TRANSACTION) {
+		break;
+	case OD_RULE_POOL_TRANSACTION:
 		rc = kiwi_be_write_data_row_add(stream, offset, "transaction",
 						11);
+		break;
+	case OD_RULE_POOL_STATEMENT:
+		rc = kiwi_be_write_data_row_add(stream, offset, "statement", 9);
+		break;
+	default:
+		break;
 	}
-
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
-	/* max_connections */
-	data_len = od_snprintf(data, sizeof(data), "%d", rule->client_max);
+	data_len = od_snprintf(data, sizeof(data), "%d", row->client_max);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
-	/* current_connections */
-	data_len = od_snprintf(data, sizeof(data), "%d",
-			       route->client_pool.count_active +
-				       route->client_pool.count_pending +
-				       route->client_pool.count_queue);
-
+	data_len =
+		od_snprintf(data, sizeof(data), "%d", row->current_connections);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
-	/* paused */
 	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
 	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 	if (rc == NOT_OK_RESPONSE) {
-		goto error;
+		return NOT_OK_RESPONSE;
 	}
 
-	/* disabled */
 	data_len = od_snprintf(data, sizeof(data), "%" PRIu64, (uint64_t)0);
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		goto error;
-	}
-
-	od_route_unlock(route);
-	return 0;
-error:
-	od_route_unlock(route);
-	return NOT_OK_RESPONSE;
+	return kiwi_be_write_data_row_add(stream, offset, data, data_len);
 }
 
 static inline int od_console_show_databases(od_client_t *client,
@@ -879,13 +874,33 @@ static inline int od_console_show_databases(od_client_t *client,
 		return NOT_OK_RESPONSE;
 	}
 
-	void *argv[] = { stream };
+	od_console_database_rows_t rows = { 0 };
+	void *argv[] = { &rows };
 	int rc;
-	rc = od_router_foreach(router, od_console_show_databases_add_cb, argv);
+	od_router_lock(router);
+	rc = od_console_database_rows_init(&rows, router->route_pool.count);
+	if (rc == OK_RESPONSE) {
+		rc = od_route_pool_foreach(&router->route_pool,
+					   od_console_show_databases_collect_cb,
+					   argv);
+	}
+	od_router_unlock(router);
 	if (rc == NOT_OK_RESPONSE) {
+		od_console_database_rows_free(&rows);
 		return NOT_OK_RESPONSE;
 	}
 
+	int i;
+	for (i = 0; i < rows.count; i++) {
+		rc = od_console_show_databases_write_row(stream,
+							 &rows.items[i]);
+		if (rc == NOT_OK_RESPONSE) {
+			od_console_database_rows_free(&rows);
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	od_console_database_rows_free(&rows);
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
 

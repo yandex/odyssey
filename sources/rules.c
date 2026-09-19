@@ -2450,6 +2450,7 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 
 			od_list_unlink(&new_storage->link);
 			od_rules_storage_add(dst, new_storage);
+			new_storage->mark = 1;
 		}
 	}
 
