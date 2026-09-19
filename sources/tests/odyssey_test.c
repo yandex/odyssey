@@ -128,6 +128,7 @@ extern void odyssey_test_thread_pool(void);
 extern void odyssey_test_linear_alloc(void);
 extern void odyssey_test_sql_minimal_parser(void);
 extern void odyssey_test_console_parser(void);
+extern void odyssey_test_console_databases(void);
 
 extern void machinarium_test_tsan_simple_race_example(void);
 
@@ -250,6 +251,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_linear_alloc);
 	odyssey_test(odyssey_test_sql_minimal_parser);
 	odyssey_test(odyssey_test_console_parser);
+	odyssey_test(odyssey_test_console_databases);
 
 	odyssey_playground_test(machinarium_test_tsan_simple_race_example);
 
