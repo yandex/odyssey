@@ -1,5 +1,11 @@
 #pragma once
 
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+
 /*
  * Odyssey.
  *
@@ -29,10 +35,12 @@
 
 #define int8 int8_t
 #define uint8 uint8_t
+#define int16 int16_t
 #define uint16 uint16_t
+#define int32 int32_t
 #define uint32 uint32_t
-#define uint64 uint64_t
 #define int64 int64_t
+#define uint64 uint64_t
 
 typedef uint16_t char16_t;
 typedef uint32_t char32_t;
@@ -124,6 +132,45 @@ typedef size_t Size;
 /* msb for char */
 #define HIGHBIT (0x80)
 #define IS_HIGHBIT_SET(ch) ((unsigned char)(ch) & HIGHBIT)
+
+/* Integer limits — PostgreSQL uses these in parser code */
+#ifndef PG_INT32_MAX
+#define PG_INT32_MAX INT32_MAX
+#endif
+#ifndef PG_INT32_MIN
+#define PG_INT32_MIN INT32_MIN
+#endif
+
+/* NAMEDATALEN — standard PostgreSQL identifier length */
+#define NAMEDATALEN 64
+
+/* likely/unlikely — PostgreSQL uses these in hot paths */
+#ifndef likely
+#define likely(x) __builtin_expect(!!(x), 1)
+#endif
+#ifndef unlikely
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#endif
+
+/* pg_strtoint32_safe — declared in pg_compat.c */
+struct Node;
+extern int32 pg_strtoint32_safe(const char *s, struct Node *escontext);
+
+/* pg_nextpower2_32 — round up to the next power of 2 */
+static inline uint32 pg_nextpower2_32(uint32 n)
+{
+	if (n == 0)
+		return 1;
+	return 1u << (32 - __builtin_clz(n - 1));
+}
+
+/* Max/Min macros */
+#ifndef Max
+#define Max(x, y) ((x) > (y) ? (x) : (y))
+#endif
+#ifndef Min
+#define Min(x, y) ((x) < (y) ? (x) : (y))
+#endif
 
 /*
  * Undefine OPENSSL_API_COMPAT to prevent conflicts with system OpenSSL headers.

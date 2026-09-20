@@ -1,0 +1,29 @@
+# Files vendored from PostgreSQL (../postgres) are excluded from clang-format
+# to keep upstream formatting and make future merges/rebases painless.
+# Supported by clang-format >= 18 (the version pinned in docker/format).
+# Matching is glob-on-file-path: use "dir/**", NOT "dir/" (no gitignore
+# directory semantics). '!' negation patterns are NOT honored by
+# clang-format 18 — don't use them.
+
+# copied from ../postgres/src/common & src/include
+sources/common/**
+sources/include/common/**
+sources/include/mb/**
+sources/include/port/**
+sources/include/utils/**
+sources/include/postgres_fe.h
+
+# SQL grammar, copied from ../postgres/src/backend/parser/{gram.y,scan.l,keywords.c,kwlookup.h,...} etc.
+sources/sql/full/gram.y
+sources/sql/full/scan.l
+sources/sql/full/keywords.c
+sources/sql/full/kwlookup.c
+sources/sql/full/parser.c
+sources/include/sql/full/**
+
+# postgres code adapted to odyssey (include paths changed)
+sources/sql/full/scansup.c
+sources/sql/full/list.c
+sources/sql/full/makefuncs.c
+sources/sql/full/pg_compat.c
+sources/include/pg_compat.h
