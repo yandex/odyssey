@@ -6,6 +6,7 @@
  */
 
 #include <errno.h>
+#include <inttypes.h>
 #include <pthread.h>
 
 #include <machinarium/build.h>
@@ -72,7 +73,8 @@ static void *machine_main(void *arg)
 			 machine->name);
 	} else {
 		snprintf(name, sizeof(name),
-			 "Machine ID: %ld (in machine_main)", mm_self->id);
+			 "Machine ID: %" PRIu64 " (in machine_main)",
+			 mm_self->id);
 	}
 	__tsan_set_fiber_name(__tsan_get_current_fiber(), name);
 #endif

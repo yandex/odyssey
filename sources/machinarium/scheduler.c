@@ -5,6 +5,8 @@
  * cooperative multitasking engine.
  */
 
+#include <inttypes.h>
+
 #include <machinarium/build.h>
 #include <machinarium/machinarium.h>
 #include <machinarium/coroutine.h>
@@ -98,8 +100,9 @@ void mm_scheduler_new(mm_scheduler_t *scheduler, mm_coroutine_t *coroutine,
 			  mm_scheduler_main, coroutine);
 #ifdef HAVE_TSAN
 	char name[256];
-	snprintf(name, sizeof(name), "Machine ID: %ld; coroutine ID: %ld",
-		 mm_self->id, coroutine->id);
+	snprintf(name, sizeof(name),
+		 "Machine ID: %" PRIu64 "; coroutine ID: %" PRIu64, mm_self->id,
+		 coroutine->id);
 	__tsan_set_fiber_name(coroutine->context.tsan_fiber, name);
 #endif
 	mm_scheduler_set(scheduler, coroutine, MM_CREADY);
