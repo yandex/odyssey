@@ -149,4 +149,28 @@ void kiwi_test_pgoptions(void)
 			  0 /* vars count */);
 	do_pgoptions_test("-x search_path=public", -1 /* expected_rc */,
 			  0 /* vars count */);
+
+	{
+		char opts[512];
+		char value[512];
+
+		memset(value, 'a', 200);
+		value[200] = 0;
+		snprintf(opts, sizeof(opts), "--search_path=%s", value);
+		do_pgoptions_test(opts, -1 /* expected_rc */,
+				  0 /* vars count */);
+
+		memset(value, 'a', 200);
+		value[200] = 0;
+		snprintf(opts, sizeof(opts), "--%s=x", value);
+		do_pgoptions_test(opts, -1 /* expected_rc */,
+				  0 /* vars count */);
+
+		/* max allowed value is KIWI_MAX_VAR_SIZE - 1 chars */
+		memset(value, 'a', KIWI_MAX_VAR_SIZE - 1);
+		value[KIWI_MAX_VAR_SIZE - 1] = 0;
+		snprintf(opts, sizeof(opts), "--search_path=%s", value);
+		do_pgoptions_test(opts, 0 /* expected_rc */, 1 /* vars count */,
+				  var(KIWI_VAR_SEARCH_PATH, value));
+	}
 }
