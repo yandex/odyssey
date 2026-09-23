@@ -16,9 +16,10 @@
 #include <backend.h>
 #include <util.h>
 
-machine_msg_t *od_query_do(od_server_t *server, char *context,
-			   const char *query, char *param, uint32_t timeout_ms)
+int od_query_do(od_server_t *server, char *context, const char *query,
+		char *param, uint32_t timeout_ms, machine_msg_t **result)
 {
+	*result = NULL;
 	od_instance_t *instance = server->global->instance;
 	od_debug(&instance->logger, context, server->client, server, "%s",
 		 query);
@@ -26,13 +27,12 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 	if (od_backend_query_send(server, context, query, param,
 				  strlen(query) + 1,
 				  timeout_ms) == NOT_OK_RESPONSE) {
-		return NULL;
+		return NOT_OK_RESPONSE;
 	}
 	machine_msg_t *ret_msg = NULL;
 	machine_msg_t *msg;
 
 	/* wait for response */
-	int has_result = 0;
 	for (;;) {
 		msg = od_read(&server->io, timeout_ms, OD_READ_BE);
 		if (msg == NULL) {
@@ -42,10 +42,7 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 					 "read error: %s",
 					 od_io_error(&server->io));
 			}
-			if (ret_msg) {
-				machine_msg_free(ret_msg);
-			}
-			return NULL;
+			goto error;
 		}
 
 		int save_msg = 0;
@@ -63,12 +60,11 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 		case KIWI_BE_ROW_DESCRIPTION:
 			break;
 		case KIWI_BE_DATA_ROW: {
-			if (has_result) {
+			if (ret_msg != NULL) {
 				goto error;
 			}
 
 			ret_msg = msg;
-			has_result = 1;
 			save_msg = 1;
 			break;
 		}
@@ -77,7 +73,8 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 					 machine_msg_size(msg));
 
 			machine_msg_free(msg);
-			return ret_msg;
+			*result = ret_msg;
+			return OK_RESPONSE;
 		default:
 			break;
 		}
@@ -86,13 +83,14 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 			machine_msg_free(msg);
 		}
 	}
-	return ret_msg;
 error:
-	machine_msg_free(msg);
-	if (ret_msg) {
+	if (msg != NULL) {
+		machine_msg_free(msg);
+	}
+	if (ret_msg != NULL) {
 		machine_msg_free(ret_msg);
 	}
-	return NULL;
+	return NOT_OK_RESPONSE;
 }
 
 __attribute__((hot)) int od_query_format(char *format_pos, char *format_end,

@@ -867,8 +867,9 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 	machine_msg_t *msg;
 
 	if (lag_query != NULL) {
-		msg = od_query_do(server, context, lag_query, NULL, 1000);
-		if (msg == NULL) {
+		if (od_query_do(server, context, lag_query, NULL, 1000, &msg) !=
+			    OK_RESPONSE ||
+		    msg == NULL) {
 			od_error(
 				&instance->logger, context, client, server,
 				"receive msg failed, closing backend connection");
@@ -898,9 +899,9 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 		}
 	}
 
-	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL,
-			  1000);
-	if (msg == NULL) {
+	if (od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL,
+			1000, &msg) != OK_RESPONSE ||
+	    msg == NULL) {
 		od_error(&instance->logger, context, client, server,
 			 "can't execute pg_is_in_recovery");
 		return NOT_OK_RESPONSE;
