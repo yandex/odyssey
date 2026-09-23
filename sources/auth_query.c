@@ -8,6 +8,7 @@
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/wait_list.h>
 #include <kiwi/kiwi.h>
 
 #include <status.h>
@@ -114,8 +115,29 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
+static od_rule_t *od_auth_query_source(od_router_t *router, od_rule_t *rule)
+{
+	kiwi_be_startup_t startup;
+	kiwi_be_startup_init(&startup);
+	if (kiwi_var_set(&startup.user, KIWI_VAR_UNDEF, rule->auth_query_user,
+			 strlen(rule->auth_query_user) + 1) == -1 ||
+	    kiwi_var_set(&startup.database, KIWI_VAR_UNDEF, rule->auth_query_db,
+			 strlen(rule->auth_query_db) + 1) == -1) {
+		return NULL;
+	}
+
+	od_router_lock(router);
+	od_rule_t *source = od_rules_forward(&router->rules, &startup, NULL, 1);
+	if (source != NULL) {
+		od_rules_ref(source);
+	}
+	od_router_unlock(router);
+	return source;
+}
+
 static od_client_t *create_auth_client(od_global_t *global,
-				       od_instance_t *instance, od_rule_t *rule)
+				       od_instance_t *instance, od_rule_t *rule,
+				       od_rule_t *source)
 {
 	od_router_t *router = global->router;
 
@@ -141,6 +163,12 @@ static od_client_t *create_auth_client(od_global_t *global,
 		return NULL;
 	}
 
+	if (client->rule != source) {
+		od_router_unroute(router, client);
+		od_client_free_extended(client);
+		return NULL;
+	}
+
 	int rc = od_attach_extended(instance, "auth_query", router, client);
 	if (rc != OK_RESPONSE) {
 		od_router_unroute(router, client);
@@ -160,12 +188,17 @@ static int do_auth_query(od_instance_t *instance, od_client_t *client,
 
 	uint32_t timeout_ms = (uint32_t)instance->config.auth_query_timeout_ms;
 
-	machine_msg_t *msg =
-		od_query_do(server, "auth_query", query, user, timeout_ms);
-	if (msg == NULL) {
+	machine_msg_t *msg;
+	if (od_query_do(server, "auth_query", query, user, timeout_ms, &msg) !=
+	    OK_RESPONSE) {
 		od_error(&instance->logger, "auth_query", client, server,
-			 "auth query returned empty msg");
+			 "auth query failed");
 		return NOT_OK_RESPONSE;
+	}
+	if (msg == NULL) {
+		password->password = NULL;
+		password->password_len = 0;
+		return OK_RESPONSE;
 	}
 
 	int rc = od_auth_parse_passwd_from_datarow(&instance->logger, msg,
@@ -177,13 +210,14 @@ static int do_auth_query(od_instance_t *instance, od_client_t *client,
 
 static int get_password_from_auth_query(od_global_t *global,
 					od_instance_t *instance,
-					od_rule_t *rule, char *user,
-					const char *auth_query,
+					od_rule_t *rule, od_rule_t *source,
+					char *user, const char *auth_query,
 					kiwi_password_t *password)
 {
 	od_router_t *router = global->router;
 
-	od_client_t *client = create_auth_client(global, instance, rule);
+	od_client_t *client =
+		create_auth_client(global, instance, rule, source);
 	if (client == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -197,13 +231,127 @@ static int get_password_from_auth_query(od_global_t *global,
 	return rc;
 }
 
+#define OD_AUTH_QUERY_CACHE_SIZE 64
+
+typedef struct {
+	od_list_t link;
+	char user[KIWI_MAX_VAR_SIZE];
+	char query[OD_QRY_MAX_SZ];
+	od_rule_t *source;
+	od_route_pswd_t *password;
+	uint64_t refresh_at_ms;
+	int refresh_in_progress;
+	int users;
+	atomic_uint_fast64_t version;
+	mm_wait_list_t waiters;
+} od_auth_query_cache_entry_t;
+
+static void od_auth_query_cache_entry_free(od_auth_query_cache_entry_t *entry)
+{
+	od_rules_unref(entry->source);
+	od_route_pswd_unref(entry->password);
+	mm_wait_list_destroy(&entry->waiters);
+	od_free(entry);
+}
+
+void od_auth_query_cache_free(od_route_t *route)
+{
+	od_list_t *i, *n;
+	od_list_foreach_safe (&route->auth_query_cache.entries, i, n) {
+		od_auth_query_cache_entry_t *entry;
+		entry = od_container_of(i, od_auth_query_cache_entry_t, link);
+		od_list_unlink(&entry->link);
+		od_auth_query_cache_entry_free(entry);
+	}
+	mm_wait_list_destroy(&route->auth_query_cache.available);
+}
+
+static void od_auth_query_cache_notify(od_route_t *route)
+{
+	atomic_fetch_add(&route->auth_query_cache.version, 1);
+	mm_wait_list_notify_all(&route->auth_query_cache.available);
+}
+
+/* Called and returns with the route locked. */
+static int od_auth_query_wait(od_route_t *route, mm_wait_list_t *waiters,
+			      uint64_t version, uint64_t deadline_ms)
+{
+	uint64_t now_ms = machine_time_ms();
+	if (now_ms >= deadline_ms) {
+		return -1;
+	}
+	od_route_unlock(route);
+	int rc = mm_wait_list_compare_wait(waiters, NULL, version,
+					   deadline_ms - now_ms);
+	int err = machine_errno();
+	od_route_lock(route);
+	return rc == 0 || err == EAGAIN ? 0 : -1;
+}
+
+static od_auth_query_cache_entry_t *
+od_auth_query_cache_get(od_route_t *route, od_rule_t *source, const char *user,
+			const char *query, uint64_t deadline_ms)
+{
+	od_auth_query_cache_entry_t *oldest;
+	od_list_t *i;
+retry:
+	oldest = NULL;
+	od_list_foreach (&route->auth_query_cache.entries, i) {
+		od_auth_query_cache_entry_t *entry;
+		entry = od_container_of(i, od_auth_query_cache_entry_t, link);
+		if (entry->source == source && strcmp(entry->user, user) == 0 &&
+		    strcmp(entry->query, query) == 0) {
+			od_list_unlink(&entry->link);
+			od_list_append(&route->auth_query_cache.entries,
+				       &entry->link);
+			return entry;
+		}
+		if (oldest == NULL && !entry->refresh_in_progress &&
+		    entry->users == 0) {
+			oldest = entry;
+		}
+	}
+
+	if (route->auth_query_cache.count == OD_AUTH_QUERY_CACHE_SIZE &&
+	    oldest == NULL) {
+		uint64_t version =
+			atomic_load(&route->auth_query_cache.version);
+		if (od_auth_query_wait(route,
+				       &route->auth_query_cache.available,
+				       version, deadline_ms) == -1) {
+			return NULL;
+		}
+		goto retry;
+	}
+
+	od_auth_query_cache_entry_t *entry = od_malloc(sizeof(*entry));
+	if (entry == NULL) {
+		return NULL;
+	}
+	memset(entry, 0, sizeof(*entry));
+	strcpy(entry->user, user);
+	strcpy(entry->query, query);
+	entry->source = source;
+	od_rules_ref(source);
+	atomic_init(&entry->version, 0);
+	mm_wait_list_init(&entry->waiters, &entry->version);
+
+	if (route->auth_query_cache.count == OD_AUTH_QUERY_CACHE_SIZE) {
+		od_list_unlink(&oldest->link);
+		od_auth_query_cache_entry_free(oldest);
+		route->auth_query_cache.count--;
+	}
+	od_list_append(&route->auth_query_cache.entries, &entry->link);
+	route->auth_query_cache.count++;
+	return entry;
+}
+
 typedef struct {
 	od_global_t *global;
 	od_instance_t *instance;
 	od_rule_t *rule;
 	od_route_t *route;
-	char user[KIWI_MAX_VAR_SIZE];
-	char query[OD_QRY_MAX_SZ];
+	od_auth_query_cache_entry_t *entry;
 } refresh_arg_t;
 
 static void pswd_update_task(void *a)
@@ -214,17 +362,18 @@ static void pswd_update_task(void *a)
 	od_instance_t *instance = arg->instance;
 	od_rule_t *rule = arg->rule;
 	od_route_t *route = arg->route;
+	od_auth_query_cache_entry_t *entry = arg->entry;
 
 	kiwi_password_t password;
 	memset(&password, 0, sizeof(password));
-	int rc = get_password_from_auth_query(global, instance, rule, arg->user,
-					      arg->query, &password);
+	int rc = get_password_from_auth_query(global, instance, rule,
+					      entry->source, entry->user,
+					      entry->query, &password);
 
 	od_route_lock(route);
 
 	if (rc == OK_RESPONSE) {
 		od_route_pswd_t *new = od_route_pswd_create(password.password);
-		od_free(password.password);
 		if (new != NULL) {
 			uint64_t jitter = 0;
 			uint64_t jitter_max =
@@ -234,15 +383,15 @@ static void pswd_update_task(void *a)
 					 jitter_max;
 			}
 
-			od_route_pswd_unref(route->auth_query_cache.password);
-			route->auth_query_cache.password = new;
-			route->auth_query_cache.valid_until_ms =
+			od_route_pswd_unref(entry->password);
+			entry->password = new;
+			entry->refresh_at_ms =
 				machine_time_ms() +
 				instance->config.auth_query_cache_ttl_ms +
 				jitter;
 		} else {
 			/* out of memory, keep the old value and retry soon */
-			route->auth_query_cache.valid_until_ms =
+			entry->refresh_at_ms =
 				machine_time_ms() +
 				instance->config.auth_query_cache_error_retry_ms;
 		}
@@ -251,7 +400,7 @@ static void pswd_update_task(void *a)
 		 * refresh failed, keep the stale value for now
 		 * and retry later
 		 */
-		route->auth_query_cache.valid_until_ms =
+		entry->refresh_at_ms =
 			machine_time_ms() +
 			instance->config.auth_query_cache_error_retry_ms;
 	} else {
@@ -260,16 +409,21 @@ static void pswd_update_task(void *a)
 		 * drop the cached password, so clients will fail
 		 * to authenticate until a refresh succeeds
 		 */
-		od_route_pswd_unref(route->auth_query_cache.password);
-		route->auth_query_cache.password = NULL;
+		od_route_pswd_unref(entry->password);
+		entry->password = NULL;
 
 		od_error(&instance->logger, "auth_query", NULL, NULL,
 			 "auth query failed, stale cached password is dropped");
 	}
+	od_free(password.password);
 
-	route->auth_query_cache.refresh_in_progress = 0;
-
-	mm_wait_flag_set(route->auth_query_cache.ready);
+	entry->refresh_in_progress = 0;
+	route->auth_query_cache.refresh_in_progress--;
+	atomic_fetch_add(&entry->version, 1);
+	mm_wait_list_notify_all(&entry->waiters);
+	if (entry->users == 0) {
+		od_auth_query_cache_notify(route);
+	}
 
 	od_route_unlock(route);
 
@@ -279,9 +433,11 @@ static void pswd_update_task(void *a)
 
 static int run_refresh_task(od_global_t *global, od_instance_t *instance,
 			    od_rule_t *rule, od_route_t *route,
-			    od_client_t *client, char *peer)
+			    od_client_t *client,
+			    od_auth_query_cache_entry_t *entry)
 {
-	route->auth_query_cache.refresh_in_progress = 1;
+	entry->refresh_in_progress = 1;
+	route->auth_query_cache.refresh_in_progress++;
 
 	od_rules_ref(rule);
 
@@ -291,23 +447,11 @@ static int run_refresh_task(od_global_t *global, od_instance_t *instance,
 	}
 	memset(arg, 0, sizeof(refresh_arg_t));
 
-	kiwi_var_t *user = &client->startup.user;
-
 	arg->global = global;
 	arg->instance = instance;
 	arg->route = route;
 	arg->rule = rule;
-	if (user->value_len > (int)sizeof(arg->user)) {
-		od_error(&instance->logger, "auth_query", client, NULL,
-			 "user name is too long: %d bytes", user->value_len);
-		goto error;
-	}
-	memcpy(arg->user, user->value, user->value_len);
-
-	char *format_pos = rule->auth_query;
-	char *format_end = rule->auth_query + strlen(rule->auth_query);
-	od_query_format(format_pos, format_end, user, peer, arg->query,
-			sizeof(arg->query));
+	arg->entry = entry;
 
 	int64_t coroid = machine_coroutine_create_named(pswd_update_task, arg,
 							"auth-query");
@@ -320,8 +464,12 @@ static int run_refresh_task(od_global_t *global, od_instance_t *instance,
 error:
 	od_rules_unref(rule);
 	od_free(arg);
-	route->auth_query_cache.refresh_in_progress = 0;
+	entry->refresh_in_progress = 0;
+	route->auth_query_cache.refresh_in_progress--;
 	int err = mm_errno_get();
+	if (entry->users == 0) {
+		od_auth_query_cache_notify(route);
+	}
 	od_error(&instance->logger, "auth_query", client, NULL,
 		 "can't run auth query coroutine: %d (%s)", err, strerror(err));
 
@@ -338,44 +486,68 @@ int od_auth_query(od_client_t *client, char *peer)
 	od_assert(route != NULL);
 	od_assert(rule->auth_query != NULL);
 
+	kiwi_var_t *user = &client->startup.user;
+	if (user->value_len > KIWI_MAX_VAR_SIZE) {
+		od_error(&instance->logger, "auth_query", client, NULL,
+			 "user name is too long: %d bytes", user->value_len);
+		return -1;
+	}
+
+	char query[OD_QRY_MAX_SZ];
+	if (od_query_format(rule->auth_query,
+			    rule->auth_query + strlen(rule->auth_query), user,
+			    peer, query, sizeof(query)) == -1) {
+		od_error(&instance->logger, "auth_query", client, NULL,
+			 "auth query is too long");
+		return -1;
+	}
+
+	uint64_t deadline_ms =
+		machine_time_ms() + instance->config.auth_query_timeout_ms;
+	od_rule_t *source = od_auth_query_source(global->router, rule);
+	if (source == NULL) {
+		od_error(&instance->logger, "auth_query", client, NULL,
+			 "can't match auth query source");
+		return -1;
+	}
 	od_route_lock(route);
 
-	od_route_pswd_t *cached =
-		od_route_pswd_ref(route->auth_query_cache.password);
-	if (cached != NULL) {
-		/*
-		 * password was queried at least once
-		 * reuse it and maybe run refresh coro in background
-		 */
-		uint64_t now_ms = machine_time_ms();
-		int outdated = route->auth_query_cache.valid_until_ms < now_ms;
-		if (outdated && !route->auth_query_cache.refresh_in_progress) {
-			(void)run_refresh_task(global, instance, rule, route,
-					       client, peer);
-		}
-	} else {
-		/*
-		 * this is the first time password is acquired
-		 *
-		 * if no one run the refresh - do it, and the wait for ready
-		 */
+	od_auth_query_cache_entry_t *entry = od_auth_query_cache_get(
+		route, source, user->value, query, deadline_ms);
+	od_rules_unref(source);
+	if (entry == NULL) {
+		od_error(&instance->logger, "auth_query", client, NULL,
+			 "can't acquire auth query cache entry");
+		od_route_unlock(route);
+		return -1;
+	}
 
-		int rc = 0;
-		if (!route->auth_query_cache.refresh_in_progress) {
-			rc = run_refresh_task(global, instance, rule, route,
-					      client, peer);
+	uint64_t now_ms = machine_time_ms();
+	if (!entry->refresh_in_progress &&
+	    (entry->password == NULL || now_ms >= entry->refresh_at_ms)) {
+		(void)run_refresh_task(global, instance, rule, route, client,
+				       entry);
+	}
+
+	if (entry->password == NULL) {
+		if (entry->refresh_in_progress) {
+			uint64_t version = atomic_load(&entry->version);
+			entry->users++;
+			while (entry->refresh_in_progress &&
+			       atomic_load(&entry->version) == version) {
+				if (od_auth_query_wait(route, &entry->waiters,
+						       version,
+						       deadline_ms) == -1) {
+					break;
+				}
+			}
+			entry->users--;
+			if (entry->users == 0 && !entry->refresh_in_progress) {
+				od_auth_query_cache_notify(route);
+			}
 		}
 
-		if (rc == 0) {
-			od_route_unlock(route);
-			mm_wait_flag_wait(route->auth_query_cache.ready,
-					  (uint32_t)instance->config
-						  .auth_query_timeout_ms);
-			od_route_lock(route);
-		}
-
-		cached = od_route_pswd_ref(route->auth_query_cache.password);
-		if (cached == NULL) {
+		if (entry->password == NULL) {
 			od_error(
 				&instance->logger, "auth_query", client, NULL,
 				"timeout on wait for password to become available or other error");
@@ -384,6 +556,7 @@ int od_auth_query(od_client_t *client, char *peer)
 		}
 	}
 
+	od_route_pswd_t *cached = od_route_pswd_ref(entry->password);
 	od_route_unlock(route);
 
 	if (cached->is_null) {
