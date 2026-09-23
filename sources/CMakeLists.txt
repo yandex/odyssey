@@ -343,7 +343,8 @@ set(od_test_src
     tests/odyssey/test_pstmt.c
     tests/odyssey/test_query_processing.c
     tests/odyssey/test_duration_parse.c
-    tests/odyssey/test_thread_pool.c)
+    tests/odyssey/test_thread_pool.c
+    tests/odyssey/test_scram.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")

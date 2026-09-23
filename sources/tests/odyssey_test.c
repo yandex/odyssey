@@ -127,6 +127,7 @@ extern void odyssey_test_parse_deallocate(void);
 extern void odyssey_test_affinity(void);
 extern void odyssey_test_duration_parse(void);
 extern void odyssey_test_thread_pool(void);
+extern void odyssey_test_scram(void);
 
 extern void machinarium_test_tsan_simple_race_example(void);
 
@@ -248,6 +249,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_affinity);
 	odyssey_test(odyssey_test_duration_parse);
 	odyssey_test(odyssey_test_thread_pool);
+	odyssey_test(odyssey_test_scram);
 
 	odyssey_playground_test(machinarium_test_tsan_simple_race_example);
 
