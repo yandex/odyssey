@@ -890,7 +890,7 @@ int od_scram_read_client_final_message(mm_io_t *io,
 
 	int proof_len = od_b64_decode(base64_proof, base64_proof_size, proof,
 				      proof_size);
-	if (proof_len < 0) {
+	if (proof_len != SCRAM_SHA_256_KEY_LEN) {
 		goto error;
 	}
 
