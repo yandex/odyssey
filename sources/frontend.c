@@ -3138,7 +3138,7 @@ static int od_frontend_route(od_client_t *client)
 	return 0;
 }
 
-int od_frontend_pre_auth(od_client_t *client)
+static int od_frontend_pre_auth(od_client_t *client)
 {
 	od_global_t *global = client->global;
 	od_extension_t *extensions = global->extensions;
@@ -3159,7 +3159,7 @@ int od_frontend_pre_auth(od_client_t *client)
 	return 0;
 }
 
-int od_frontend_auth(od_client_t *client)
+static int od_frontend_auth(od_client_t *client)
 {
 	od_global_t *global = client->global;
 	od_instance_t *instance = global->instance;
@@ -3263,7 +3263,7 @@ int od_frontend_auth(od_client_t *client)
 	return 0;
 }
 
-int od_frontend_run(od_client_t *client)
+static int od_frontend_run(od_client_t *client)
 {
 	od_global_t *global = client->global;
 	od_router_t *router = global->router;
