@@ -152,7 +152,7 @@ void kiwi_test_pgoptions(void)
 
 	{
 		char opts[512];
-		char value[512];
+		char value[256];
 
 		memset(value, 'a', 200);
 		value[200] = 0;
