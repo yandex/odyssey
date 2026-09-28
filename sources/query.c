@@ -42,6 +42,9 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 					 "read error: %s",
 					 od_io_error(&server->io));
 			}
+			if (ret_msg) {
+				machine_msg_free(ret_msg);
+			}
 			return NULL;
 		}
 
@@ -86,6 +89,9 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 	return ret_msg;
 error:
 	machine_msg_free(msg);
+	if (ret_msg) {
+		machine_msg_free(ret_msg);
+	}
 	return NULL;
 }
 
