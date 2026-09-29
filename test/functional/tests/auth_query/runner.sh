@@ -2,7 +2,13 @@
 
 set -ex
 
-/usr/bin/odyssey /tests/auth_query/config.conf
+psql -X -v ON_ERROR_STOP=1 -h localhost -p 5432 -U postgres -d postgres \
+	-f /tests/auth_query/cache.sql
+
+config=$(mktemp)
+trap 'rm -f "$config"' EXIT
+cp /tests/auth_query/config.conf "$config"
+/usr/bin/odyssey "$config"
 sleep 1
 
 odyssey_pid=$(cat /var/run/odyssey.pid)
@@ -31,6 +37,17 @@ check_null_password_rejected() {
 # The first attempt populates the negative cache entry; the second reuses it.
 check_null_password_rejected
 check_null_password_rejected
+
+if ! timeout 60s bash /tests/auth_query/cache.sh "$config" ||
+	! timeout 20s python3 /tests/auth_query/cache_protocol.py 5432 6432; then
+	for i in /asan-output*; do
+		if [ -f "$i" ]; then
+			cat "$i"
+		fi
+	done
+	cat /var/log/odyssey.log
+	exit 1
+fi
 
 timeout 25s pgbench 'host=localhost port=6432 user=auth_query_user_scram_sha_256 dbname=auth_query_db password=passwd' -f /tests/auth_query/select.sql -T 21 --connect --no-vacuum -j2 -c2 --progress 1 || {
 	echo "ERROR: failed backend auth with correct password"
@@ -69,3 +86,8 @@ timeout 25s pgbench 'host=localhost port=6432 user=auth_query_user_md5 dbname=au
 }
 
 ody-stop
+
+psql -X -v ON_ERROR_STOP=1 -h localhost -p 5432 -U postgres -d postgres \
+	-c 'DROP SCHEMA auth_query_cache_test CASCADE'
+psql -X -v ON_ERROR_STOP=1 -h localhost -p 5432 -U postgres -d postgres \
+	-c 'DROP DATABASE auth_query_source_new'
