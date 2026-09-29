@@ -43,6 +43,8 @@ void od_client_init(od_client_t *client)
 
 	kiwi_be_startup_init(&client->startup);
 	kiwi_vars_init(&client->vars);
+	kiwi_var_init(&client->startup_application_name, "application_name",
+		      sizeof("application_name"));
 	kiwi_key_init(&client->key);
 
 	od_io_init(&client->io);
