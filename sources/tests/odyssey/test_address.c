@@ -144,6 +144,17 @@ void odyssey_test_address_parse(void)
 		address("2001:0db8:85a3:1234:5678:8a2e:1375:7334", "klg",
 			31337),
 		address_unix("/var/lib/postgresql/.s.5432", "", 0));
+
+	do_test("", NOT_OK_RESPONSE, 0);
+	do_test(",", NOT_OK_RESPONSE, 0);
+	do_test(",,", NOT_OK_RESPONSE, 0);
+
+	do_test("a,", OK_RESPONSE, 1, address("a", "", 0));
+	do_test(",a", OK_RESPONSE, 1, address("a", "", 0));
+	do_test("a,,b", OK_RESPONSE, 2, address("a", "", 0),
+		address("b", "", 0));
+	do_test(",a,,b,", OK_RESPONSE, 2, address("a", "", 0),
+		address("b", "", 0));
 }
 
 static inline int sign(int a)

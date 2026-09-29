@@ -406,6 +406,7 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
+/* Gives a rough estimate of number of endpoints, might overestimate */
 static size_t od_config_reader_get_endpoints_count(const char *buff, int len)
 {
 	size_t count = 1;
@@ -443,13 +444,13 @@ int od_parse_addresses(const char *host_str, od_address_t **out, size_t *count)
 	char *strtok_preserve = NULL;
 
 	int len = strlen(host_str);
-	if (len > (int)sizeof(buff) - 1 /* 0-byte */) {
+	if (len > (int)sizeof(buff) - 1 /* 0-byte */ || len == 0) {
 		return NOT_OK_RESPONSE;
 	}
 	strcpy(buff, host_str);
 
-	size_t result_count = od_config_reader_get_endpoints_count(buff, len);
-	od_address_t *result = od_malloc(result_count * sizeof(od_address_t));
+	size_t estimate_count = od_config_reader_get_endpoints_count(buff, len);
+	od_address_t *result = od_malloc(estimate_count * sizeof(od_address_t));
 	if (result == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -476,8 +477,15 @@ int od_parse_addresses(const char *host_str, od_address_t **out, size_t *count)
 		next_address = strtok_r(NULL, ",", &strtok_preserve);
 	}
 
+	/* strtok_r skips empty tokens, so fewer entries may be produced */
+	size_t produced = address - result;
+	if (produced == 0) {
+		od_free(result);
+		return NOT_OK_RESPONSE;
+	}
+
 	*out = result;
-	*count = result_count;
+	*count = produced;
 
 	return OK_RESPONSE;
 }
