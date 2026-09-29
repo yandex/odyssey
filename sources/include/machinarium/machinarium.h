@@ -228,6 +228,8 @@ MACHINE_API int machine_tls_set_cert_file(machine_tls_t *, char *);
 
 MACHINE_API int machine_tls_set_key_file(machine_tls_t *, char *);
 
+MACHINE_API void machine_tls_cache_invalidate(void);
+
 /* dns */
 
 MACHINE_API int machine_getsockname(mm_io_t *, struct sockaddr *, int *);

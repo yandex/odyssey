@@ -29,6 +29,7 @@ int mm_tls_read_pending(mm_io_t *);
 int mm_tls_read(mm_io_t *, char *, int);
 int mm_tls_verify_common_name(mm_io_t *, char *);
 SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client);
+void mm_tls_ctx_free(struct mm_tls_ctx *);
 
 int mm_tls_get_cert_hash(mm_io_t *io,
 			 unsigned char (*cert_hash)[MM_CERT_HASH_LEN],
