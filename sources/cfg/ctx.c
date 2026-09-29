@@ -10,14 +10,11 @@
 #include <cfg/ctx.h>
 
 void od_cfg_parse_ctx_init(od_cfg_parse_ctx_t *ctx, const char *filename,
-			   char *input, size_t input_size,
 			   od_cfg_model_t *model, od_cfg_diag_list_t *diags)
 {
 	memset(ctx, 0, sizeof(*ctx));
 
 	ctx->filename = filename;
-	ctx->input = input;
-	ctx->input_size = input_size;
 	ctx->model = model;
 	ctx->diags = diags;
 
@@ -30,5 +27,11 @@ void od_cfg_parse_ctx_free(od_cfg_parse_ctx_t *ctx)
 {
 	od_free(ctx->last_unknown_ident);
 	ctx->last_unknown_ident = NULL;
+
+	for (size_t i = 0; i < ctx->owned_count; i++) {
+		od_free(ctx->owned_paths[i]);
+	}
+	od_free(ctx->owned_paths);
+
 	memset(ctx, 0, sizeof(*ctx));
 }

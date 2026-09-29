@@ -11,11 +11,20 @@
 #include <cfg/diag.h>
 #include <cfg/model.h>
 
+#define OD_CFG_MAX_INCLUDE_DEPTH 16
+
+typedef struct od_cfg_include_frame {
+	const char *filename;
+	int lexer_line;
+	int lexer_column;
+	size_t lexer_offset;
+	void *buffer;
+} od_cfg_include_frame_t;
+
 typedef struct od_cfg_parse_ctx {
 	const char *filename;
 
-	char *input;
-	size_t input_size;
+	void *buffer;
 
 	int lexer_line;
 	int lexer_column;
@@ -24,7 +33,13 @@ typedef struct od_cfg_parse_ctx {
 	od_cfg_model_t *model;
 	od_cfg_diag_list_t *diags;
 	int include_depth;
+	int include_base;
 	int allow_include;
+	od_cfg_include_frame_t include_stack[OD_CFG_MAX_INCLUDE_DEPTH];
+	/* Bison locations borrow these names until yyparse returns. */
+	char **owned_paths;
+	size_t owned_count;
+	size_t owned_capacity;
 
 	/*
 	 * bison scopes
@@ -53,7 +68,6 @@ typedef struct od_cfg_parse_ctx {
 } od_cfg_parse_ctx_t;
 
 void od_cfg_parse_ctx_init(od_cfg_parse_ctx_t *ctx, const char *filename,
-			   char *input, size_t input_size,
 			   od_cfg_model_t *model, od_cfg_diag_list_t *diags);
 
 void od_cfg_parse_ctx_free(od_cfg_parse_ctx_t *ctx);

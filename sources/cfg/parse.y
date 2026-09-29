@@ -126,6 +126,7 @@
 }
 
 %token ERROR_TOKEN
+%token INCLUDE_END "end of included file"
 
 %token <str> IDENT
 %token <str> STRING
@@ -936,7 +937,6 @@ top_item:
 	| INCLUDE STRING
 		{
 			if (!ctx->allow_include) {
-				
 				od_cfg_diag_error(ctx->diags, @1,
 								  "includes are forbidden in this context");
 				od_free($2);
@@ -944,14 +944,14 @@ top_item:
 				YYERROR;
 			}
 
-			int rc = od_cfg_parse_file_depth($2, ctx->model,
-							 ctx->diags,
-							 ctx->include_depth + 1, ctx->allow_include);
-			od_free($2);
-			if (rc != 0) {
+			if (od_cfg_include_push(ctx, scanner, $2) != 0) {
+				od_free($2);
+				$2 = NULL;
 				YYABORT;
 			}
+			$2 = NULL;
 		}
+		top_items INCLUDE_END
 	;
 
 database_section:

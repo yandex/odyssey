@@ -89,8 +89,97 @@ static int read_file(const char *path, char **out, size_t *out_size,
 	return OK_RESPONSE;
 }
 
-#define OD_CFG_MAX_INCLUDE_DEPTH 16
 #define OD_CFG_AUTOCONF_SUFFIX ".autoconf"
+
+int od_cfg_include_push(od_cfg_parse_ctx_t *ctx, void *scanner_arg, char *path)
+{
+	yyscan_t scanner = scanner_arg;
+
+	if (ctx->include_depth + 1 > OD_CFG_MAX_INCLUDE_DEPTH) {
+		od_cfg_diag_error(ctx->diags, od_cfg_location_empty(path),
+				  "include depth limit (%d) exceeded — "
+				  "possible circular include",
+				  OD_CFG_MAX_INCLUDE_DEPTH);
+		return -1;
+	}
+
+	char *buf = NULL;
+	size_t size = 0;
+	if (read_file(path, &buf, &size, ctx->diags) != 0) {
+		return -1;
+	}
+
+	if (ctx->owned_count == ctx->owned_capacity) {
+		size_t capacity =
+			ctx->owned_capacity == 0 ? 16 : ctx->owned_capacity * 2;
+		char **paths =
+			od_realloc(ctx->owned_paths, capacity * sizeof(*paths));
+		if (paths == NULL) {
+			od_cfg_diag_error(
+				ctx->diags, od_cfg_location_empty(path),
+				"out of memory while including config file '%s'",
+				path);
+			od_free(buf);
+			return -1;
+		}
+		ctx->owned_paths = paths;
+		ctx->owned_capacity = capacity;
+	}
+
+	od_cfg_include_frame_t *frame = &ctx->include_stack[ctx->include_depth];
+	frame->filename = ctx->filename;
+	frame->lexer_line = ctx->lexer_line;
+	frame->lexer_column = ctx->lexer_column;
+	frame->lexer_offset = ctx->lexer_offset;
+	frame->buffer = ctx->buffer;
+
+	/*
+	 * yy_scan_bytes() switches to the new buffer without pushing.
+	 * Restore the parent, then yypush so <<EOF>> can pop.
+	 */
+	YY_BUFFER_STATE parent = (YY_BUFFER_STATE)ctx->buffer;
+	YY_BUFFER_STATE child = yy_scan_bytes(buf, (int)size, scanner);
+	od_free(buf);
+	if (child == NULL) {
+		od_cfg_diag_error(ctx->diags, od_cfg_location_empty(path),
+				  "failed to create config scanner buffer");
+		return -1;
+	}
+
+	yy_switch_to_buffer(parent, scanner);
+	yypush_buffer_state(child, scanner);
+
+	ctx->filename = path;
+	ctx->buffer = child;
+	ctx->lexer_line = 1;
+	ctx->lexer_column = 1;
+	ctx->lexer_offset = 0;
+
+	ctx->owned_paths[ctx->owned_count] = path;
+	ctx->owned_count++;
+	ctx->include_depth++;
+	return 0;
+}
+
+int od_cfg_include_pop(od_cfg_parse_ctx_t *ctx, void *scanner_arg)
+{
+	yyscan_t scanner = scanner_arg;
+
+	if (ctx->include_depth <= ctx->include_base) {
+		return 1;
+	}
+
+	yypop_buffer_state(scanner);
+
+	ctx->include_depth--;
+	od_cfg_include_frame_t *frame = &ctx->include_stack[ctx->include_depth];
+	ctx->filename = frame->filename;
+	ctx->lexer_line = frame->lexer_line;
+	ctx->lexer_column = frame->lexer_column;
+	ctx->lexer_offset = frame->lexer_offset;
+	ctx->buffer = frame->buffer;
+	return 0;
+}
 
 #define MERGE_PLAIN_FLD(d, s, f)                              \
 	do {                                                  \
@@ -258,8 +347,9 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 	}
 
 	od_cfg_parse_ctx_t ctx;
-	od_cfg_parse_ctx_init(&ctx, path, buf, size, model, diags);
+	od_cfg_parse_ctx_init(&ctx, path, model, diags);
 	ctx.include_depth = depth;
+	ctx.include_base = depth;
 	ctx.allow_include = allow_include;
 
 	yyscan_t scanner;
@@ -272,22 +362,29 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 	}
 
 	YY_BUFFER_STATE buffer = yy_scan_bytes(buf, (int)size, scanner);
+	od_free(buf);
 	if (buffer == NULL) {
 		od_cfg_diag_error(diags, od_cfg_location_empty(path),
 				  "failed to create config scanner buffer");
 		yylex_destroy(scanner);
 		od_cfg_parse_ctx_free(&ctx);
-		od_free(buf);
 		return -1;
 	}
 
+	ctx.buffer = buffer;
+
 	int parse_rc = yyparse(scanner, &ctx);
+
+	while (ctx.include_depth > ctx.include_base) {
+		if (od_cfg_include_pop(&ctx, scanner) != 0) {
+			break;
+		}
+	}
 
 	yy_delete_buffer(buffer, scanner);
 	yylex_destroy(scanner);
 
 	od_cfg_parse_ctx_free(&ctx);
-	od_free(buf);
 
 	if (parse_rc != 0 || od_cfg_diag_has_errors(diags)) {
 		return -1;

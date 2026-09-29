@@ -175,6 +175,14 @@ FLEX_TARGET(cfg_scanner
 )
 ADD_FLEX_BISON_DEPENDENCY(cfg_scanner cfg_parser)
 list(APPEND od_src ${FLEX_cfg_scanner_OUTPUTS} ${BISON_cfg_parser_OUTPUTS})
+# Reload parses on the system coroutine (default 32 pages). Unoptimized
+# ASAN/Debug frames for yyparse+yylex nearly fill 128 KiB.
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Release" AND
+   NOT CMAKE_BUILD_TYPE STREQUAL "RelWithDbgInfo")
+    set_source_files_properties(
+        ${BISON_cfg_parser_OUTPUTS} ${FLEX_cfg_scanner_OUTPUTS}
+        PROPERTIES COMPILE_FLAGS "-O2")
+endif()
 
 set(SQL_MINIMAL_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/sql/minimal)
 file(MAKE_DIRECTORY ${SQL_MINIMAL_GEN_DIR})
@@ -433,7 +441,8 @@ set(od_test_src
     tests/odyssey/test_linear_alloc.c
     tests/odyssey/test_scram.c
     tests/odyssey/test_sql_parser.c
-    tests/odyssey/test_console_parser.c)
+    tests/odyssey/test_console_parser.c
+    tests/odyssey/test_cfg_include_stack.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")
