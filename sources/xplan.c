@@ -1454,42 +1454,53 @@ static od_frontend_status_t run_parse_shadow(od_xplan_entry_t *ps,
 
 	od_instance_t *instance = client->global->instance;
 
-	machine_msg_t *msg = od_read(&server->io, timeout_ms, OD_READ_BE);
-	if (msg == NULL) {
-		return OD_ESERVER_READ;
+	for (;;) {
+		machine_msg_t *msg =
+			od_read(&server->io, timeout_ms, OD_READ_BE);
+		if (msg == NULL) {
+			return OD_ESERVER_READ;
+		}
+
+		kiwi_be_type_t type = msg_be_type(msg);
+		od_frontend_status_t status = OD_OK;
+		switch (type) {
+		case KIWI_BE_PARSE_COMPLETE:
+			/* The client must not see the shadow ParseComplete. */
+			machine_msg_free(msg);
+			return OD_OK;
+		case KIWI_BE_ERROR_RESPONSE:
+			od_backend_error(server, "main", machine_msg_data(msg),
+					 machine_msg_size(msg));
+			server->xproto_err = 1;
+			break;
+		case KIWI_BE_PARAMETER_STATUS:
+			if (od_backend_update_parameter(
+				    server, "main", machine_msg_data(msg),
+				    machine_msg_size(msg), 0) == -1) {
+				status = OD_ESERVER_READ;
+			}
+			break;
+		case KIWI_BE_NOTICE_RESPONSE:
+		case KIWI_BE_NOTIFICATION_RESPONSE:
+			break;
+		default:
+			od_error(
+				&instance->logger, "main", client, server,
+				"run_parse_shadow: unexpected msg type from server '%c'",
+				type);
+			status = OD_ESERVER_READ;
+			break;
+		}
+
+		if (status == OD_OK &&
+		    od_io_write(&client->io, msg, timeout_ms) != 0) {
+			status = OD_ECLIENT_WRITE;
+		}
+		machine_msg_free(msg);
+		if (status != OD_OK || server->xproto_err) {
+			return status;
+		}
 	}
-
-	od_frontend_status_t status;
-
-	kiwi_be_type_t type = msg_be_type(msg);
-	switch (type) {
-	case KIWI_BE_PARSE_COMPLETE:
-		/* drop response - client should not see PC from shadow parse */
-		status = OD_OK;
-		break;
-	case KIWI_BE_ERROR_RESPONSE:
-		/*
-		 * i think this ErrorResponse is nearly impossible on shadow parsing
-		 * but lets handle it, just in case
-		 */
-		od_backend_error(server, "main", machine_msg_data(msg),
-				 machine_msg_size(msg));
-		od_error(&instance->logger, "main", client, server,
-			 "run_parse_shadow: ErrorResponse met");
-		status = OD_ESERVER_READ;
-		break;
-	default:
-		od_error(
-			&instance->logger, "main", client, server,
-			"run_parse_shadow: unexpected msg type from server '%c'",
-			type);
-		status = OD_ESERVER_READ;
-		break;
-	}
-
-	machine_msg_free(msg);
-
-	return status;
 }
 
 static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
@@ -1772,6 +1783,9 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 				return status;
 			}
 			forward_begin = -1;
+			if (server->xproto_err) {
+				continue;
+			}
 		}
 
 		switch (entry->type) {

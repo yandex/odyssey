@@ -718,10 +718,22 @@ Enable support of prepared statements in transactional pooling.
 
 *integer*
 
-Per-server-connection limit of reserved prepared statements.
-Eviction happens on returning connection to the pool.
-Eviction is best-effort: statements still referenced by clients or by other servers are not evicted, so the number of reserved statements may stay above the configured limit.
-Default: 0 (disabled)
+Per-server-connection limit of reserved protocol-level prepared statements.
+After a successful reset, before the connection returns to the pool, the number
+of these statements does not exceed the positive limit in the rule used for
+that reset. If cleanup fails, the backend connection is closed.
+
+Eviction preserves client statement names and statements on other backends.
+The next Bind or Describe prepares an evicted statement again as needed. A small
+limit can therefore increase preparation work and reset latency, and evicted
+statements lose their PostgreSQL planning history.
+
+The limit can be exceeded during a transaction, an unfinished pipeline, or while
+a client pins its backend. Reload does not trim idle connections. Existing clients
+may keep using their previous rule and its limit for later resets.
+
+Requires `pool_reserve_prepared_statement yes`.
+Default: 0 (disabled).
 
 `server_pstmt_cache_size 512`
 

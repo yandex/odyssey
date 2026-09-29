@@ -461,7 +461,7 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	/* fresh server per sub-test: deterministic hand position */
 
-	/* --- pinned statements are never evicted --- */
+	/* --- client names survive eviction of their server copies --- */
 
 	od_pstmt_desc_t d[4];
 	static char buf[4][8];
@@ -487,24 +487,30 @@ static void test_pstmt_server_sieve_eviction(void)
 	test(server->pstmt_count == 0);
 	machine_msg_free(stream);
 
-	/* refs = 3: pinned */
+	od_client_t *client = od_client_allocate();
+	client->prep_stmt_ids = od_client_pstmt_hashmap_create();
+	test(client->prep_stmt_ids != NULL);
 	for (int i = 0; i < 4; i++) {
 		test(od_server_add_pstmt(server, p[i]) == 0);
-	}
-	test(server->pstmt_count == 4);
-
-	stream = machine_msg_create(0);
-	test(od_server_pstmt_evict_overflow(server, 2, stream) == 0);
-	test(server->pstmt_count == 4);
-	machine_msg_free(stream);
-
-	/* refs = 2: evictable */
-	for (int i = 0; i < 4; i++) {
+		test(od_client_add_pstmt(client, buf[i], p[i]) == 0);
 		od_pstmt_unref(p[i]);
 	}
+	test(server->pstmt_count == 4);
 
 	stream = machine_msg_create(0);
-	test(od_server_pstmt_evict_overflow(server, 0, stream) == 4);
+	test(od_server_pstmt_evict_overflow(server, 2, stream) == 2);
+	test(server->pstmt_count == 2);
+	for (int i = 0; i < 4; i++) {
+		test(od_global_pstmts_has_pstmt(global, d[i]) == 1);
+		test(od_client_get_pstmt(client, buf[i]) == p[i]);
+		test(od_server_has_pstmt(server, p[i]) == (i >= 2));
+		test(atomic_load(&p[i]->refs) == (uint64_t)(i >= 2 ? 3 : 2));
+	}
+	machine_msg_free(stream);
+	od_client_free(client);
+
+	stream = machine_msg_create(0);
+	test(od_server_pstmt_evict_overflow(server, 0, stream) == 2);
 	test(server->pstmt_count == 0);
 	machine_msg_free(stream);
 
@@ -587,7 +593,7 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	od_server_free(server);
 
-	/* --- a pinned statement is skipped and evicted on a later pass --- */
+	/* --- another server does not prevent local eviction --- */
 
 	od_pstmt_desc_t dr[4];
 	static char rbuf[4][8];
@@ -604,33 +610,34 @@ static void test_pstmt_server_sieve_eviction(void)
 	}
 
 	server = od_server_allocate(1);
+	od_server_t *other = od_server_allocate(1);
 	for (int i = 0; i < 4; i++) {
 		test(od_server_add_pstmt(server, rp[i]) == 0);
-	}
-	for (int i = 0; i < 4; i++) {
+		test(od_server_add_pstmt(other, rp[i]) == 0);
 		od_pstmt_unref(rp[i]);
 	}
 
-	od_pstmt_ref(rp[0]);
-
 	stream = machine_msg_create(0);
-	test(od_server_pstmt_evict_overflow(server, 0, stream) == 3);
-	test(server->pstmt_count == 1);
-	test(od_server_has_pstmt(server, rp[0]) == 1);
-	test(od_global_pstmts_has_pstmt(global, dr[0]) == 1);
-	test(od_global_pstmts_has_pstmt(global, dr[1]) == 0);
-	test(od_global_pstmts_has_pstmt(global, dr[2]) == 0);
-	test(od_global_pstmts_has_pstmt(global, dr[3]) == 0);
+	test(od_server_pstmt_evict_overflow(server, 0, stream) == 4);
+	test(server->pstmt_count == 0);
+	test(other->pstmt_count == 4);
+	for (int i = 0; i < 4; i++) {
+		test(od_global_pstmts_has_pstmt(global, dr[i]) == 1);
+		test(od_server_has_pstmt(other, rp[i]) == 1);
+		test(atomic_load(&rp[i]->refs) == 2);
+	}
 	machine_msg_free(stream);
 
-	od_pstmt_unref(rp[0]);
 	stream = machine_msg_create(0);
-	test(od_server_pstmt_evict_overflow(server, 0, stream) == 1);
-	test(server->pstmt_count == 0);
-	test(od_global_pstmts_has_pstmt(global, dr[0]) == 0);
+	test(od_server_pstmt_evict_overflow(other, 0, stream) == 4);
+	test(other->pstmt_count == 0);
+	for (int i = 0; i < 4; i++) {
+		test(od_global_pstmts_has_pstmt(global, dr[i]) == 0);
+	}
 	machine_msg_free(stream);
 
 	od_server_free(server);
+	od_server_free(other);
 
 	/* --- clear resets the eviction bookkeeping --- */
 

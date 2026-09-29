@@ -521,13 +521,6 @@ int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
 			continue;
 		}
 
-		/* refs == 2: only the global map and this server hold it */
-		uint64_t refs = atomic_load_explicit(&pstmt->refs,
-						     memory_order_acquire);
-		if (refs > 2) {
-			continue;
-		}
-
 		mm_hashmap_keylock_t klock;
 		int rc =
 			mm_hashmap_lock_key(server->prep_stmts, &klock,

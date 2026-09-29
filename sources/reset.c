@@ -179,6 +179,12 @@ int od_reset(od_server_t *server)
 		}
 	}
 
+	if (server->is_transaction) {
+		od_log(&instance->logger, "reset", server->client, server,
+		       "discard query left an active transaction, closing");
+		goto drop;
+	}
+
 	/* evict reserved prepared statements over the configured limit */
 	if (route->rule->pool->reserve_prepared_statement &&
 	    route->rule->pool->server_pstmt_cache_size > 0 &&
@@ -215,7 +221,7 @@ int od_reset(od_server_t *server)
 
 			od_frontend_status_t st =
 				od_service_stream_server_until_rfq(
-					"reset", server, 1 /* ignore_errors */,
+					"reset", server, 0 /* ignore_errors */,
 					reset_timeout_ms);
 			if (st != OD_OK) {
 				goto error;
