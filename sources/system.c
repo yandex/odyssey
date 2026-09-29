@@ -625,8 +625,6 @@ void od_system_config_reload(od_system_t *system)
 
 	od_rules_lock(&router->rules);
 
-	od_rules_stop_checkers(&router->rules);
-
 	od_config_t config;
 	od_config_init(&config);
 
@@ -652,18 +650,23 @@ void od_system_config_reload(od_system_t *system)
 	if (rc == -1) {
 		goto error;
 	}
-	od_config_reload(&instance->config, &config);
-	od_logger_set_debug(&instance->logger, instance->config.log_debug);
-	od_hba_reload(hba, &hba_rules);
-
 	/* auto-generate default rule for auth_query if none specified */
 	rc = od_rules_autogenerate_defaults(&rules, &instance->logger);
-
-	od_rules_sort_for_matching(&rules);
-
 	if (rc == -1) {
 		goto error;
 	}
+
+	rc = od_rules_sort_for_matching(&rules);
+	if (rc != 0) {
+		goto error;
+	}
+
+	/* Keep running checkers intact until preparation can no longer fail. */
+	od_rules_stop_checkers(&router->rules);
+
+	od_config_reload(&instance->config, &config);
+	od_logger_set_debug(&instance->logger, instance->config.log_debug);
+	od_hba_reload(hba, &hba_rules);
 
 	/*
 	 * Merge storages: reuse unchanged storages (keeping their watchdogs
@@ -815,8 +818,18 @@ error:
 	atomic_store(&instance->config_load_failed, 1);
 
 	od_rules_unlock(&router->rules);
-	od_config_free(&config);
+	/* These groups have never been handed to checker coroutines. */
+	od_list_foreach (&rules.rules, i) {
+		od_rule_t *rule = od_container_of(i, od_rule_t, link);
+		if (rule->group) {
+			od_group_free(rule->group);
+			rule->group = NULL;
+		}
+	}
+	od_rules_cleanup(&rules);
 	od_rules_free(&rules);
+	od_hba_rules_free(&hba_rules);
+	od_config_free(&config);
 
 	od_error(&instance->logger, "reload-config", NULL, NULL,
 		 "failed to load '%s', keeping the running configuration",
