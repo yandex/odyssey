@@ -1173,7 +1173,7 @@ scanner_yyerror(const char *message, core_yyscan_t yyscanner)
 	 * but report it through the error callback instead of ereport().
 	 */
 	if (yyext->core_yy_extra.scanbuf == NULL)
-		strlcpy(errbuf, message, sizeof(errbuf));
+		snprintf(errbuf, sizeof(errbuf), "%s", message);
 	else
 	{
 		const char *loc = yyext->core_yy_extra.scanbuf + *yylloc;
