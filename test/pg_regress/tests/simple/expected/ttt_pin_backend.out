@@ -1,0 +1,57 @@
+SELECT 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+
+BEGIN;
+CREATE TEMP TABLE z_ttt(i int);
+SELECT 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+COMMIT;
+INSERT INTO z_ttt VALUES (42);
+SELECT 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+DROP TABLE z_ttt;
+SELECT 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+

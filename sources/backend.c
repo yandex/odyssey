@@ -30,6 +30,8 @@
 #include <stream.h>
 #include <tls.h>
 
+#define TTT_SESSION_OWNS_TEMP_RELS_STR "ttt.owns_session_objs"
+
 void od_backend_close(od_server_t *server)
 {
 	od_assert(server->route == NULL);
@@ -1084,6 +1086,17 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 	/* update server only or client and server parameter */
 	od_debug(&instance->logger, context, client, server, "%.*s = %.*s",
 		 name_len, name, value_len, value);
+
+	/* ttt reports temp-rel ownership via ParameterStatus */
+	if (client != NULL &&
+	    name_len == sizeof(TTT_SESSION_OWNS_TEMP_RELS_STR) &&
+	    memcmp(name, TTT_SESSION_OWNS_TEMP_RELS_STR,
+		   sizeof(TTT_SESSION_OWNS_TEMP_RELS_STR)) == 0) {
+		client->backend_pin =
+			value_len == 3 && memcmp(value, "on", 2) == 0;
+		od_debug(&instance->logger, context, client, server,
+			 "ttt: backend_pin set to %d", client->backend_pin);
+	}
 
 	if (server_only) {
 		kiwi_vars_update(&server->vars, name, name_len, value,
