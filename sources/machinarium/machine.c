@@ -48,8 +48,7 @@ static inline void free_tls_container(struct mm_tls_ctx *ctx_container)
 	while (ctx_container != NULL) {
 		struct mm_tls_ctx *next = ctx_container->next;
 
-		SSL_CTX_free(ctx_container->tls_ctx);
-		mm_free(ctx_container);
+		mm_tls_ctx_free(ctx_container);
 
 		ctx_container = next;
 	}

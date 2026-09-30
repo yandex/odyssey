@@ -679,6 +679,8 @@ void od_system_config_reload(od_system_t *system)
 
 	od_rules_unlock(&router->rules);
 
+	machine_tls_cache_invalidate();
+
 	/* Reload TLS certificates */
 	od_list_foreach (&router->servers, i) {
 		od_system_server_t *server;
