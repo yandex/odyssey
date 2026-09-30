@@ -7,6 +7,23 @@
 
 static OD_THREAD_LOCAL od_linear_alloc_t *_current_linear_alloc = NULL;
 
+static OD_THREAD_LOCAL void (*_oom_hook)(void) = NULL;
+
+void od_set_thread_oom_hook(void (*hook)(void))
+{
+	_oom_hook = hook;
+}
+
+void od_oom_fatal(void)
+{
+	if (_oom_hook != NULL) {
+		_oom_hook();
+	}
+
+	fprintf(stderr, "out of memory\n");
+	exit(EXIT_FAILURE);
+}
+
 void od_set_thread_linear_alloc(od_linear_alloc_t *la)
 {
 	_current_linear_alloc = la;

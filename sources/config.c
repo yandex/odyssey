@@ -103,7 +103,7 @@ void od_config_init(od_config_t *config)
 	config->soft_oom.drop.signal = SIGTERM;
 
 	memset(&config->query_parsing, 0, sizeof(config->query_parsing));
-	config->query_parsing.mem_limit_bytes = 1024 * 1024;
+	config->query_parsing.mem_limit_bytes = 5 * 1024 * 1024;
 	config->query_parsing.mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
 
 	config->host_watcher_enabled = 0;

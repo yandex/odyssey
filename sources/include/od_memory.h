@@ -18,3 +18,5 @@ char *od_strndup(const char *s, size_t n);
 
 /* can be set to NULL to disable usage of alloc */
 void od_set_thread_linear_alloc(od_linear_alloc_t *la);
+void od_oom_fatal(void);
+void od_set_thread_oom_hook(void (*hook)(void));

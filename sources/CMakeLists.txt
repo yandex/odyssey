@@ -15,6 +15,7 @@ set(od_src
     kiwi/options.c
     kiwi/var.c
     machinarium/ds/vrb.c
+    machinarium/ds/hash.c
     machinarium/ds/hm.c
     machinarium/ds/vector.c
     machinarium/ds/queue.c
@@ -204,6 +205,41 @@ list(APPEND od_src
     sql/minimal/parser.c
 )
 
+# Full PostgreSQL-compatible SQL parser
+set(SQL_FULL_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/sql/full)
+file(MAKE_DIRECTORY ${SQL_FULL_GEN_DIR})
+
+BISON_TARGET(sql_full_parser
+    sql/full/gram.y
+    ${SQL_FULL_GEN_DIR}/gram.tab.c
+    DEFINES_FILE ${SQL_FULL_GEN_DIR}/gram.tab.h
+    COMPILE_FLAGS "-Wall -Wno-precedence -Wno-empty-rule"
+)
+FLEX_TARGET(sql_full_scanner
+    sql/full/scan.l
+    ${SQL_FULL_GEN_DIR}/scan.c
+    COMPILE_FLAGS "--header-file=${SQL_FULL_GEN_DIR}/scan.h -CF -p -p"
+)
+ADD_FLEX_BISON_DEPENDENCY(sql_full_scanner sql_full_parser)
+set_source_files_properties(${FLEX_sql_full_scanner_OUTPUTS} PROPERTIES
+    COMPILE_FLAGS "-Wno-unused-function -Wno-macro-redefined -Wno-unused-parameter -Wno-missing-field-initializers"
+)
+set_source_files_properties(${BISON_sql_full_parser_OUTPUTS} PROPERTIES
+    COMPILE_FLAGS "-Wno-macro-redefined -Wno-unused-but-set-variable -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-unused-value -Wno-unused-parameter -Wno-int-to-pointer-cast -Wno-constant-conversion -Wno-shift-count-overflow"
+)
+list(APPEND od_src
+    ${FLEX_sql_full_scanner_OUTPUTS}
+    ${BISON_sql_full_parser_OUTPUTS}
+    sql/full/parser.c
+    sql/full/ctx.c
+    sql/full/keywords.c
+    sql/full/kwlookup.c
+    sql/full/list.c
+    sql/full/makefuncs.c
+    sql/full/scansup.c
+    sql/full/pg_compat.c
+)
+
 set(CONSOLE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/console)
 file(MAKE_DIRECTORY ${CONSOLE_GEN_DIR})
 
@@ -306,7 +342,7 @@ include_directories("${PROJECT_BINARY_DIR}/sources/include")
 add_executable(${od_binary} ${od_src} main.c)
 add_dependencies(${od_binary} build_libs)
 
-target_include_directories(${od_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR} ${CONSOLE_GEN_DIR})
+target_include_directories(${od_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR} ${SQL_FULL_GEN_DIR} ${CONSOLE_GEN_DIR})
 
 if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_binary} PROPERTY COMPILE_OPTIONS "-pthread")
@@ -435,6 +471,7 @@ set(od_test_src
     tests/odyssey/test_linear_alloc.c
     tests/odyssey/test_scram.c
     tests/odyssey/test_sql_parser.c
+    tests/odyssey/test_sql_full_parser.c
     tests/odyssey/test_console_parser.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
@@ -454,7 +491,7 @@ if(THREADS_HAVE_PTHREAD_ARG)
     set_property(TARGET ${od_test_binary} PROPERTY INTERFACE_COMPILE_OPTIONS "-pthread")
 endif()
 
-target_include_directories(${od_test_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR} ${CONSOLE_GEN_DIR})
+target_include_directories(${od_test_binary} PRIVATE ${CONFIG_GEN_DIR} ${SQL_MINIMAL_GEN_DIR} ${SQL_FULL_GEN_DIR} ${CONSOLE_GEN_DIR})
 
 target_link_libraries(${od_test_binary} ${od_libraries} ${CMAKE_THREAD_LIBS_INIT})
 

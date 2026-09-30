@@ -16,8 +16,7 @@
 
 #include <machinarium/mutex.h>
 #include <machinarium/list.h>
-
-typedef uint64_t mm_hash_t;
+#include <machinarium/ds/hash.h>
 
 typedef struct mm_hashmap mm_hashmap_t;
 
@@ -95,6 +94,3 @@ int mm_hashmap_lock_key(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
 			int flags /* see mm_hashmap_lockkey_flags_t */);
 void mm_hashmap_unlock_key(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock);
 void mm_hashmap_remove(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock);
-
-/* seed is optional, can be zero */
-mm_hash_t mm_xxh64_hash(const void *data, size_t size, uint64_t seed);
