@@ -4,12 +4,16 @@
 #include <sql/full/ast.h>
 #include <sql/full/pg_list.h>
 
-/* scanner.h's declarations use YYLTYPE, which bison's substitution
- * defines expand to BASE_YYLTYPE inside gram.tab.c.  Bison typedefs
- * BASE_YYLTYPE only at the bottom of gram.tab.h, after this block is
- * copied there, so provide the identical typedef up front to make
- * any inclusion order work (bison's own typedef is the same type). */
-typedef int BASE_YYLTYPE;
+/*
+ * Override bison's default YYLTYPE (struct with first_line/column etc.)
+ * with a plain int (byte offset). This goes into gram.tab.h and is
+ * visible to both bison (gram.tab.c) and flex (scan.c via gramparse.h).
+ * Unlike %define api.location.type this works with any bison version,
+ * including bison 3.0.4, which rejects api.location.type as unused.
+ */
+#undef  YYLTYPE
+typedef int base_yy_ltype_t;
+#define YYLTYPE base_yy_ltype_t
 
 #include <sql/full/scanner.h>
 
@@ -26,6 +30,18 @@ typedef void *yyscan_t;
 }
 
 %code {
+/*
+ * Bison emits its own #define YYLTYPE (the name behind it varies across
+ * bison versions) above this block. Override it with our int type after
+ * the fact, and disable the struct-style default initializer for the
+ * location variable.
+ */
+#undef  YYLTYPE
+#undef  BASE_YYLTYPE_IS_TRIVIAL
+#define BASE_YYLTYPE_IS_TRIVIAL 0
+typedef int base_yy_ltype_t;
+#define YYLTYPE base_yy_ltype_t
+
 #include <pg_compat.h>
 #include <sql/full/gramparse.h>
 #include <sql/full/ast.h>
@@ -33,6 +49,7 @@ typedef void *yyscan_t;
 #include <sql/full/scansup.h>
 #include <mb/pg_wchar.h>
 
+#undef  YYLLOC_DEFAULT
 #define YYLLOC_DEFAULT(Current, Rhs, N) \
 	do { \
 		(Current) = (-1); \
@@ -163,7 +180,6 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 }
 %define api.pure full
 %define api.prefix {base_yy}
-%define api.location.type {int}
 %define parse.error verbose
 %locations
 %start parse_toplevel
