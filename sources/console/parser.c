@@ -22,7 +22,7 @@ od_console_node_t *od_console_parse(const char *input, size_t input_len,
 		return NULL;
 	}
 
-	od_linear_alloc_reset(arena);
+	od_linear_alloc_reset(arena, 0);
 
 	od_console_parse_ctx_t ctx;
 	od_console_parse_ctx_init(&ctx, input, input_len, arena, error_cb,

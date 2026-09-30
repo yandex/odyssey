@@ -243,7 +243,7 @@ char *scram_build_secret(pg_cryptohash_type hash_type, int key_length,
 		 + encoded_server_len + 1; /* Base64-encoded ServerKey */
 
 #ifdef FRONTEND
-	result = malloc(maxlen);
+	result = od_malloc(maxlen);
 	if (!result) {
 		*errstr = _("out of memory");
 		return NULL;
@@ -259,7 +259,7 @@ char *scram_build_secret(pg_cryptohash_type hash_type, int key_length,
 	if (encoded_result < 0) {
 		*errstr = _("could not encode salt");
 #ifdef FRONTEND
-		free(result);
+		od_free(result);
 		return NULL;
 #else
 		elog(ERROR, "%s", *errstr);
@@ -274,7 +274,7 @@ char *scram_build_secret(pg_cryptohash_type hash_type, int key_length,
 	if (encoded_result < 0) {
 		*errstr = _("could not encode stored key");
 #ifdef FRONTEND
-		free(result);
+		od_free(result);
 		return NULL;
 #else
 		elog(ERROR, "%s", *errstr);
@@ -290,7 +290,7 @@ char *scram_build_secret(pg_cryptohash_type hash_type, int key_length,
 	if (encoded_result < 0) {
 		*errstr = _("could not encode server key");
 #ifdef FRONTEND
-		free(result);
+		od_free(result);
 		return NULL;
 #else
 		elog(ERROR, "%s", *errstr);

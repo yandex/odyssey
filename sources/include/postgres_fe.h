@@ -26,6 +26,7 @@
 /* IWYU pragma: begin_exports */
 
 #include "od_c.h"
+#include "od_memory.h"
 #include "pg_compat.h"
 
 #include "common/fe_memutils.h"

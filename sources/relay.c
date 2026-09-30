@@ -879,7 +879,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
 	status = try_virtual_process_query(client, arena, query, query_len);
-	od_linear_alloc_reset(arena);
+	od_linear_alloc_reset(arena, 0);
 
 	if (status == OD_SKIP) {
 		/* query must not be sent to backend */

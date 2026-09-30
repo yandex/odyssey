@@ -64,7 +64,7 @@ typedef int od_console_yyltype_t;
 	static char *arena_str(od_console_parse_ctx_t *ctx, const char *src,
 			       size_t len)
 	{
-		char *s = od_linear_alloc_alloc(ctx->arena, len + 1);
+		char *s = od_linear_alloc_alloc(ctx->arena, len + 1, 0);
 		if (s == NULL) {
 			return NULL;
 		}
@@ -77,7 +77,7 @@ typedef int od_console_yyltype_t;
 				  size_t la, char sep, const char *b,
 				  size_t lb)
 	{
-		char *s = od_linear_alloc_alloc(ctx->arena, la + 1 + lb + 1);
+		char *s = od_linear_alloc_alloc(ctx->arena, la + 1 + lb + 1, 0);
 		if (s == NULL) {
 			return NULL;
 		}

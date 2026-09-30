@@ -35,8 +35,8 @@
 #define ALLOC(size) palloc(size)
 #define FREE(size) pfree(size)
 #else
-#define ALLOC(size) malloc(size)
-#define FREE(size) free(size)
+#define ALLOC(size) od_malloc(size)
+#define FREE(size) od_free(size)
 #endif
 
 /* Constants for calculations with Hangul characters */

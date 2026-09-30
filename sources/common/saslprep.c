@@ -44,9 +44,9 @@
 #define ALLOC(size) palloc(size)
 #define FREE(size) pfree(size)
 #else
-#define STRDUP(s) strdup(s)
-#define ALLOC(size) malloc(size)
-#define FREE(size) free(size)
+#define STRDUP(s) od_strdup(s)
+#define ALLOC(size) od_malloc(size)
+#define FREE(size) od_free(size)
 #endif
 
 /* Prototypes for local functions */
