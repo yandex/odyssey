@@ -620,8 +620,6 @@ void od_system_config_reload(od_system_t *system)
 	od_hba_t *hba = system->global->hba;
 	od_list_t *i;
 
-	machine_tls_cache_invalidate();
-
 	od_log(&instance->logger, "config", NULL, NULL,
 	       "importing changes from '%s'", instance->config_file);
 
@@ -680,6 +678,8 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_storage_merge(&router->rules, &rules);
 
 	od_rules_unlock(&router->rules);
+
+	machine_tls_cache_invalidate();
 
 	/* Reload TLS certificates */
 	od_list_foreach (&router->servers, i) {
