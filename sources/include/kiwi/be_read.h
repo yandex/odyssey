@@ -68,8 +68,11 @@ static inline int kiwi_be_read_options(kiwi_be_startup_t *su, char *pos,
 			kiwi_var_set(&su->replication, KIWI_VAR_UNDEF, value,
 				     value_size);
 		} else if (name_size == 8 && !memcmp(name, "options", 8)) {
-			kiwi_parse_options_and_update_vars(vars, value,
-							   value_size);
+			rc = kiwi_parse_options_and_update_vars(vars, value,
+								value_size);
+			if (kiwi_unlikely(rc == -1)) {
+				return -1;
+			}
 		} else {
 			kiwi_vars_update(vars, name, name_size, value,
 					 value_size);
