@@ -24,7 +24,7 @@ static const char *parse_ok(const char *input)
 	memset(err, 0, sizeof(err));
 	memset(out, 0, sizeof(out));
 
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	od_sql_minimal_node_t *node = od_sql_minimal_parse(
 		input, strlen(input), &s_arena, on_error, err);
 
@@ -45,7 +45,7 @@ static void parse_fail(const char *input)
 	static char err[PRINT_BUF_SIZE];
 
 	memset(err, 0, sizeof(err));
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	od_sql_minimal_node_t *node = od_sql_minimal_parse(
 		input, strlen(input), &s_arena, on_error, err);
 	if (node != NULL) {
@@ -349,7 +349,7 @@ static void test_unlisten_with_semicolon(void)
 
 static void test_empty_input(void)
 {
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	od_sql_minimal_node_t *node =
 		od_sql_minimal_parse("", 0, &s_arena, NULL, NULL);
 	test(node == NULL);
@@ -390,7 +390,7 @@ static void test_long_query_oom(void)
 	big_query[sizeof(big_query) - 2] = ';';
 	big_query[sizeof(big_query) - 1] = '\0';
 
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	od_sql_minimal_error_cb_t saved_cb = NULL;
 	(void)saved_cb;
 
@@ -417,7 +417,7 @@ static void test_long_set_value(void)
 
 static void test_extract_query_ctx(void)
 {
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 
 	/* DISCARD ALL */
 	od_sql_minimal_node_t *ast = od_sql_minimal_parse(
@@ -433,7 +433,7 @@ static void test_extract_query_ctx(void)
 	od_query_ctx_reset(&ctx);
 
 	/* UNLISTEN * */
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	ast = od_sql_minimal_parse("UNLISTEN *", strlen("UNLISTEN *"), &s_arena,
 				   NULL, NULL);
 	test(ast != NULL);
@@ -446,7 +446,7 @@ static void test_extract_query_ctx(void)
 	od_query_ctx_reset(&ctx);
 
 	/* DEALLOCATE ALL */
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	ast = od_sql_minimal_parse("DEALLOCATE ALL", strlen("DEALLOCATE ALL"),
 				   &s_arena, NULL, NULL);
 	test(ast != NULL);
@@ -459,7 +459,7 @@ static void test_extract_query_ctx(void)
 	od_query_ctx_reset(&ctx);
 
 	/* DEALLOCATE name */
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	ast = od_sql_minimal_parse("DEALLOCATE foo", strlen("DEALLOCATE foo"),
 				   &s_arena, NULL, NULL);
 	test(ast != NULL);
@@ -474,7 +474,7 @@ static void test_extract_query_ctx(void)
 	test(ctx.has_deallocate_name == 0);
 
 	/* SELECT — nothing */
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	ast = od_sql_minimal_parse("SELECT 1", strlen("SELECT 1"), &s_arena,
 				   NULL, NULL);
 	test(ast == NULL); /* not recognized by minimal parser */
@@ -487,7 +487,7 @@ static void test_extract_query_ctx(void)
 	od_query_ctx_reset(&ctx);
 
 	/* DISCARD TEMP — not ALL, no parse error */
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	ast = od_sql_minimal_parse("DISCARD TEMP", strlen("DISCARD TEMP"),
 				   &s_arena, NULL, NULL);
 	test(ast != NULL);

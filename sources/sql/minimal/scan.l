@@ -101,7 +101,7 @@ INTEGER     -?{DIGIT}+
 
 	size_t len = (size_t)yyleng - 2;
 	od_linear_alloc_t *_arena = yyextra->arena;
-	char *s = od_linear_alloc_alloc(_arena, len + 1);
+	char *s = od_linear_alloc_alloc(_arena, len + 1, 0);
 	if (s == NULL) {
 		return ERROR_TOKEN;
 	}
@@ -123,7 +123,7 @@ INTEGER     -?{DIGIT}+
 	}
 
 	od_linear_alloc_t *_arena = yyextra->arena;
-	char *s = od_linear_alloc_alloc(_arena, len + 1);
+	char *s = od_linear_alloc_alloc(_arena, len + 1, 0);
 	if (s == NULL) {
 		return ERROR_TOKEN;
 	}
@@ -143,7 +143,7 @@ INTEGER     -?{DIGIT}+
 	}
 
 	od_linear_alloc_t *_arena = yyextra->arena;
-	char *s = od_linear_alloc_alloc(_arena, (size_t)yyleng + 1);
+	char *s = od_linear_alloc_alloc(_arena, (size_t)yyleng + 1, 0);
 	if (s == NULL) {
 		return ERROR_TOKEN;
 	}
@@ -169,7 +169,7 @@ void *
 od_sql_minimal_yyalloc(yy_size_t bytes, yyscan_t yyscanner)
 {
 	od_sql_minimal_parse_ctx_t *ctx = od_sql_minimal_yyget_extra(yyscanner);
-	return od_linear_alloc_alloc(ctx->arena, (size_t)bytes);
+	return od_linear_alloc_alloc(ctx->arena, (size_t)bytes, OD_LINEAR_ALLOC_ZERO);
 }
 
 void *

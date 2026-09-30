@@ -15,7 +15,8 @@ od_console_node_t *od_console_node_alloc(od_linear_alloc_t *al,
 					 od_console_node_tag_t type,
 					 size_t size)
 {
-	od_console_node_t *n = od_linear_alloc_alloc(al, size);
+	od_console_node_t *n =
+		od_linear_alloc_alloc(al, size, OD_LINEAR_ALLOC_ZERO);
 	if (n == NULL) {
 		return NULL;
 	}

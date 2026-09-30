@@ -64,6 +64,7 @@ set(od_src
     machinarium/compression.c
     machinarium/cert_hash.c
     machinarium/sem.c
+    alloc/linear.c
     cfg/diag.c
     cfg/model.c
     cfg/keywords.c

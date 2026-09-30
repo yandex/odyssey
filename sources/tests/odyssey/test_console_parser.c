@@ -24,7 +24,7 @@ static const char *parse_ok(const char *input)
 	memset(err, 0, sizeof(err));
 	memset(out, 0, sizeof(out));
 
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	od_console_node_t *node =
 		od_console_parse(input, strlen(input), &s_arena, on_error, err);
 
@@ -45,7 +45,7 @@ static void parse_fail(const char *input)
 	static char err[PRINT_BUF_SIZE];
 
 	memset(err, 0, sizeof(err));
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	od_console_node_t *node =
 		od_console_parse(input, strlen(input), &s_arena, on_error, err);
 	if (node != NULL) {
@@ -288,7 +288,7 @@ static void test_drop_servers(void)
 
 static void test_empty_input(void)
 {
-	od_linear_alloc_reset(&s_arena);
+	od_linear_alloc_reset(&s_arena, 0);
 	od_console_node_t *node = od_console_parse("", 0, &s_arena, NULL, NULL);
 	test(node == NULL);
 }

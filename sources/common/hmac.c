@@ -41,8 +41,8 @@
 #define ALLOC(size) palloc(size)
 #define FREE(ptr) pfree(ptr)
 #else
-#define ALLOC(size) malloc(size)
-#define FREE(ptr) free(ptr)
+#define ALLOC(size) od_malloc(size)
+#define FREE(ptr) od_free(ptr)
 #endif
 
 /* Set of error states */
