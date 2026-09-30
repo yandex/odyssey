@@ -9,7 +9,7 @@
 #include <pstmt.h>
 
 #define ARENA_SIZE 8192
-static uint8_t s_arena_buf[ARENA_SIZE];
+static _Alignas(max_align_t) uint8_t s_arena_buf[ARENA_SIZE];
 static od_linear_alloc_t s_arena;
 
 static void test_refs(void)

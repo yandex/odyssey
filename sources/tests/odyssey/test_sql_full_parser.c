@@ -9,7 +9,7 @@
 
 #define OD_TEST_FULL_PARSE_ARENA_SIZE (5 * 1024 * 1024)
 
-static uint8_t s_arena_buf[OD_TEST_FULL_PARSE_ARENA_SIZE];
+static _Alignas(max_align_t) uint8_t s_arena_buf[OD_TEST_FULL_PARSE_ARENA_SIZE];
 static od_linear_alloc_t s_arena;
 
 static char s_err_buf[1024];
@@ -218,7 +218,7 @@ static void test_select_typecast(void)
 #define OD_TEST_FULL_PARSE_ITERS 200
 
 struct full_parse_thread_arg {
-	uint8_t arena_buf[OD_TEST_FULL_PARSE_ARENA_SIZE];
+	_Alignas(max_align_t) uint8_t arena_buf[OD_TEST_FULL_PARSE_ARENA_SIZE];
 	od_linear_alloc_t arena;
 	char err_buf[1024];
 	int failures;
