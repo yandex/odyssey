@@ -28,6 +28,9 @@ FROM common-builder AS pg-build
 RUN git clone --depth 1 --branch REL_18_STABLE https://github.com/postgres/postgres.git
 RUN cd postgres && ./configure --prefix /usr --without-icu --without-zlib && make -j install >/dev/null
 
+RUN git clone --depth 1 https://github.com/pg-sharding/ttt /ttt
+RUN cd /ttt && make USE_PGXS=1 && make USE_PGXS=1 install
+
 FROM pg-build AS odyssey-build
 
 ARG build_type=build_dbg
