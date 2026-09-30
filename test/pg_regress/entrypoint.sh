@@ -58,6 +58,7 @@ rm -rf ${PGDIRREPL1} || true
 rm -rf ${PGDIRREPL2} || true
 
 initdb -D ${PGDIR}
+echo "session_preload_libraries = 'transaction_transients_trace'" >> ${PGDIR}/postgresql.conf
 pg_ctl start -D ${PGDIR} -l ${PGDIR}/log.txt
 
 psql -p 5432 -c "ALTER SYSTEM SET wal_level = replica;"
