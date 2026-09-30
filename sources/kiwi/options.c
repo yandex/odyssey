@@ -57,7 +57,7 @@ static inline tok_info_t pgopts_strtok(const char *str, const char *end,
 	 */
 
 	tok_info_t r;
-	memset(&r, 0, sizeof(struct iovec));
+	memset(&r, 0, sizeof(r));
 
 	if (str == NULL) {
 		str = *prev;
@@ -95,8 +95,6 @@ static inline size_t find_eq_pos(const char *str, size_t len)
 static inline int unescape(const char *str, size_t len, char *dst,
 			   size_t dst_size, size_t *out_len)
 {
-	assert(dst_size > 0);
-
 	int escape = 0;
 	size_t rlen = 0;
 
