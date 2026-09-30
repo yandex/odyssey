@@ -4,6 +4,10 @@
 
 set -eux
 
+# Bound loopback segments while preserving slow reads of large rows.
+ip link set dev lo mtu 1500
+ip -o link show dev lo
+
 until pg_isready -h primary -p 5432 -U postgres -d postgres; do
   echo "Wait for primary..."
   sleep 1

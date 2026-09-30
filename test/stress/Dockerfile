@@ -62,6 +62,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     build-essential \
     strace ltrace \
     lsof \
+    iproute2 \
     python3
 
 # Taken from - https://docs.docker.com/engine/examples/running_ssh_service/#environment-variables
