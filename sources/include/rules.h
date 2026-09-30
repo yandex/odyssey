@@ -197,6 +197,7 @@ struct od_rule {
 	double *quantiles;
 	int quantiles_count;
 	int server_drop_on_cached_plan_error;
+	int auto_route_ro_on_standby;
 	int server_drop_on_oom;
 	uint64_t server_lifetime_us;
 	int keepalive;

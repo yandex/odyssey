@@ -136,6 +136,7 @@ typedef struct od_cfg_listen {
 	od_cfg_string_field_t host;
 	od_cfg_int_field_t port;
 	od_cfg_string_field_t target_session_attrs;
+	od_cfg_bool_field_t auto_route_ro_on_standby;
 	od_cfg_balancing_t balancing;
 
 	od_cfg_int_field_t client_login_timeout;
@@ -337,6 +338,7 @@ struct od_cfg_route {
 	od_cfg_string_field_t mdb_iamproxy_socket_path;
 	od_cfg_string_field_t auth_pam_service;
 	od_cfg_string_field_t target_session_attrs;
+	od_cfg_bool_field_t auto_route_ro_on_standby;
 	od_cfg_string_field_t auth_query;
 	od_cfg_string_field_t auth_query_db;
 	od_cfg_string_field_t auth_query_user;

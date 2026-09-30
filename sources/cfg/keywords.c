@@ -88,6 +88,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "host", HOST },
 	{ "port", PORT },
 	{ "target_session_attrs", TARGET_SESSION_ATTRS },
+	{ "auto_route_ro_on_standby", AUTO_ROUTE_RO_ON_STANDBY },
 	{ "client_login_timeout", CLIENT_LOGIN_TIMEOUT },
 	{ "backlog", BACKLOG },
 	{ "tls", TLS },

@@ -103,41 +103,70 @@ int od_sql_minimal_node_print(const od_sql_minimal_node_t *node, char *buf,
 void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 				      od_query_ctx_t *ctx)
 {
-	ctx->is_discard_all = 0;
-	ctx->is_unlisten_all = 0;
-	ctx->is_deallocate_all = 0;
-	ctx->has_deallocate_name = 0;
-	ctx->deallocate_name[0] = '\0';
-	ctx->parse_error = 0;
+	od_query_ctx_release(ctx);
+
+	ctx->flags = 0;
+	ctx->s1[0] = '\0';
+	ctx->s2[0] = '\0';
+	ctx->s2_long = NULL;
 
 	if (ast == NULL) {
-		ctx->parse_error = 1;
+		od_query_ctx_set(ctx, OD_QUERY_CTX_PARSE_ERROR);
 		return;
 	}
 
 	switch (ast->type) {
+	case OD_SQL_MINIMAL_NODE_TYPE_SHOW_STMT: {
+		const od_sql_minimal_show_stmt_t *n =
+			(const od_sql_minimal_show_stmt_t *)ast;
+		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SHOW);
+		od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", n->name);
+		break;
+	}
+	case OD_SQL_MINIMAL_NODE_TYPE_SET_STMT: {
+		const od_sql_minimal_set_stmt_t *n =
+			(const od_sql_minimal_set_stmt_t *)ast;
+		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SET);
+		od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", n->key);
+
+		const char *value = n->value != NULL ? n->value : "";
+		od_snprintf(ctx->s2, sizeof(ctx->s2), "%s", value);
+		size_t len = strlen(value);
+		if (len >= sizeof(ctx->s2)) {
+			ctx->s2_long = od_malloc(len + 1);
+			if (ctx->s2_long != NULL) {
+				memcpy(ctx->s2_long, value, len + 1);
+			}
+		}
+		break;
+	}
+	case OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT:
+		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_BEGIN);
+		break;
 	case OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT: {
 		const od_sql_minimal_unlisten_stmt_t *n =
 			(const od_sql_minimal_unlisten_stmt_t *)ast;
-		ctx->is_unlisten_all = n->is_all;
+		if (n->is_all) {
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL);
+		}
 		break;
 	}
 	case OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT: {
 		const od_sql_minimal_discard_stmt_t *n =
 			(const od_sql_minimal_discard_stmt_t *)ast;
-		ctx->is_discard_all = (n->target == OD_SQL_MINIMAL_DISCARD_ALL);
+		if (n->target == OD_SQL_MINIMAL_DISCARD_ALL) {
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_DISCARD_ALL);
+		}
 		break;
 	}
 	case OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT: {
 		const od_sql_minimal_deallocate_stmt_t *n =
 			(const od_sql_minimal_deallocate_stmt_t *)ast;
 		if (n->is_all) {
-			ctx->is_deallocate_all = 1;
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL);
 		} else if (n->name != NULL) {
-			ctx->has_deallocate_name = 1;
-			od_snprintf(ctx->deallocate_name,
-				    sizeof(ctx->deallocate_name), "%s",
-				    n->name);
+			od_query_ctx_set(ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME);
+			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", n->name);
 		}
 		break;
 	}
@@ -146,7 +175,16 @@ void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 	}
 }
 
+void od_query_ctx_release(od_query_ctx_t *ctx)
+{
+	if (ctx->s2_long != NULL) {
+		od_free(ctx->s2_long);
+		ctx->s2_long = NULL;
+	}
+}
+
 void od_query_ctx_reset(od_query_ctx_t *ctx)
 {
+	od_query_ctx_release(ctx);
 	memset(ctx, 0, sizeof(od_query_ctx_t));
 }

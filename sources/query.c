@@ -15,6 +15,7 @@
 #include <instance.h>
 #include <backend.h>
 #include <util.h>
+#include <sql/minimal/parser.h>
 
 machine_msg_t *od_query_do(od_server_t *server, char *context,
 			   const char *query, char *param, uint32_t timeout_ms)
@@ -143,4 +144,15 @@ __attribute__((hot)) int od_query_format(char *format_pos, char *format_end,
 	dst_pos[0] = 0;
 	dst_pos++;
 	return dst_pos - output;
+}
+
+void od_query_parse_fill_ctx(const char *query, uint32_t query_len,
+			     od_linear_alloc_t *arena, od_query_ctx_t *ctx)
+{
+	od_sql_minimal_node_t *ast =
+		od_sql_minimal_parse(query, query_len, arena, NULL, NULL);
+
+	od_sql_minimal_extract_query_ctx(ast, ctx);
+
+	/* TODO: set OD_QUERY_CTX_IS_SELECT on top of the full parser */
 }

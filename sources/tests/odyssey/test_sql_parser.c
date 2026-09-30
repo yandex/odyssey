@@ -4,6 +4,7 @@
 #include <sql/minimal/ast.h>
 #include <sql/minimal/parser.h>
 #include <alloc/linear.h>
+#include <query.h>
 
 #define PRINT_BUF_SIZE 1024
 #define ARENA_SIZE 8192
@@ -424,12 +425,13 @@ static void test_extract_query_ctx(void)
 		"DISCARD ALL", strlen("DISCARD ALL"), &s_arena, NULL, NULL);
 	test(ast != NULL);
 	od_query_ctx_t ctx;
+	memset(&ctx, 0, sizeof(ctx));
 	od_sql_minimal_extract_query_ctx(ast, &ctx);
-	test(ctx.parse_error == 0);
-	test(ctx.is_discard_all == 1);
-	test(ctx.is_unlisten_all == 0);
-	test(ctx.is_deallocate_all == 0);
-	test(ctx.has_deallocate_name == 0);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 	od_query_ctx_reset(&ctx);
 
 	/* UNLISTEN * */
@@ -438,11 +440,11 @@ static void test_extract_query_ctx(void)
 				   NULL, NULL);
 	test(ast != NULL);
 	od_sql_minimal_extract_query_ctx(ast, &ctx);
-	test(ctx.parse_error == 0);
-	test(ctx.is_discard_all == 0);
-	test(ctx.is_unlisten_all == 1);
-	test(ctx.is_deallocate_all == 0);
-	test(ctx.has_deallocate_name == 0);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 	od_query_ctx_reset(&ctx);
 
 	/* DEALLOCATE ALL */
@@ -451,11 +453,11 @@ static void test_extract_query_ctx(void)
 				   &s_arena, NULL, NULL);
 	test(ast != NULL);
 	od_sql_minimal_extract_query_ctx(ast, &ctx);
-	test(ctx.parse_error == 0);
-	test(ctx.is_discard_all == 0);
-	test(ctx.is_unlisten_all == 0);
-	test(ctx.is_deallocate_all == 1);
-	test(ctx.has_deallocate_name == 0);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 	od_query_ctx_reset(&ctx);
 
 	/* DEALLOCATE name */
@@ -464,14 +466,14 @@ static void test_extract_query_ctx(void)
 				   &s_arena, NULL, NULL);
 	test(ast != NULL);
 	od_sql_minimal_extract_query_ctx(ast, &ctx);
-	test(ctx.parse_error == 0);
-	test(ctx.is_discard_all == 0);
-	test(ctx.is_unlisten_all == 0);
-	test(ctx.is_deallocate_all == 0);
-	test(ctx.has_deallocate_name == 1);
-	test(strcmp(ctx.deallocate_name, "foo") == 0);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
+	test(strcmp(ctx.s1, "foo") == 0);
 	od_query_ctx_reset(&ctx);
-	test(ctx.has_deallocate_name == 0);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 
 	/* SELECT — nothing */
 	od_linear_alloc_reset(&s_arena, 0);
@@ -479,11 +481,11 @@ static void test_extract_query_ctx(void)
 				   NULL, NULL);
 	test(ast == NULL); /* not recognized by minimal parser */
 	od_sql_minimal_extract_query_ctx(NULL, &ctx);
-	test(ctx.parse_error == 1);
-	test(ctx.is_discard_all == 0);
-	test(ctx.is_unlisten_all == 0);
-	test(ctx.is_deallocate_all == 0);
-	test(ctx.has_deallocate_name == 0);
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 	od_query_ctx_reset(&ctx);
 
 	/* DISCARD TEMP — not ALL, no parse error */
@@ -492,9 +494,97 @@ static void test_extract_query_ctx(void)
 				   &s_arena, NULL, NULL);
 	test(ast != NULL);
 	od_sql_minimal_extract_query_ctx(ast, &ctx);
-	test(ctx.parse_error == 0);
-	test(ctx.is_discard_all == 0);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
 	od_query_ctx_reset(&ctx);
+}
+
+static void test_parse_fill_ctx(void)
+{
+	od_query_ctx_t ctx;
+	memset(&ctx, 0, sizeof(ctx));
+
+	/* DISCARD ALL — ctx filled */
+	od_linear_alloc_reset(&s_arena, 0);
+	od_query_parse_fill_ctx("DISCARD ALL", strlen("DISCARD ALL"), &s_arena,
+				&ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* SHOW — name stored in ctx */
+	od_linear_alloc_reset(&s_arena, 0);
+	od_query_parse_fill_ctx("SHOW application_name",
+				strlen("SHOW application_name"), &s_arena,
+				&ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SHOW));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+	test(strcmp(ctx.s1, "application_name") == 0);
+	od_query_ctx_reset(&ctx);
+
+	/* SET — key and value stored in ctx */
+	od_linear_alloc_reset(&s_arena, 0);
+	od_query_parse_fill_ctx("SET application_name = 'foo'",
+				strlen("SET application_name = 'foo'"),
+				&s_arena, &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SHOW));
+	test(strcmp(ctx.s1, "application_name") == 0);
+	test(strcmp(ctx.s2, "foo") == 0);
+	test(ctx.s2_long == NULL);
+	od_query_ctx_reset(&ctx);
+	test(ctx.s2_long == NULL);
+
+	/* SET with a long value — truncated inline, full copy owned by ctx */
+	{
+		char long_value[128];
+		char query[192];
+		memset(long_value, 'x', sizeof(long_value) - 1);
+		long_value[sizeof(long_value) - 1] = '\0';
+		int n = snprintf(query, sizeof(query),
+				 "SET application_name = '%s'", long_value);
+		test(n > 0 && (size_t)n < sizeof(query));
+
+		od_linear_alloc_reset(&s_arena, 0);
+		od_query_parse_fill_ctx(query, strlen(query), &s_arena, &ctx);
+		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+		test(strlen(ctx.s2) == 64 - 1);
+		test(ctx.s2_long != NULL);
+		test(strcmp(ctx.s2_long, long_value) == 0);
+		od_query_ctx_reset(&ctx);
+		test(ctx.s2_long == NULL);
+	}
+
+	/* SET ... DEFAULT — empty value */
+	od_linear_alloc_reset(&s_arena, 0);
+	od_query_parse_fill_ctx("SET application_name TO DEFAULT",
+				strlen("SET application_name TO DEFAULT"),
+				&s_arena, &ctx);
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+	test(ctx.s2[0] == '\0');
+	test(ctx.s2_long == NULL);
+	od_query_ctx_reset(&ctx);
+
+	/* BEGIN */
+	od_linear_alloc_reset(&s_arena, 0);
+	od_query_parse_fill_ctx("BEGIN", strlen("BEGIN"), &s_arena, &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+	od_query_ctx_reset(&ctx);
+
+	/* SELECT — minimal parse fails, ctx is still filled */
+	od_linear_alloc_reset(&s_arena, 0);
+	od_query_parse_fill_ctx("SELECT 1", strlen("SELECT 1"), &s_arena, &ctx);
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 }
 
 void odyssey_test_sql_minimal_parser(void)
@@ -556,4 +646,5 @@ void odyssey_test_sql_minimal_parser(void)
 	test_long_set_value();
 
 	test_extract_query_ctx();
+	test_parse_fill_ctx();
 }

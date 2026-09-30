@@ -14,6 +14,7 @@
 #include <system.h>
 #include <config.h>
 #include <list.h>
+#include <query.h>
 
 void od_client_init(od_client_t *client)
 {
@@ -63,7 +64,7 @@ void od_client_init(od_client_t *client)
 
 	memset(client->peer, 0, sizeof(client->peer));
 
-	od_query_ctx_reset(&client->query_ctx);
+	memset(&client->query_ctx, 0, sizeof(client->query_ctx));
 
 	client->pending_begin = 0;
 
@@ -89,6 +90,8 @@ void od_client_free(od_client_t *client)
 	}
 
 	od_relay_destroy(&client->relay);
+
+	od_query_ctx_reset(&client->query_ctx);
 
 	od_io_free(&client->io);
 	/* clear password if saved any */

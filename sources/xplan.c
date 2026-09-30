@@ -1056,7 +1056,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 	 * backend_pin on UNLISTEN *).
 	 */
 	const od_query_ctx_t *qctx = &pstmt->query_ctx;
-	if (qctx->is_discard_all) {
+	if (od_query_ctx_has(qctx, OD_QUERY_CTX_IS_DISCARD_ALL)) {
 		od_debug(&instance->logger, "rewrite execute", client, server,
 			 "DISCARD ALL detected via portal, invalidate caches");
 
@@ -1065,7 +1065,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 			NULL /* can not to pass the pstmt - it will not be used */);
 	}
 
-	if (qctx->is_deallocate_all) {
+	if (od_query_ctx_has(qctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL)) {
 		od_debug(
 			&instance->logger, "rewrite execute", client, server,
 			"DEALLOCATE ALL detected via portal, invalidate client caches");
@@ -1074,21 +1074,22 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 			cc_deallocate_all, sizeof(cc_deallocate_all));
 	}
 
-	if (qctx->has_deallocate_name) { /* DEALLOCATE name */
+	/* DEALLOCATE name */
+	if (od_query_ctx_has(qctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME)) {
 		od_debug(&instance->logger, "rewrite execute", client, server,
-			 "DEALLOCATE '%s' detected via portal",
-			 qctx->deallocate_name);
+			 "DEALLOCATE '%s' detected via portal", qctx->s1);
 		/*
 		 * TODO: PG returns ERROR 26000 if the statement does not
 		 * exist; we always report success, same as
 		 * process_vdeallocate() in the simple path.
 		 *
-		 * deallocate_name is stored inplace in od_pstmt_t.query_ctx.
-		 * The client_pstmt delta field is passed to hashmap operations
-		 * (strcmp/strlen), so make an owned NUL-terminated copy. It is
-		 * freed in plan_entry_destroy.
+		 * s1 (the deallocate name) is stored inplace in
+		 * od_pstmt_t.query_ctx. The client_pstmt delta field is
+		 * passed to hashmap operations (strcmp/strlen), so make an
+		 * owned NUL-terminated copy. It is freed in
+		 * plan_entry_destroy.
 		 */
-		char *dealloc_name_z = od_strdup(qctx->deallocate_name);
+		char *dealloc_name_z = od_strdup(qctx->s1);
 		if (dealloc_name_z == NULL) {
 			return OD_EOOM;
 		}
@@ -1292,7 +1293,9 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 	 * actually drop the subscription. after success, clear
 	 * backend_pin, matching simple-protocol process_unlisten.
 	 */
-	if (delta->pstmt != NULL && delta->pstmt->query_ctx.is_unlisten_all) {
+	if (delta->pstmt != NULL &&
+	    od_query_ctx_has(&delta->pstmt->query_ctx,
+			     OD_QUERY_CTX_IS_UNLISTEN_ALL)) {
 		client->backend_pin = 0;
 	}
 

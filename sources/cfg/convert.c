@@ -700,6 +700,15 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	}
 #endif
 	COPY_TSA(cfg->target_session_attrs, rule->target_session_attrs, diags);
+	COPY_BOOL(cfg->auto_route_ro_on_standby,
+		  rule->auto_route_ro_on_standby);
+	if (cfg->target_session_attrs.seen.is_set &&
+	    cfg->auto_route_ro_on_standby.seen.is_set) {
+		od_cfg_diag_error(
+			diags, cfg->auto_route_ro_on_standby.seen.location,
+			"target_session_attrs and auto_route_ro_on_standby cannot be specified together");
+		goto error;
+	}
 	COPY_STR(cfg->auth_query, rule->auth_query, diags);
 	COPY_STR(cfg->auth_query_db, rule->auth_query_db, diags);
 	COPY_STR(cfg->auth_query_user, rule->auth_query_user, diags);
@@ -1063,6 +1072,15 @@ static int convert_listen(convert_ctx_t *ctx, const od_cfg_listen_t *cfg)
 	COPY_INT(cfg->port, listen->port);
 	COPY_TSA(cfg->target_session_attrs, listen->target_session_attrs,
 		 diags);
+	COPY_BOOL(cfg->auto_route_ro_on_standby,
+		  listen->auto_route_ro_on_standby);
+	if (cfg->target_session_attrs.seen.is_set &&
+	    cfg->auto_route_ro_on_standby.seen.is_set) {
+		od_cfg_diag_error(
+			diags, cfg->auto_route_ro_on_standby.seen.location,
+			"target_session_attrs and auto_route_ro_on_standby cannot be specified together");
+		goto error;
+	}
 	{
 		int rc = convert_balancing(&cfg->balancing,
 					   &listen->balancing_override, diags);
