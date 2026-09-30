@@ -5,6 +5,12 @@
 
 #include <sql/full/parser.h>
 #include <sql/full/ast.h>
+#include <alloc/linear.h>
+
+#define OD_TEST_FULL_PARSE_ARENA_SIZE (5 * 1024 * 1024)
+
+static uint8_t s_arena_buf[OD_TEST_FULL_PARSE_ARENA_SIZE];
+static od_linear_alloc_t s_arena;
 
 static char s_err_buf[1024];
 
@@ -18,7 +24,8 @@ static void on_error(const char *msg, void *userdata)
 static List *parse_ok(const char *input)
 {
 	s_err_buf[0] = '\0';
-	List *result = od_sql_full_parse(input, strlen(input), on_error, NULL);
+	List *result = od_sql_full_parse(&s_arena, input, strlen(input),
+					 on_error, NULL);
 	if (result == NULL || s_err_buf[0] != '\0') {
 		fprintf(stderr,
 			"parse_ok FAILED: input=[%s] err=[%s] result=%p\n",
@@ -31,7 +38,8 @@ static List *parse_ok(const char *input)
 static void parse_fail(const char *input)
 {
 	s_err_buf[0] = '\0';
-	List *result = od_sql_full_parse(input, strlen(input), on_error, NULL);
+	List *result = od_sql_full_parse(&s_arena, input, strlen(input),
+					 on_error, NULL);
 	if (result != NULL) {
 		fprintf(stderr,
 			"parse_fail: expected failure but got result for [%s]\n",
@@ -210,6 +218,8 @@ static void test_select_typecast(void)
 #define OD_TEST_FULL_PARSE_ITERS 200
 
 struct full_parse_thread_arg {
+	uint8_t arena_buf[OD_TEST_FULL_PARSE_ARENA_SIZE];
+	od_linear_alloc_t arena;
 	char err_buf[1024];
 	int failures;
 };
@@ -226,10 +236,14 @@ static void *full_parse_thread(void *argp)
 {
 	struct full_parse_thread_arg *arg = argp;
 
+	od_linear_alloc_init(&arg->arena, arg->arena_buf,
+			     sizeof(arg->arena_buf));
+
 	for (int i = 0; i < OD_TEST_FULL_PARSE_ITERS; i++) {
 		arg->err_buf[0] = '\0';
 		List *ok =
-			od_sql_full_parse("SELECT * FROM t WHERE a = 1",
+			od_sql_full_parse(&arg->arena,
+					  "SELECT * FROM t WHERE a = 1",
 					  strlen("SELECT * FROM t WHERE a = 1"),
 					  threaded_on_error, arg);
 		if (ok == NULL || arg->err_buf[0] != '\0') {
@@ -238,9 +252,9 @@ static void *full_parse_thread(void *argp)
 		}
 
 		arg->err_buf[0] = '\0';
-		List *bad =
-			od_sql_full_parse("SELECT FROM", strlen("SELECT FROM"),
-					  threaded_on_error, arg);
+		List *bad = od_sql_full_parse(&arg->arena, "SELECT FROM",
+					      strlen("SELECT FROM"),
+					      threaded_on_error, arg);
 		if (bad != NULL || arg->err_buf[0] == '\0') {
 			arg->failures++;
 		}
@@ -250,8 +264,8 @@ static void *full_parse_thread(void *argp)
 
 static void test_concurrent_parse(void)
 {
-	pthread_t threads[OD_TEST_FULL_PARSE_THREADS];
-	struct full_parse_thread_arg args[OD_TEST_FULL_PARSE_THREADS];
+	static pthread_t threads[OD_TEST_FULL_PARSE_THREADS];
+	static struct full_parse_thread_arg args[OD_TEST_FULL_PARSE_THREADS];
 
 	memset(args, 0, sizeof(args));
 
@@ -272,6 +286,8 @@ static void test_concurrent_parse(void)
 
 void odyssey_test_sql_full_parser(void)
 {
+	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
+
 	test_select_star();
 	test_select_columns();
 	test_select_where();

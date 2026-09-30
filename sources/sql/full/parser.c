@@ -25,6 +25,8 @@
 
 #include <common/fe_memutils.h>
 
+#include <od_memory.h>
+#include <alloc/linear.h>
 #include <sql/full/gramparse.h>
 #include <sql/full/parser.h>
 #include <sql/full/scansup.h>
@@ -529,10 +531,19 @@ invalid_pair:
 }
 
 List *
-od_sql_full_parse(const char *input, size_t input_len,
+od_sql_full_parse(od_linear_alloc_t *la, const char *input, size_t input_len,
                   od_sql_full_error_cb_t error_cb,
                   void *userdata)
 {
 	(void)input_len;
-	return od_sql_full_raw_parse(input, error_cb, userdata);
+
+	od_linear_alloc_reset(la, OD_LINEAR_ALLOC_REALLOC);
+
+	od_set_thread_linear_alloc(la);
+
+	List *res = od_sql_full_raw_parse(input, error_cb, userdata);
+
+	od_set_thread_linear_alloc(NULL);
+
+	return res;
 }
