@@ -19,6 +19,8 @@
 
 #include "postgres_fe.h"
 
+#include <od_memory.h>
+
 static inline void *pg_malloc_internal(size_t size, int flags)
 {
 	void *tmp;
@@ -30,8 +32,7 @@ static inline void *pg_malloc_internal(size_t size, int flags)
 	tmp = od_malloc(size);
 	if (tmp == NULL) {
 		if ((flags & MCXT_ALLOC_NO_OOM) == 0) {
-			fprintf(stderr, _("out of memory\n"));
-			exit(EXIT_FAILURE);
+			od_oom_fatal();
 		}
 		return NULL;
 	}
@@ -67,8 +68,7 @@ void *pg_realloc(void *ptr, size_t size)
 	}
 	tmp = od_realloc(ptr, size);
 	if (!tmp) {
-		fprintf(stderr, _("out of memory\n"));
-		exit(EXIT_FAILURE);
+		od_oom_fatal();
 	}
 	return tmp;
 }
@@ -87,8 +87,7 @@ char *pg_strdup(const char *in)
 	}
 	tmp = od_strdup(in);
 	if (!tmp) {
-		fprintf(stderr, _("out of memory\n"));
-		exit(EXIT_FAILURE);
+		od_oom_fatal();
 	}
 	return tmp;
 }

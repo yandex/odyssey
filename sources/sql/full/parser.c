@@ -39,6 +39,24 @@ static void check_unicode_value(char32_t c, core_yyscan_t yyscanner);
 static char *str_udeescape(const char *str, char escape,
 						   int position, core_yyscan_t yyscanner);
 
+static OD_THREAD_LOCAL base_yy_extra_type *full_parse_oom_yyextra = NULL;
+
+static void
+full_parse_oom_handler(void)
+{
+	base_yy_extra_type *yyext = full_parse_oom_yyextra;
+
+	full_parse_oom_yyextra = NULL;
+	if (yyext == NULL)
+		return;					/* no unwind point, fe_memutils will exit */
+
+	yyext->had_error = 1;
+	if (yyext->error_cb)
+		yyext->error_cb("out of memory", yyext->error_cb_userdata);
+
+	longjmp(yyext->error_jmp, 1);
+}
+
 
 /*
  * od_sql_full_raw_parse
@@ -53,7 +71,7 @@ od_sql_full_raw_parse(const char *str,
 					  od_sql_full_error_cb_t error_cb,
 					  void *error_userdata)
 {
-	core_yyscan_t yyscanner;
+	core_yyscan_t yyscanner = NULL;
 	base_yy_extra_type yyextra;
 	int			yyresult;
 
@@ -63,6 +81,29 @@ od_sql_full_raw_parse(const char *str,
 	yyextra.error_cb = error_cb;
 	yyextra.error_cb_userdata = error_userdata;
 
+	if (setjmp(yyextra.error_jmp) != 0)
+	{
+		/*
+		 * Syntax error or out of memory.  The scanner may not have been
+		 * created yet (e.g. OOM in the scan buffer allocation), in
+		 * which case its flex state (allocated by libc malloc) leaks,
+		 * which is acceptable for an OOM path.
+		 */
+		if (yyscanner != NULL)
+			scanner_finish(yyscanner);
+		od_set_thread_oom_hook(NULL);
+		full_parse_oom_yyextra = NULL;
+		return NIL;
+	}
+
+	/*
+	 * Arm the OOM unwind before the first allocation is made, so that
+	 * arena exhaustion during scanning or parsing fails the parse
+	 * instead of killing the process.
+	 */
+	full_parse_oom_yyextra = &yyextra;
+	od_set_thread_oom_hook(full_parse_oom_handler);
+
 	/* initialize the flex scanner */
 	yyscanner = scanner_init(str, &yyextra.core_yy_extra,
 							 &ScanKeywords, ScanKeywordTokens);
@@ -71,17 +112,13 @@ od_sql_full_raw_parse(const char *str,
 		if (yyextra.error_cb)
 			yyextra.error_cb("yylex_init() failed",
 							 yyextra.error_cb_userdata);
+		od_set_thread_oom_hook(NULL);
+		full_parse_oom_yyextra = NULL;
 		return NIL;
 	}
 
 	/* base_yylex() only needs us to initialize the lookahead token */
 	yyextra.have_lookahead = false;
-
-	if (setjmp(yyextra.error_jmp) != 0)
-	{
-		scanner_finish(yyscanner);
-		return NIL;
-	}
 
 	/* initialize the bison parser */
 	parser_init(&yyextra);
@@ -91,6 +128,9 @@ od_sql_full_raw_parse(const char *str,
 
 	/* Clean up (release memory) */
 	scanner_finish(yyscanner);
+
+	od_set_thread_oom_hook(NULL);
+	full_parse_oom_yyextra = NULL;
 
 	if (yyresult)				/* error */
 		return NIL;

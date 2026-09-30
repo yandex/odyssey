@@ -346,8 +346,8 @@ static void test_tree_select_bool_and_null(void)
 
 static void test_tree_select_constants(void)
 {
-	SelectStmt *s = parse_select_one(
-		"SELECT 1, 2.5, 'hello', true, false, NULL");
+	SelectStmt *s =
+		parse_select_one("SELECT 1, 2.5, 'hello', true, false, NULL");
 
 	test(list_length(s->targetList) == 6);
 
@@ -485,8 +485,8 @@ static void test_tree_select_typecast(void)
 
 static void test_tree_select_order_by(void)
 {
-	SelectStmt *s = parse_select_one(
-		"SELECT * FROM t ORDER BY a DESC, b ASC");
+	SelectStmt *s =
+		parse_select_one("SELECT * FROM t ORDER BY a DESC, b ASC");
 
 	test(list_length(s->sortClause) == 2);
 
@@ -520,7 +520,8 @@ static void test_tree_select_distinct(void)
 
 static void test_tree_select_union(void)
 {
-	SelectStmt *s = parse_select_one("SELECT * FROM a UNION SELECT * FROM b");
+	SelectStmt *s =
+		parse_select_one("SELECT * FROM a UNION SELECT * FROM b");
 
 	test(s->op == SETOP_UNION);
 	test(s->all == false);
@@ -541,8 +542,8 @@ static void test_tree_select_union(void)
 
 static void test_tree_select_subquery(void)
 {
-	SelectStmt *s = parse_select_one(
-		"SELECT * FROM (SELECT * FROM t) AS sub");
+	SelectStmt *s =
+		parse_select_one("SELECT * FROM (SELECT * FROM t) AS sub");
 
 	test(list_length(s->fromClause) == 1);
 	RangeSubselect *rs = linitial(s->fromClause);
@@ -561,8 +562,7 @@ static void test_tree_select_subquery(void)
 
 static void test_tree_select_join(void)
 {
-	SelectStmt *s = parse_select_one(
-		"SELECT * FROM a JOIN b ON a.x = b.y");
+	SelectStmt *s = parse_select_one("SELECT * FROM a JOIN b ON a.x = b.y");
 
 	test(list_length(s->fromClause) == 1);
 	JoinExpr *j = linitial(s->fromClause);
@@ -594,12 +594,75 @@ static void test_tree_select_join(void)
 
 static void test_tree_select_left_join(void)
 {
-	SelectStmt *s = parse_select_one(
-		"SELECT * FROM a LEFT JOIN b ON a.x = b.y");
+	SelectStmt *s =
+		parse_select_one("SELECT * FROM a LEFT JOIN b ON a.x = b.y");
 
 	JoinExpr *j = linitial(s->fromClause);
 	test(j->jointype == JOIN_LEFT);
 	expect_simple_a_expr(j->quals, "=");
+}
+
+/*
+ * The parser must survive arena exhaustion: report the failure through
+ * the error callback and return NULL instead of terminating the process.
+ */
+static void test_oom(void)
+{
+	static char big[8192];
+	static char query[8192];
+
+	/*
+	 * Case 1: the query text itself does not fit into the arena, the
+	 * scan buffer allocation fails immediately.
+	 */
+	static _Alignas(max_align_t) uint8_t tiny_buf[1024];
+	od_linear_alloc_t tiny_arena;
+	od_linear_alloc_init(&tiny_arena, tiny_buf, sizeof(tiny_buf));
+
+	size_t off = snprintf(big, sizeof(big), "%s", "SELECT ");
+	for (int i = 0; off < sizeof(big) - 64; i++) {
+		off += snprintf(big + off, sizeof(big) - off, "a%d, ", i);
+	}
+	snprintf(big + off, sizeof(big) - off, "%s", "FROM t");
+
+	s_err_buf[0] = '\0';
+	List *result = od_sql_full_parse(&tiny_arena, big, strlen(big),
+					 on_error, NULL);
+	test(result == NULL);
+	test(s_err_buf[0] != '\0');
+
+	/*
+	 * Case 2: the query text fits into the arena, but the resulting
+	 * parse tree does not.  The arena must be big enough to hold the
+	 * flex DFA state buffer (~64KB), which is allocated regardless of
+	 * the input size.
+	 */
+	static _Alignas(max_align_t) uint8_t mid_buf[128 * 1024];
+	od_linear_alloc_t mid_arena;
+	od_linear_alloc_init(&mid_arena, mid_buf, sizeof(mid_buf));
+
+	off = snprintf(query, sizeof(query), "%s", "SELECT ");
+	for (int i = 0; off < sizeof(query) - 64; i++) {
+		off += snprintf(query + off, sizeof(query) - off, "column_%d, ",
+				i);
+	}
+	/* strip the trailing ", " */
+	off -= 2;
+	snprintf(query + off, sizeof(query) - off, "%s", " FROM t");
+
+	s_err_buf[0] = '\0';
+	result = od_sql_full_parse(&mid_arena, query, strlen(query), on_error,
+				   NULL);
+	test(result == NULL);
+	test(s_err_buf[0] != '\0');
+
+	/* the parser must remain fully usable after OOM */
+	s_err_buf[0] = '\0';
+	List *ok = od_sql_full_parse(&mid_arena, "SELECT * FROM t",
+				     strlen("SELECT * FROM t"), on_error, NULL);
+	test(ok != NULL);
+	test(s_err_buf[0] == '\0');
+	test(list_length(ok) == 1);
 }
 
 #define OD_TEST_FULL_PARSE_THREADS 4
@@ -715,6 +778,7 @@ void odyssey_test_sql_full_parser(void)
 	test_tree_select_subquery();
 	test_tree_select_join();
 	test_tree_select_left_join();
+	test_oom();
 
 	test_concurrent_parse();
 }
