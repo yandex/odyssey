@@ -247,19 +247,89 @@ to_return:
 }
 #endif /* OD_ENABLE_SSL_KEYLOG */
 
+static atomic_uint_fast64_t mm_tls_cache_epoch = 0;
+
+void machine_tls_cache_invalidate(void)
+{
+	atomic_fetch_add_explicit(&mm_tls_cache_epoch, 1, memory_order_relaxed);
+}
+
+void mm_tls_ctx_free(mm_tls_ctx_t *ctx_container)
+{
+	if (ctx_container->protocols) {
+		mm_free(ctx_container->protocols);
+	}
+	if (ctx_container->cert_file) {
+		mm_free(ctx_container->cert_file);
+	}
+	if (ctx_container->key_file) {
+		mm_free(ctx_container->key_file);
+	}
+	if (ctx_container->ca_file) {
+		mm_free(ctx_container->ca_file);
+	}
+	if (ctx_container->ca_path) {
+		mm_free(ctx_container->ca_path);
+	}
+	if (ctx_container->tls_ctx) {
+		SSL_CTX_free(ctx_container->tls_ctx);
+	}
+	mm_free(ctx_container);
+}
+
+static inline int mm_tls_str_match(const char *a, const char *b)
+{
+	if (a == NULL || b == NULL) {
+		return a == b;
+	}
+	return strcmp(a, b) == 0;
+}
+
+static inline int mm_tls_opts_match(const mm_tls_ctx_t *entry,
+				    const mm_tls_t *tls)
+{
+	return entry->verify == tls->verify &&
+	       mm_tls_str_match(entry->protocols, tls->protocols) &&
+	       mm_tls_str_match(entry->cert_file, tls->cert_file) &&
+	       mm_tls_str_match(entry->key_file, tls->key_file) &&
+	       mm_tls_str_match(entry->ca_file, tls->ca_file) &&
+	       mm_tls_str_match(entry->ca_path, tls->ca_path);
+}
+
 SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 {
-	mm_tls_ctx_t *ctx_container;
+	mm_tls_ctx_t **ctx_list;
 	if (is_client) {
-		ctx_container = mm_self->client_tls_ctx;
+		ctx_list = &mm_self->client_tls_ctx;
 	} else {
-		ctx_container = mm_self->server_tls_ctx;
+		ctx_list = &mm_self->server_tls_ctx;
 	}
-	while (ctx_container != NULL) {
-		if (ctx_container->key == io->tls) {
-			return ctx_container->tls_ctx;
+
+	uint64_t epoch =
+		atomic_load_explicit(&mm_tls_cache_epoch, memory_order_relaxed);
+
+	mm_tls_ctx_t *prev = NULL;
+	mm_tls_ctx_t *it = *ctx_list;
+	while (it != NULL) {
+		mm_tls_ctx_t *next = it->next;
+
+		if (it->epoch != epoch) {
+			if (prev) {
+				prev->next = next;
+			} else {
+				*ctx_list = next;
+			}
+			mm_tls_ctx_free(it);
+			it = next;
+			continue;
 		}
-		ctx_container = ctx_container->next;
+
+		if (mm_tls_opts_match(it, io->tls)) {
+			return it->tls_ctx;
+		}
+
+		prev = it;
+		it = next;
 	}
 	/* Cached context not found - we must create ctx */
 
@@ -362,23 +432,50 @@ SSL_CTX *mm_tls_get_context(mm_io_t *io, int is_client)
 
 		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
 	}
-	/* Place new ctx on top of cache */
 
-	ctx_container = mm_malloc(sizeof(*ctx_container));
+	/*
+	 * Place new ctx on top of the cache, keyed by TLS options
+	 * content. The originating mm_tls_t object may be freed with
+	 * its connection, the copies below keep the cache valid.
+	 */
+	mm_tls_ctx_t *ctx_container = mm_malloc(sizeof(*ctx_container));
 	if (ctx_container == NULL) {
 		goto error;
 	}
-
-	ctx_container->key = io->tls;
+	memset(ctx_container, 0, sizeof(*ctx_container));
+	ctx_container->verify = io->tls->verify;
+	ctx_container->epoch = epoch;
 	ctx_container->tls_ctx = ctx;
 
-	if (is_client) {
-		ctx_container->next = mm_self->client_tls_ctx;
-		mm_self->client_tls_ctx = ctx_container;
-	} else {
-		ctx_container->next = mm_self->server_tls_ctx;
-		mm_self->server_tls_ctx = ctx_container;
+	int dup_rc = 0;
+	if (io->tls->protocols) {
+		ctx_container->protocols = mm_strdup(io->tls->protocols);
+		dup_rc = ctx_container->protocols == NULL;
 	}
+	if (!dup_rc && io->tls->cert_file) {
+		ctx_container->cert_file = mm_strdup(io->tls->cert_file);
+		dup_rc = ctx_container->cert_file == NULL;
+	}
+	if (!dup_rc && io->tls->key_file) {
+		ctx_container->key_file = mm_strdup(io->tls->key_file);
+		dup_rc = ctx_container->key_file == NULL;
+	}
+	if (!dup_rc && io->tls->ca_file) {
+		ctx_container->ca_file = mm_strdup(io->tls->ca_file);
+		dup_rc = ctx_container->ca_file == NULL;
+	}
+	if (!dup_rc && io->tls->ca_path) {
+		ctx_container->ca_path = mm_strdup(io->tls->ca_path);
+		dup_rc = ctx_container->ca_path == NULL;
+	}
+	if (dup_rc) {
+		mm_errno_set(ENOMEM);
+		mm_tls_ctx_free(ctx_container);
+		return NULL;
+	}
+
+	ctx_container->next = *ctx_list;
+	*ctx_list = ctx_container;
 
 	return ctx;
 error:

@@ -30,7 +30,13 @@ struct mm_tls {
 };
 
 struct mm_tls_ctx {
-	mm_tls_t *key;
+	mm_tlsverify_t verify;
+	char *protocols;
+	char *cert_file;
+	char *key_file;
+	char *ca_file;
+	char *ca_path;
+	uint64_t epoch;
 	SSL_CTX *tls_ctx;
 	mm_tls_ctx_t *next;
 };
