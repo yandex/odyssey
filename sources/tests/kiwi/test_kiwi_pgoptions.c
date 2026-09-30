@@ -174,3 +174,84 @@ void kiwi_test_pgoptions(void)
 				  var(KIWI_VAR_SEARCH_PATH, value));
 	}
 }
+
+static void build_startup_packet(char *buf, size_t cap, size_t *out_len,
+				 const char *options_value)
+{
+	size_t pos = 0;
+
+	/* length placeholder */
+	buf[pos++] = 0;
+	buf[pos++] = 0;
+	buf[pos++] = 0;
+	buf[pos++] = 0;
+
+	/* protocol version 3.0 */
+	buf[pos++] = 0;
+	buf[pos++] = 3;
+	buf[pos++] = 0;
+	buf[pos++] = 0;
+
+	memcpy(buf + pos, "user", 5);
+	pos += 5;
+	memcpy(buf + pos, "test", 5);
+	pos += 5;
+
+	memcpy(buf + pos, "options", 8);
+	pos += 8;
+
+	size_t value_len = strlen(options_value) + 1;
+	test(cap - pos > value_len + 1);
+	memcpy(buf + pos, options_value, value_len);
+	pos += value_len;
+
+	buf[pos++] = '\0';
+
+	uint32_t len = pos;
+	buf[0] = (len >> 24) & 0xFF;
+	buf[1] = (len >> 16) & 0xFF;
+	buf[2] = (len >> 8) & 0xFF;
+	buf[3] = len & 0xFF;
+
+	*out_len = pos;
+}
+
+void kiwi_test_be_read_startup_options(void)
+{
+	char buf[1024];
+	size_t len;
+	kiwi_be_startup_t su;
+	kiwi_vars_t vars;
+
+	/* valid options are applied */
+	build_startup_packet(buf, sizeof(buf), &len, "--search_path=public");
+	kiwi_be_startup_init(&su);
+	kiwi_vars_init(&vars);
+	test(kiwi_be_read_startup(buf, len, &su, &vars) ==
+	     KIWI_STARTUP_READ_OK);
+	kiwi_var_t *var = kiwi_vars_get(&vars, KIWI_VAR_SEARCH_PATH);
+	test(var != NULL);
+	test(var->value_len == (int)(strlen("public") + 1));
+	test(strcmp(var->value, "public") == 0);
+
+	/* too long option value must reject the whole startup packet */
+	{
+		char value[256];
+		memset(value, 'a', 200);
+		value[200] = 0;
+		char opts[512];
+		snprintf(opts, sizeof(opts), "--search_path=%s", value);
+		build_startup_packet(buf, sizeof(buf), &len, opts);
+		kiwi_be_startup_init(&su);
+		kiwi_vars_init(&vars);
+		test(kiwi_be_read_startup(buf, len, &su, &vars) ==
+		     KIWI_STARTUP_READ_OPTIONS_ERROR);
+	}
+
+	/* unexpected token must reject the whole startup packet */
+	build_startup_packet(buf, sizeof(buf), &len, "-x search_path=public");
+	kiwi_be_startup_init(&su);
+	kiwi_vars_init(&vars);
+	test(kiwi_be_read_startup(buf, len, &su, &vars) ==
+	     KIWI_STARTUP_READ_OPTIONS_ERROR);
+}
