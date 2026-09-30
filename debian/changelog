@@ -1,3 +1,33 @@
+odyssey (1.6.0-rc1-1) unstable; urgency=medium
+
+  * Fix SSL_CTX cache (#1627)
+  * fix: require a full-length SCRAM client proof (#1616)
+  * Add virtual "odyssey.pooling_mode" GUC. (#1607)
+  * Add cancel_rate_limit (#1603)
+  * Forcely close OOMed connections (#1604)
+  * Add autoconf support (#1598)
+  * Introduce new counters for clients waiting for a route (#1507)
+  * Add odyssey.opportunistic_acquire GUC (#1583)
+  * Track UNLISTEN executed by extended proto
+  * Unpin backend on UNLISTEN by simple query (#1573)
+  * Rate limit client connections accept (#1550)
+  * Add virtual odyssey.version GUC (#1547)
+  * listen-level balancing section override (#1537)
+  * listen-level balancing_method override (#1535)
+  * ref counters for global pstmts map (#1515)
+  * support FreeBSD build (#1517)
+  * correct support for "allow" for backends (#1514)
+  * keepalive parameters in rule config (#1513)
+  * Add support for "prefer" mode of tls (#1511)
+  * add listen-level storage failover (#1502)
+  * add portal tacking on client side (#1494)
+  * az_aware option (#1479)
+  * OpenSSL 4 compatibility (#1466)
+  * simple mac os support (#1467)
+  * scram-passthrough impl (#1463)
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Wed, 30 Sep 2026 17:02:26 +0500
+
 odyssey (1.5.1-rc9-1) unstable; urgency=medium
 
   * fix logger shutdown
