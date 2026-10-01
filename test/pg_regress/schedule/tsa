@@ -1,2 +1,3 @@
 test: ports
 test: users
+test: execute_on_host

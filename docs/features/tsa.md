@@ -112,3 +112,18 @@ $ psql -h localhost -p 6432 -c "select pg_is_in_recovery()" -U user-rw -d db
 
 See [rule configuration guide](../configuration/rules.md) for
 more about rules section.
+
+## Explicit host selection
+
+Besides TSA, a client can pin its session to a particular storage host with
+`SET odyssey.execute_on_host` (requires `virtual_processing yes`). Balancing is
+skipped and every attach goes to this host only; TSA is still checked against
+it. The host must be one of the storage `host` entries (`host[:port]`, port
+defaults to the storage `port`), otherwise the `SET` is rejected.
+
+```sql
+SET odyssey.execute_on_host TO 'standby:5432';
+SHOW odyssey.execute_on_host;
+-- back to balancing
+SET odyssey.execute_on_host TO DEFAULT;
+```

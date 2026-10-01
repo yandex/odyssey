@@ -890,9 +890,35 @@ static od_frontend_status_t attach_with_storage(od_client_t *client,
 						od_rule_storage_t *storage,
 						int is_deploy)
 {
+	od_instance_t *instance = client->global->instance;
 	od_route_t *route = client->route;
 
 	od_target_session_attrs_t tsa = attach_effective_tsa(client, context);
+
+	if (client->execute_on_host.host != NULL) {
+		/*
+		 * explicit host was requested with SET odyssey.execute_on_host:
+		 * skip balancing and attach to this host only (tsa still checked)
+		 */
+		od_storage_endpoint_t *endpoint =
+			od_storage_find_endpoint_by_host(
+				storage, &client->execute_on_host);
+		if (endpoint == NULL) {
+			char addr[256];
+			od_address_to_str(&client->execute_on_host, addr,
+					  sizeof(addr) - 1);
+			od_debug(&instance->logger, context, client, NULL,
+				 "execute_on_host %s is not in storage '%s'",
+				 addr, storage->name);
+			return OD_EATTACH;
+		}
+
+		return attach_to_first_with_fail_fast(client, context,
+						      route_params, &endpoint,
+						      1, tsa, is_deploy,
+						      storage);
+	}
+
 	uint32_t lag_timeout = get_effective_catchup_timeout(client);
 
 	host_select_arg_t arg;
@@ -1013,6 +1039,33 @@ static od_frontend_status_t attach_impl(od_client_t *client, char *context,
 
 	return attach_with_storage(client, context, route_params,
 				   client->route->rule->storage, is_deploy);
+}
+
+int od_frontend_host_is_known(od_client_t *client, const od_address_t *address)
+{
+	od_config_listen_t *listen = client->source->config;
+
+	if (listen == NULL || listen->storage_count == 0) {
+		return od_storage_find_endpoint_by_host(
+			       client->route->rule->storage, address) != NULL;
+	}
+
+	od_router_t *router = client->global->router;
+	int found = 0;
+
+	od_rules_lock(&router->rules);
+	for (size_t i = 0; i < listen->storage_count && !found; ++i) {
+		od_rule_storage_t *storage = od_rules_storage_match(
+			&router->rules, listen->storage_names[i]);
+		if (storage == NULL) {
+			continue;
+		}
+		found = od_storage_find_endpoint_by_host(storage, address) !=
+			NULL;
+	}
+	od_rules_unlock(&router->rules);
+
+	return found;
 }
 
 od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,

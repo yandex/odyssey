@@ -136,6 +136,12 @@ void od_frontend_attach_init_candidates(
 	od_endpoint_attach_candidate_t *candidates,
 	od_target_session_attrs_t tsa, int prefer_localhost);
 
+/*
+ * check that address (host:port, see SET odyssey.execute_on_host) is one of the
+ * endpoints of the storages the client can be attached to
+ */
+int od_frontend_host_is_known(od_client_t *client, const od_address_t *address);
+
 od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
 					kiwi_params_t *route_params);
 

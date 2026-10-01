@@ -77,6 +77,7 @@ void od_client_init(od_client_t *client)
 	/* Init GUCs. */
 	client->backend_pin = false;
 	client->opportunistic_acquire = false;
+	od_address_init(&client->execute_on_host);
 }
 
 void od_client_free(od_client_t *client)
@@ -112,6 +113,8 @@ void od_client_free(od_client_t *client)
 	client->scram_key_valid = 0;
 
 	machine_msg_free_safe(client->read_msg);
+
+	od_address_destroy(&client->execute_on_host);
 
 	od_free(client);
 }

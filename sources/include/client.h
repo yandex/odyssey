@@ -80,6 +80,11 @@ struct od_client {
 	/* client-side GUC state. XXX: maybe use embedded struct here */
 	bool backend_pin;
 	bool opportunistic_acquire;
+	/*
+	 * SET odyssey.execute_on_host - explicit storage host to attach to,
+	 * host == NULL means not set
+	 */
+	od_address_t execute_on_host;
 
 	bool physical_rep;
 	bool logical_rep;

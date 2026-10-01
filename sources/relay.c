@@ -31,6 +31,7 @@
 
 #define APPLICATION_NAME_STR "application_name"
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
+#define ODYSSEY_EXECUTE_ON_HOST_STR "odyssey.execute_on_host"
 #define ODYSSEY_PIN_BACKEND "odyssey.pin_backend"
 #define ODYSSEY_OPPORTUNISTIC_ACQUIRE "odyssey.opportunistic_acquire"
 #define ODYSSEY_POOLING_MODE "odyssey.pooling_mode"
@@ -345,6 +346,94 @@ static od_frontend_status_t process_set_tsa(od_client_t *client,
 	return OD_SKIP;
 }
 
+static od_frontend_status_t reply_set_ok(od_client_t *client)
+{
+	od_server_t *server = client->server;
+
+	uint8_t txstatus = 'I';
+	if (server != NULL) {
+		txstatus = server->is_transaction ? 'T' : 'I';
+	}
+
+	char msg[128 /* message below is ~ 60 bytes */];
+	int rc;
+	char *out = msg;
+	char *end = msg + sizeof(msg);
+	rc = kiwi_be_format_notice(out, end - out, 'M',
+				   PROCESSED_BY_ODYSSEY_STR);
+	od_assert(rc != -1);
+	out += rc;
+
+	rc = kiwi_be_format_command_complete(out, end - out, "SET");
+	od_assert(rc != -1);
+	out += rc;
+
+	rc = kiwi_be_format_ready(out, end - out, txstatus);
+	od_assert(rc != -1);
+	out += rc;
+
+	size_t unused;
+	rc = od_io_write_raw(&client->io, msg, out - msg, &unused, 1000, 0);
+	if (rc != 0) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	return OD_SKIP;
+}
+
+/*
+ * SET odyssey.execute_on_host TO 'host[:port]' - attach only to this storage
+ * host, bypassing balancing; empty value (or DEFAULT) resets the hint
+ */
+static od_frontend_status_t
+process_set_execute_on_host(od_client_t *client, const od_query_ctx_t *ctx)
+{
+	od_instance_t *instance = client->global->instance;
+	const char *value = ctx->s2;
+	size_t value_len = strlen(value);
+
+	if (value_len == 0) {
+		od_address_destroy(&client->execute_on_host);
+		od_address_init(&client->execute_on_host);
+
+		od_debug(&instance->logger, "virtual processing", client,
+			 client->server, "execute_on_host hint is reset");
+
+		return reply_set_ok(client);
+	}
+
+	od_address_t *addrs = NULL;
+	size_t count = 0;
+	if (od_parse_addresses(value, &addrs, &count) != OK_RESPONSE) {
+		return reply_reject_guc(client, ODYSSEY_EXECUTE_ON_HOST_STR,
+					value, value_len);
+	}
+
+	if (count != 1 || !od_frontend_host_is_known(client, &addrs[0])) {
+		for (size_t i = 0; i < count; ++i) {
+			od_address_destroy(&addrs[i]);
+		}
+		od_free(addrs);
+
+		od_debug(&instance->logger, "virtual processing", client,
+			 client->server, "unknown execute_on_host %.*s",
+			 (int)value_len, value);
+
+		return reply_reject_guc(client, ODYSSEY_EXECUTE_ON_HOST_STR,
+					value, value_len);
+	}
+
+	/* od_address_move destroys the previous value */
+	od_address_move(&client->execute_on_host, &addrs[0]);
+	od_free(addrs);
+
+	od_debug(&instance->logger, "virtual processing", client,
+		 client->server, "parsed execute_on_host hint %.*s",
+		 (int)value_len, value);
+
+	return reply_set_ok(client);
+}
+
 static od_frontend_status_t process_set_appname(od_client_t *client,
 						const od_query_ctx_t *ctx)
 {
@@ -418,6 +507,12 @@ static od_frontend_status_t process_vset(od_client_t *client,
 	if (strcmp(ctx->s1, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_set_tsa(client, ctx);
+		}
+	}
+
+	if (strcmp(ctx->s1, ODYSSEY_EXECUTE_ON_HOST_STR) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_set_execute_on_host(client, ctx);
 		}
 	}
 
@@ -514,6 +609,18 @@ static od_frontend_status_t process_show_tsa(od_client_t *client)
 	return virtual_str_ans(client, ODYSSEY_TARGET_SESSION_ATTRS_STR, val);
 }
 
+static od_frontend_status_t process_show_execute_on_host(od_client_t *client)
+{
+	char addr[256] = "";
+
+	if (client->execute_on_host.host != NULL) {
+		od_address_to_str(&client->execute_on_host, addr,
+				  sizeof(addr) - 1);
+	}
+
+	return virtual_str_ans(client, ODYSSEY_EXECUTE_ON_HOST_STR, addr);
+}
+
 static od_frontend_status_t process_show_bool_guc(od_client_t *client,
 						  const char *name, bool val)
 {
@@ -557,6 +664,12 @@ static od_frontend_status_t process_vshow(od_client_t *client,
 	if (strcmp(ctx->s1, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_show_tsa(client);
+		}
+	}
+
+	if (strcmp(ctx->s1, ODYSSEY_EXECUTE_ON_HOST_STR) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_show_execute_on_host(client);
 		}
 	}
 
