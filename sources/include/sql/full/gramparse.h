@@ -57,13 +57,6 @@ TypeName *SystemTypeName(char *name);
 #define ROLESTMT_ROLE 0
 #define ROLESTMT_USER 1
 #define ROLESTMT_GROUP 2
-#define VAR_SET_VALUE 0
-#define VAR_SET_DEFAULT 1
-#define VAR_SET_CURRENT 2
-#define VAR_SET_MULTI 3
-#define VAR_RESET 4
-#define VAR_RESET_ALL 5
-#define VAR_SET 6
 #define FRAMEOPTION_NONRANGE 0
 #define FRAMEOPTION_RANGE 0x01
 #define FRAMEOPTION_ROWS 0x02
@@ -107,12 +100,6 @@ TypeName *SystemTypeName(char *name);
 #define SETOP_UNION 1
 #define SETOP_INTERSECT 2
 #define SETOP_EXCEPT 3
-
-/* DiscardMode */
-#define DISCARD_ALL 0
-#define DISCARD_PLANS 1
-#define DISCARD_SEQUENCES 2
-#define DISCARD_TEMP 3
 
 /* ObjectType */
 #define OBJECT_TABLE 0

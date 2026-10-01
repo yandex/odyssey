@@ -302,3 +302,18 @@
 #define CTEMaterializeAlways 1
 #define CTEMaterializeNever 2
 #define CTEMaterializeDefault 10289
+
+/* VariableSetStmt kind (parsenodes.h VariableSetKind) */
+#define VAR_SET_VALUE 0
+#define VAR_SET_DEFAULT 1
+#define VAR_SET_CURRENT 2
+#define VAR_SET_MULTI 3
+#define VAR_RESET 4
+#define VAR_RESET_ALL 5
+#define VAR_SET 6
+
+/* DiscardStmt target (parsenodes.h DiscardMode) */
+#define DISCARD_ALL 0
+#define DISCARD_PLANS 1
+#define DISCARD_SEQUENCES 2
+#define DISCARD_TEMP 3
