@@ -202,38 +202,12 @@ static od_frontend_status_t reply_cant_change_guc(od_client_t *client,
 			       len);
 }
 
-static od_frontend_status_t process_set_generic_bool(od_client_t *client,
-						     const od_query_ctx_t *ctx,
-						     bool *guc_val_ptr)
+/*
+ * reply to a virtually processed SET: NOTICE + CommandComplete + ReadyForQuery
+ */
+static od_frontend_status_t reply_set_ok(od_client_t *client)
 {
-	const char *option_value;
-	size_t option_value_len;
-
-	od_server_t *server;
-	od_instance_t *instance = client->global->instance;
-
-	server = client->server;
-	option_value = ctx->s2;
-	option_value_len = strlen(option_value);
-
-	if (strncasecmp(option_value, "true", option_value_len) == 0 ||
-	    strncasecmp(option_value, "on", option_value_len) == 0 ||
-	    strncasecmp(option_value, "1", option_value_len) == 0) {
-		*guc_val_ptr = 1;
-	} else if (strncasecmp(option_value, "false", option_value_len) == 0 ||
-		   strncasecmp(option_value, "off", option_value_len) == 0 ||
-		   strncasecmp(option_value, "0", option_value_len) == 0) {
-		*guc_val_ptr = 0;
-	} else {
-		/* Reject this */
-		return reply_reject_guc(client, ctx->s1, option_value,
-					option_value_len);
-	}
-
-	/* XXX: refactor this */
-	od_debug(&instance->logger, "virtual processing", client, server,
-		 "processed virtual bool GUC %.*s", (int)option_value_len,
-		 option_value);
+	od_server_t *server = client->server;
 
 	uint8_t txstatus = 'I';
 	if (server != NULL) {
@@ -264,6 +238,41 @@ static od_frontend_status_t process_set_generic_bool(od_client_t *client,
 	}
 
 	return OD_SKIP;
+}
+
+static od_frontend_status_t process_set_generic_bool(od_client_t *client,
+						     const od_query_ctx_t *ctx,
+						     bool *guc_val_ptr)
+{
+	const char *option_value;
+	size_t option_value_len;
+
+	od_server_t *server;
+	od_instance_t *instance = client->global->instance;
+
+	server = client->server;
+	option_value = ctx->s2;
+	option_value_len = strlen(option_value);
+
+	if (strncasecmp(option_value, "true", option_value_len) == 0 ||
+	    strncasecmp(option_value, "on", option_value_len) == 0 ||
+	    strncasecmp(option_value, "1", option_value_len) == 0) {
+		*guc_val_ptr = 1;
+	} else if (strncasecmp(option_value, "false", option_value_len) == 0 ||
+		   strncasecmp(option_value, "off", option_value_len) == 0 ||
+		   strncasecmp(option_value, "0", option_value_len) == 0) {
+		*guc_val_ptr = 0;
+	} else {
+		/* Reject this */
+		return reply_reject_guc(client, ctx->s1, option_value,
+					option_value_len);
+	}
+
+	od_debug(&instance->logger, "virtual processing", client, server,
+		 "processed virtual bool GUC %.*s", (int)option_value_len,
+		 option_value);
+
+	return reply_set_ok(client);
 }
 
 static od_frontend_status_t process_set_tsa(od_client_t *client,
@@ -315,70 +324,7 @@ static od_frontend_status_t process_set_tsa(od_client_t *client,
 	od_debug(&instance->logger, "virtual processing", client, server,
 		 "parsed tsa hint %.*s", (int)option_value_len, option_value);
 
-	uint8_t txstatus = 'I';
-	if (server != NULL) {
-		txstatus = server->is_transaction ? 'T' : 'I';
-	}
-
-	char msg[128 /* message below is ~ 60 bytes */];
-	int rc;
-	char *out = msg;
-	char *end = msg + sizeof(msg);
-	rc = kiwi_be_format_notice(out, end - out, 'M',
-				   PROCESSED_BY_ODYSSEY_STR);
-	od_assert(rc != -1);
-	out += rc;
-
-	rc = kiwi_be_format_command_complete(out, end - out, "SET");
-	od_assert(rc != -1);
-	out += rc;
-
-	rc = kiwi_be_format_ready(out, end - out, txstatus);
-	od_assert(rc != -1);
-	out += rc;
-
-	size_t unused;
-	rc = od_io_write_raw(&client->io, msg, out - msg, &unused, 1000, 0);
-	if (rc != 0) {
-		return OD_ECLIENT_WRITE;
-	}
-
-	return OD_SKIP;
-}
-
-static od_frontend_status_t reply_set_ok(od_client_t *client)
-{
-	od_server_t *server = client->server;
-
-	uint8_t txstatus = 'I';
-	if (server != NULL) {
-		txstatus = server->is_transaction ? 'T' : 'I';
-	}
-
-	char msg[128 /* message below is ~ 60 bytes */];
-	int rc;
-	char *out = msg;
-	char *end = msg + sizeof(msg);
-	rc = kiwi_be_format_notice(out, end - out, 'M',
-				   PROCESSED_BY_ODYSSEY_STR);
-	od_assert(rc != -1);
-	out += rc;
-
-	rc = kiwi_be_format_command_complete(out, end - out, "SET");
-	od_assert(rc != -1);
-	out += rc;
-
-	rc = kiwi_be_format_ready(out, end - out, txstatus);
-	od_assert(rc != -1);
-	out += rc;
-
-	size_t unused;
-	rc = od_io_write_raw(&client->io, msg, out - msg, &unused, 1000, 0);
-	if (rc != 0) {
-		return OD_ECLIENT_WRITE;
-	}
-
-	return OD_SKIP;
+	return reply_set_ok(client);
 }
 
 /*

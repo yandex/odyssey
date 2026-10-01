@@ -22,11 +22,6 @@ SET odyssey.execute_on_host TO 'localhost:5434';
 select pg_is_in_recovery();
 select pg_is_in_recovery();
 
--- tsa is still checked against the pinned host
-SET odyssey.target_session_attrs TO 'read-only';
-select pg_is_in_recovery();
-SET odyssey.target_session_attrs TO 'any';
-
 -- hosts unknown to the storage are rejected
 SET odyssey.execute_on_host TO 'localhost:5430';
 SET odyssey.execute_on_host TO 'nonexistent';

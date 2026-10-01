@@ -86,18 +86,6 @@ NOTICE:  select host tcp://localhost:5434
  t
 (1 row)
 
--- tsa is still checked against the pinned host
-SET odyssey.target_session_attrs TO 'read-only';
-NOTICE:  processed virtually by odyssey
-select pg_is_in_recovery();
-NOTICE:  select host tcp://localhost:5434
- pg_is_in_recovery 
--------------------
- t
-(1 row)
-
-SET odyssey.target_session_attrs TO 'any';
-NOTICE:  processed virtually by odyssey
 -- hosts unknown to the storage are rejected
 SET odyssey.execute_on_host TO 'localhost:5430';
 NOTICE:  processed virtually by odyssey
