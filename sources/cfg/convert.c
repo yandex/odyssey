@@ -1457,7 +1457,6 @@ static int convert_query_parsing(convert_ctx_t *ctx,
 	}
 
 	od_config_t *config = ctx->config;
-	od_cfg_diag_list_t *diags = ctx->diags;
 	od_config_query_parsing_t *qp = &config->query_parsing;
 
 	COPY_U64(cfg->mem_limit, qp->mem_limit_bytes);
@@ -1472,9 +1471,8 @@ static int convert_query_parsing(convert_ctx_t *ctx,
 			qp->mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
 			break;
 		case OD_CFG_QUERY_PARSING_MODE_FULL:
-			od_cfg_diag_error(diags, cfg->mode.seen.location,
-					  "full mode is not supported now");
-			return -1;
+			qp->mode = OD_CONFIG_QUERY_PARSING_MODE_FULL;
+			break;
 		default:
 			od_assert(0);
 		}

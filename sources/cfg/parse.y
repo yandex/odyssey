@@ -2597,9 +2597,11 @@ query_parsing_item:
 		}
 	| MODE FULL
 		{
-			od_cfg_diag_error(ctx->diags, @1,
-							  "full mode of query parsing is not supported now");
-			YYERROR;
+			od_cfg_set_query_parsing_mode(ctx->diags,
+										  &ctx->current_query_parsing->mode,
+										  OD_CFG_QUERY_PARSING_MODE_FULL,
+										  @1,
+										  "mode");
 		}
 	| MEM_LIMIT size_value
 		{
