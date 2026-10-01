@@ -93,10 +93,11 @@ static void test_pstmt_query_ctx(void)
 	discard_desc.len = sizeof("DISCARD ALL");
 	od_pstmt_t *ps = od_pstmt_create_or_get(gm, discard_desc, &s_arena);
 	test(ps != NULL);
-	test(ps->query_ctx.is_discard_all == 1);
-	test(ps->query_ctx.is_unlisten_all == 0);
-	test(ps->query_ctx.is_deallocate_all == 0);
-	test(ps->query_ctx.has_deallocate_name == 0);
+	test(od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx,
+			       OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 	od_pstmt_unref(ps);
 
 	/* UNLISTEN * */
@@ -105,10 +106,11 @@ static void test_pstmt_query_ctx(void)
 	unlisten_desc.len = sizeof("UNLISTEN *");
 	ps = od_pstmt_create_or_get(gm, unlisten_desc, &s_arena);
 	test(ps != NULL);
-	test(ps->query_ctx.is_discard_all == 0);
-	test(ps->query_ctx.is_unlisten_all == 1);
-	test(ps->query_ctx.is_deallocate_all == 0);
-	test(ps->query_ctx.has_deallocate_name == 0);
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx,
+			       OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 	od_pstmt_unref(ps);
 
 	/* DEALLOCATE ALL */
@@ -117,10 +119,11 @@ static void test_pstmt_query_ctx(void)
 	dealloc_all_desc.len = sizeof("DEALLOCATE ALL");
 	ps = od_pstmt_create_or_get(gm, dealloc_all_desc, &s_arena);
 	test(ps != NULL);
-	test(ps->query_ctx.is_discard_all == 0);
-	test(ps->query_ctx.is_unlisten_all == 0);
-	test(ps->query_ctx.is_deallocate_all == 1);
-	test(ps->query_ctx.has_deallocate_name == 0);
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx,
+			       OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 	od_pstmt_unref(ps);
 
 	/* DEALLOCATE name */
@@ -129,11 +132,12 @@ static void test_pstmt_query_ctx(void)
 	dealloc_name_desc.len = sizeof("DEALLOCATE foo");
 	ps = od_pstmt_create_or_get(gm, dealloc_name_desc, &s_arena);
 	test(ps != NULL);
-	test(ps->query_ctx.is_discard_all == 0);
-	test(ps->query_ctx.is_unlisten_all == 0);
-	test(ps->query_ctx.is_deallocate_all == 0);
-	test(ps->query_ctx.has_deallocate_name == 1);
-	test(strcmp(ps->query_ctx.deallocate_name, "foo") == 0);
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(od_query_ctx_has(&ps->query_ctx,
+			      OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
+	test(strcmp(ps->query_ctx.s1, "foo") == 0);
 	od_pstmt_unref(ps);
 
 	/* normal SELECT — no flags */
@@ -142,10 +146,11 @@ static void test_pstmt_query_ctx(void)
 	select_desc.len = sizeof("SELECT 1");
 	ps = od_pstmt_create_or_get(gm, select_desc, &s_arena);
 	test(ps != NULL);
-	test(ps->query_ctx.is_discard_all == 0);
-	test(ps->query_ctx.is_unlisten_all == 0);
-	test(ps->query_ctx.is_deallocate_all == 0);
-	test(ps->query_ctx.has_deallocate_name == 0);
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL));
+	test(!od_query_ctx_has(&ps->query_ctx,
+			       OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 	od_pstmt_unref(ps);
 
 	od_global_pstmts_map_free(gm);

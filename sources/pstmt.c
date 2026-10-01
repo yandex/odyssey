@@ -17,7 +17,7 @@
 #include <client.h>
 #include <server.h>
 #include <pstmt.h>
-#include <sql/minimal/parser.h>
+#include <query.h>
 
 /* XXX: randomize seed ? */
 static const uint64_t hash_seed = 0;
@@ -620,6 +620,7 @@ static void pstmt_desc_val_dtor(void *val)
 {
 	od_pstmt_t *pstmt = val;
 	od_assert(pstmt_is_correct_deletion(pstmt));
+	od_query_ctx_reset(&pstmt->query_ctx);
 	od_free(pstmt->desc.data);
 }
 
@@ -717,16 +718,10 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 		 * (is_discard_all, is_unlisten_all, is_deallocate_all,
 		 *  deallocate_name) so that plan_execute / process_discard /
 		 * process_unlisten can avoid re-parsing on every Execute.
-		 *
-		 * od_sql_minimal_parse uses the arena provided by the caller;
-		 * the AST is discarded after extraction. deallocate_name is
-		 * stored inplace in query_ctx (no heap allocation).
 		 */
-		od_sql_minimal_node_t *ast =
-			od_sql_minimal_parse(value->desc.data,
-					     strlen(value->desc.data), arena,
-					     NULL, NULL);
-		od_sql_minimal_extract_query_ctx(ast, &value->query_ctx);
+		od_query_parse_fill_ctx(value->desc.data,
+					strlen(value->desc.data), arena,
+					&value->query_ctx);
 	} else {
 		/* the key already exists and has a copy of desc.data, do nothing */
 	}

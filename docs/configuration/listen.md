@@ -129,6 +129,20 @@ host is primary or not.
 
 `target_session_attrs "read-write"`
 
+## **auto_route_ro_on_standby**
+*yes|no*
+
+Switch for automatic routing of read-only queries (simple protocol, outside
+transactions) to standby replicas, while the rest of the traffic is routed to
+the primary. Has no effect when `target_session_attrs` is set for the
+connection (rule, listen or client `odyssey.target_session_attrs`).
+
+Specifying `target_session_attrs` and `auto_route_ro_on_standby` in the same
+section is a configuration error. When set on a listen endpoint, it overrides
+the value from the matched database/user rule.
+
+`auto_route_ro_on_standby yes`
+
 ## **balancing**
 
 Optional sub-section that overrides the load-balancing behaviour for this

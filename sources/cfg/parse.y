@@ -208,6 +208,7 @@
 %token HOST "host"
 %token PORT "port"
 %token TARGET_SESSION_ATTRS "target_session_attrs"
+%token AUTO_ROUTE_RO_ON_STANDBY "auto_route_ro_on_standby"
 %token CLIENT_LOGIN_TIMEOUT "client_login_timeout"
 %token BACKLOG "backlog"
 %token TLS "tls"
@@ -1358,6 +1359,15 @@ route_item:
 							@1,
 							"application_name_add_host");
 		}
+	| AUTO_ROUTE_RO_ON_STANDBY bool_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_bool(ctx->diags,
+							&ur->auto_route_ro_on_standby,
+							$2,
+							@1,
+							"auto_route_ro_on_standby");
+		}
 	| SERVER_DROP_ON_CACHED_PLAN_ERROR bool_value
 		{
 			od_cfg_route_t *ur = ctx->current_user;
@@ -2389,6 +2399,14 @@ listen_item:
 							  @1,
 							  "target_session_attrs");
 			$2 = NULL;
+		}
+	| AUTO_ROUTE_RO_ON_STANDBY bool_value
+		{
+			od_cfg_set_bool(ctx->diags,
+							&ctx->current_listen->auto_route_ro_on_standby,
+							$2,
+							@1,
+							"auto_route_ro_on_standby");
 		}
 	| listen_balancing_section
 	| CLIENT_LOGIN_TIMEOUT int_value

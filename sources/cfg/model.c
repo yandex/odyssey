@@ -100,6 +100,8 @@ static void dump_listen(FILE *file, const od_cfg_listen_t *l)
 	dump_string(file, "host", 1, &l->host);
 	dump_int(file, "port", 1, &l->port);
 	dump_string(file, "target_session_attrs", 1, &l->target_session_attrs);
+	dump_bool(file, "auto_route_ro_on_standby", 1,
+		  &l->auto_route_ro_on_standby);
 	dump_balancing(file, 1, &l->balancing);
 	dump_int(file, "client_login_timeout", 1, &l->client_login_timeout);
 	dump_int(file, "reserved_clients", 1, &l->reserved_clients);
@@ -266,6 +268,8 @@ static void dump_user(FILE *file, const char *type, const od_cfg_route_t *user)
 	dump_string(file, "auth_pam_service", 2, &user->auth_pam_service);
 	dump_string(file, "target_session_attrs", 2,
 		    &user->target_session_attrs);
+	dump_bool(file, "auto_route_ro_on_standby", 2,
+		  &user->auto_route_ro_on_standby);
 	dump_string(file, "auth_query", 2, &user->auth_query);
 	dump_string(file, "auth_query_db", 2, &user->auth_query_db);
 	dump_string(file, "auth_query_user", 2, &user->auth_query_user);
@@ -610,6 +614,7 @@ static void od_cfg_listen_free(od_cfg_listen_t *listen)
 	od_cfg_string_field_free(&listen->host);
 	od_cfg_int_field_free(&listen->port);
 	od_cfg_string_field_free(&listen->target_session_attrs);
+	od_cfg_bool_field_free(&listen->auto_route_ro_on_standby);
 	od_cfg_balancing_free(&listen->balancing);
 	od_cfg_int_field_free(&listen->client_login_timeout);
 	od_cfg_int_field_free(&listen->backlog);
@@ -761,6 +766,7 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 	od_cfg_string_field_free(&user->mdb_iamproxy_socket_path);
 	od_cfg_string_field_free(&user->auth_pam_service);
 	od_cfg_string_field_free(&user->target_session_attrs);
+	od_cfg_bool_field_free(&user->auto_route_ro_on_standby);
 	od_cfg_string_field_free(&user->auth_query);
 	od_cfg_string_field_free(&user->auth_query_db);
 	od_cfg_string_field_free(&user->auth_query_user);

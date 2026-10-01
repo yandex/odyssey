@@ -27,7 +27,7 @@
 #include <misc.h>
 #include <option.h>
 #include <worker.h>
-#include <sql/minimal/parser.h>
+#include <query.h>
 
 #define APPLICATION_NAME_STR "application_name"
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
@@ -201,10 +201,9 @@ static od_frontend_status_t reply_cant_change_guc(od_client_t *client,
 			       len);
 }
 
-static od_frontend_status_t
-process_set_generic_bool(od_client_t *client,
-			 const od_sql_minimal_set_stmt_t *stmt,
-			 bool *guc_val_ptr)
+static od_frontend_status_t process_set_generic_bool(od_client_t *client,
+						     const od_query_ctx_t *ctx,
+						     bool *guc_val_ptr)
 {
 	const char *option_value;
 	size_t option_value_len;
@@ -213,7 +212,7 @@ process_set_generic_bool(od_client_t *client,
 	od_instance_t *instance = client->global->instance;
 
 	server = client->server;
-	option_value = stmt->value;
+	option_value = ctx->s2;
 	option_value_len = strlen(option_value);
 
 	if (strncasecmp(option_value, "true", option_value_len) == 0 ||
@@ -226,7 +225,7 @@ process_set_generic_bool(od_client_t *client,
 		*guc_val_ptr = 0;
 	} else {
 		/* Reject this */
-		return reply_reject_guc(client, stmt->key, option_value,
+		return reply_reject_guc(client, ctx->s1, option_value,
 					option_value_len);
 	}
 
@@ -266,8 +265,8 @@ process_set_generic_bool(od_client_t *client,
 	return OD_SKIP;
 }
 
-static od_frontend_status_t
-process_set_tsa(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
+static od_frontend_status_t process_set_tsa(od_client_t *client,
+					    const od_query_ctx_t *ctx)
 {
 	const char *option_value;
 	size_t option_value_len;
@@ -276,7 +275,7 @@ process_set_tsa(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
 
 	server = client->server;
 
-	option_value = stmt->value;
+	option_value = ctx->s2;
 	option_value_len = strlen(option_value);
 
 	/* for now, very straightforward logic, as there is only one supported param */
@@ -346,13 +345,13 @@ process_set_tsa(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
 	return OD_SKIP;
 }
 
-static od_frontend_status_t
-process_set_appname(od_client_t *client, const od_sql_minimal_set_stmt_t *stmt)
+static od_frontend_status_t process_set_appname(od_client_t *client,
+						const od_query_ctx_t *ctx)
 {
 	int rc;
 	char original_appname[64];
-	size_t len = od_min(strlen(stmt->value), sizeof(original_appname));
-	snprintf(original_appname, sizeof(original_appname), "%s", stmt->value);
+	size_t len = od_min(strlen(ctx->s2), sizeof(original_appname));
+	snprintf(original_appname, sizeof(original_appname), "%s", ctx->s2);
 
 	char peer_name[KIWI_MAX_VAR_SIZE];
 	rc = od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0);
@@ -406,39 +405,39 @@ error:
 }
 
 static od_frontend_status_t process_vset(od_client_t *client,
-					 const od_sql_minimal_set_stmt_t *stmt)
+					 const od_query_ctx_t *ctx)
 {
 	od_instance_t *instance = od_global_get_instance();
 
-	if (strcmp(stmt->key, APPLICATION_NAME_STR) == 0) {
+	if (strcmp(ctx->s1, APPLICATION_NAME_STR) == 0) {
 		if (client->rule->application_name_add_host) {
-			return process_set_appname(client, stmt);
+			return process_set_appname(client, ctx);
 		}
 	}
 
-	if (strcmp(stmt->key, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
+	if (strcmp(ctx->s1, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
 		if (instance->config.virtual_processing) {
-			return process_set_tsa(client, stmt);
+			return process_set_tsa(client, ctx);
 		}
 	}
 
-	if (strcmp(stmt->key, ODYSSEY_PIN_BACKEND) == 0) {
+	if (strcmp(ctx->s1, ODYSSEY_PIN_BACKEND) == 0) {
 		if (instance->config.virtual_processing) {
-			return process_set_generic_bool(client, stmt,
+			return process_set_generic_bool(client, ctx,
 							&client->backend_pin);
 		}
 	}
 
-	if (strcmp(stmt->key, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
+	if (strcmp(ctx->s1, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_set_generic_bool(
-				client, stmt, &client->opportunistic_acquire);
+				client, ctx, &client->opportunistic_acquire);
 		}
 	}
 
-	if (strcmp(stmt->key, ODYSSEY_POOLING_MODE) == 0) {
+	if (strcmp(ctx->s1, ODYSSEY_POOLING_MODE) == 0) {
 		if (instance->config.virtual_processing) {
-			return reply_cant_change_guc(client, stmt->key);
+			return reply_cant_change_guc(client, ctx->s1);
 		}
 	}
 
@@ -550,39 +549,38 @@ static od_frontend_status_t process_show_version(od_client_t *client)
 	return virtual_str_ans(client, ODYSSEY_VERSION_STR, data);
 }
 
-static od_frontend_status_t
-process_vshow(od_client_t *client, const od_sql_minimal_show_stmt_t *stmt)
+static od_frontend_status_t process_vshow(od_client_t *client,
+					  const od_query_ctx_t *ctx)
 {
 	od_instance_t *instance = od_global_get_instance();
 
-	if (strcmp(stmt->name, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
+	if (strcmp(ctx->s1, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_show_tsa(client);
 		}
 	}
 
-	if (strcmp(stmt->name, ODYSSEY_PIN_BACKEND) == 0) {
+	if (strcmp(ctx->s1, ODYSSEY_PIN_BACKEND) == 0) {
 		if (instance->config.virtual_processing) {
-			return process_show_bool_guc(client, stmt->name,
+			return process_show_bool_guc(client, ctx->s1,
 						     client->backend_pin);
 		}
 	}
 
-	if (strcmp(stmt->name, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
+	if (strcmp(ctx->s1, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_show_bool_guc(
-				client, stmt->name,
-				client->opportunistic_acquire);
+				client, ctx->s1, client->opportunistic_acquire);
 		}
 	}
 
-	if (strcmp(stmt->name, ODYSSEY_POOLING_MODE) == 0) {
+	if (strcmp(ctx->s1, ODYSSEY_POOLING_MODE) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_show_pooling_mode(client);
 		}
 	}
 
-	if (strcmp(stmt->name, ODYSSEY_VERSION_STR) == 0) {
+	if (strcmp(ctx->s1, ODYSSEY_VERSION_STR) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_show_version(client);
 		}
@@ -591,15 +589,14 @@ process_vshow(od_client_t *client, const od_sql_minimal_show_stmt_t *stmt)
 	return OD_OK;
 }
 
-static od_frontend_status_t
-process_vdeallocate(od_client_t *client,
-		    const od_sql_minimal_deallocate_stmt_t *deallocate)
+static od_frontend_status_t process_vdeallocate(od_client_t *client,
+						const od_query_ctx_t *ctx)
 {
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 	const char *command = NULL;
 
-	if (deallocate->is_all) {
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL)) {
 		od_debug(&instance->logger, "main", client, server,
 			 "DEALLOCATE ALL detected, remove from client hashmap");
 		od_client_pstmts_clear(client);
@@ -607,11 +604,12 @@ process_vdeallocate(od_client_t *client,
 
 		command = "DEALLOCATE ALL";
 	} else {
-		od_assert(deallocate->name != NULL);
+		od_assert(od_query_ctx_has(ctx,
+					   OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 		od_debug(&instance->logger, "main", client, server,
 			 "DEALLOCATE '%s' detected, remove from client hashmap",
-			 deallocate->name);
-		od_client_remove_pstmt(client, deallocate->name);
+			 ctx->s1);
+		od_client_remove_pstmt(client, ctx->s1);
 
 		command = "DEALLOCATE";
 	}
@@ -638,11 +636,8 @@ process_vdeallocate(od_client_t *client,
 	return OD_SKIP;
 }
 
-static od_frontend_status_t
-process_vbegin(od_client_t *client, const od_sql_minimal_begin_stmt_t *stmt)
+static od_frontend_status_t process_vbegin(od_client_t *client)
 {
-	(void)stmt;
-
 	od_server_t *server = client->server;
 	int in_tx = (server != NULL && server->is_transaction);
 
@@ -671,67 +666,56 @@ process_vbegin(od_client_t *client, const od_sql_minimal_begin_stmt_t *stmt)
 }
 
 static od_frontend_status_t try_virtual_process_query(od_client_t *client,
-						      od_linear_alloc_t *arena,
-						      const char *query,
-						      uint32_t query_len)
+						      const od_query_ctx_t *ctx)
 {
 	od_instance_t *instance = od_global_get_instance();
+
 	int need_process;
 
-	if (instance->config.query_parsing.mode ==
-	    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
 		return OD_OK;
 	}
 
-	od_sql_minimal_node_t *ast = od_sql_minimal_parse(
-		query, query_len - 1 /* zero included */, arena, NULL, NULL);
-	if (ast == NULL) {
-		return OD_OK;
-	}
-
-	switch (ast->type) {
-	case OD_SQL_MINIMAL_NODE_TYPE_SHOW_STMT:
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SHOW)) {
 		need_process = instance->config.virtual_processing;
 		if (!need_process) {
 			return OD_OK;
 		}
 
-		return process_vshow(client,
-				     (const od_sql_minimal_show_stmt_t *)ast);
-		return OD_OK;
-	case OD_SQL_MINIMAL_NODE_TYPE_SET_STMT:
+		return process_vshow(client, ctx);
+	}
+
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET)) {
 		need_process = client->rule->application_name_add_host ||
 			       instance->config.virtual_processing;
 		if (!need_process) {
 			return OD_OK;
 		}
 
-		return process_vset(client,
-				    (const od_sql_minimal_set_stmt_t *)ast);
-	case OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT:
+		return process_vset(client, ctx);
+	}
+
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_BEGIN)) {
 		need_process = instance->config.virtual_transaction;
 		if (!need_process) {
 			return OD_OK;
 		}
 
-		return process_vbegin(client,
-				      (const od_sql_minimal_begin_stmt_t *)ast);
-	case OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT:
+		return process_vbegin(client);
+	}
+
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL) ||
+	    od_query_ctx_has(ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME)) {
 		need_process = client->rule->pool->reserve_prepared_statement;
 		if (!need_process) {
 			return OD_OK;
 		}
 
-		return process_vdeallocate(
-			client, (const od_sql_minimal_deallocate_stmt_t *)ast);
-	case OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT:
-	case OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT:
-		od_sql_minimal_extract_query_ctx(ast, &client->query_ctx);
-		/* let the backend execute the query */
-		return OD_OK;
-	default:
-		return OD_OK;
+		return process_vdeallocate(client, ctx);
 	}
+
+	/* discard / unlisten / everything else - let the backend execute */
+	return OD_OK;
 }
 
 typedef od_frontend_status_t (*handler_t)(od_relay_t *relay, machine_msg_t *msg,
@@ -768,7 +752,7 @@ static void process_discard(od_client_t *client, od_server_t *server)
 		return;
 	}
 
-	if (client->query_ctx.is_discard_all) {
+	if (od_query_ctx_has(&client->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL)) {
 		od_debug(&instance->logger, "main", client, server,
 			 "DISCARD ALL detected, invalidate caches");
 
@@ -789,7 +773,8 @@ static inline void process_unlisten(od_client_t *client, od_server_t *server)
 		return;
 	}
 
-	if (client->query_ctx.is_unlisten_all) {
+	if (od_query_ctx_has(&client->query_ctx,
+			     OD_QUERY_CTX_IS_UNLISTEN_ALL)) {
 		od_debug(&instance->logger, "main", client, server,
 			 "UNLISTEN ALL detected, unpin client");
 
@@ -878,7 +863,17 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	}
 
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
-	status = try_virtual_process_query(client, arena, query, query_len);
+
+	od_instance_t *instance = client->global->instance;
+
+	if (instance->config.query_parsing.mode !=
+	    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
+		od_query_parse_fill_ctx(query,
+					query_len - 1 /* zero included */,
+					arena, &client->query_ctx);
+	}
+
+	status = try_virtual_process_query(client, &client->query_ctx);
 	od_linear_alloc_reset(arena, 0);
 
 	if (status == OD_SKIP) {

@@ -209,6 +209,7 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 	listen->client_login_timeout = 15000;
 	listen->reserved_clients = -1; /* disabled */
 	listen->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
+	listen->auto_route_ro_on_standby = 0;
 	listen->balancing_override_set = 0;
 	od_storage_balancing_init(&listen->balancing_override);
 
@@ -750,6 +751,9 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       "  target_session_attrs %s",
 		       od_target_session_attrs_to_str(
 			       listen->target_session_attrs));
+		od_log(logger, "config", NULL, NULL,
+		       "  auto_route_ro_on_standby %s",
+		       listen->auto_route_ro_on_standby ? "yes" : "no");
 		if (listen->balancing_override_set) {
 			od_log(logger, "config", NULL, NULL,
 			       "  balancing override: method %s, az_aware %d",

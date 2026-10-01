@@ -68,6 +68,7 @@ A special `user default` is used when no user is matched.
 | group_checker_interval            | integer (ms)                           | 7000 (global) | runtime (global)          | Global setting: interval for checking group membership changes (7 seconds default).                                                                                        |
 | maintain_params                   | boolean                                | yes (1)       | runtime (new connections) | Maintain client connection parameters across backend connections for compatibility.                                                                                        |
 | target_session_attrs              | string enum                            | — (not set)   | runtime (new connections) | Target session attributes for connection routing; defaults to undefined behavior.                                                                                          |
+| auto_route_ro_on_standby          | boolean                                | no (0)        | runtime (new connections) | Reserved for automatic routing of read-only queries to standby replicas; see the section below.                                                                            |
 | quantiles                         | string (comma-separated)               | — (not set)   | runtime (new connections) | Comma-separated list of quantile values for statistics collection; disabled when not set.                                                                                  |
 | catchup_timeout                   | integer (sec)                          | 0             | runtime (new connections) | Timeout for replica catchup operations; 0 = no timeout.                                                                                                                    |
 | catchup_checks                    | integer                                | 0             | runtime (new connections) | **Deprecated.** Accepted but ignored.                                                                                                                                      |
@@ -786,6 +787,27 @@ Possible values are:
 - any (the default) - select host randomly
 
 `target_session_attrs "read-write"`
+
+---
+
+## **auto_route_ro_on_standby**
+
+*yes|no*
+
+Switch for automatic routing of read-only queries (simple protocol, outside
+transactions) to standby replicas, while the rest of the traffic is routed to
+the primary. Has no effect when `target_session_attrs` is set for the
+connection (rule, listen or client `odyssey.target_session_attrs`).
+
+Specifying `target_session_attrs` and `auto_route_ro_on_standby` in the same
+section is a configuration error.
+
+When set on a [listen](listen.md#auto_route_ro_on_standby) endpoint, the
+listen value overrides the rule value.
+
+Incompatible with session pooling.
+
+`auto_route_ro_on_standby yes`
 
 ---
 

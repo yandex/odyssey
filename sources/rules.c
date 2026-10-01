@@ -562,6 +562,8 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 
 	rule->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 
+	rule->auto_route_ro_on_standby = 0;
+
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
 	rule->server_lifetime_us = 3600 * 1000000L;
@@ -1534,6 +1536,10 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
+	if (a->auto_route_ro_on_standby != b->auto_route_ro_on_standby) {
+		return 0;
+	}
+
 	if (a->catchup_timeout != b->catchup_timeout) {
 		return 0;
 	}
@@ -2178,6 +2184,16 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			return NOT_OK_RESPONSE;
 		}
 
+		if (rule->auto_route_ro_on_standby &&
+		    rule->pool->pool_type == OD_RULE_POOL_SESSION) {
+			od_error(
+				logger, "rules", NULL, NULL,
+				"rule '%s.%s %s': auto_route_ro_on_standby is not supported with session pooling",
+				rule->db_name, rule->user_name,
+				rule->address_range.string_value);
+			return NOT_OK_RESPONSE;
+		}
+
 		if (rule->storage->storage_type != OD_RULE_STORAGE_LOCAL) {
 			if (rule->user_role != OD_RULE_ROLE_UNDEF) {
 				od_error(
@@ -2644,6 +2660,9 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  target_session_attrs              %s",
 		       od_target_session_attrs_to_str(
 			       rule->target_session_attrs));
+		od_log(logger, "rules", NULL, NULL,
+		       "  auto_route_ro_on_standby          %s",
+		       rule->auto_route_ro_on_standby ? "yes" : "no");
 
 		/* pool  */
 		od_log(logger, "rules", NULL, NULL,

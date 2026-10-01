@@ -66,14 +66,33 @@ typedef struct {
 
 #define OD_PG_NAMEDATALEN 64
 
+typedef enum {
+	OD_QUERY_CTX_PARSE_ERROR = 1 << 0,
+	OD_QUERY_CTX_IS_SELECT = 1 << 1,
+	OD_QUERY_CTX_IS_SHOW = 1 << 2,
+	OD_QUERY_CTX_IS_SET = 1 << 3,
+	OD_QUERY_CTX_IS_BEGIN = 1 << 4,
+	OD_QUERY_CTX_IS_DISCARD_ALL = 1 << 5,
+	OD_QUERY_CTX_IS_UNLISTEN_ALL = 1 << 6,
+	OD_QUERY_CTX_IS_DEALLOCATE_ALL = 1 << 7,
+	OD_QUERY_CTX_HAS_DEALLOCATE_NAME = 1 << 8,
+} od_query_ctx_flags_t;
+
 typedef struct {
-	int parse_error;
-	int is_discard_all;
-	int is_unlisten_all;
-	int is_deallocate_all;
-	int has_deallocate_name;
-	char deallocate_name[OD_PG_NAMEDATALEN];
+	uint64_t flags;
+	/*
+	 *   OD_QUERY_CTX_IS_SHOW               s1 = guc name
+	 *   OD_QUERY_CTX_IS_SET                s1 = guc key, s2 = guc value
+	 *   OD_QUERY_CTX_HAS_DEALLOCATE_NAME   s1 = prepared statement name
+	 */
+	char s1[OD_PG_NAMEDATALEN];
+	char s2[OD_PG_NAMEDATALEN];
+	char *s2_long;
 } od_query_ctx_t;
+
+#define od_query_ctx_has(ctx, flag) (((ctx)->flags & (flag)) != 0)
+#define od_query_ctx_set(ctx, flag) ((ctx)->flags |= (flag))
+#define od_query_ctx_clear(ctx, flag) ((ctx)->flags &= ~(uint64_t)(flag))
 
 od_sql_minimal_node_t *od_sql_minimal_node_alloc(od_linear_alloc_t *al,
 						 od_sql_minimal_node_tag_t type,
@@ -91,8 +110,5 @@ int od_sql_minimal_node_print(const od_sql_minimal_node_t *node, char *buf,
 void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 				      od_query_ctx_t *ctx);
 
-/*
- * Reset query context: zeroes the struct (no heap allocations to free).
- * Safe to call on a zeroed/stack od_query_ctx_t.
- */
+void od_query_ctx_release(od_query_ctx_t *ctx);
 void od_query_ctx_reset(od_query_ctx_t *ctx);
