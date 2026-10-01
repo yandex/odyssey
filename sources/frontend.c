@@ -840,6 +840,50 @@ attach_to_first_with_fail_fast(od_client_t *client, char *context,
 	return status;
 }
 
+static int auto_route_ro_enabled(od_client_t *client)
+{
+	int by_rule = client->rule->auto_route_ro_on_standby;
+	int by_cfg = 0;
+
+	od_config_listen_t *listencfg = client->source->config;
+	if (listencfg != NULL) {
+		by_cfg = listencfg->auto_route_ro_on_standby;
+	}
+
+	return by_rule || by_cfg;
+}
+
+static od_target_session_attrs_t attach_effective_tsa(od_client_t *client,
+						      char *context)
+{
+	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
+
+	if (!auto_route_ro_enabled(client)) {
+		return tsa;
+	}
+
+	if (kiwi_vars_get(&client->vars,
+			  KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS) != NULL) {
+		return tsa;
+	}
+
+	od_instance_t *instance = client->global->instance;
+
+	const od_query_ctx_t *qctx = &client->query_ctx;
+	if (!od_query_ctx_has(qctx, OD_QUERY_CTX_IS_SELECT) ||
+	    od_query_ctx_has(qctx, OD_QUERY_CTX_PARSE_ERROR)) {
+		od_debug(
+			&instance->logger, context, client, NULL,
+			"auto_route_ro_on_standby: read-write query, route to master");
+		return OD_TARGET_SESSION_ATTRS_RW;
+	}
+
+	od_debug(&instance->logger, context, client, NULL,
+		 "auto_route_ro_on_standby: read-only query, prefer-standby");
+
+	return OD_TARGET_SESSION_ATTRS_PREFER_STANDBY;
+}
+
 static od_frontend_status_t attach_with_storage(od_client_t *client,
 						char *context,
 						kiwi_params_t *route_params,
@@ -848,7 +892,7 @@ static od_frontend_status_t attach_with_storage(od_client_t *client,
 {
 	od_route_t *route = client->route;
 
-	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
+	od_target_session_attrs_t tsa = attach_effective_tsa(client, context);
 	uint32_t lag_timeout = get_effective_catchup_timeout(client);
 
 	host_select_arg_t arg;
@@ -2721,7 +2765,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		od_assert(server == NULL);
 		od_assert(client->route != NULL);
 
-		od_target_session_attrs_t attrs = od_tsa_get_effective(client);
+		od_target_session_attrs_t attrs =
+			attach_effective_tsa(client, context);
 
 		od_frontend_fatal(
 			client, KIWI_CONNECTION_FAILURE,
