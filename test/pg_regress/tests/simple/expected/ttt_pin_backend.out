@@ -23,7 +23,7 @@ SHOW odyssey.pin_backend;
 NOTICE:  processed virtually by odyssey
  odyssey.pin_backend 
 ---------------------
- on
+ off
 (1 row)
 
 COMMIT;
