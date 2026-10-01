@@ -378,6 +378,20 @@ static inline char *od_config_yes_no(int value)
 	return value ? "yes" : "no";
 }
 
+static const char *
+od_config_query_parsing_mode_to_str(od_config_query_parsing_mode_t mode)
+{
+	switch (mode) {
+	case OD_CONFIG_QUERY_PARSING_MODE_DISABLED:
+		return "disabled";
+	case OD_CONFIG_QUERY_PARSING_MODE_MINIMAL:
+		return "minimal";
+	case OD_CONFIG_QUERY_PARSING_MODE_FULL:
+		return "full";
+	}
+	return "unknown";
+}
+
 /*
  * Description of the global configuration for SHOW CONFIG.
  *
@@ -686,6 +700,12 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       od_config_yes_no(config->virtual_transaction));
 	od_log(logger, "config", NULL, NULL, "smart_search_path_enquoting %s",
 	       od_config_yes_no(config->smart_search_path_enquoting));
+	od_log(logger, "config", NULL, NULL, "query_parsing mode       %s",
+	       od_config_query_parsing_mode_to_str(config->query_parsing.mode));
+	od_log(logger, "config", NULL, NULL, "query_parsing max_query_len %zu",
+	       config->query_parsing.max_query_len);
+	od_log(logger, "config", NULL, NULL, "query_parsing mem_limit  %zu",
+	       config->query_parsing.mem_limit_bytes);
 	if (config->availability_zone[0]) {
 		od_log(logger, "config", NULL, NULL,
 		       "availability_zone       %s", config->availability_zone);

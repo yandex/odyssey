@@ -182,6 +182,76 @@ static void set_ctx_value(od_query_ctx_t *ctx, const char *value)
 	}
 }
 
+static int is_select_copy(CopyStmt *cstmt)
+{
+	if (cstmt->is_from) {
+		return 0;
+	}
+
+	if (cstmt->filename != NULL) {
+		return 0;
+	}
+
+	if (cstmt->query == NULL) {
+		return 1;
+	}
+
+	return IsA(cstmt->query, SelectStmt);
+}
+
+static int is_select_explain(ExplainStmt *estmt)
+{
+	/* TODO: support smth like this:
+	Node *query = estmt->query;
+	ListCell *lc;
+	int analyze = 0;
+
+	foreach(lc, estmt->options) {
+		DefElem *opt = lfirst_node(DefElem, lc);
+		if (strcmp(opt->defname, "analyze") == 0) {
+			analyze = 1;
+			break;
+		}
+	}
+
+	if (IsA(query, SelectStmt)) {
+		if (!analyze) {
+			return 1;
+		}
+
+		return !has_function_calls(query);
+	}
+
+	return !analyze;
+		*/
+
+	(void)estmt;
+	return 0;
+}
+
+static int is_select_select(SelectStmt *sstmt)
+{
+	if (sstmt->intoClause != NULL || sstmt->lockingClause != NULL) {
+		return 0;
+	}
+
+	if (sstmt->withClause != NULL) {
+		ListCell *cte_item;
+
+		foreach(cte_item, sstmt->withClause->ctes)
+		{
+			CommonTableExpr *cte =
+				lfirst_node(CommonTableExpr, cte_item);
+
+			if (!IsA(cte->ctequery, SelectStmt)) {
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
 static void parse_full(const char *query, uint32_t query_len,
 		       od_linear_alloc_t *arena, od_query_ctx_t *ctx)
 {
@@ -218,6 +288,7 @@ static void parse_full(const char *query, uint32_t query_len,
 		VariableShowStmt *vsstmt = castNode(VariableShowStmt, node);
 		od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", vsstmt->name);
 		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SHOW);
+		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SELECT);
 	} else if (IsA(node, VariableSetStmt)) {
 		VariableSetStmt *vsstmt = castNode(VariableSetStmt, node);
 		if (vsstmt->kind == VAR_SET_VALUE && vsstmt->args != NULL &&
@@ -271,9 +342,22 @@ static void parse_full(const char *query, uint32_t query_len,
 			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s",
 				    dstmt->name);
 		}
-
 	} else if (IsA(node, SelectStmt)) {
-		/* TODO: will be done in next patches */
+		/* inspired by https://github.com/pgpool/pgpool2/blob/91c8522/src/protocol/pool_process_query.c#L1140 */
+		SelectStmt *sstmt = castNode(SelectStmt, node);
+		if (is_select_select(sstmt)) {
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SELECT);
+		}
+	} else if (IsA(node, CopyStmt)) {
+		CopyStmt *cstmt = castNode(CopyStmt, node);
+		if (is_select_copy(cstmt)) {
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SELECT);
+		}
+	} else if (IsA(node, ExplainStmt)) {
+		ExplainStmt *estmt = castNode(ExplainStmt, node);
+		if (is_select_explain(estmt)) {
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SELECT);
+		}
 	}
 
 	return;
