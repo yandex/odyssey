@@ -1,0 +1,205 @@
+-- 1 primary (localhost:5432) and 4 replicas (localhost:5433..5436)
+SET odyssey.target_session_attrs TO 'read-write';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.execute_on_host;
+NOTICE:  processed virtually by odyssey
+ odyssey.execute_on_host 
+-------------------------
+ tcp://localhost:5432
+(1 row)
+
+CREATE TABLE tsa_test (i int);
+NOTICE:  select host tcp://localhost:5432
+INSERT INTO tsa_test (i) VALUES (22);
+NOTICE:  select host tcp://localhost:5432
+SELECT count(*) FROM tsa_test;
+NOTICE:  select host tcp://localhost:5432
+ count 
+-------
+     1
+(1 row)
+
+SELECT 1+2;
+NOTICE:  select host tcp://localhost:5432
+ ?column? 
+----------
+        3
+(1 row)
+
+SET odyssey.target_session_attrs TO 'prefer-standby';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5433';
+NOTICE:  processed virtually by odyssey
+SELECT 1+2;
+NOTICE:  select host tcp://localhost:5433
+ ?column? 
+----------
+        3
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT 1+2;
+NOTICE:  select host tcp://localhost:5434
+ ?column? 
+----------
+        3
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5435';
+NOTICE:  processed virtually by odyssey
+SELECT 1+2;
+NOTICE:  select host tcp://localhost:5435
+ ?column? 
+----------
+        3
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5436';
+NOTICE:  processed virtually by odyssey
+SELECT 1+2;
+NOTICE:  select host tcp://localhost:5436
+ ?column? 
+----------
+        3
+(1 row)
+
+SET odyssey.target_session_attrs TO 'read-only';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5433';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5434
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5435';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5435
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5436';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5436
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.target_session_attrs TO 'any';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5432
+ pg_is_in_recovery 
+-------------------
+ f
+(1 row)
+
+SET odyssey.execute_on_host TO DEFAULT;
+NOTICE:  processed virtually by odyssey
+-- cut the replicas off: prefer-standby must fall back to the primary
+\! ${PGTEST_DIR}/sql/replicas.sh stop
+\! sleep 1
+SET odyssey.target_session_attrs TO 'prefer-standby';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5432
+ pg_is_in_recovery 
+-------------------
+ f
+(1 row)
+
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5432
+ pg_is_in_recovery 
+-------------------
+ f
+(1 row)
+
+SET odyssey.target_session_attrs TO 'read-write';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+SELECT 1+2;
+NOTICE:  select host tcp://localhost:5432
+ ?column? 
+----------
+        3
+(1 row)
+
+SET odyssey.execute_on_host TO DEFAULT;
+NOTICE:  processed virtually by odyssey
+-- pinned dead replica is an error (child psql, server id is masked)
+\! psql 'host=localhost port=6432 user=postgres dbname=postgres' -c "SET odyssey.execute_on_host TO 'localhost:5433'" -c 'select 1' 2>&1 | sed -E 's/remote server s[0-9a-f]+/remote server <id>/'
+NOTICE:  processed virtually by odyssey
+SET
+FATAL:  odyssey: failed to connect to remote server <id>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+connection to server was lost
+\! ${PGTEST_DIR}/sql/replicas.sh start
+SET odyssey.target_session_attrs TO 'read-only';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5433';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5434
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5435';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5435
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5436';
+NOTICE:  processed virtually by odyssey
+SELECT pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5436
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.target_session_attrs TO 'read-write';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+DROP TABLE tsa_test;
+NOTICE:  select host tcp://localhost:5432
