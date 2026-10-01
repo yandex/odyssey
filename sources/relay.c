@@ -866,12 +866,9 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_instance_t *instance = client->global->instance;
 
-	if (instance->config.query_parsing.mode !=
-	    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
-		od_query_parse_fill_ctx(query,
-					query_len - 1 /* zero included */,
-					arena, &client->query_ctx);
-	}
+	od_query_parse_fill_ctx(query, query_len - 1 /* zero included */, arena,
+				&client->query_ctx,
+				&instance->config.query_parsing);
 
 	status = try_virtual_process_query(client, &client->query_ctx);
 	od_linear_alloc_reset(arena, 0);

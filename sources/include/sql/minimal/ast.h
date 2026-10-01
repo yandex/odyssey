@@ -76,6 +76,7 @@ typedef enum {
 	OD_QUERY_CTX_IS_UNLISTEN_ALL = 1 << 6,
 	OD_QUERY_CTX_IS_DEALLOCATE_ALL = 1 << 7,
 	OD_QUERY_CTX_HAS_DEALLOCATE_NAME = 1 << 8,
+	OD_QUERY_CTX_TOO_LONG = 1 << 9,
 } od_query_ctx_flags_t;
 
 typedef struct {

@@ -12,6 +12,12 @@
 static _Alignas(max_align_t) uint8_t s_arena_buf[ARENA_SIZE];
 static od_linear_alloc_t s_arena;
 
+static od_config_query_parsing_t s_parsing = {
+	.mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL,
+	.mem_limit_bytes = 5 * 1024 * 1024,
+	.max_query_len = 10000,
+};
+
 static void test_refs(void)
 {
 	od_global_pstmt_map_t *global = od_global_pstmts_map_create(1);
@@ -20,13 +26,14 @@ static void test_refs(void)
 	od_pstmt_desc_t desc;
 	desc.data = "data1";
 	desc.len = sizeof("data1");
-	od_pstmt_t *ps = od_pstmt_create_or_get(global, desc, &s_arena);
+	od_pstmt_t *ps =
+		od_pstmt_create_or_get(global, desc, &s_arena, &s_parsing);
 	test(ps != NULL);
 
 	od_pstmt_unref(ps);
 	test(od_global_pstmts_has_pstmt(global, desc) == 0);
 
-	ps = od_pstmt_create_or_get(global, desc, &s_arena);
+	ps = od_pstmt_create_or_get(global, desc, &s_arena, &s_parsing);
 	test(ps != NULL);
 
 	od_pstmt_t *p2 = ps;
@@ -49,18 +56,20 @@ static void test_pstmt_global(void)
 	desc.data = "data";
 	desc.len = sizeof("data");
 
-	od_pstmt_t *pstmt = od_pstmt_create_or_get(gm, desc, &s_arena);
+	od_pstmt_t *pstmt =
+		od_pstmt_create_or_get(gm, desc, &s_arena, &s_parsing);
 	test(pstmt != NULL);
 	test(desc.len == pstmt->desc.len);
 	test(memcmp(desc.data, pstmt->desc.data, pstmt->desc.len) == 0);
 	test(&pstmt->desc != &desc);
 	test(pstmt->desc.data != desc.data);
 
-	od_pstmt_t *t = od_pstmt_create_or_get(gm, desc, &s_arena);
+	od_pstmt_t *t = od_pstmt_create_or_get(gm, desc, &s_arena, &s_parsing);
 	test(t == pstmt);
 	od_pstmt_unref(t);
 
-	od_pstmt_t *pstmt2 = od_pstmt_create_or_get(gm, desc, &s_arena);
+	od_pstmt_t *pstmt2 =
+		od_pstmt_create_or_get(gm, desc, &s_arena, &s_parsing);
 	test(pstmt2 == pstmt);
 	test(pstmt2->desc.data == pstmt->desc.data);
 
@@ -68,7 +77,8 @@ static void test_pstmt_global(void)
 	desc_copy.data = od_strdup("data");
 	test(desc.data != NULL);
 	desc_copy.len = sizeof("data");
-	od_pstmt_t *pstmt3 = od_pstmt_create_or_get(gm, desc_copy, &s_arena);
+	od_pstmt_t *pstmt3 =
+		od_pstmt_create_or_get(gm, desc_copy, &s_arena, &s_parsing);
 	test(pstmt3 == pstmt2);
 	test(pstmt3 == pstmt);
 
@@ -91,7 +101,8 @@ static void test_pstmt_query_ctx(void)
 	od_pstmt_desc_t discard_desc;
 	discard_desc.data = "DISCARD ALL";
 	discard_desc.len = sizeof("DISCARD ALL");
-	od_pstmt_t *ps = od_pstmt_create_or_get(gm, discard_desc, &s_arena);
+	od_pstmt_t *ps =
+		od_pstmt_create_or_get(gm, discard_desc, &s_arena, &s_parsing);
 	test(ps != NULL);
 	test(od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
 	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
@@ -104,7 +115,7 @@ static void test_pstmt_query_ctx(void)
 	od_pstmt_desc_t unlisten_desc;
 	unlisten_desc.data = "UNLISTEN *";
 	unlisten_desc.len = sizeof("UNLISTEN *");
-	ps = od_pstmt_create_or_get(gm, unlisten_desc, &s_arena);
+	ps = od_pstmt_create_or_get(gm, unlisten_desc, &s_arena, &s_parsing);
 	test(ps != NULL);
 	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
 	test(od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
@@ -117,7 +128,7 @@ static void test_pstmt_query_ctx(void)
 	od_pstmt_desc_t dealloc_all_desc;
 	dealloc_all_desc.data = "DEALLOCATE ALL";
 	dealloc_all_desc.len = sizeof("DEALLOCATE ALL");
-	ps = od_pstmt_create_or_get(gm, dealloc_all_desc, &s_arena);
+	ps = od_pstmt_create_or_get(gm, dealloc_all_desc, &s_arena, &s_parsing);
 	test(ps != NULL);
 	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
 	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
@@ -130,7 +141,8 @@ static void test_pstmt_query_ctx(void)
 	od_pstmt_desc_t dealloc_name_desc;
 	dealloc_name_desc.data = "DEALLOCATE foo";
 	dealloc_name_desc.len = sizeof("DEALLOCATE foo");
-	ps = od_pstmt_create_or_get(gm, dealloc_name_desc, &s_arena);
+	ps = od_pstmt_create_or_get(gm, dealloc_name_desc, &s_arena,
+				    &s_parsing);
 	test(ps != NULL);
 	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
 	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
@@ -144,7 +156,7 @@ static void test_pstmt_query_ctx(void)
 	od_pstmt_desc_t select_desc;
 	select_desc.data = "SELECT 1";
 	select_desc.len = sizeof("SELECT 1");
-	ps = od_pstmt_create_or_get(gm, select_desc, &s_arena);
+	ps = od_pstmt_create_or_get(gm, select_desc, &s_arena, &s_parsing);
 	test(ps != NULL);
 	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
 	test(!od_query_ctx_has(&ps->query_ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
@@ -185,19 +197,24 @@ void test_pstmt_client_hashmap(void)
 	desc5.data = "data5";
 	desc5.len = sizeof("data5");
 
-	od_pstmt_t *unnamed1 = od_pstmt_create_or_get(global, desc1, &s_arena);
+	od_pstmt_t *unnamed1 =
+		od_pstmt_create_or_get(global, desc1, &s_arena, &s_parsing);
 	test(unnamed1 != NULL);
 
-	od_pstmt_t *unnamed2 = od_pstmt_create_or_get(global, desc2, &s_arena);
+	od_pstmt_t *unnamed2 =
+		od_pstmt_create_or_get(global, desc2, &s_arena, &s_parsing);
 	test(unnamed2 != NULL);
 
-	od_pstmt_t *p0 = od_pstmt_create_or_get(global, desc3, &s_arena);
+	od_pstmt_t *p0 =
+		od_pstmt_create_or_get(global, desc3, &s_arena, &s_parsing);
 	test(p0 != NULL);
 
-	od_pstmt_t *p1 = od_pstmt_create_or_get(global, desc4, &s_arena);
+	od_pstmt_t *p1 =
+		od_pstmt_create_or_get(global, desc4, &s_arena, &s_parsing);
 	test(p1 != NULL);
 
-	od_pstmt_t *dangling = od_pstmt_create_or_get(global, desc5, &s_arena);
+	od_pstmt_t *dangling =
+		od_pstmt_create_or_get(global, desc5, &s_arena, &s_parsing);
 	test(dangling != NULL);
 
 	test(unnamed1 != unnamed2);
@@ -312,19 +329,24 @@ static void test_portal_client_hashmap(void)
 	desc5.data = "data5";
 	desc5.len = sizeof("data5");
 
-	od_pstmt_t *unnamed1 = od_pstmt_create_or_get(global, desc1, &s_arena);
+	od_pstmt_t *unnamed1 =
+		od_pstmt_create_or_get(global, desc1, &s_arena, &s_parsing);
 	test(unnamed1 != NULL);
 
-	od_pstmt_t *unnamed2 = od_pstmt_create_or_get(global, desc2, &s_arena);
+	od_pstmt_t *unnamed2 =
+		od_pstmt_create_or_get(global, desc2, &s_arena, &s_parsing);
 	test(unnamed2 != NULL);
 
-	od_pstmt_t *p0 = od_pstmt_create_or_get(global, desc3, &s_arena);
+	od_pstmt_t *p0 =
+		od_pstmt_create_or_get(global, desc3, &s_arena, &s_parsing);
 	test(p0 != NULL);
 
-	od_pstmt_t *p1 = od_pstmt_create_or_get(global, desc4, &s_arena);
+	od_pstmt_t *p1 =
+		od_pstmt_create_or_get(global, desc4, &s_arena, &s_parsing);
 	test(p1 != NULL);
 
-	od_pstmt_t *dangling = od_pstmt_create_or_get(global, desc5, &s_arena);
+	od_pstmt_t *dangling =
+		od_pstmt_create_or_get(global, desc5, &s_arena, &s_parsing);
 	test(dangling != NULL);
 
 	test(unnamed1 != unnamed2);
@@ -411,13 +433,16 @@ static void test_pstmt_server_hashmap(void)
 	desc5.data = "data5";
 	desc5.len = sizeof("data5");
 
-	od_pstmt_t *p0 = od_pstmt_create_or_get(global, desc3, &s_arena);
+	od_pstmt_t *p0 =
+		od_pstmt_create_or_get(global, desc3, &s_arena, &s_parsing);
 	test(p0 != NULL);
 
-	od_pstmt_t *p1 = od_pstmt_create_or_get(global, desc4, &s_arena);
+	od_pstmt_t *p1 =
+		od_pstmt_create_or_get(global, desc4, &s_arena, &s_parsing);
 	test(p1 != NULL);
 
-	od_pstmt_t *dangling = od_pstmt_create_or_get(global, desc5, &s_arena);
+	od_pstmt_t *dangling =
+		od_pstmt_create_or_get(global, desc5, &s_arena, &s_parsing);
 	test(dangling != NULL);
 
 	test(p0 != p1);
@@ -478,7 +503,8 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	od_pstmt_t *p[4];
 	for (int i = 0; i < 4; i++) {
-		p[i] = od_pstmt_create_or_get(global, d[i], &s_arena);
+		p[i] = od_pstmt_create_or_get(global, d[i], &s_arena,
+					      &s_parsing);
 		test(p[i] != NULL);
 	}
 
@@ -522,7 +548,8 @@ static void test_pstmt_server_sieve_eviction(void)
 	/* --- oldest unvisited entries are evicted first --- */
 
 	for (int i = 0; i < 4; i++) {
-		p[i] = od_pstmt_create_or_get(global, d[i], &s_arena);
+		p[i] = od_pstmt_create_or_get(global, d[i], &s_arena,
+					      &s_parsing);
 		test(p[i] != NULL);
 	}
 
@@ -565,7 +592,8 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	od_pstmt_t *hp[4];
 	for (int i = 0; i < 4; i++) {
-		hp[i] = od_pstmt_create_or_get(global, dh[i], &s_arena);
+		hp[i] = od_pstmt_create_or_get(global, dh[i], &s_arena,
+					       &s_parsing);
 		test(hp[i] != NULL);
 	}
 
@@ -604,7 +632,8 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	od_pstmt_t *rp[4];
 	for (int i = 0; i < 4; i++) {
-		rp[i] = od_pstmt_create_or_get(global, dr[i], &s_arena);
+		rp[i] = od_pstmt_create_or_get(global, dr[i], &s_arena,
+					       &s_parsing);
 		test(rp[i] != NULL);
 	}
 
@@ -642,7 +671,8 @@ static void test_pstmt_server_sieve_eviction(void)
 	od_pstmt_desc_t d4;
 	d4.data = "q4";
 	d4.len = sizeof("q4");
-	od_pstmt_t *p4 = od_pstmt_create_or_get(global, d4, &s_arena);
+	od_pstmt_t *p4 =
+		od_pstmt_create_or_get(global, d4, &s_arena, &s_parsing);
 	test(p4 != NULL);
 
 	server = od_server_allocate(1);

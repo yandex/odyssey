@@ -209,6 +209,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "minimal", MINIMAL },
 	{ "full", FULL },
 	{ "mem_limit", MEM_LIMIT },
+	{ "max_query_len", MAX_QUERY_LEN },
 	{ "reserved_clients", RESERVED_CLIENTS },
 
 	{ NULL, 0 }

@@ -105,6 +105,7 @@ void od_config_init(od_config_t *config)
 	memset(&config->query_parsing, 0, sizeof(config->query_parsing));
 	config->query_parsing.mem_limit_bytes = 5 * 1024 * 1024;
 	config->query_parsing.mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
+	config->query_parsing.max_query_len = 10000;
 
 	config->host_watcher_enabled = 0;
 

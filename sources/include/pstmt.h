@@ -32,6 +32,7 @@
 #include <machinarium/machinarium.h>
 
 #include <types.h>
+#include <config.h>
 #include <alloc/linear.h>
 #include <sql/minimal/ast.h>
 
@@ -122,7 +123,8 @@ od_global_pstmt_map_t *od_global_pstmts_map_create(size_t nlocks);
 void od_global_pstmts_map_free(od_global_pstmt_map_t *hm);
 od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *gm,
 				   od_pstmt_desc_t desc,
-				   od_linear_alloc_t *arena);
+				   od_linear_alloc_t *arena,
+				   const od_config_query_parsing_t *parsing);
 int od_global_pstmts_has_pstmt(od_global_pstmt_map_t *gm,
 			       const od_pstmt_desc_t desc);
 void od_global_pstmt_try_remove(od_global_pstmt_map_t *gm, od_pstmt_t *pstmt);

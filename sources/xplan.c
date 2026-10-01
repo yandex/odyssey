@@ -776,7 +776,8 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 	od_global_pstmt_map_t *global_pstmts =
 		od_instance_get_pstmts_map(instance);
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
-	od_pstmt_t *pstmt = od_pstmt_create_or_get(global_pstmts, desc, arena);
+	od_pstmt_t *pstmt = od_pstmt_create_or_get(
+		global_pstmts, desc, arena, &instance->config.query_parsing);
 	if (pstmt == NULL) {
 		return OD_EOOM;
 	}
