@@ -632,10 +632,11 @@ static void test_parse_fill_ctx_full(void)
 	od_query_ctx_t ctx;
 	memset(&ctx, 0, sizeof(ctx));
 
-	/* SHOW — name stored in ctx */
+	/* SHOW — name stored in ctx; in full mode SHOW is also a select */
 	fill_ctx_full("SHOW application_name", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SHOW));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
 	test(strcmp(ctx.s1, "application_name") == 0);
 	od_query_ctx_reset(&ctx);
@@ -776,8 +777,136 @@ static void test_parse_fill_ctx_full(void)
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
 	od_query_ctx_reset(&ctx);
 
-	/* SELECT — parsed, but no ctx flags yet */
+	/* SELECT — simple select is flagged */
 	fill_ctx_full("SELECT 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("SELECT * FROM t WHERE a = 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* UNION — still a select */
+	fill_ctx_full("SELECT 1 UNION SELECT 2", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* VALUES — still a select */
+	fill_ctx_full("VALUES (1), (2)", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* SELECT INTO — writes, not flagged */
+	fill_ctx_full("SELECT 1 INTO t2", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* FOR UPDATE — locking, not flagged */
+	fill_ctx_full("SELECT 1 FOR UPDATE", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* WITH — all CTEs are selects, flagged */
+	fill_ctx_full("WITH cte AS (SELECT 1) SELECT * FROM cte", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("WITH cte AS (SELECT 1), cte2 AS (SELECT 2) SELECT 1",
+		      &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* WITH — a writing CTE disqualifies the query */
+	fill_ctx_full(
+		"WITH cte AS (INSERT INTO t VALUES (1)) SELECT * FROM cte",
+		&ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* COPY TO STDOUT — like a select */
+	fill_ctx_full("COPY t TO STDOUT", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("COPY (SELECT 1) TO STDOUT", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* COPY FROM STDIN — writes, not flagged */
+	fill_ctx_full("COPY t FROM STDIN", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* COPY TO file — not flagged */
+	fill_ctx_full("COPY t TO '/tmp/out'", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN — not supported yet, parsed but not flagged */
+	fill_ctx_full("EXPLAIN SELECT 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* UPDATE — writes, not flagged */
+	fill_ctx_full("UPDATE t SET a = 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("UPDATE t SET a = 1 WHERE b = 2", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("UPDATE t SET a = 1 WHERE b = 2 RETURNING a", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* UPDATE with a CTE — writes, not flagged */
+	fill_ctx_full("WITH cte AS (SELECT 1) UPDATE t SET a = 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* DELETE — writes, not flagged */
+	fill_ctx_full("DELETE FROM t", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("DELETE FROM t WHERE a = 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("DELETE FROM t WHERE a = 1 RETURNING a", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* TRUNCATE — writes, not flagged */
+	fill_ctx_full("TRUNCATE t", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* CREATE TABLE AS SELECT — writes, not flagged */
+	fill_ctx_full("CREATE TABLE t2 AS SELECT 1", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	od_query_ctx_reset(&ctx);
@@ -786,6 +915,7 @@ static void test_parse_fill_ctx_full(void)
 	fill_ctx_full("INSERT INTO t VALUES (1)", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	od_query_ctx_reset(&ctx);
 
 	/* multi statement — parse error */
