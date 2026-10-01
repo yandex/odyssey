@@ -52,6 +52,22 @@ listen {
 	}
 }
 
+query_parsing {
+	mode full
+}
+
+listen {
+	host "*"
+	port 8432
+	backlog 128
+	tls "disable"
+	balancing {
+		method "roundrobin" {}
+		show_notice_messages yes
+	}
+	auto_route_ro_on_standby yes
+}
+
 storage "rr-hosts" {
 	type "remote"
 	host "localhost:5432,localhost:5433,localhost:5434"
