@@ -853,8 +853,8 @@ static int auto_route_ro_enabled(od_client_t *client)
 	return by_rule || by_cfg;
 }
 
-static od_target_session_attrs_t
-attach_effective_tsa(od_client_t *client, char *context)
+static od_target_session_attrs_t attach_effective_tsa(od_client_t *client,
+						      char *context)
 {
 	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
 
