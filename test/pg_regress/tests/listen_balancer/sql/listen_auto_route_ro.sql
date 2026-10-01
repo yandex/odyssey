@@ -9,3 +9,5 @@ select 47;
 select 67;
 select 67;
 select 67;
+
+create temporary table auto_ro_baz(i int);

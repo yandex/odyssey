@@ -867,13 +867,17 @@ static od_target_session_attrs_t attach_effective_tsa(od_client_t *client,
 		return tsa;
 	}
 
+	od_instance_t *instance = client->global->instance;
+
 	const od_query_ctx_t *qctx = &client->query_ctx;
 	if (!od_query_ctx_has(qctx, OD_QUERY_CTX_IS_SELECT) ||
 	    od_query_ctx_has(qctx, OD_QUERY_CTX_PARSE_ERROR)) {
-		return tsa;
+		od_debug(
+			&instance->logger, context, client, NULL,
+			"auto_route_ro_on_standby: read-write query, route to master");
+		return OD_TARGET_SESSION_ATTRS_RW;
 	}
 
-	od_instance_t *instance = client->global->instance;
 	od_debug(&instance->logger, context, client, NULL,
 		 "auto_route_ro_on_standby: read-only query, prefer-standby");
 
