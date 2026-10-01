@@ -800,6 +800,45 @@ static void test_parse_fill_ctx_full(void)
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	od_query_ctx_reset(&ctx);
 
+	/* safe built-in functions — still a select */
+	fill_ctx_full("SELECT count(*) FROM t", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("SELECT now()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("SELECT random(), version()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("SELECT pg_catalog.count(*) FROM t", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* unknown functions — not a select */
+	fill_ctx_full("SELECT write_fn()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* safe function wrapping an unknown one — the argument is walked */
+	fill_ctx_full("SELECT count(write_fn())", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* non pg_catalog qualification is never whitelisted */
+	fill_ctx_full("SELECT myschema.count(*)", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
 	/* SELECT INTO — writes, not flagged */
 	fill_ctx_full("SELECT 1 INTO t2", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
@@ -855,8 +894,85 @@ static void test_parse_fill_ctx_full(void)
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	od_query_ctx_reset(&ctx);
 
-	/* EXPLAIN — not supported yet, parsed but not flagged */
+	/* EXPLAIN — like a select */
 	fill_ctx_full("EXPLAIN SELECT 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN of a writing statement — still safe without ANALYZE */
+	fill_ctx_full("EXPLAIN UPDATE t SET a = 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN ANALYZE SELECT — still a select */
+	fill_ctx_full("EXPLAIN ANALYZE SELECT 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN (ANALYZE) — parenthesized form */
+	fill_ctx_full("EXPLAIN (ANALYZE) SELECT 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN ANALYZE UPDATE — writes, not flagged */
+	fill_ctx_full("EXPLAIN ANALYZE UPDATE t SET a = 1", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN ANALYZE with a function call — not flagged */
+	fill_ctx_full("EXPLAIN ANALYZE SELECT write_fn()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* plain EXPLAIN with a function call — no ANALYZE, still a select */
+	fill_ctx_full("EXPLAIN SELECT write_fn()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN ANALYZE — function call in WHERE */
+	fill_ctx_full("EXPLAIN ANALYZE SELECT * FROM t WHERE b = write_fn()",
+		      &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN ANALYZE — safe function in FROM */
+	fill_ctx_full("EXPLAIN ANALYZE SELECT * FROM generate_series(1, 10)",
+		      &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN ANALYZE — safe function in SELECT list */
+	fill_ctx_full("EXPLAIN ANALYZE SELECT count(*) FROM t", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN ANALYZE — safe function wrapping an unknown one */
+	fill_ctx_full("EXPLAIN ANALYZE SELECT count(write_fn())", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN ANALYZE — function call inside a CTE */
+	fill_ctx_full(
+		"EXPLAIN ANALYZE WITH cte AS (SELECT write_fn()) SELECT * FROM cte",
+		&ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* EXPLAIN ANALYZE — function call in ORDER BY */
+	fill_ctx_full("EXPLAIN ANALYZE SELECT * FROM t ORDER BY write_fn()",
+		      &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	od_query_ctx_reset(&ctx);

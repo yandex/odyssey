@@ -199,15 +199,577 @@ static int is_select_copy(CopyStmt *cstmt)
 	return IsA(cstmt->query, SelectStmt);
 }
 
+static const char *safe_function_names[] = {
+	"abs",
+	"age",
+	"array_agg",
+	"array_cat",
+	"array_dims",
+	"array_length",
+	"array_lower",
+	"array_ndims",
+	"array_position",
+	"array_positions",
+	"array_to_string",
+	"array_upper",
+	"ascii",
+	"avg",
+	"bit_and",
+	"bit_or",
+	"bool_and",
+	"bool_or",
+	"bool_xor",
+	"btrim",
+	"cardinality",
+	"ceil",
+	"ceiling",
+	"char_length",
+	"character_length",
+	"chr",
+	"concat",
+	"concat_ws",
+	"corr",
+	"count",
+	"covar_pop",
+	"covar_samp",
+	"current_database",
+	"current_schema",
+	"current_schemas",
+	"cume_dist",
+	"date_part",
+	"date_trunc",
+	"decode",
+	"dense_rank",
+	"div",
+	"encode",
+	"ends_with",
+	"every",
+	"exp",
+	"extract",
+	"first_value",
+	"floor",
+	"format",
+	"gcd",
+	"gen_random_uuid",
+	"generate_series",
+	"initcap",
+	"isfinite",
+	"json_agg",
+	"json_build_array",
+	"json_build_object",
+	"json_extract_path",
+	"json_extract_path_text",
+	"json_object_agg",
+	"jsonb_agg",
+	"jsonb_build_array",
+	"jsonb_build_object",
+	"jsonb_extract_path",
+	"jsonb_extract_path_text",
+	"jsonb_object_agg",
+	"jsonb_pretty",
+	"jsonb_set",
+	"jsonb_typeof",
+	"json_typeof",
+	"lag",
+	"last_value",
+	"lcm",
+	"lead",
+	"left",
+	"length",
+	"ln",
+	"log",
+	"lower",
+	"lpad",
+	"ltrim",
+	"make_date",
+	"make_interval",
+	"make_time",
+	"make_timestamp",
+	"make_timestamptz",
+	"max",
+	"md5",
+	"min",
+	"mode",
+	"mod",
+	"now",
+	"nth_value",
+	"ntile",
+	"overlay",
+	"percent_rank",
+	"percentile_cont",
+	"percentile_disc",
+	"pi",
+	"position",
+	"pow",
+	"power",
+	"pg_backend_pid",
+	"pg_column_size",
+	"pg_database_size",
+	"pg_get_expr",
+	"pg_indexes_size",
+	"pg_is_in_recovery",
+	"pg_relation_size",
+	"pg_size_pretty",
+	"pg_table_size",
+	"pg_total_relation_size",
+	"quote_ident",
+	"quote_literal",
+	"quote_nullable",
+	"random",
+	"rank",
+	"regexp_match",
+	"regexp_matches",
+	"regexp_replace",
+	"regexp_split_to_array",
+	"regexp_split_to_table",
+	"regexp_substr",
+	"repeat",
+	"replace",
+	"reverse",
+	"right",
+	"round",
+	"row_number",
+	"row_to_json",
+	"rpad",
+	"rtrim",
+	"scale",
+	"sign",
+	"split_part",
+	"sqrt",
+	"starts_with",
+	"strpos",
+	"string_agg",
+	"string_to_array",
+	"substr",
+	"substring",
+	"sum",
+	"to_char",
+	"to_date",
+	"to_hex",
+	"to_json",
+	"to_jsonb",
+	"to_number",
+	"to_timestamp",
+	"translate",
+	"trim",
+	"trim_scale",
+	"trunc",
+	"txid_current",
+	"unistr",
+	"unnest",
+	"upper",
+	"version",
+	"width_bucket",
+	"xmlagg",
+};
+
+static int is_safe_function_name(const char *name)
+{
+	size_t i;
+
+	for (i = 0; i < lengthof(safe_function_names); i++) {
+		if (strcmp(safe_function_names[i], name) == 0) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static int is_safe_function_call(FuncCall *fcall)
+{
+	List *names = fcall->funcname;
+
+	if (names == NULL || list_length(names) == 0 ||
+	    list_length(names) > 2) {
+		return 0;
+	}
+
+	if (list_length(names) == 2 &&
+	    strcmp(strVal(linitial(names)), "pg_catalog") != 0) {
+		return 0;
+	}
+
+	return is_safe_function_name(strVal(llast(names)));
+}
+
+static int has_function_call_walker(Node *node)
+{
+	if (node == NULL) {
+		return 0;
+	}
+
+#define WALK(n) has_function_call_walker((Node *)(n))
+
+	switch (nodeTag(node)) {
+	/* primitive node types with no subnodes */
+	case T_JsonFormat:
+	case T_SetToDefault:
+	case T_CurrentOfExpr:
+	case T_SQLValueFunction:
+	case T_Integer:
+	case T_Float:
+	case T_Boolean:
+	case T_String:
+	case T_BitString:
+	case T_ParamRef:
+	case T_A_Const:
+	case T_A_Star:
+	case T_MergeSupportFunc:
+	case T_ReturningOption:
+	case T_Alias:
+	case T_ColumnRef:
+	case T_JsonTablePathSpec:
+		break;
+	case T_RangeVar:
+		return WALK(((RangeVar *)node)->alias);
+	case T_GroupingFunc:
+		return WALK(((GroupingFunc *)node)->args);
+	case T_SubLink:
+		return WALK(((SubLink *)node)->testexpr) ||
+		       WALK(((SubLink *)node)->subselect);
+	case T_CaseExpr: {
+		CaseExpr *caseexpr = (CaseExpr *)node;
+		ListCell *temp;
+
+		if (WALK(caseexpr->arg)) {
+			return 1;
+		}
+		foreach(temp, caseexpr->args)
+		{
+			CaseWhen *when = lfirst_node(CaseWhen, temp);
+
+			if (WALK(when->expr) || WALK(when->result)) {
+				return 1;
+			}
+		}
+		return WALK(caseexpr->defresult);
+	}
+	case T_RowExpr:
+		return WALK(((RowExpr *)node)->args);
+	case T_CoalesceExpr:
+		return WALK(((CoalesceExpr *)node)->args);
+	case T_MinMaxExpr:
+		return WALK(((MinMaxExpr *)node)->args);
+	case T_XmlExpr: {
+		XmlExpr *xexpr = (XmlExpr *)node;
+
+		return WALK(xexpr->named_args) || WALK(xexpr->args);
+	}
+	case T_JsonReturning:
+		return WALK(((JsonReturning *)node)->format);
+	case T_JsonValueExpr: {
+		JsonValueExpr *jve = (JsonValueExpr *)node;
+
+		return WALK(jve->raw_expr) || WALK(jve->formatted_expr) ||
+		       WALK(jve->format);
+	}
+	case T_JsonParseExpr: {
+		JsonParseExpr *jpe = (JsonParseExpr *)node;
+
+		return WALK(jpe->expr) || WALK(jpe->output);
+	}
+	case T_JsonScalarExpr: {
+		JsonScalarExpr *jse = (JsonScalarExpr *)node;
+
+		return WALK(jse->expr) || WALK(jse->output);
+	}
+	case T_JsonSerializeExpr: {
+		JsonSerializeExpr *jse = (JsonSerializeExpr *)node;
+
+		return WALK(jse->expr) || WALK(jse->output);
+	}
+	case T_JsonArgument:
+		return WALK(((JsonArgument *)node)->val);
+	case T_JsonFuncExpr: {
+		JsonFuncExpr *jfe = (JsonFuncExpr *)node;
+
+		return WALK(jfe->context_item) || WALK(jfe->pathspec) ||
+		       WALK(jfe->passing) || WALK(jfe->output) ||
+		       WALK(jfe->on_empty) || WALK(jfe->on_error);
+	}
+	case T_JsonBehavior:
+		return WALK(((JsonBehavior *)node)->expr);
+	case T_JsonTable: {
+		JsonTable *jt = (JsonTable *)node;
+
+		return WALK(jt->context_item) || WALK(jt->passing) ||
+		       WALK(jt->columns) || WALK(jt->on_error);
+	}
+	case T_JsonTableColumn: {
+		JsonTableColumn *jtc = (JsonTableColumn *)node;
+
+		return WALK(jtc->typeName) || WALK(jtc->on_empty) ||
+		       WALK(jtc->on_error) || WALK(jtc->columns);
+	}
+	case T_NullTest:
+		return WALK(((NullTest *)node)->arg);
+	case T_BooleanTest:
+		return WALK(((BooleanTest *)node)->arg);
+	case T_JoinExpr: {
+		JoinExpr *join = (JoinExpr *)node;
+
+		return WALK(join->larg) || WALK(join->rarg) ||
+		       WALK(join->quals) || WALK(join->alias);
+	}
+	case T_IntoClause: {
+		IntoClause *into = (IntoClause *)node;
+
+		return WALK(into->rel) || WALK(into->viewQuery);
+	}
+	case T_List: {
+		ListCell *temp;
+
+		foreach(temp, (List *)node)
+		{
+			if (WALK(lfirst(temp))) {
+				return 1;
+			}
+		}
+		return 0;
+	}
+	case T_InsertStmt: {
+		InsertStmt *stmt = (InsertStmt *)node;
+
+		return WALK(stmt->relation) || WALK(stmt->cols) ||
+		       WALK(stmt->selectStmt) || WALK(stmt->onConflictClause) ||
+		       WALK(stmt->returningClause) || WALK(stmt->withClause);
+	}
+	case T_DeleteStmt: {
+		DeleteStmt *stmt = (DeleteStmt *)node;
+
+		return WALK(stmt->relation) || WALK(stmt->usingClause) ||
+		       WALK(stmt->whereClause) || WALK(stmt->returningClause) ||
+		       WALK(stmt->withClause);
+	}
+	case T_UpdateStmt: {
+		UpdateStmt *stmt = (UpdateStmt *)node;
+
+		return WALK(stmt->relation) || WALK(stmt->targetList) ||
+		       WALK(stmt->whereClause) || WALK(stmt->fromClause) ||
+		       WALK(stmt->returningClause) || WALK(stmt->withClause);
+	}
+	case T_MergeStmt: {
+		MergeStmt *stmt = (MergeStmt *)node;
+
+		return WALK(stmt->relation) || WALK(stmt->sourceRelation) ||
+		       WALK(stmt->joinCondition) ||
+		       WALK(stmt->mergeWhenClauses) ||
+		       WALK(stmt->returningClause) || WALK(stmt->withClause);
+	}
+	case T_MergeWhenClause: {
+		MergeWhenClause *clause = (MergeWhenClause *)node;
+
+		return WALK(clause->condition) || WALK(clause->targetList) ||
+		       WALK(clause->values);
+	}
+	case T_ReturningClause: {
+		ReturningClause *returning = (ReturningClause *)node;
+
+		return WALK(returning->options) || WALK(returning->exprs);
+	}
+	case T_SelectStmt: {
+		SelectStmt *stmt = (SelectStmt *)node;
+
+		return WALK(stmt->distinctClause) || WALK(stmt->intoClause) ||
+		       WALK(stmt->targetList) || WALK(stmt->fromClause) ||
+		       WALK(stmt->whereClause) || WALK(stmt->groupClause) ||
+		       WALK(stmt->havingClause) || WALK(stmt->windowClause) ||
+		       WALK(stmt->valuesLists) || WALK(stmt->sortClause) ||
+		       WALK(stmt->limitOffset) || WALK(stmt->limitCount) ||
+		       WALK(stmt->lockingClause) || WALK(stmt->withClause) ||
+		       WALK(stmt->larg) || WALK(stmt->rarg);
+	}
+	case T_PLAssignStmt: {
+		PLAssignStmt *stmt = (PLAssignStmt *)node;
+
+		return WALK(stmt->indirection) || WALK(stmt->val);
+	}
+	case T_A_Expr: {
+		A_Expr *expr = (A_Expr *)node;
+
+		return WALK(expr->lexpr) || WALK(expr->rexpr);
+	}
+	case T_BoolExpr:
+		return WALK(((BoolExpr *)node)->args);
+	case T_FuncCall: {
+		FuncCall *fcall = (FuncCall *)node;
+
+		/* known safe functions are descended into, not reported */
+		if (is_safe_function_call(fcall)) {
+			return WALK(fcall->args) || WALK(fcall->agg_order) ||
+			       WALK(fcall->agg_filter) || WALK(fcall->over);
+		}
+
+		/* a function call has been found */
+		return 1;
+	}
+	case T_NamedArgExpr:
+		return WALK(((NamedArgExpr *)node)->arg);
+	case T_A_Indices: {
+		A_Indices *indices = (A_Indices *)node;
+
+		return WALK(indices->lidx) || WALK(indices->uidx);
+	}
+	case T_A_Indirection: {
+		A_Indirection *indir = (A_Indirection *)node;
+
+		return WALK(indir->arg) || WALK(indir->indirection);
+	}
+	case T_A_ArrayExpr:
+		return WALK(((A_ArrayExpr *)node)->elements);
+	case T_ResTarget: {
+		ResTarget *rt = (ResTarget *)node;
+
+		return WALK(rt->indirection) || WALK(rt->val);
+	}
+	case T_MultiAssignRef:
+		return WALK(((MultiAssignRef *)node)->source);
+	case T_TypeCast: {
+		TypeCast *tc = (TypeCast *)node;
+
+		return WALK(tc->arg) || WALK(tc->typeName);
+	}
+	case T_CollateClause:
+		return WALK(((CollateClause *)node)->arg);
+	case T_SortBy:
+		return WALK(((SortBy *)node)->node);
+	case T_WindowDef: {
+		WindowDef *wd = (WindowDef *)node;
+
+		return WALK(wd->partitionClause) || WALK(wd->orderClause) ||
+		       WALK(wd->startOffset) || WALK(wd->endOffset);
+	}
+	case T_RangeSubselect: {
+		RangeSubselect *rs = (RangeSubselect *)node;
+
+		return WALK(rs->subquery) || WALK(rs->alias);
+	}
+	case T_RangeFunction: {
+		RangeFunction *rf = (RangeFunction *)node;
+
+		return WALK(rf->functions) || WALK(rf->alias) ||
+		       WALK(rf->coldeflist);
+	}
+	case T_RangeTableSample: {
+		RangeTableSample *rts = (RangeTableSample *)node;
+
+		return WALK(rts->relation) || WALK(rts->args) ||
+		       WALK(rts->repeatable);
+	}
+	case T_RangeTableFunc: {
+		RangeTableFunc *rtf = (RangeTableFunc *)node;
+
+		return WALK(rtf->docexpr) || WALK(rtf->rowexpr) ||
+		       WALK(rtf->namespaces) || WALK(rtf->columns) ||
+		       WALK(rtf->alias);
+	}
+	case T_RangeTableFuncCol: {
+		RangeTableFuncCol *rtfc = (RangeTableFuncCol *)node;
+
+		return WALK(rtfc->colexpr) || WALK(rtfc->coldefexpr);
+	}
+	case T_TypeName: {
+		TypeName *tn = (TypeName *)node;
+
+		return WALK(tn->typmods) || WALK(tn->arrayBounds);
+	}
+	case T_ColumnDef: {
+		ColumnDef *coldef = (ColumnDef *)node;
+
+		return WALK(coldef->typeName) || WALK(coldef->raw_default) ||
+		       WALK(coldef->collClause);
+	}
+	case T_IndexElem:
+		return WALK(((IndexElem *)node)->expr);
+	case T_GroupingSet:
+		return WALK(((GroupingSet *)node)->content);
+	case T_LockingClause:
+		return WALK(((LockingClause *)node)->lockedRels);
+	case T_XmlSerialize: {
+		XmlSerialize *xs = (XmlSerialize *)node;
+
+		return WALK(xs->expr) || WALK(xs->typeName);
+	}
+	case T_WithClause:
+		return WALK(((WithClause *)node)->ctes);
+	case T_InferClause: {
+		InferClause *stmt = (InferClause *)node;
+
+		return WALK(stmt->indexElems) || WALK(stmt->whereClause);
+	}
+	case T_OnConflictClause: {
+		OnConflictClause *stmt = (OnConflictClause *)node;
+
+		return WALK(stmt->infer) || WALK(stmt->targetList) ||
+		       WALK(stmt->whereClause);
+	}
+	case T_CommonTableExpr:
+		return WALK(((CommonTableExpr *)node)->ctequery);
+	case T_JsonOutput: {
+		JsonOutput *out = (JsonOutput *)node;
+
+		return WALK(out->typeName) || WALK(out->returning);
+	}
+	case T_JsonObjectConstructor: {
+		JsonObjectConstructor *joc = (JsonObjectConstructor *)node;
+
+		return WALK(joc->output) || WALK(joc->exprs);
+	}
+	case T_JsonArrayConstructor: {
+		JsonArrayConstructor *jac = (JsonArrayConstructor *)node;
+
+		return WALK(jac->output) || WALK(jac->exprs);
+	}
+	case T_JsonAggConstructor: {
+		JsonAggConstructor *ctor = (JsonAggConstructor *)node;
+
+		return WALK(ctor->output) || WALK(ctor->agg_order) ||
+		       WALK(ctor->agg_filter) || WALK(ctor->over);
+	}
+	case T_JsonObjectAgg: {
+		JsonObjectAgg *joa = (JsonObjectAgg *)node;
+
+		return WALK(joa->constructor) || WALK(joa->arg);
+	}
+	case T_JsonArrayAgg: {
+		JsonArrayAgg *jaa = (JsonArrayAgg *)node;
+
+		return WALK(jaa->constructor) || WALK(jaa->arg);
+	}
+	case T_JsonArrayQueryConstructor: {
+		JsonArrayQueryConstructor *jaqc =
+			(JsonArrayQueryConstructor *)node;
+
+		return WALK(jaqc->output) || WALK(jaqc->query);
+	}
+	default:
+		break;
+	}
+
+#undef WALK
+	return 0;
+}
+
+static int has_function_calls(Node *node)
+{
+	if (node == NULL || !IsA(node, SelectStmt)) {
+		return 0;
+	}
+
+	return has_function_call_walker(node);
+}
+
 static int is_select_explain(ExplainStmt *estmt)
 {
-	/* TODO: support smth like this:
 	Node *query = estmt->query;
 	ListCell *lc;
 	int analyze = 0;
 
-	foreach(lc, estmt->options) {
+	foreach(lc, estmt->options)
+	{
 		DefElem *opt = lfirst_node(DefElem, lc);
+
 		if (strcmp(opt->defname, "analyze") == 0) {
 			analyze = 1;
 			break;
@@ -223,10 +785,6 @@ static int is_select_explain(ExplainStmt *estmt)
 	}
 
 	return !analyze;
-		*/
-
-	(void)estmt;
-	return 0;
 }
 
 static int is_select_select(SelectStmt *sstmt)
@@ -249,7 +807,7 @@ static int is_select_select(SelectStmt *sstmt)
 		}
 	}
 
-	return 1;
+	return !has_function_calls((Node *)sstmt);
 }
 
 static void parse_full(const char *query, uint32_t query_len,
