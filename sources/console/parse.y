@@ -116,6 +116,10 @@ typedef int od_console_yyltype_t;
 %token KW_DROP
 %token KW_GC
 
+/* SELECT * FROM <target> (alias for SHOW <target>) */
+%token KW_SELECT
+%token KW_FROM
+
 /* set helpers */
 %token KW_TO
 %token KW_DEFAULT
@@ -168,6 +172,11 @@ stmt:
  *
  * Currently the optional <arg> is used by SHOW CONFIG <field_name>
  * to filter the output to a single configuration parameter.
+ *
+ * SELECT * FROM <name> [<arg>]
+ *
+ * Plain alias for SHOW <name> [<arg>]: produces exactly the same
+ * node, so the console handler does not distinguish between them.
  */
 show_stmt:
 	  KW_SHOW col_id opt_show_arg
@@ -177,6 +186,15 @@ show_stmt:
 			if (n == NULL) YYABORT;
 			n->name = $2; $2 = NULL;
 			n->arg  = $3; $3 = NULL;
+			$$ = (od_console_node_t *)n;
+		}
+	| KW_SELECT '*' KW_FROM col_id opt_show_arg
+		{
+			od_console_show_stmt_t *n =
+				ALLOC_NODE(ctx, show, OD_CONSOLE_NODE_TYPE_SHOW_STMT);
+			if (n == NULL) YYABORT;
+			n->name = $4; $4 = NULL;
+			n->arg  = $5; $5 = NULL;
 			$$ = (od_console_node_t *)n;
 		}
 	;
