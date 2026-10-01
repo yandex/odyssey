@@ -12,6 +12,23 @@
 static _Alignas(max_align_t) uint8_t s_arena_buf[ARENA_SIZE];
 static od_linear_alloc_t s_arena;
 
+#define DEFAULT_MAX_QUERY_LEN 10000
+
+static od_config_query_parsing_t s_minimal_parsing = {
+	.mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL,
+	.max_query_len = DEFAULT_MAX_QUERY_LEN,
+};
+
+static od_config_query_parsing_t s_disabled_parsing = {
+	.mode = OD_CONFIG_QUERY_PARSING_MODE_DISABLED,
+	.max_query_len = DEFAULT_MAX_QUERY_LEN,
+};
+
+static od_config_query_parsing_t s_small_parsing = {
+	.mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL,
+	.max_query_len = 6,
+};
+
 static void on_error(const char *msg, void *userdata)
 {
 	strcpy((char *)userdata, msg);
@@ -507,7 +524,7 @@ static void test_parse_fill_ctx(void)
 	/* DISCARD ALL — ctx filled */
 	od_linear_alloc_reset(&s_arena, 0);
 	od_query_parse_fill_ctx("DISCARD ALL", strlen("DISCARD ALL"), &s_arena,
-				&ctx);
+				&ctx, &s_minimal_parsing);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
@@ -517,8 +534,8 @@ static void test_parse_fill_ctx(void)
 	/* SHOW — name stored in ctx */
 	od_linear_alloc_reset(&s_arena, 0);
 	od_query_parse_fill_ctx("SHOW application_name",
-				strlen("SHOW application_name"), &s_arena,
-				&ctx);
+				strlen("SHOW application_name"), &s_arena, &ctx,
+				&s_minimal_parsing);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SHOW));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
@@ -529,7 +546,7 @@ static void test_parse_fill_ctx(void)
 	od_linear_alloc_reset(&s_arena, 0);
 	od_query_parse_fill_ctx("SET application_name = 'foo'",
 				strlen("SET application_name = 'foo'"),
-				&s_arena, &ctx);
+				&s_arena, &ctx, &s_minimal_parsing);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SHOW));
@@ -550,7 +567,8 @@ static void test_parse_fill_ctx(void)
 		test(n > 0 && (size_t)n < sizeof(query));
 
 		od_linear_alloc_reset(&s_arena, 0);
-		od_query_parse_fill_ctx(query, strlen(query), &s_arena, &ctx);
+		od_query_parse_fill_ctx(query, strlen(query), &s_arena, &ctx,
+					&s_minimal_parsing);
 		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
 		test(strlen(ctx.s2) == 64 - 1);
 		test(ctx.s2_long != NULL);
@@ -563,7 +581,7 @@ static void test_parse_fill_ctx(void)
 	od_linear_alloc_reset(&s_arena, 0);
 	od_query_parse_fill_ctx("SET application_name TO DEFAULT",
 				strlen("SET application_name TO DEFAULT"),
-				&s_arena, &ctx);
+				&s_arena, &ctx, &s_minimal_parsing);
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
 	test(ctx.s2[0] == '\0');
 	test(ctx.s2_long == NULL);
@@ -571,7 +589,8 @@ static void test_parse_fill_ctx(void)
 
 	/* BEGIN */
 	od_linear_alloc_reset(&s_arena, 0);
-	od_query_parse_fill_ctx("BEGIN", strlen("BEGIN"), &s_arena, &ctx);
+	od_query_parse_fill_ctx("BEGIN", strlen("BEGIN"), &s_arena, &ctx,
+				&s_minimal_parsing);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
@@ -579,7 +598,8 @@ static void test_parse_fill_ctx(void)
 
 	/* SELECT — minimal parse fails, ctx is still filled */
 	od_linear_alloc_reset(&s_arena, 0);
-	od_query_parse_fill_ctx("SELECT 1", strlen("SELECT 1"), &s_arena, &ctx);
+	od_query_parse_fill_ctx("SELECT 1", strlen("SELECT 1"), &s_arena, &ctx,
+				&s_minimal_parsing);
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
@@ -587,9 +607,93 @@ static void test_parse_fill_ctx(void)
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 }
 
+static void test_parse_fill_ctx_modes(void)
+{
+	od_query_ctx_t ctx;
+	memset(&ctx, 0, sizeof(ctx));
+
+	/* DISABLED — no parsing at all, ctx is reset */
+	od_query_parse_fill_ctx("DISCARD ALL", strlen("DISCARD ALL"), &s_arena,
+				&ctx, &s_disabled_parsing);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
+	test(ctx.s2_long == NULL);
+
+	/* DISABLED — a previously filled s2_long is released */
+	{
+		char long_value[128];
+		char query[192];
+		memset(long_value, 'x', sizeof(long_value) - 1);
+		long_value[sizeof(long_value) - 1] = '\0';
+		int n = snprintf(query, sizeof(query),
+				 "SET application_name = '%s'", long_value);
+		test(n > 0 && (size_t)n < sizeof(query));
+
+		od_linear_alloc_reset(&s_arena, 0);
+		od_query_parse_fill_ctx(query, strlen(query), &s_arena, &ctx,
+					&s_minimal_parsing);
+		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+		test(ctx.s2_long != NULL);
+
+		od_query_parse_fill_ctx(query, strlen(query), &s_arena, &ctx,
+					&s_disabled_parsing);
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+		test(ctx.s2_long == NULL);
+	}
+
+	/*
+	 * max_query_len: queries of length > max_query_len are not parsed,
+	 * TOO_LONG | PARSE_ERROR are set; the boundary itself is parsed
+	 */
+	{
+		/* "SHOW x" — exactly max_query_len, still parsed */
+		od_linear_alloc_reset(&s_arena, 0);
+		od_query_parse_fill_ctx("SHOW x", strlen("SHOW x"), &s_arena,
+					&ctx, &s_small_parsing);
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_TOO_LONG));
+		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SHOW));
+		test(strcmp(ctx.s1, "x") == 0);
+
+		/* "SHOW xx" — one byte over the limit */
+		od_query_parse_fill_ctx("SHOW xx", strlen("SHOW xx"), &s_arena,
+					&ctx, &s_small_parsing);
+		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_TOO_LONG));
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SHOW));
+		od_query_ctx_reset(&ctx);
+
+		/* a query over the default limit is not parsed either */
+		{
+			char query[DEFAULT_MAX_QUERY_LEN + 16];
+			memset(query, ' ', sizeof(query) - 1);
+			query[sizeof(query) - 1] = '\0';
+			memcpy(query, "DISCARD ALL", strlen("DISCARD ALL"));
+
+			od_query_parse_fill_ctx(query, strlen(query), &s_arena,
+						&ctx, &s_minimal_parsing);
+			test(od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+			test(od_query_ctx_has(&ctx, OD_QUERY_CTX_TOO_LONG));
+			test(!od_query_ctx_has(&ctx,
+					       OD_QUERY_CTX_IS_DISCARD_ALL));
+			od_query_ctx_reset(&ctx);
+		}
+
+		/* DISABLED ignores the limit, ctx is always reset */
+		od_query_parse_fill_ctx("SHOW xx", strlen("SHOW xx"), &s_arena,
+					&ctx, &s_disabled_parsing);
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_TOO_LONG));
+		od_query_ctx_reset(&ctx);
+	}
+}
+
 void odyssey_test_sql_minimal_parser(void)
 {
 	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
+
+	test_parse_fill_ctx_modes();
 
 	test_show_basic();
 	test_show_all();

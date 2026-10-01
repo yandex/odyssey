@@ -1461,6 +1461,7 @@ static int convert_query_parsing(convert_ctx_t *ctx,
 	od_config_query_parsing_t *qp = &config->query_parsing;
 
 	COPY_U64(cfg->mem_limit, qp->mem_limit_bytes);
+	COPY_U64(cfg->max_query_len, qp->max_query_len);
 
 	if (cfg->mode.seen.is_set) {
 		switch (cfg->mode.value) {

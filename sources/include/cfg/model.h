@@ -242,6 +242,7 @@ typedef struct od_cfg_query_parsing {
 	od_cfg_seen_t seen;
 	od_cfg_query_parsing_mode_field_t mode;
 	od_cfg_u64_field_t mem_limit;
+	od_cfg_u64_field_t max_query_len;
 } od_cfg_query_parsing_t;
 
 typedef struct od_cfg_ldap_endpoint {

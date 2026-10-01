@@ -147,8 +147,21 @@ __attribute__((hot)) int od_query_format(char *format_pos, char *format_end,
 }
 
 void od_query_parse_fill_ctx(const char *query, uint32_t query_len,
-			     od_linear_alloc_t *arena, od_query_ctx_t *ctx)
+			     od_linear_alloc_t *arena, od_query_ctx_t *ctx,
+			     const od_config_query_parsing_t *parsing)
 {
+	if (parsing->mode == OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
+		od_query_ctx_reset(ctx);
+		return;
+	}
+
+	if (query_len > parsing->max_query_len) {
+		od_query_ctx_reset(ctx);
+		od_query_ctx_set(ctx, OD_QUERY_CTX_PARSE_ERROR);
+		od_query_ctx_set(ctx, OD_QUERY_CTX_TOO_LONG);
+		return;
+	}
+
 	od_sql_minimal_node_t *ast =
 		od_sql_minimal_parse(query, query_len, arena, NULL, NULL);
 

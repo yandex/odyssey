@@ -326,6 +326,7 @@
 %token MINIMAL "minimal"
 %token FULL "full"
 %token MEM_LIMIT "mem_limit"
+%token MAX_QUERY_LEN "max_query_len"
 %token RESERVED_CLIENTS "reserved_clients"
 
 %type <boolean> bool_value
@@ -2611,6 +2612,19 @@ query_parsing_item:
 						   $2,
 						   @1,
 						   "mem_limit");
+			}
+		}
+	| MAX_QUERY_LEN int_value
+		{
+			if ($2 < 0) {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "max_query_len must be non-negative");
+			} else {
+				od_cfg_set_u64(ctx->diags,
+						   &ctx->current_query_parsing->max_query_len,
+						   $2,
+						   @1,
+						   "max_query_len");
 			}
 		}
 	;

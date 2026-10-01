@@ -75,6 +75,7 @@ typedef enum {
 typedef struct {
 	od_config_query_parsing_mode_t mode;
 	size_t mem_limit_bytes;
+	size_t max_query_len;
 } od_config_query_parsing_t;
 
 struct od_config {

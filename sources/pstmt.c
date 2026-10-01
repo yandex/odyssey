@@ -674,7 +674,8 @@ void od_global_pstmts_map_free(od_global_pstmt_map_t *hm)
 
 od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 				   const od_pstmt_desc_t desc,
-				   od_linear_alloc_t *arena)
+				   od_linear_alloc_t *arena,
+				   const od_config_query_parsing_t *parsing)
 {
 	mm_hashmap_keylock_t klock;
 	int rc;
@@ -721,7 +722,7 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 		 */
 		od_query_parse_fill_ctx(value->desc.data,
 					strlen(value->desc.data), arena,
-					&value->query_ctx);
+					&value->query_ctx, parsing);
 	} else {
 		/* the key already exists and has a copy of desc.data, do nothing */
 	}
