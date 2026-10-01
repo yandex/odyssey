@@ -784,7 +784,7 @@ static int is_select_explain(ExplainStmt *estmt)
 		return !has_function_calls(query);
 	}
 
-	return !analyze;
+	return 0;
 }
 
 static int is_select_select(SelectStmt *sstmt)

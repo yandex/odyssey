@@ -900,10 +900,10 @@ static void test_parse_fill_ctx_full(void)
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	od_query_ctx_reset(&ctx);
 
-	/* EXPLAIN of a writing statement — still safe without ANALYZE */
+	/* EXPLAIN of a writing statement — treat as write query */
 	fill_ctx_full("EXPLAIN UPDATE t SET a = 1", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
-	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	od_query_ctx_reset(&ctx);
 
 	/* EXPLAIN ANALYZE SELECT — still a select */
