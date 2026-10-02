@@ -28,7 +28,7 @@
 	if (_ctx && _ctx->fatal_set) { \
 		_ctx->had_error = 1; \
 		if (_ctx->error_cb) { \
-			_ctx->error_cb(msg, _ctx->error_cb_userdata); \
+			_ctx->error_cb(msg, 0, _ctx->error_cb_userdata); \
 		} \
 		longjmp(_ctx->fatal_jmp, 1); \
 	} \
@@ -38,8 +38,12 @@
 }
 
 %{
+/*
+ * yy_scan_bytes() copies the input, so the token offset must be computed
+ * against the flex buffer, not against the original ctx->scanbuf
+ */
 #define SET_YYLLOC() \
-    (*yylloc = (int)(yytext - yyextra->scanbuf))
+    (*yylloc = (int)(yytext - YY_CURRENT_BUFFER_LVALUE->yy_ch_buf))
 
 void *od_console_yyalloc(yy_size_t bytes, yyscan_t yyscanner);
 void *od_console_yyrealloc(void *ptr, yy_size_t bytes, yyscan_t yyscanner);
@@ -148,6 +152,12 @@ INTEGER     -?{DIGIT}+
 . {
 	SET_YYLLOC();
 	return ERROR_TOKEN;
+}
+
+<<EOF>> {
+	/* unexpected end of input points right past the last character */
+	*yylloc = (int)yyextra->scanbuflen;
+	return 0;
 }
 
 %%

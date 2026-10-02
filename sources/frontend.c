@@ -72,7 +72,7 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	machine_msg_t *msg;
-	msg = od_frontend_error_msg(client, NULL, code, fmt, args);
+	msg = od_frontend_error_msg(client, NULL, code, 0, fmt, args);
 	va_end(args);
 	if (msg == NULL) {
 		return -1;
@@ -85,7 +85,7 @@ int od_frontend_fatal_no_startup(mm_io_t *io, char *code, char *fmt, ...)
 	va_list args;
 	va_start(args, fmt);
 	machine_msg_t *msg;
-	msg = od_frontend_error_msg(NULL, NULL, code, fmt, args);
+	msg = od_frontend_error_msg(NULL, NULL, code, 0, fmt, args);
 	va_end(args);
 	if (msg == NULL) {
 		return -1;
@@ -148,7 +148,7 @@ static inline int od_frontend_error_fwd(od_client_t *client)
 	machine_msg_t *msg;
 	msg = kiwi_be_write_error_as(NULL, error.severity, error.code,
 				     error.detail, detail_len, error.hint,
-				     hint_len, text, text_len);
+				     hint_len, text, text_len, 0);
 	if (msg == NULL) {
 		return -1;
 	}

@@ -36,7 +36,7 @@ od_console_node_t *od_console_parse(const char *input, size_t input_len,
 	yyscan_t scanner;
 	if (od_console_yylex_init_extra(&ctx, &scanner) != 0) {
 		if (error_cb) {
-			error_cb("failed to initialize scanner", userdata);
+			error_cb("failed to initialize scanner", 0, userdata);
 		}
 		return NULL;
 	}
@@ -45,7 +45,8 @@ od_console_node_t *od_console_parse(const char *input, size_t input_len,
 		ctx.scanbuf, (int)ctx.scanbuflen, scanner);
 	if (buf == NULL) {
 		if (error_cb) {
-			error_cb("failed to create scanner buffer", userdata);
+			error_cb("failed to create scanner buffer", 0,
+				 userdata);
 		}
 		od_console_yylex_destroy(scanner);
 		return NULL;
