@@ -755,6 +755,10 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		}
 	}
 
+	mm_hashmap_keylock_t client_klock;
+	rc = od_instance_clients_lock(instance, &client->key, &client_klock);
+	od_assert(rc == 0);
+
 	/*
 	 * we assign client's rule to pass connection limit to the place where
 	 * error is handled Client does not actually belong to the pool
@@ -762,8 +766,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	od_rules_ref(rule);
 	client->rule = rule;
 
-	mm_hashmap_keylock_t client_klock;
-	od_instance_clients_lock(instance, &client->key, &client_klock);
 	od_route_lock(route);
 
 	/* increase counter of new tot tcp connections */
@@ -802,13 +804,10 @@ void od_router_unroute(od_router_t *router, od_client_t *client)
 	od_assert(client->server == NULL);
 
 	od_route_t *route = client->route;
-	mm_hashmap_keylock_t client_klock;
-	od_instance_clients_lock(instance, &client->key, &client_klock);
 	od_route_lock(route);
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_UNDEF);
 	client->route = NULL;
 	od_route_unlock(route);
-	od_instance_clients_unlock(instance, &client_klock);
 }
 
 bool od_should_not_spun_connection_yet(int connections_in_pool, int pool_size,
@@ -1157,7 +1156,9 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 
 	mm_hashmap_keylock_t client_klock;
-	od_instance_clients_lock(instance, &client->key, &client_klock);
+	int rc;
+	rc = od_instance_clients_lock(instance, &client->key, &client_klock);
+	od_assert(rc == 0);
 
 	od_route_t *route = client->route;
 	od_assert(route != NULL);
@@ -1212,7 +1213,9 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 
 	mm_hashmap_keylock_t client_klock;
-	od_instance_clients_lock(instance, &client->key, &client_klock);
+	int rc;
+	rc = od_instance_clients_lock(instance, &client->key, &client_klock);
+	od_assert(rc);
 
 	od_route_t *route = client->route;
 	od_assert(route != NULL);
