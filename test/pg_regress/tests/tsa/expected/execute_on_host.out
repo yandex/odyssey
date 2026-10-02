@@ -1,0 +1,136 @@
+\connect 'host=localhost port=6432 user=postgres dbname=postgres'
+-- not set by default
+SHOW odyssey.execute_on_host;
+NOTICE:  processed virtually by odyssey
+ odyssey.execute_on_host 
+-------------------------
+ 
+(1 row)
+
+-- pin the session to the primary: no round-robin anymore
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.execute_on_host;
+NOTICE:  processed virtually by odyssey
+ odyssey.execute_on_host 
+-------------------------
+ tcp://localhost:5432
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5432
+ pg_is_in_recovery 
+-------------------
+ f
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5432
+ pg_is_in_recovery 
+-------------------
+ f
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5432
+ pg_is_in_recovery 
+-------------------
+ f
+(1 row)
+
+-- pin to a replica
+SET odyssey.execute_on_host = 'localhost:5433';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.execute_on_host;
+NOTICE:  processed virtually by odyssey
+ odyssey.execute_on_host 
+-------------------------
+ tcp://localhost:5433
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+-- and to another one
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5434
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5434
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+-- hosts unknown to the storage are rejected
+SET odyssey.execute_on_host TO 'localhost:5430';
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.execute_on_host": "localhost:5430"
+SET odyssey.execute_on_host TO 'nonexistent';
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.execute_on_host": "nonexistent"
+SET odyssey.execute_on_host TO 'localhost:5432,localhost:5433';
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.execute_on_host": "localhost:5432,localhost:5433"
+SHOW odyssey.execute_on_host;
+NOTICE:  processed virtually by odyssey
+ odyssey.execute_on_host 
+-------------------------
+ tcp://localhost:5434
+(1 row)
+
+-- reset: back to round-robin over all hosts
+SET odyssey.execute_on_host TO DEFAULT;
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.execute_on_host;
+NOTICE:  processed virtually by odyssey
+ odyssey.execute_on_host 
+-------------------------
+ 
+(1 row)
+
+select 1;
+NOTICE:  select host tcp://localhost:5433
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1;
+NOTICE:  select host tcp://localhost:5434
+ ?column? 
+----------
+        1
+(1 row)
+
+select 1;
+NOTICE:  select host tcp://localhost:5432
+ ?column? 
+----------
+        1
+(1 row)
+

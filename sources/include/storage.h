@@ -110,6 +110,14 @@ void od_rules_storage_unref(od_rule_storage_t *);
 od_storage_endpoint_t *od_storage_find_endpoint(od_rule_storage_t *storage,
 						const od_address_t *address);
 
+/*
+ * like od_storage_find_endpoint, but compares only type, host and port
+ * (ignores availability zone); port 0 means storage default port
+ */
+od_storage_endpoint_t *
+od_storage_find_endpoint_by_host(od_rule_storage_t *storage,
+				 const od_address_t *address);
+
 /* watchdog */
 void od_storage_watchdog_watch(void *arg);
 

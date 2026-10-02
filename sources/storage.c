@@ -226,6 +226,37 @@ od_storage_endpoint_t *od_storage_find_endpoint(od_rule_storage_t *storage,
 	return NULL;
 }
 
+od_storage_endpoint_t *
+od_storage_find_endpoint_by_host(od_rule_storage_t *storage,
+				 const od_address_t *address)
+{
+	int port = address->port;
+	if (port == 0) {
+		port = storage->port;
+	}
+
+	for (size_t i = 0; i < storage->endpoints_count; ++i) {
+		od_storage_endpoint_t *e = &storage->endpoints[i];
+
+		if (e->address.type != address->type) {
+			continue;
+		}
+
+		if (strcmp(e->address.host, address->host) != 0) {
+			continue;
+		}
+
+		if (address->type == OD_ADDRESS_TYPE_TCP &&
+		    e->address.port != port) {
+			continue;
+		}
+
+		return e;
+	}
+
+	return NULL;
+}
+
 static inline od_client_t *
 od_storage_watchdog_prepare_client(od_storage_watchdog_t *watchdog)
 {
