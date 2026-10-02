@@ -66,5 +66,3 @@ void od_instance_clients_unlock(od_instance_t *instance,
 				mm_hashmap_keylock_t *klock);
 int od_instance_clients_add(od_instance_t *instance, od_client_t *client);
 int od_instance_clients_remove(od_instance_t *instance, od_client_t *client);
-int od_instance_clients_find(od_instance_t *instance, const kiwi_key_t *key,
-			     mm_hashmap_keylock_t *klock, od_client_t **result);

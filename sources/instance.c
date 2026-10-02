@@ -690,10 +690,9 @@ int od_instance_clients_add(od_instance_t *instance, od_client_t *client)
 	mm_hashmap_keylock_t klock;
 	int rc = mm_hashmap_lock_key(instance->clients_by_key->hm, &klock,
 				     &client->key, 1);
-	if (rc == -1) {
-		return rc;
+	if (rc == -1 || klock.found) {
+		return -1;
 	}
-	od_assert(!klock.found);
 	void *val = mm_hashmap_kvp_val(instance->clients_by_key->hm, klock.kvp);
 	memcpy(val, &client, sizeof(od_client_t *));
 	od_instance_clients_unlock(instance, &klock);
@@ -705,25 +704,9 @@ int od_instance_clients_remove(od_instance_t *instance, od_client_t *client)
 	mm_hashmap_keylock_t klock;
 	int rc = od_instance_clients_lock(instance, &client->key, &klock);
 	if (rc == -1) {
-		return -1;
-	}
-	od_assert(klock.found);
-	mm_hashmap_remove(instance->clients_by_key->hm, &klock);
-	return 0;
-}
-
-int od_instance_clients_find(od_instance_t *instance, const kiwi_key_t *key,
-			     mm_hashmap_keylock_t *klock, od_client_t **result)
-{
-	int rc = od_instance_clients_lock(instance, key, klock);
-	if (rc == -1) {
 		return rc;
 	}
-	if (klock->found) {
-		*result = *(od_client_t **)mm_hashmap_kvp_val(
-			instance->clients_by_key->hm, klock->kvp);
-	} else {
-		*result = NULL;
-	}
+	od_release_assert(klock.found);
+	mm_hashmap_remove(instance->clients_by_key->hm, &klock);
 	return 0;
 }
