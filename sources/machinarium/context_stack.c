@@ -27,6 +27,7 @@ int mm_contextstack_create(mm_contextstack_t *stack, size_t size,
 	base += size_guard;
 	stack->pointer = base;
 	stack->size = size;
+	stack->max_depth = (size * 95) / 100;
 	stack->size_guard = size_guard;
 #ifdef HAVE_VALGRIND
 	stack->valgrind_stack = VALGRIND_STACK_REGISTER(

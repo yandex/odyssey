@@ -72,6 +72,7 @@ extern void machinarium_test_client_server1(void);
 extern void machinarium_test_client_server2(void);
 extern void machinarium_test_client_server_unix_socket(void);
 extern void machinarium_test_client_server_unix_socket_no_msg(void);
+extern void machinarium_test_check_stack_depth(void);
 extern void machinarium_test_read_10mb0(void);
 extern void machinarium_test_read_10mb1(void);
 extern void machinarium_test_read_10mb2(void);
@@ -197,6 +198,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_client_server2);
 	odyssey_test(machinarium_test_client_server_unix_socket);
 	odyssey_test(machinarium_test_client_server_unix_socket_no_msg);
+	odyssey_test(machinarium_test_check_stack_depth);
 	odyssey_test(machinarium_test_coroutine_names);
 	odyssey_test(machinarium_test_read_10mb0);
 	odyssey_test(machinarium_test_read_10mb1);

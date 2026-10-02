@@ -432,6 +432,7 @@ set(od_test_src
     tests/machinarium/test_client_server2.c
     tests/machinarium/test_client_server_unix_socket.c
     tests/machinarium/test_client_server_unix_socket_no_msg.c
+    tests/machinarium/test_check_stack_depth.c
     tests/machinarium/test_coroutine_names.c
     tests/machinarium/test_mutex_threads.c
     tests/machinarium/test_mutex_coroutines.c
