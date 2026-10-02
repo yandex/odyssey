@@ -947,9 +947,18 @@ static od_frontend_status_t attach_with_storage(od_client_t *client,
 			&arg);
 
 		if (count > 0) {
+			/*
+			 * host_filter can't drop a host whose status is
+			 * outdated (it may have become a standby), so it
+			 * is kept as a candidate. Attach as 'read-only'
+			 * here: the status gets refreshed on connect and a
+			 * host that turns out to be the primary is
+			 * rejected, instead of being accepted as
+			 * prefer-standby would do.
+			 */
 			status = attach_to_first_with_fail_fast(
 				client, context, route_params, endpoints, count,
-				tsa, is_deploy, storage);
+				OD_TARGET_SESSION_ATTRS_RO, is_deploy, storage);
 			if (status == OD_OK) {
 				return status;
 			}

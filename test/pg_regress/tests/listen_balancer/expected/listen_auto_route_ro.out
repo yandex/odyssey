@@ -7,7 +7,7 @@ NOTICE:  select host tcp://localhost:5434
 (1 row)
 
 select 43;
-NOTICE:  select host tcp://localhost:5432
+NOTICE:  select host tcp://localhost:5433
  ?column? 
 ----------
        43
