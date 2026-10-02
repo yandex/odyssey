@@ -20,8 +20,8 @@
 
 static inline machine_msg_t *od_frontend_error_msg(od_client_t *client,
 						   machine_msg_t *stream,
-						   char *code, char *fmt,
-						   va_list args)
+						   char *code, int position,
+						   char *fmt, va_list args)
 {
 	char msg[OD_QRY_MAX_SZ];
 	int msg_len;
@@ -40,7 +40,7 @@ static inline machine_msg_t *od_frontend_error_msg(od_client_t *client,
 	}
 	msg_len +=
 		od_vsnprintf(msg + msg_len, sizeof(msg) - msg_len, fmt, args);
-	return kiwi_be_write_error(stream, code, msg, msg_len);
+	return kiwi_be_write_error_pos(stream, code, msg, msg_len, position);
 }
 
 static inline machine_msg_t *
@@ -77,7 +77,24 @@ static inline machine_msg_t *od_frontend_errorf(od_client_t *client,
 	va_list args;
 	va_start(args, fmt);
 	machine_msg_t *msg;
-	msg = od_frontend_error_msg(client, stream, code, fmt, args);
+	msg = od_frontend_error_msg(client, stream, code, 0, fmt, args);
+	va_end(args);
+	return msg;
+}
+
+/*
+ * same as od_frontend_errorf(), but also sets the error cursor
+ * position (1-based index into the query string, 0 means none)
+ */
+static inline machine_msg_t *od_frontend_errorf_pos(od_client_t *client,
+						    machine_msg_t *stream,
+						    char *code, int position,
+						    char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	machine_msg_t *msg;
+	msg = od_frontend_error_msg(client, stream, code, position, fmt, args);
 	va_end(args);
 	return msg;
 }

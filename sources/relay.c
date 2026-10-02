@@ -151,7 +151,7 @@ static od_frontend_status_t reply_error_guc(od_client_t *client,
 	}
 
 	m = kiwi_be_write_error_as(m, "ERROR", sqlstate, NULL, 0, NULL, 0, buf,
-				   len);
+				   len, 0);
 	if (m == NULL) {
 		return OD_EOOM;
 	}

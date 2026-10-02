@@ -175,6 +175,7 @@ database "console" {
 		role "admin"
 		pool "session"
 		storage "local"
+		client_show_id no
 	}
 }
 

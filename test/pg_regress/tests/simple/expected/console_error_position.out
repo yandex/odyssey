@@ -1,0 +1,29 @@
+\c console
+SHOW STATS extra more;
+ERROR:  odyssey: console command error: syntax error, unexpected IDENT, expecting end of file
+LINE 1: SHOW STATS extra more;
+                         ^
+SHOW CONFIG workers extra;
+ERROR:  odyssey: console command error: syntax error, unexpected IDENT, expecting end of file
+LINE 1: SHOW CONFIG workers extra;
+                            ^
+SELECT 1;
+ERROR:  odyssey: console command error: syntax error, unexpected IDENT, expecting end of file
+LINE 1: SELECT 1;
+        ^
+KILL_CLIENT c3f1;
+ERROR:  odyssey: console command error: invalid client id
+LINE 1: KILL_CLIENT c3f1;
+                    ^
+SHOW;
+ERROR:  odyssey: console command error: syntax error, unexpected ';', expecting IDENT or KW_SERVERS
+LINE 1: SHOW;
+            ^
+SET odyssey.foo TO;
+ERROR:  odyssey: console command error: syntax error, unexpected ';'
+LINE 1: SET odyssey.foo TO;
+                          ^
+SHOW ST@TS;
+ERROR:  odyssey: console command error: syntax error, unexpected ERROR_TOKEN, expecting end of file
+LINE 1: SHOW ST@TS;
+               ^
