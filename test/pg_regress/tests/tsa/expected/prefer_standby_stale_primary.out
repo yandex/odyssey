@@ -1,0 +1,69 @@
+\connect 'host=localhost port=6432 user=postgres dbname=postgres'
+-- refresh the primary status, then let it expire
+-- (endpoints_status_poll_interval is 5s in the config)
+SET odyssey.target_session_attrs TO 'read-write';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5432
+ pg_is_in_recovery 
+-------------------
+ f
+(1 row)
+
+\! sleep 6
+-- refresh the replicas only: the primary status stays outdated
+SET odyssey.target_session_attrs TO 'read-only';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5433';
+NOTICE:  processed virtually by odyssey
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5434
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+SET odyssey.execute_on_host TO DEFAULT;
+NOTICE:  processed virtually by odyssey
+-- prefer-standby must not end up on the primary just because its status is stale
+SET odyssey.target_session_attrs TO 'prefer-standby';
+NOTICE:  processed virtually by odyssey
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5434
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+select pg_is_in_recovery();
+NOTICE:  select host tcp://localhost:5434
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
