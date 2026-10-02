@@ -120,6 +120,14 @@ int od_storage_watchdog_free(od_storage_watchdog_t *watchdog)
 		od_free(watchdog->query);
 	}
 
+	if (watchdog->route_usr) {
+		od_free(watchdog->route_usr);
+	}
+
+	if (watchdog->route_db) {
+		od_free(watchdog->route_db);
+	}
+
 	machine_wait_flag_destroy(watchdog->online);
 
 	od_free(watchdog);
