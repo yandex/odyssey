@@ -797,7 +797,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 void od_router_unroute(od_router_t *router, od_client_t *client)
 {
-	od_instance_t *instance = router->global->instance;
+	(void)router;
 
 	/* detach client from route */
 	od_assert(client->route);
