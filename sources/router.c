@@ -756,10 +756,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		}
 	}
 
-	mm_hashmap_keylock_t client_klock;
-	rc = od_instance_clients_lock(instance, &client->key, &client_klock);
-	od_assert(rc == 0);
-
 	/*
 	 * we assign client's rule to pass connection limit to the place where
 	 * error is handled Client does not actually belong to the pool
@@ -777,7 +773,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	    od_client_pool_total(&route->client_pool) >= rule->client_max) {
 		od_route_unlock(route);
 		od_router_unlock(router);
-		od_instance_clients_unlock(instance, &client_klock);
 
 		od_router_status_t ret = OD_ROUTER_ERROR_LIMIT_ROUTE;
 		if (route->extra_logging_enabled) {
@@ -792,7 +787,6 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	client->route = route;
 
 	od_route_unlock(route);
-	od_instance_clients_unlock(instance, &client_klock);
 	return OD_ROUTER_OK;
 }
 
@@ -1153,6 +1147,8 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 void od_router_detach(od_router_t *router, od_client_t *client)
 {
 	(void)router;
+	od_route_t *route = client->route;
+	od_assert(route != NULL);
 
 	od_instance_t *instance = client->global->instance;
 
@@ -1161,9 +1157,6 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	rc = od_instance_clients_lock(instance, &client->key, &client_klock);
 	(void)rc;
 	od_assert(rc == 0);
-
-	od_route_t *route = client->route;
-	od_assert(route != NULL);
 
 	/* detach from current machine event loop */
 	od_server_t *server = client->server;
@@ -1267,14 +1260,11 @@ void od_router_cancel(od_router_t *router, kiwi_key_t *key)
 	}
 
 	od_route_t *route = client->route;
-	od_rule_storage_t *storage = od_rules_storage_ref(route->rule->storage);
+	od_rule_storage_t *storage = route->rule->storage;
 	const od_address_t *address = od_server_pool_address(server);
 
 	od_stat_cancel(&route->stats);
 	od_cancel(global, storage, address, &server->key, &server->id);
-	if (storage) {
-		od_rules_storage_unref(storage);
-	}
 
 	od_instance_clients_unlock(instance, &client_klock);
 }
