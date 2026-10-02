@@ -363,7 +363,8 @@ static const char *safe_function_names[] = {
 	"xmlagg",
 };
 
-static int is_safe_function_name(const char *name)
+static int is_safe_function_name(const od_config_query_parsing_t *parsing,
+				 const char *name)
 {
 	size_t i;
 
@@ -373,10 +374,20 @@ static int is_safe_function_name(const char *name)
 		}
 	}
 
+	if (parsing != NULL) {
+		for (i = 0; i < parsing->standby_function_names_count; i++) {
+			if (strcmp(parsing->standby_function_names[i], name) ==
+			    0) {
+				return 1;
+			}
+		}
+	}
+
 	return 0;
 }
 
-static int is_safe_function_call(FuncCall *fcall)
+static int is_safe_function_call(const od_config_query_parsing_t *parsing,
+				 FuncCall *fcall)
 {
 	List *names = fcall->funcname;
 
@@ -390,10 +401,11 @@ static int is_safe_function_call(FuncCall *fcall)
 		return 0;
 	}
 
-	return is_safe_function_name(strVal(llast(names)));
+	return is_safe_function_name(parsing, strVal(llast(names)));
 }
 
-static int has_function_call_walker(Node *node)
+static int has_function_call_walker(const od_config_query_parsing_t *parsing,
+				    Node *node)
 {
 	if (node == NULL) {
 		return 0;
@@ -403,7 +415,7 @@ static int has_function_call_walker(Node *node)
 		return 1;
 	}
 
-#define WALK(n) has_function_call_walker((Node *)(n))
+#define WALK(n) has_function_call_walker(parsing, (Node *)(n))
 
 	switch (nodeTag(node)) {
 	/* primitive node types with no subnodes */
@@ -600,7 +612,7 @@ static int has_function_call_walker(Node *node)
 		FuncCall *fcall = (FuncCall *)node;
 
 		/* known safe functions are descended into, not reported */
-		if (is_safe_function_call(fcall)) {
+		if (is_safe_function_call(parsing, fcall)) {
 			return WALK(fcall->args) || WALK(fcall->agg_order) ||
 			       WALK(fcall->agg_filter) || WALK(fcall->over);
 		}
@@ -755,16 +767,18 @@ static int has_function_call_walker(Node *node)
 	return 0;
 }
 
-static int has_function_calls(Node *node)
+static int has_function_calls(const od_config_query_parsing_t *parsing,
+			      Node *node)
 {
 	if (node == NULL || !IsA(node, SelectStmt)) {
 		return 0;
 	}
 
-	return has_function_call_walker(node);
+	return has_function_call_walker(parsing, node);
 }
 
-static int is_select_explain(ExplainStmt *estmt)
+static int is_select_explain(const od_config_query_parsing_t *parsing,
+			     ExplainStmt *estmt)
 {
 	Node *query = estmt->query;
 	ListCell *lc;
@@ -785,13 +799,14 @@ static int is_select_explain(ExplainStmt *estmt)
 			return 1;
 		}
 
-		return !has_function_calls(query);
+		return !has_function_calls(parsing, query);
 	}
 
 	return 0;
 }
 
-static int is_select_select(SelectStmt *sstmt)
+static int is_select_select(const od_config_query_parsing_t *parsing,
+			    SelectStmt *sstmt)
 {
 	if (sstmt->intoClause != NULL || sstmt->lockingClause != NULL) {
 		return 0;
@@ -811,11 +826,12 @@ static int is_select_select(SelectStmt *sstmt)
 		}
 	}
 
-	return !has_function_calls((Node *)sstmt);
+	return !has_function_calls(parsing, (Node *)sstmt);
 }
 
 static void parse_full(const char *query, uint32_t query_len,
-		       od_linear_alloc_t *arena, od_query_ctx_t *ctx)
+		       od_linear_alloc_t *arena, od_query_ctx_t *ctx,
+		       const od_config_query_parsing_t *parsing)
 {
 	char errbuf[256];
 	parse_error_cb_arg_t ea = { .errbuf = errbuf, .size = sizeof(errbuf) };
@@ -907,7 +923,7 @@ static void parse_full(const char *query, uint32_t query_len,
 	} else if (IsA(node, SelectStmt)) {
 		/* inspired by https://github.com/pgpool/pgpool2/blob/91c8522/src/protocol/pool_process_query.c#L1140 */
 		SelectStmt *sstmt = castNode(SelectStmt, node);
-		if (is_select_select(sstmt)) {
+		if (is_select_select(parsing, sstmt)) {
 			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SELECT);
 		}
 	} else if (IsA(node, CopyStmt)) {
@@ -917,7 +933,7 @@ static void parse_full(const char *query, uint32_t query_len,
 		}
 	} else if (IsA(node, ExplainStmt)) {
 		ExplainStmt *estmt = castNode(ExplainStmt, node);
-		if (is_select_explain(estmt)) {
+		if (is_select_explain(parsing, estmt)) {
 			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SELECT);
 		}
 	}
@@ -947,7 +963,7 @@ void od_query_parse_fill_ctx(const char *query, uint32_t query_len,
 	if (parsing->mode == OD_CONFIG_QUERY_PARSING_MODE_MINIMAL) {
 		parse_minimal(query, query_len, arena, ctx);
 	} else if (parsing->mode == OD_CONFIG_QUERY_PARSING_MODE_FULL) {
-		parse_full(query, query_len, arena, ctx);
+		parse_full(query, query_len, arena, ctx, parsing);
 	} else {
 		od_release_assert(0);
 	}

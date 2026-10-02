@@ -130,6 +130,7 @@ nav:
     - Listen: configuration/listen.md
     - Storage: configuration/storage.md
     - Rules: configuration/rules.md
+    - Query parsing: configuration/query-parsing.md
     - Soft OOM: configuration/soft-oom.md
     - Shared pools: configuration/shared-pools.md
   - Features:

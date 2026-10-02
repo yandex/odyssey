@@ -1463,6 +1463,38 @@ error:
 	return -1;
 }
 
+static int parse_standby_function_list(convert_ctx_t *ctx,
+				       const od_cfg_query_parsing_t *cfg,
+				       od_config_query_parsing_t *qp)
+{
+	const od_cfg_string_list_field_t *field = &cfg->standby_function_list;
+
+	if (!field->seen.is_set || field->count == 0) {
+		return 0;
+	}
+
+	qp->standby_function_names = od_malloc(field->count * sizeof(char *));
+	if (qp->standby_function_names == NULL) {
+		od_cfg_diag_error(ctx->diags, field->seen.location,
+				  "can't allocate standby_function_list");
+		return -1;
+	}
+
+	for (size_t i = 0; i < field->count; ++i) {
+		char *name = od_strdup(field->values[i]);
+		if (name == NULL) {
+			od_cfg_diag_error(
+				ctx->diags, field->seen.location,
+				"can't allocate standby_function_list");
+			return -1;
+		}
+		qp->standby_function_names[i] = name;
+	}
+	qp->standby_function_names_count = field->count;
+
+	return 0;
+}
+
 static int convert_query_parsing(convert_ctx_t *ctx,
 				 const od_cfg_query_parsing_t *cfg)
 {
@@ -1492,7 +1524,7 @@ static int convert_query_parsing(convert_ctx_t *ctx,
 		}
 	}
 
-	return 0;
+	return parse_standby_function_list(ctx, cfg, qp);
 }
 
 static int parse_address_range(const od_cfg_route_t *rcfg,

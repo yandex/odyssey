@@ -42,6 +42,12 @@ typedef struct {
 	od_cfg_seen_t seen;
 } od_cfg_string_field_t;
 
+typedef struct {
+	char **values;
+	size_t count;
+	od_cfg_seen_t seen;
+} od_cfg_string_list_field_t;
+
 typedef struct od_cfg_global {
 	od_cfg_bool_field_t daemonize;
 	od_cfg_bool_field_t sequential_routing;
@@ -243,6 +249,7 @@ typedef struct od_cfg_query_parsing {
 	od_cfg_query_parsing_mode_field_t mode;
 	od_cfg_u64_field_t mem_limit;
 	od_cfg_u64_field_t max_query_len;
+	od_cfg_string_list_field_t standby_function_list;
 } od_cfg_query_parsing_t;
 
 typedef struct od_cfg_ldap_endpoint {
@@ -531,6 +538,16 @@ int od_cfg_set_u64(od_cfg_diag_list_t *diags, od_cfg_u64_field_t *field,
 int od_cfg_set_string(od_cfg_diag_list_t *diags, od_cfg_string_field_t *field,
 		      char *value, od_cfg_location_t location,
 		      const char *field_name);
+
+int od_cfg_string_list_begin(od_cfg_diag_list_t *diags,
+			     od_cfg_string_list_field_t *field,
+			     od_cfg_location_t location,
+			     const char *field_name);
+
+int od_cfg_string_list_append(od_cfg_diag_list_t *diags,
+			      od_cfg_string_list_field_t *field, char *value);
+
+void od_cfg_string_list_free(od_cfg_string_list_field_t *field);
 
 int od_cfg_set_query_parsing_mode(od_cfg_diag_list_t *diags,
 				  od_cfg_query_parsing_mode_field_t *field,

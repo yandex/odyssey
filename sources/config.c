@@ -187,6 +187,14 @@ void od_config_free(od_config_t *config)
 	if (config->cpu_affinity) {
 		od_free(config->cpu_affinity);
 	}
+
+	od_config_query_parsing_t *qp = &config->query_parsing;
+	for (size_t i = 0; i < qp->standby_function_names_count; ++i) {
+		od_free(qp->standby_function_names[i]);
+	}
+	if (qp->standby_function_names) {
+		od_free(qp->standby_function_names);
+	}
 }
 
 od_config_listen_t *od_config_listen_add(od_config_t *config)
@@ -706,6 +714,9 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->query_parsing.max_query_len);
 	od_log(logger, "config", NULL, NULL, "query_parsing mem_limit  %zu",
 	       config->query_parsing.mem_limit_bytes);
+	od_log(logger, "config", NULL, NULL,
+	       "query_parsing standby_function_list extra functions %zu",
+	       config->query_parsing.standby_function_names_count);
 	if (config->availability_zone[0]) {
 		od_log(logger, "config", NULL, NULL,
 		       "availability_zone       %s", config->availability_zone);
