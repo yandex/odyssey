@@ -1256,9 +1256,23 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 		}
 
 		od_storage_watchdog_t *watchdog = storage->watchdog;
+		size_t route_name_sz =
+			sizeof("watchdog_int_") + strlen(cfg->name);
+		watchdog->route_usr = od_malloc(route_name_sz);
+		if (watchdog->route_usr == NULL) {
+			od_cfg_diag_error(diags, cfg->watchdog->location,
+					  "can't allocate watchdog route");
+			goto error;
+		}
+		snprintf(watchdog->route_usr, route_name_sz, "watchdog_int_%s",
+			 cfg->name);
 
-		watchdog->route_usr = "watchdog_int";
-		watchdog->route_db = "watchdog_int";
+		watchdog->route_db = od_strdup(watchdog->route_usr);
+		if (watchdog->route_db == NULL) {
+			od_cfg_diag_error(diags, cfg->watchdog->location,
+					  "can't allocate watchdog route");
+			goto error;
+		}
 
 		od_rule_t *rule;
 		od_address_range_t address_range =
