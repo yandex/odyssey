@@ -52,12 +52,17 @@ typedef int od_console_yyltype_t;
 				       od_console_parse_ctx_t *ctx,
 				       const char *msg)
 	{
-		(void)loc;
 		(void)scanner;
+
+		/* location is a 0-based byte offset, report 1-based */
+		int position = 0;
+		if (loc != NULL && *loc >= 0) {
+			position = *loc + 1;
+		}
 
 		ctx->had_error = 1;
 		if (ctx->error_cb) {
-			ctx->error_cb(msg, ctx->error_cb_userdata);
+			ctx->error_cb(msg, position, ctx->error_cb_userdata);
 		}
 	}
 
@@ -214,7 +219,7 @@ kill_client_stmt:
 		{
 			if ($2 == NULL ||
 			    strlen($2) != (size_t)(OD_ID_LEN + 1)) {
-				od_console_yyerror(&yylloc, scanner, ctx,
+				od_console_yyerror(&@2, scanner, ctx,
 					       "invalid client id");
 				YYABORT;
 			}
@@ -318,7 +323,7 @@ set_key:
 			size_t la = strlen($1), lb = strlen($3);
 			$$ = arena_strcat(ctx, $1, la, '.', $3, lb);
 			if ($$ == NULL) {
-				od_console_yyerror(&yylloc, scanner, ctx,
+				od_console_yyerror(NULL, scanner, ctx,
 					       "out of memory");
 				YYABORT;
 			}
@@ -334,7 +339,7 @@ set_value:
 			int  n = snprintf(tmp, sizeof(tmp), "%" PRId64, $1);
 			$$ = arena_str(ctx, tmp, (size_t)n);
 			if ($$ == NULL) {
-				od_console_yyerror(&yylloc, scanner, ctx,
+				od_console_yyerror(NULL, scanner, ctx,
 					       "out of memory");
 				YYABORT;
 			}
@@ -379,7 +384,7 @@ col_id:
 		{
 			$$ = arena_str(ctx, "servers", 7);
 			if ($$ == NULL) {
-				od_console_yyerror(&yylloc, scanner, ctx,
+				od_console_yyerror(NULL, scanner, ctx,
 					       "out of memory");
 				YYABORT;
 			}

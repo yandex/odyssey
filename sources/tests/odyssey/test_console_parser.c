@@ -11,9 +11,12 @@
 static _Alignas(max_align_t) uint8_t s_arena_buf[ARENA_SIZE];
 static od_linear_alloc_t s_arena;
 
-static void on_error(const char *msg, void *userdata)
+static int s_err_position;
+
+static void on_error(const char *msg, int position, void *userdata)
 {
 	strcpy((char *)userdata, msg);
+	s_err_position = position;
 }
 
 static const char *parse_ok(const char *input)
@@ -45,6 +48,7 @@ static void parse_fail(const char *input)
 	static char err[PRINT_BUF_SIZE];
 
 	memset(err, 0, sizeof(err));
+	s_err_position = 0;
 	od_linear_alloc_reset(&s_arena, 0);
 	od_console_node_t *node =
 		od_console_parse(input, strlen(input), &s_arena, on_error, err);
@@ -55,6 +59,21 @@ static void parse_fail(const char *input)
 		abort();
 	}
 	test(node == NULL);
+}
+
+/*
+ * parse must fail with the error cursor at the given 1-based position
+ */
+static void parse_fail_at(const char *input, int position)
+{
+	parse_fail(input);
+	if (s_err_position != position) {
+		fprintf(stderr,
+			"parse_fail_at: input=[%s] expected position %d, got %d\n",
+			input, position, s_err_position);
+		abort();
+	}
+	test(s_err_position == position);
 }
 
 /*
@@ -344,6 +363,24 @@ static void test_parse_errors(void)
 	parse_fail("DISCARD ALL");
 }
 
+/*
+ * error cursor points to the offending token (1-based),
+ * or right past the end of input when it ends too early
+ */
+static void test_parse_error_position(void)
+{
+	parse_fail_at("SELECT 1", 1);
+	parse_fail_at("RELOAD extra", 8);
+	parse_fail_at("  GC extra;", 6);
+	parse_fail_at("SHOW STATS extra more", 18);
+	parse_fail_at("SHOW CONFIG workers extra", 21);
+	parse_fail_at("SET odyssey.foo TO", 19);
+	parse_fail_at("SHOW", 5);
+	parse_fail_at("KILL_CLIENT c3f1", 13);
+	parse_fail_at("SHOW -- comment\n STATS extra more", 30);
+	parse_fail_at("SHOW ST@TS", 8);
+}
+
 void odyssey_test_console_parser(void)
 {
 	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
@@ -396,4 +433,5 @@ void odyssey_test_console_parser(void)
 
 	test_empty_input();
 	test_parse_errors();
+	test_parse_error_position();
 }
