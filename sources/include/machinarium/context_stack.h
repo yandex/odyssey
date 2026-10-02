@@ -15,6 +15,7 @@ typedef struct mm_contextstack mm_contextstack_t;
 struct mm_contextstack {
 	char *pointer;
 	size_t size;
+	size_t max_depth;
 	size_t size_guard;
 #ifdef HAVE_VALGRIND
 	int valgrind_stack;

@@ -99,6 +99,8 @@ MACHINE_API int machine_wait(uint64_t machine_id);
 
 MACHINE_API int machine_stop(uint64_t machine_id);
 
+MACHINE_API int machinarium_check_stack_depth(void);
+
 /* time */
 
 MACHINE_API uint64_t machine_time_ms(void);
@@ -235,20 +237,6 @@ MACHINE_API void machine_tls_cache_invalidate(void);
 MACHINE_API int machine_getsockname(mm_io_t *, struct sockaddr *, int *);
 
 MACHINE_API int machine_getpeername(mm_io_t *, struct sockaddr *, int *);
-
-/* iov */
-
-MACHINE_API machine_iov_t *machine_iov_create(void);
-
-MACHINE_API void machine_iov_free(machine_iov_t *);
-
-MACHINE_API int machine_iov_add_pointer(machine_iov_t *, void *, int);
-
-MACHINE_API int machine_iov_add(machine_iov_t *, machine_msg_t *);
-
-MACHINE_API int machine_iov_pending(machine_iov_t *);
-
-MACHINE_API size_t machine_iov_inflight_size(machine_iov_t *iov);
 
 /* read */
 

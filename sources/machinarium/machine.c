@@ -514,3 +514,35 @@ void mm_machine_atexit(void (*fun)(void *), void *arg)
 	e->fptr = fun;
 	e->arg = arg;
 }
+
+MACHINE_API int machinarium_check_stack_depth(void)
+{
+	if (mm_self == NULL) {
+		return 0;
+	}
+
+	mm_coroutine_t *coro = mm_self->scheduler.current;
+	if (coro == NULL) {
+		return 0;
+	}
+
+	uintptr_t sp;
+	uintptr_t top = (uintptr_t)coro->stack.pointer;
+
+#if defined(__has_builtin)
+#if __has_builtin(__builtin_frame_address)
+	sp = (uintptr_t)__builtin_frame_address(0);
+#endif
+#elif defined(__GNUC__) || defined(__clang__)
+	sp = (uintptr_t)__builtin_frame_address(0);
+#else
+	int unused = 42;
+	sp = (uintptr_t)(&unused);
+#endif
+
+	if (top < sp) {
+		return (size_t)(sp - top) >= coro->stack.max_depth;
+	}
+
+	return (size_t)(top - sp) >= coro->stack.max_depth;
+}
