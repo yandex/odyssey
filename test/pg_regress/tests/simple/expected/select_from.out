@@ -1,0 +1,24 @@
+\c console
+SELECT * FROM IS_PAUSED;
+ is_paused 
+-----------
+ f
+(1 row)
+
+select * from is_paused;
+ is_paused 
+-----------
+ f
+(1 row)
+
+-- SHOW <target> <arg> has no SELECT alias
+SELECT * FROM CONFIG workers;
+ERROR:  odyssey: console command error: syntax error, unexpected IDENT, expecting end of file
+select * from config log_debug;
+ERROR:  odyssey: console command error: syntax error, unexpected IDENT, expecting end of file
+SHOW CONFIG workers;
+   key   | value | default | changeable 
+---------+-------+---------+------------
+ workers | 1     | 1       | no
+(1 row)
+

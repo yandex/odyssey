@@ -190,6 +190,38 @@ static void test_show_with_block_comment(void)
 }
 
 /*
+ * SELECT * FROM <target> is a plain alias for SHOW <target>
+ */
+static void test_select_from_alias(void)
+{
+	test(strcmp(parse_ok("SELECT * FROM STATS"), "(show stats)") == 0);
+	test(strcmp(parse_ok("select * from pools"), "(show pools)") == 0);
+	test(strcmp(parse_ok("SELECT * FROM SERVERS;"), "(show servers)") == 0);
+	test(strcmp(parse_ok("SELECT*FROM clients"), "(show clients)") == 0);
+	test(strcmp(parse_ok("SELECT * FROM CONFIG"), "(show config)") == 0);
+}
+
+static void test_select_from_errors(void)
+{
+	parse_fail("SELECT");
+	parse_fail("SELECT *");
+	parse_fail("SELECT * FROM");
+	parse_fail("SELECT FROM stats");
+	parse_fail("SELECT stats");
+	parse_fail("SELECT * stats");
+	parse_fail("SELECT * FROM 42");
+	parse_fail("SELECT 1 FROM stats");
+	parse_fail("SELECT * FROM stats extra more");
+
+	/* SHOW <target> <arg> has no SELECT alias */
+	test(strcmp(parse_ok("SHOW CONFIG workers"), "(show config workers)") ==
+	     0);
+	parse_fail("SELECT * FROM CONFIG workers");
+	parse_fail("select * from config workers");
+	parse_fail("SELECT * FROM CONFIG log_debug;");
+}
+
+/*
  * KILL_CLIENT tests
  */
 static void test_kill_client_basic(void)
@@ -340,6 +372,8 @@ void odyssey_test_console_parser(void)
 	test_show_case_insensitive();
 	test_show_whitespace();
 	test_show_with_block_comment();
+	test_select_from_alias();
+	test_select_from_errors();
 
 	test_kill_client_basic();
 	test_kill_client_case_insensitive_cmd();

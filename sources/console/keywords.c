@@ -25,6 +25,10 @@ static const od_console_keyword_t keywords[] = {
 	{ "drop", KW_DROP },
 	{ "gc", KW_GC },
 
+	/* SELECT * FROM <target> (alias for SHOW <target>) */
+	{ "select", KW_SELECT },
+	{ "from", KW_FROM },
+
 	/* drop targets */
 	{ "servers", KW_SERVERS },
 
