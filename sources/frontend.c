@@ -24,7 +24,6 @@
 #include <ejection.h>
 #include <stream.h>
 #include <module.h>
-#include <cancel.h>
 #include <auth.h>
 #include <reset.h>
 #include <system.h>
@@ -36,7 +35,6 @@
 #include <compression.h>
 #include <extension.h>
 #include <deploy.h>
-#include <router_cancel.h>
 #include <misc.h>
 #include <server.h>
 
@@ -3077,23 +3075,7 @@ void od_frontend(void *arg)
 			return;
 		}
 
-		od_router_cancel_t cancel;
-		od_router_cancel_init(&cancel);
-		od_route_t *srv_route = NULL;
-		rc = od_router_cancel(router, &client->startup.key, &cancel,
-				      &srv_route);
-		if (rc == 0) {
-			od_stat_cancel(&srv_route->stats);
-
-			od_cancel(client->global, cancel.storage,
-				  cancel.address, &cancel.key, &cancel.id);
-
-			od_route_lock(srv_route);
-			od_route_signal_locked(srv_route, NULL);
-			od_route_unlock(srv_route);
-
-			od_router_cancel_free(&cancel);
-		}
+		od_router_cancel(router, &client->startup.key);
 
 		cancel_finished(global, instance);
 
