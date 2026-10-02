@@ -399,6 +399,10 @@ static int has_function_call_walker(Node *node)
 		return 0;
 	}
 
+	if (machinarium_check_stack_depth()) {
+		return 1;
+	}
+
 #define WALK(n) has_function_call_walker((Node *)(n))
 
 	switch (nodeTag(node)) {
