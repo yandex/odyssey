@@ -1158,6 +1158,7 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	mm_hashmap_keylock_t client_klock;
 	int rc;
 	rc = od_instance_clients_lock(instance, &client->key, &client_klock);
+	(void)rc;
 	od_assert(rc == 0);
 
 	od_route_t *route = client->route;
@@ -1215,7 +1216,8 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	mm_hashmap_keylock_t client_klock;
 	int rc;
 	rc = od_instance_clients_lock(instance, &client->key, &client_klock);
-	od_assert(rc);
+	(void)rc;
+	od_assert(rc == 0);
 
 	od_route_t *route = client->route;
 	od_assert(route != NULL);
@@ -1246,21 +1248,21 @@ od_router_status_t od_router_cancel(od_router_t *router, kiwi_key_t *key,
 {
 	od_instance_t *instance = router->global->instance;
 
-	od_client_t *client = NULL;
 	mm_hashmap_keylock_t client_klock;
-	int rc =
-		od_instance_clients_find(instance, key, &client_klock, &client);
-	if (rc == -1) {
-		return OD_ROUTER_ERROR_NOT_FOUND;
-	}
-	if (client == NULL) {
-		od_instance_clients_unlock(instance, &client_klock);
+	int rc;
+	rc = od_instance_clients_lock(instance, key, &client_klock);
+	(void)rc;
+	od_assert(rc == 0);
+
+	if (!client_klock.found) {
 		return OD_ROUTER_ERROR_NOT_FOUND;
 	}
 
+	od_client_t *client = mm_hashmap_kvp_val(instance->clients_by_key->hm,
+						 client_klock.kvp);
+
 	od_server_t *server = client->server;
 	if (server == NULL) {
-		od_instance_clients_unlock(instance, &client_klock);
 		return OD_ROUTER_ERROR_NOT_FOUND;
 	}
 
