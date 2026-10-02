@@ -22,6 +22,7 @@
 #include <util.h>
 #include <stat.h>
 #include <pool.h>
+#include <cancel.h>
 
 void od_router_init(od_router_t *router, od_global_t *global)
 {
@@ -1242,11 +1243,10 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	od_server_free(server);
 }
 
-od_router_status_t od_router_cancel(od_router_t *router, kiwi_key_t *key,
-				    od_router_cancel_t *cancel,
-				    od_route_t **route_out)
+void od_router_cancel(od_router_t *router, kiwi_key_t *key)
 {
-	od_instance_t *instance = router->global->instance;
+	od_global_t *global = router->global;
+	od_instance_t *instance = global->instance;
 
 	mm_hashmap_keylock_t client_klock;
 	int rc;
@@ -1255,7 +1255,7 @@ od_router_status_t od_router_cancel(od_router_t *router, kiwi_key_t *key,
 	od_assert(rc == 0);
 
 	if (!client_klock.found) {
-		return OD_ROUTER_ERROR_NOT_FOUND;
+		return;
 	}
 
 	od_client_t *client = mm_hashmap_kvp_val(instance->clients_by_key->hm,
@@ -1263,20 +1263,20 @@ od_router_status_t od_router_cancel(od_router_t *router, kiwi_key_t *key,
 
 	od_server_t *server = client->server;
 	if (server == NULL) {
-		return OD_ROUTER_ERROR_NOT_FOUND;
+		return;
 	}
 
 	od_route_t *route = client->route;
-	cancel->id = server->id;
-	cancel->key = server->key;
-	cancel->storage = od_rules_storage_ref(route->rule->storage);
-	cancel->address = od_server_pool_address(server);
-	cancel->server = server;
-	*route_out = route;
+	od_rule_storage_t *storage = od_rules_storage_ref(route->rule->storage);
+	const od_address_t *address = od_server_pool_address(server);
+
+	od_stat_cancel(&route->stats);
+	od_cancel(global, storage, address, &server->key, &server->id);
+	if (storage) {
+		od_rules_storage_unref(storage);
+	}
 
 	od_instance_clients_unlock(instance, &client_klock);
-
-	return OD_ROUTER_OK;
 }
 
 static inline int od_router_kill_cb(od_route_t *route, void **argv)

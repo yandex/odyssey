@@ -12,7 +12,6 @@
 
 #include <rules.h>
 #include <route_pool.h>
-#include <router_cancel.h>
 
 struct od_router {
 	mm_mutex_t lock;
@@ -68,8 +67,7 @@ od_router_status_t od_router_attach(od_router_t *, od_client_t *, bool,
 void od_router_detach(od_router_t *, od_client_t *);
 void od_router_close(od_router_t *, od_client_t *);
 
-od_router_status_t od_router_cancel(od_router_t *, kiwi_key_t *,
-				    od_router_cancel_t *, od_route_t **);
+void od_router_cancel(od_router_t *, kiwi_key_t *);
 
 void od_router_kill(od_router_t *, od_id_t *);
 

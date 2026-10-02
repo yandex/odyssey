@@ -660,7 +660,7 @@ int od_instance_clients_create_map(od_instance_t *instance)
 	}
 
 	instance->clients_by_key->hm =
-		mm_hashmap_create(32768, 16 * (size_t)instance->config.workers,
+		mm_hashmap_create(32768, 64 * (size_t)instance->config.workers,
 				  sizeof(kiwi_key_t), sizeof(od_client_t *),
 				  od_instance_clients_hm_cmp,
 				  od_instance_clients_hm_hash, NULL, NULL,
