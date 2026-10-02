@@ -204,6 +204,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "az_aware", AZ_AWARE },
 	{ "virtual_transaction", VIRTUAL_TRANSACTION },
 	{ "query_parsing", QUERY_PARSING },
+	{ "standby_function_list", STANDBY_FUNCTION_LIST },
 	{ "mode", MODE },
 	{ "disabled", DISABLED },
 	{ "minimal", MINIMAL },

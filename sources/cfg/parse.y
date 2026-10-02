@@ -321,6 +321,7 @@
 %token AZ_AWARE "az_aware"
 %token VIRTUAL_TRANSACTION "virtual_transaction"
 %token QUERY_PARSING "query_parsing"
+%token STANDBY_FUNCTION_LIST "standby_function_list"
 %token MODE "mode"
 %token DISABLED "disabled"
 %token MINIMAL "minimal"
@@ -2628,6 +2629,26 @@ query_parsing_item:
 						   @1,
 						   "max_query_len");
 			}
+		}
+	| STANDBY_FUNCTION_LIST
+		{
+			od_cfg_string_list_begin(ctx->diags,
+						  &ctx->current_query_parsing->standby_function_list,
+						  @1,
+						  "standby_function_list");
+		}
+	  '{' standby_function_list_items '}'
+	;
+
+standby_function_list_items:
+	  %empty
+	| standby_function_list_items STRING
+		{
+			od_cfg_string_list_append(
+				ctx->diags,
+				&ctx->current_query_parsing->standby_function_list,
+				$2);
+			$2 = NULL;
 		}
 	;
 

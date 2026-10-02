@@ -76,6 +76,12 @@ typedef struct {
 	od_config_query_parsing_mode_t mode;
 	size_t mem_limit_bytes;
 	size_t max_query_len;
+	/*
+	 * additional standby-friendly function names from
+	 * query_parsing.standby_function_list (extends the built-in list)
+	 */
+	char **standby_function_names;
+	size_t standby_function_names_count;
 } od_config_query_parsing_t;
 
 struct od_config {

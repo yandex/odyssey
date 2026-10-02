@@ -34,6 +34,15 @@ static od_config_query_parsing_t s_full_parsing = {
 	.max_query_len = DEFAULT_MAX_QUERY_LEN,
 };
 
+static char *s_standby_extra_names[] = { "my_ro_fn", "other_safe_fn" };
+
+static od_config_query_parsing_t s_full_parsing_extra = {
+	.mode = OD_CONFIG_QUERY_PARSING_MODE_FULL,
+	.max_query_len = DEFAULT_MAX_QUERY_LEN,
+	.standby_function_names = s_standby_extra_names,
+	.standby_function_names_count = 2,
+};
+
 #define FULL_ARENA_SIZE (5 * 1024 * 1024)
 
 static _Alignas(max_align_t) uint8_t s_full_arena_buf[FULL_ARENA_SIZE];
@@ -624,6 +633,13 @@ static void fill_ctx_full(const char *query, od_query_ctx_t *ctx)
 				&s_full_parsing);
 }
 
+static void fill_ctx_full_extra(const char *query, od_query_ctx_t *ctx)
+{
+	od_linear_alloc_reset(&s_full_arena, 0);
+	od_query_parse_fill_ctx(query, strlen(query), &s_full_arena, ctx,
+				&s_full_parsing_extra);
+}
+
 static void test_parse_fill_ctx_full(void)
 {
 	od_linear_alloc_init(&s_full_arena, s_full_arena_buf,
@@ -835,6 +851,48 @@ static void test_parse_fill_ctx_full(void)
 
 	/* non pg_catalog qualification is never whitelisted */
 	fill_ctx_full("SELECT myschema.count(*)", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/*
+	 * query_parsing.standby_function_list extends the built-in list
+	 */
+	fill_ctx_full_extra("SELECT my_ro_fn()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full_extra("SELECT other_safe_fn('x')", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full_extra("SELECT pg_catalog.my_ro_fn()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* built-in functions are still recognized together with the extra list */
+	fill_ctx_full_extra("SELECT count(*), my_ro_fn()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* unknown functions are still not recognized */
+	fill_ctx_full_extra("SELECT unknown_fn()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* the extra list does not bypass the qualification check */
+	fill_ctx_full_extra("SELECT myschema.my_ro_fn()", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	/* the default list alone does not know about the extra functions */
+	fill_ctx_full("SELECT my_ro_fn()", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	od_query_ctx_reset(&ctx);
