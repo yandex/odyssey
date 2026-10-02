@@ -8,6 +8,11 @@ REGRESS_DIR=/home/postgres/regress
 PGDIR=/home/postgres/pgdir
 PGDIRREPL1=/home/postgres/pgrepl1
 PGDIRREPL2=/home/postgres/pgrepl2
+PGDIRREPL3=/home/postgres/pgrepl3
+PGDIRREPL4=/home/postgres/pgrepl4
+
+# for test scripts that stop/start replicas
+export PGDIR PGDIRREPL1 PGDIRREPL2 PGDIRREPL3 PGDIRREPL4
 
 do_test() {
     local name=$1
@@ -51,11 +56,15 @@ do_test() {
 
 pg_ctl stop -D ${PGDIRREPL1} || true
 pg_ctl stop -D ${PGDIRREPL2} || true
+pg_ctl stop -D ${PGDIRREPL3} || true
+pg_ctl stop -D ${PGDIRREPL4} || true
 pg_ctl stop -D ${PGDIR} || true
 
 rm -rf ${PGDIR} || true
 rm -rf ${PGDIRREPL1} || true
 rm -rf ${PGDIRREPL2} || true
+rm -rf ${PGDIRREPL3} || true
+rm -rf ${PGDIRREPL4} || true
 
 initdb -D ${PGDIR}
 echo "session_preload_libraries = 'transaction_transients_trace'" >> ${PGDIR}/postgresql.conf
@@ -73,6 +82,14 @@ pg_basebackup -D ${PGDIRREPL2} -p 5432 -R
 echo "port = 5434" >> ${PGDIRREPL2}/postgresql.conf
 pg_ctl start -D ${PGDIRREPL2} -l ${PGDIRREPL2}/log.txt
 
+pg_basebackup -D ${PGDIRREPL3} -p 5432 -R
+echo "port = 5435" >> ${PGDIRREPL3}/postgresql.conf
+pg_ctl start -D ${PGDIRREPL3} -l ${PGDIRREPL3}/log.txt
+
+pg_basebackup -D ${PGDIRREPL4} -p 5432 -R
+echo "port = 5436" >> ${PGDIRREPL4}/postgresql.conf
+pg_ctl start -D ${PGDIRREPL4} -l ${PGDIRREPL4}/log.txt
+
 do_test pin_on_listen 6432 postgres
 
 do_test simple 6432 suser
@@ -85,5 +102,7 @@ do_test balancer 6432 postgres
 do_test listen_balancer 6432 postgres
 
 do_test tsa 6432 postgres
+
+do_test tsa_5node 6432 postgres
 
 do_test az_aware 6432 postgres
