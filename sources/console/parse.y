@@ -173,10 +173,12 @@ stmt:
  * Currently the optional <arg> is used by SHOW CONFIG <field_name>
  * to filter the output to a single configuration parameter.
  *
- * SELECT * FROM <name> [<arg>]
+ * SELECT * FROM <name>
  *
- * Plain alias for SHOW <name> [<arg>]: produces exactly the same
- * node, so the console handler does not distinguish between them.
+ * Plain alias for SHOW <name>: produces exactly the same node, so the
+ * console handler does not distinguish between them. The optional <arg>
+ * is deliberately not accepted here: SELECT * FROM CONFIG workers is a
+ * syntax error, use SHOW CONFIG workers.
  */
 show_stmt:
 	  KW_SHOW col_id opt_show_arg
@@ -188,13 +190,13 @@ show_stmt:
 			n->arg  = $3; $3 = NULL;
 			$$ = (od_console_node_t *)n;
 		}
-	| KW_SELECT '*' KW_FROM col_id opt_show_arg
+	| KW_SELECT '*' KW_FROM col_id
 		{
 			od_console_show_stmt_t *n =
 				ALLOC_NODE(ctx, show, OD_CONSOLE_NODE_TYPE_SHOW_STMT);
 			if (n == NULL) YYABORT;
 			n->name = $4; $4 = NULL;
-			n->arg  = $5; $5 = NULL;
+			n->arg  = NULL;
 			$$ = (od_console_node_t *)n;
 		}
 	;

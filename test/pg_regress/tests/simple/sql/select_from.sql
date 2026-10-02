@@ -1,7 +1,7 @@
 \c console
-SELECT * FROM CONFIG availability_zone;
-SELECT * FROM CONFIG log_debug;
-SELECT * FROM CONFIG log_format;
-SELECT * FROM CONFIG workers;
-select * from config workers;
 SELECT * FROM IS_PAUSED;
+select * from is_paused;
+-- SHOW <target> <arg> has no SELECT alias
+SELECT * FROM CONFIG workers;
+select * from config log_debug;
+SHOW CONFIG workers;

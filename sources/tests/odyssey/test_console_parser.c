@@ -199,10 +199,6 @@ static void test_select_from_alias(void)
 	test(strcmp(parse_ok("SELECT * FROM SERVERS;"), "(show servers)") == 0);
 	test(strcmp(parse_ok("SELECT*FROM clients"), "(show clients)") == 0);
 	test(strcmp(parse_ok("SELECT * FROM CONFIG"), "(show config)") == 0);
-	test(strcmp(parse_ok("SELECT * FROM CONFIG workers"),
-		    "(show config workers)") == 0);
-	test(strcmp(parse_ok("SHOW CONFIG workers"), "(show config workers)") ==
-	     0);
 }
 
 static void test_select_from_errors(void)
@@ -216,6 +212,13 @@ static void test_select_from_errors(void)
 	parse_fail("SELECT * FROM 42");
 	parse_fail("SELECT 1 FROM stats");
 	parse_fail("SELECT * FROM stats extra more");
+
+	/* SHOW <target> <arg> has no SELECT alias */
+	test(strcmp(parse_ok("SHOW CONFIG workers"), "(show config workers)") ==
+	     0);
+	parse_fail("SELECT * FROM CONFIG workers");
+	parse_fail("select * from config workers");
+	parse_fail("SELECT * FROM CONFIG log_debug;");
 }
 
 /*
