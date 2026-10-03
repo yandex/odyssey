@@ -228,7 +228,21 @@ KIWI_API static inline int kiwi_be_read_query(char *data, uint32_t size,
 	if (kiwi_unlikely(header->type != KIWI_FE_QUERY)) {
 		return -1;
 	}
-	*query = kiwi_header_data(header);
+	/*
+	 * The query string must be NUL-terminated exactly at the end of
+	 * the message.  A client may send a message without the trailing
+	 * zero (or an empty one): without the check the string is later
+	 * parsed by functions relying on strlen(), running past the end
+	 * of the message buffer (heap-buffer-overflow read).
+	 */
+	if (kiwi_unlikely(len == 0)) {
+		return -1;
+	}
+	char *query_str = kiwi_header_data(header);
+	if (kiwi_unlikely(query_str[len - 1] != '\0')) {
+		return -1;
+	}
+	*query = query_str;
 	*query_len = len;
 	return 0;
 }
@@ -282,6 +296,19 @@ kiwi_be_read_parse_dest(char *data, uint32_t size,
 	/* query and params */
 	dest->description_len = pos_size;
 	dest->description = pos;
+	/*
+	 * The description holds "query\0" followed by an int16 parameter
+	 * type count (and int32 oids).  Require a NUL-terminated query:
+	 * the stored description is later parsed with strlen-based
+	 * routines, a message without the terminator makes them read
+	 * past the end of the buffer.
+	 */
+	if (kiwi_unlikely(pos_size < 3)) {
+		return -1;
+	}
+	if (kiwi_unlikely(memchr(pos, '\0', pos_size - 2) == NULL)) {
+		return -1;
+	}
 	return 0;
 }
 
