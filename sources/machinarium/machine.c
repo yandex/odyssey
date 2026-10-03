@@ -541,7 +541,17 @@ MACHINE_API int machinarium_check_stack_depth(void)
 #endif
 
 	if (top < sp) {
-		return (size_t)(sp - top) >= coro->stack.max_depth;
+		/*
+		 * stack grows downward: sp starts near top + size and
+		 * decreases as the coroutine consumes stack.  Used depth is
+		 * measured from the high end of the region, not from top.
+		 */
+		uintptr_t high = top + coro->stack.size;
+		if (sp > high) {
+			/* sp outside the region: treat as overflow */
+			return 1;
+		}
+		return (size_t)(high - sp) >= coro->stack.max_depth;
 	}
 
 	return (size_t)(top - sp) >= coro->stack.max_depth;

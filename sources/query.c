@@ -404,18 +404,40 @@ static int is_safe_function_call(const od_config_query_parsing_t *parsing,
 	return is_safe_function_name(parsing, strVal(llast(names)));
 }
 
+/*
+ * Depth bound for the AST walker.  Conservative: kept well below any
+ * plausible legitimate query (an AST deeper than this is treated as
+ * "not read-only"), small enough to be safe on small coroutine stacks
+ * and on ASan/-O0 builds with fat stack frames.
+ */
+#define HAS_FUNCTION_CALL_WALKER_MAX_DEPTH 256
+
+static int has_function_call_walker_impl(
+	const od_config_query_parsing_t *parsing, Node *node, int depth);
+
 static int has_function_call_walker(const od_config_query_parsing_t *parsing,
 				    Node *node)
+{
+	return has_function_call_walker_impl(parsing, node, 0);
+}
+
+#define WALK(n) has_function_call_walker_impl(parsing, (Node *)(n), depth + 1)
+
+static int has_function_call_walker_impl(
+	const od_config_query_parsing_t *parsing, Node *node, int depth)
 {
 	if (node == NULL) {
 		return 0;
 	}
 
-	if (machinarium_check_stack_depth()) {
+	if (depth >= HAS_FUNCTION_CALL_WALKER_MAX_DEPTH) {
 		return 1;
 	}
 
-#define WALK(n) has_function_call_walker(parsing, (Node *)(n))
+	/* coroutine stack guard: checked at every level */
+	if (machinarium_check_stack_depth()) {
+		return 1;
+	}
 
 	switch (nodeTag(node)) {
 	/* primitive node types with no subnodes */
