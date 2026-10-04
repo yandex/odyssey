@@ -15,7 +15,8 @@ size_t __attribute__((noinline)) recurse(size_t n)
 		return 1;
 	}
 
-	return n + recurse(n - 1);
+	volatile size_t v = n;
+	return v + recurse(n - 1);
 }
 
 static void test_coroutine(void *arg)

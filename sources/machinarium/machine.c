@@ -527,7 +527,8 @@ MACHINE_API int machinarium_check_stack_depth(void)
 	}
 
 	uintptr_t sp;
-	uintptr_t top = (uintptr_t)coro->stack.pointer;
+	uintptr_t base = (uintptr_t)coro->stack.pointer;
+	uintptr_t end = base + coro->stack.size;
 
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_frame_address)
@@ -540,9 +541,9 @@ MACHINE_API int machinarium_check_stack_depth(void)
 	sp = (uintptr_t)(&unused);
 #endif
 
-	if (top < sp) {
-		return (size_t)(sp - top) >= coro->stack.max_depth;
+	if (sp > end) {
+		return 0;
 	}
 
-	return (size_t)(top - sp) >= coro->stack.max_depth;
+	return (end - sp) >= coro->stack.max_depth;
 }
