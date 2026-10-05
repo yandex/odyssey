@@ -7,6 +7,7 @@ on:
     paths:
       - "docker/prom-exporter/**"
       - "prometheus/**"
+      - "test/prom-exporter/**"
 jobs:
   prom-exporter:
     name: prom-exporter
