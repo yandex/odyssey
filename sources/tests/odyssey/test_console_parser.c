@@ -369,7 +369,7 @@ static void test_parse_errors(void)
  */
 static void test_parse_error_position(void)
 {
-	parse_fail_at("SELECT 1", 1);
+	parse_fail_at("SELECT 1", 8);
 	parse_fail_at("RELOAD extra", 8);
 	parse_fail_at("  GC extra;", 6);
 	parse_fail_at("SHOW STATS extra more", 18);
