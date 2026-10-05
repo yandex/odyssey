@@ -44,7 +44,7 @@ static char *build_query_message(const char *payload, size_t payload_len,
  * 'P' (1 byte) + length (4 bytes) + name\0 + query + int16 param count
  */
 static char *build_parse_message(const char *query, size_t query_len,
-				  uint32_t *total_len)
+				 uint32_t *total_len)
 {
 	size_t payload_len = 2 + query_len + 2;
 	char *buf = malloc(1 + 4 + payload_len);
