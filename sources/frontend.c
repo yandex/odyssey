@@ -3361,10 +3361,10 @@ void od_frontend(void *arg)
 	/* cleanup */
 
 cleanup:
+	od_global_clients_map_remove(instance->clients_by_key, client);
+
 	/* detach client from its route */
 	od_router_unroute(router, client);
-
-	od_global_clients_map_remove(instance->clients_by_key, client);
 
 	/* close frontend connection */
 	od_frontend_close(client);
