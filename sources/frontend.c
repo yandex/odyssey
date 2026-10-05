@@ -2835,6 +2835,19 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	case OD_ESERVER_WRITE:
 		/* close client connection and close server
 			 * connection in case of server errors */
+		if (server == NULL) {
+			/*
+			 * The failure happened before a server connection
+			 * was attached (e.g. a malformed client message
+			 * processed by the relay): there is no server
+			 * to describe or to close.
+			 */
+			od_frontend_error(client, KIWI_CONNECTION_FAILURE,
+					  "remote server read/write error");
+			od_frontend_on_client_disconnect(status, client,
+							 context, 0);
+			break;
+		}
 		od_log(&instance->logger, context, client, server,
 		       "server disconnected (read/write error): %s, status %s",
 		       od_io_error(&server->io),
