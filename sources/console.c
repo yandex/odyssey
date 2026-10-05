@@ -2554,13 +2554,19 @@ static inline od_retcode_t od_console_drop_servers(od_client_t *client,
 	return OK_RESPONSE;
 }
 
-static void od_console_error_cb(const char *msg, void *userdata)
+typedef struct {
+	char msg[256];
+	int position;
+} od_console_parse_error_t;
+
+static void od_console_error_cb(const char *msg, int position, void *userdata)
 {
-	char *buf = (char *)userdata;
-	if (buf == NULL || msg == NULL) {
+	od_console_parse_error_t *err = userdata;
+	if (err == NULL || msg == NULL) {
 		return;
 	}
-	snprintf(buf, 255, "%s", msg);
+	snprintf(err->msg, sizeof(err->msg), "%s", msg);
+	err->position = position;
 }
 
 int od_console_query(od_client_t *client, machine_msg_t *stream,
@@ -2596,17 +2602,17 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	}
 
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
-	char parse_err[256] = { 0 };
+	od_console_parse_error_t parse_err = { .msg = { 0 }, .position = 0 };
 	od_console_node_t *ast = od_console_parse(
-		query, query_len - 1, arena, od_console_error_cb, parse_err);
+		query, query_len - 1, arena, od_console_error_cb, &parse_err);
 	if (ast == NULL) {
 		od_error(&instance->logger, "console", client, NULL,
 			 "console command error: %.*s", query_len - 1, query);
-		if (parse_err[0] != '\0') {
-			msg = od_frontend_errorf(client, stream,
-						 KIWI_SYNTAX_ERROR,
-						 "console command error: %s",
-						 parse_err);
+		if (parse_err.msg[0] != '\0') {
+			msg = od_frontend_errorf_pos(
+				client, stream, KIWI_SYNTAX_ERROR,
+				parse_err.position, "console command error: %s",
+				parse_err.msg);
 		} else {
 			msg = od_frontend_errorf(client, stream,
 						 KIWI_SYNTAX_ERROR,

@@ -14,7 +14,12 @@
 
 #include <console/ast.h>
 
-typedef void (*od_console_error_cb_t)(const char *msg, void *userdata);
+/*
+ * position is a 1-based index of the offending token in the input
+ * string, 0 if unknown
+ */
+typedef void (*od_console_error_cb_t)(const char *msg, int position,
+				      void *userdata);
 
 typedef struct od_console_parse_ctx {
 	const char *scanbuf;
