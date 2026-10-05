@@ -1,4 +1,4 @@
-FROM golang:1.25.0
+FROM golang:1.27.0
 
 RUN apt-get update -y && apt-get install -y postgresql-client postgresql-contrib
 

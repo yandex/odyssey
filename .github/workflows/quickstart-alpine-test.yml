@@ -12,6 +12,7 @@ on:
       - "modules/**"
       - "cmake/**"
       - "!docker/prom-exporter/**"
+      - "!test/prom-exporter/**"
       - "!sources/machinarium/gdb/**"
 jobs:
   quickstart-image-build:
