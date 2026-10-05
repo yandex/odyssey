@@ -3062,24 +3062,21 @@ static int od_frontend_cancel(od_client_t *client)
 	od_instance_t *instance = global->instance;
 	od_router_t *router = global->router;
 
-	od_debug(&instance->logger, "startup", client, NULL,
-			"cancel request");
+	od_debug(&instance->logger, "startup", client, NULL, "cancel request");
 
 	od_routing_slot_release(global);
 
 	uint32_t queue_timeout =
 		instance->config.cancel_queue_timeout_ms >= 0 ?
-			(uint32_t)instance->config
-				.cancel_queue_timeout_ms :
+			(uint32_t)instance->config.cancel_queue_timeout_ms :
 			2 * (uint32_t)instance->config.cancel_timeout_ms;
 
 	int rc;
 	rc = wait_cancel_allowed(global, instance, queue_timeout);
 	if (rc != 0) {
-		od_error(
-			&instance->logger, "startup", client, NULL,
-			"dropping cancel request due to queue timeout %u ms",
-			queue_timeout);
+		od_error(&instance->logger, "startup", client, NULL,
+			 "dropping cancel request due to queue timeout %u ms",
+			 queue_timeout);
 		od_frontend_close(client);
 		return rc;
 	}
