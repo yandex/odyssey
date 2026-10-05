@@ -1255,11 +1255,13 @@ void od_router_cancel(od_router_t *router, kiwi_key_t *key)
 		return;
 	}
 
-	od_client_t *client = *(od_client_t **)mm_hashmap_kvp_val(
-		global->instance->clients_by_key->hm, client_klock.kvp);
+	od_client_t *client = od_global_clients_map_get_val(
+		global->instance->clients_by_key, &client_klock);
 
 	od_server_t *server = client->server;
 	if (server == NULL) {
+		od_global_clients_map_unlock(global->instance->clients_by_key,
+					     &client_klock);
 		return;
 	}
 

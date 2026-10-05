@@ -100,3 +100,15 @@ int od_global_clients_map_remove(od_global_clients_map_t *map,
 	mm_hashmap_remove(map->hm, &klock);
 	return 0;
 }
+
+kiwi_key_t od_global_clients_map_get_key(od_global_clients_map_t *map,
+					 mm_hashmap_keylock_t *klock)
+{
+	return *(kiwi_key_t *)mm_hashmap_kvp_key(map->hm, klock->kvp);
+}
+
+od_client_t *od_global_clients_map_get_val(od_global_clients_map_t *map,
+					   mm_hashmap_keylock_t *klock)
+{
+	return *(od_client_t **)mm_hashmap_kvp_val(map->hm, klock->kvp);
+}

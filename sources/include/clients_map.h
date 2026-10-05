@@ -47,3 +47,8 @@ int od_global_clients_map_add(od_global_clients_map_t *map,
 			      od_client_t *client);
 int od_global_clients_map_remove(od_global_clients_map_t *map,
 				 od_client_t *client);
+
+kiwi_key_t od_global_clients_map_get_key(od_global_clients_map_t *map,
+					 mm_hashmap_keylock_t *klock);
+od_client_t *od_global_clients_map_get_val(od_global_clients_map_t *map,
+					   mm_hashmap_keylock_t *klock);
