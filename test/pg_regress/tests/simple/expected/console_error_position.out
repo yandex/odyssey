@@ -8,9 +8,9 @@ ERROR:  odyssey: console command error: syntax error, unexpected IDENT, expectin
 LINE 1: SHOW CONFIG workers extra;
                             ^
 SELECT 1;
-ERROR:  odyssey: console command error: syntax error, unexpected IDENT, expecting end of file
+ERROR:  odyssey: console command error: syntax error, unexpected INTEGER, expecting '*'
 LINE 1: SELECT 1;
-        ^
+               ^
 KILL_CLIENT c3f1;
 ERROR:  odyssey: console command error: invalid client id
 LINE 1: KILL_CLIENT c3f1;
