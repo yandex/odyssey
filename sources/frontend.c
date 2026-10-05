@@ -3094,7 +3094,7 @@ void od_frontend(void *arg)
 	client->key.key_pid = client->id.id_a;
 	client->key.key = client->id.id_b;
 
-	rc = od_instance_clients_add(instance, client);
+	rc = od_global_clients_map_add(instance->clients_by_key, client);
 	if (rc == -1) {
 		od_frontend_close(client);
 		od_routing_slot_release(global);
@@ -3216,7 +3216,7 @@ void od_frontend(void *arg)
 			break;
 		}
 
-		od_instance_clients_remove(instance, client);
+		od_global_clients_map_remove(instance->clients_by_key, client);
 		od_frontend_close(client);
 		return;
 	}
@@ -3364,7 +3364,7 @@ cleanup:
 	/* detach client from its route */
 	od_router_unroute(router, client);
 
-	od_instance_clients_remove(instance, client);
+	od_global_clients_map_remove(instance->clients_by_key, client);
 
 	/* close frontend connection */
 	od_frontend_close(client);

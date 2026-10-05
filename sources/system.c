@@ -848,9 +848,9 @@ static inline void od_system(void *arg)
 		return;
 	}
 
-	int rc;
-	rc = od_instance_clients_create_map(instance);
-	if (rc == -1) {
+	instance->clients_by_key = od_global_clients_map_create(
+		64 * (size_t)instance->config.workers);
+	if (instance->clients_by_key == NULL) {
 		od_error(&instance->logger, "system", NULL, NULL,
 			 "failed to create clients map, errno = %d (%s)",
 			 machine_errno(), strerror(machine_errno()));
@@ -871,6 +871,7 @@ static inline void od_system(void *arg)
 
 	/* start worker threads */
 
+	int rc;
 #ifdef LDAP_FOUND
 	rc = od_ldap_workers_init(instance->config.workers);
 	if (rc == -1) {
