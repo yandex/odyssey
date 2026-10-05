@@ -136,6 +136,62 @@ static void test_clients_add_lookup_remove(void)
 	od_global_clients_map_free(map);
 }
 
+static void test_clients_get_key_val(void)
+{
+	od_global_clients_map_t *map = od_global_clients_map_create(4);
+	test(map != NULL);
+
+	od_client_t *c1 = test_client_create(100, 1);
+	od_client_t *c2 = test_client_create(200, 2);
+
+	test(od_global_clients_map_add(map, c1) == 0);
+	test(od_global_clients_map_add(map, c2) == 0);
+
+	mm_hashmap_keylock_t klock;
+
+	/* get_key / get_val for a registered key */
+	test(od_global_clients_map_lock(map, &c1->key, &klock) == 0);
+	test(klock.found == 1);
+
+	kiwi_key_t got_key = od_global_clients_map_get_key(map, &klock);
+	test(got_key.key == c1->key.key);
+	test(got_key.key_pid == c1->key.key_pid);
+
+	od_client_t *got_val = od_global_clients_map_get_val(map, &klock);
+	test(got_val == c1);
+
+	od_global_clients_map_unlock(map, &klock);
+
+	/* get_key / get_val for another registered key */
+	test(od_global_clients_map_lock(map, &c2->key, &klock) == 0);
+	test(klock.found == 1);
+	test(od_global_clients_map_get_val(map, &klock) == c2);
+	test(od_global_clients_map_get_key(map, &klock).key == c2->key.key);
+	test(od_global_clients_map_get_key(map, &klock).key_pid ==
+	     c2->key.key_pid);
+	od_global_clients_map_unlock(map, &klock);
+
+	/* unknown key: not found, get_key/get_val must not be used */
+	kiwi_key_t unknown;
+	kiwi_key_init(&unknown);
+	unknown.key = 777;
+	unknown.key_pid = 777;
+	test(od_global_clients_map_lock(map, &unknown, &klock) == 0);
+	test(klock.found == 0);
+	od_global_clients_map_unlock(map, &klock);
+
+	/* after remove the key is gone */
+	test(od_global_clients_map_remove(map, c1) == 0);
+	test(od_global_clients_map_lock(map, &c1->key, &klock) == 0);
+	test(klock.found == 0);
+	od_global_clients_map_unlock(map, &klock);
+
+	od_client_free(c1);
+	od_client_free(c2);
+
+	od_global_clients_map_free(map);
+}
+
 typedef struct {
 	od_global_clients_map_t *map;
 	uint32_t key_base;
@@ -207,6 +263,7 @@ static void test_impl(void *a)
 
 	test_clients_map_create();
 	test_clients_add_lookup_remove();
+	test_clients_get_key_val();
 	test_clients_concurrent();
 }
 
