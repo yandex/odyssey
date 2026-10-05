@@ -141,7 +141,11 @@ void kiwi_test_pgoptions(void)
 			  -1 /* expected_rc */, 0 /* vars count */);
 	do_pgoptions_test("  -c     statement_timeout = 19   ",
 			  -1 /* expected_rc */, 0 /* vars count */);
-	do_pgoptions_test("-c      statement_time=1337", -1 /* expected_rc */,
+	do_pgoptions_test("-c      statement_time=1337", 0 /* expected_rc */,
+			  0 /* vars count */);
+	do_pgoptions_test("-c intervalstyle=postgres_verbose",
+			  0 /* expected_rc */, 0 /* vars count */);
+	do_pgoptions_test("--unknown_var=some\\ value", 0 /* expected_rc */,
 			  0 /* vars count */);
 	do_pgoptions_test("-c search_path", -1 /* expected_rc */,
 			  0 /* vars count */);
@@ -247,6 +251,14 @@ void kiwi_test_be_read_startup_options(void)
 		test(kiwi_be_read_startup(buf, len, &su, &vars) ==
 		     KIWI_STARTUP_READ_OPTIONS_ERROR);
 	}
+
+	/* unknown GUC in options must not reject the whole startup packet */
+	build_startup_packet(buf, sizeof(buf), &len,
+			     "-c intervalstyle=postgres_verbose");
+	kiwi_be_startup_init(&su);
+	kiwi_vars_init(&vars);
+	test(kiwi_be_read_startup(buf, len, &su, &vars) ==
+	     KIWI_STARTUP_READ_OK);
 
 	/* unexpected token must reject the whole startup packet */
 	build_startup_packet(buf, sizeof(buf), &len, "-x search_path=public");

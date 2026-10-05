@@ -142,7 +142,13 @@ static inline int kiwi_parse_option_and_update_var(kiwi_vars_t *vars,
 
 	kiwi_long_option_rewrite(name, (int)nlen);
 
-	return kiwi_vars_update(vars, name, (int)nlen + 1, val, (int)vlen + 1);
+	/*
+	 * options may contain arbitrary GUCs unknown to kiwi,
+	 * silently skip them, only malformed tokens are fatal here
+	 */
+	kiwi_vars_update(vars, name, (int)nlen + 1, val, (int)vlen + 1);
+
+	return 0;
 }
 
 int kiwi_parse_options_and_update_vars(kiwi_vars_t *vars, const char *str,
