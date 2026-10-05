@@ -4,7 +4,13 @@
 
 atomic_int hit = 0;
 
-size_t __attribute__((noinline)) __attribute__((disable_tail_calls))
+typedef size_t (*recurse_fn)(size_t);
+
+#ifdef __clang__
+size_t __attribute__((noinline, disable_tail_calls))
+#else
+size_t __attribute__((noinline, optimize("-fno-optimize-sibling-calls")))
+#endif
 recurse(size_t n)
 {
 	if (n == 0) {
@@ -19,8 +25,9 @@ recurse(size_t n)
 	volatile char buf[128];
 	(void)buf;
 
+	recurse_fn volatile fn = recurse;
 	volatile size_t v = n;
-	return v + recurse(n - 1);
+	return v + fn(n - 1);
 }
 
 static void test_coroutine(void *arg)
