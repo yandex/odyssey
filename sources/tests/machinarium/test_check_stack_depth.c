@@ -4,7 +4,8 @@
 
 atomic_int hit = 0;
 
-size_t __attribute__((noinline)) recurse(size_t n)
+size_t __attribute__((noinline)) __attribute__((disable_tail_calls))
+recurse(size_t n)
 {
 	if (n == 0) {
 		return 1;
@@ -15,13 +16,17 @@ size_t __attribute__((noinline)) recurse(size_t n)
 		return 1;
 	}
 
-	return n + recurse(n - 1);
+	volatile char buf[128];
+	(void)buf;
+
+	volatile size_t v = n;
+	return v + recurse(n - 1);
 }
 
 static void test_coroutine(void *arg)
 {
 	(void)arg;
-	size_t unused = recurse(100000000000);
+	size_t unused = recurse(10000000000);
 	test(atomic_load(&hit) == 1);
 	test(unused > 0);
 }

@@ -527,7 +527,8 @@ MACHINE_API int machinarium_check_stack_depth(void)
 	}
 
 	uintptr_t sp;
-	uintptr_t top = (uintptr_t)coro->stack.pointer;
+	uintptr_t base = (uintptr_t)coro->stack.pointer;
+	uintptr_t end = base + coro->stack.size;
 
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_frame_address)
@@ -540,19 +541,9 @@ MACHINE_API int machinarium_check_stack_depth(void)
 	sp = (uintptr_t)(&unused);
 #endif
 
-	if (top < sp) {
-		/*
-		 * stack grows downward: sp starts near top + size and
-		 * decreases as the coroutine consumes stack.  Used depth is
-		 * measured from the high end of the region, not from top.
-		 */
-		uintptr_t high = top + coro->stack.size;
-		if (sp > high) {
-			/* sp outside the region: treat as overflow */
-			return 1;
-		}
-		return (size_t)(high - sp) >= coro->stack.max_depth;
+	if (sp > end) {
+		return 0;
 	}
 
-	return (size_t)(top - sp) >= coro->stack.max_depth;
+	return (end - sp) >= coro->stack.max_depth;
 }
