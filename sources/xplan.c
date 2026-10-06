@@ -1523,19 +1523,14 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 		kiwi_be_type_t type = *data;
 		od_instance_t *instance = client->global->instance;
 
-		if (instance->config.log_debug) {
-			if (type == KIWI_BE_COMMAND_COMPLETE) {
-				const char *command_tag =
-					data + sizeof(kiwi_header_t);
-				od_debug(&instance->logger, "main", client,
-					 server, "%s - %s",
-					 kiwi_be_type_to_string(type),
-					 command_tag);
-			} else {
-				od_debug(&instance->logger, "main", client,
-					 server, "%s",
-					 kiwi_be_type_to_string(type));
-			}
+		if (type == KIWI_BE_COMMAND_COMPLETE) {
+			const char *command_tag = data + sizeof(kiwi_header_t);
+			od_debug(&instance->logger, "main", client, server,
+				 "%s - %s", kiwi_be_type_to_string(type),
+				 command_tag);
+		} else {
+			od_debug(&instance->logger, "main", client, server,
+				 "%s", kiwi_be_type_to_string(type));
 		}
 
 		switch (type) {
@@ -1591,7 +1586,6 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 	od_client_t *client = arg->client;
 	od_server_t *server = arg->server;
 	od_instance_t *instance = client->global->instance;
-	od_rule_t *rule = client->route->rule;
 	od_xplan_t *xp = arg->xp;
 	od_xplan_entry_t *entry = mm_vector_get(&xp->entries, arg->idx);
 	arg->idx++;
@@ -1604,7 +1598,7 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 		apply_delta = 1;
 	}
 
-	if (instance->config.log_debug || rule->log_debug) {
+	if (od_logger_debug_enabled(&instance->logger, client, server)) {
 		char buf[256];
 		plan_entry_description(entry, buf, sizeof(buf));
 		od_debug(
@@ -1716,7 +1710,6 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 
 	od_client_t *client = relay->client;
 	od_instance_t *instance = client->global->instance;
-	od_rule_t *rule = client->route->rule;
 	od_server_t *server = client->server;
 	od_frontend_status_t status = OD_OK;
 
@@ -1817,7 +1810,8 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 			status = delta_apply(&entry->delta, client, server);
 		}
 
-		if (instance->config.log_debug || rule->log_debug) {
+		if (od_logger_debug_enabled(&instance->logger, client,
+					    server)) {
 			char buf[256];
 			plan_entry_description(entry, buf, sizeof(buf));
 			od_debug(&instance->logger, "main", client, server,
@@ -1938,7 +1932,6 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 				  uint32_t timeout_ms)
 {
 	od_client_t *client = relay->client;
-	od_rule_t *rule = client->route->rule;
 	od_instance_t *instance = client->global->instance;
 
 	size_t count = mm_vector_size(&xp->entries);
@@ -1952,7 +1945,7 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 
 	size_t written = prepare_send_iovecs(xp, iovecs);
 
-	if (instance->config.log_debug || rule->log_debug) {
+	if (od_logger_debug_enabled(&instance->logger, client, NULL)) {
 		log_xbuf(instance, client, &relay->xbuf);
 		log_plan_debug(instance, xp, client);
 		log_srv_send_buf(instance, client, iovecs, written);

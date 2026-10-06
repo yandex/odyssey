@@ -914,19 +914,14 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 		kiwi_be_type_t type = *data;
 		od_instance_t *instance = client->global->instance;
 
-		if (instance->config.log_debug) {
-			if (type == KIWI_BE_COMMAND_COMPLETE) {
-				const char *command_tag =
-					data + sizeof(kiwi_header_t);
-				od_debug(&instance->logger, "main", client,
-					 server, "%s - %s",
-					 kiwi_be_type_to_string(type),
-					 command_tag);
-			} else {
-				od_debug(&instance->logger, "main", client,
-					 server, "%s",
-					 kiwi_be_type_to_string(type));
-			}
+		if (type == KIWI_BE_COMMAND_COMPLETE) {
+			const char *command_tag = data + sizeof(kiwi_header_t);
+			od_debug(&instance->logger, "main", client, server,
+				 "%s - %s", kiwi_be_type_to_string(type),
+				 command_tag);
+		} else {
+			od_debug(&instance->logger, "main", client, server,
+				 "%s", kiwi_be_type_to_string(type));
 		}
 
 		switch (type) {
