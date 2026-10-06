@@ -493,7 +493,13 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			break;
 		}
 		case KIWI_BE_NOTICE_RESPONSE:
-			if (client != NULL) {
+			/*
+			 * internal clients (watchdog, auth_query, group checker)
+			 * have no attached io: there is nobody to forward the
+			 * notice to, and a failed write would break the startup
+			 */
+			if (client != NULL &&
+			    client->type != OD_POOL_CLIENT_INTERNAL) {
 				int rc = od_write(&client->io, msg);
 				if (rc != 0) {
 					od_error(
