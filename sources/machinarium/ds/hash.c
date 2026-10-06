@@ -31,6 +31,10 @@ static inline uint64_t read_u64(const void *b)
 {
 	uint64_t v;
 	memcpy(&v, b, sizeof(uint64_t));
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	/* xxh64 is defined over little-endian lanes */
+	v = __builtin_bswap64(v);
+#endif
 	return v;
 }
 
@@ -38,6 +42,9 @@ static inline uint32_t read_u32(const void *b)
 {
 	uint32_t v;
 	memcpy(&v, b, sizeof(uint32_t));
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	v = __builtin_bswap32(v);
+#endif
 	return v;
 }
 

@@ -19,7 +19,8 @@ typedef struct mm_lf_stack_entry {
 	struct mm_lf_stack_entry *prev;
 } mm_lf_stack_entry_t;
 
-#if defined(__SIZEOF_INT128__) && defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_16)
+/* MM_HAVE_SYNC_CAS_16 is set by cmake when 128-bit __sync CAS links */
+#if defined(__SIZEOF_INT128__) && defined(MM_HAVE_SYNC_CAS_16)
 
 /* lock-free path: 128-bit tagged pointer via __sync builtins */
 
