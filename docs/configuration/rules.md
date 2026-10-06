@@ -80,6 +80,7 @@ A special `user default` is used when no user is matched.
 | enable_mdb_iamproxy_auth          | boolean                                | no (0)        | runtime (new connections) | Enable Yandex MDB IAM proxy authentication.                                                                                                                                |
 | mdb_iamproxy_socket_path          | string                                 | — (not set)   | runtime (new connections) | Path to the MDB IAM proxy UNIX socket.                                                                                                                                     |
 | log_query (per-route)             | boolean                                | no (0)        | runtime (new connections) | Log queries for this specific route (overrides global `log_query`).                                                                                                        |
+| log_query_sampling (per-route)    | integer (0..100)                       | — (global)    | runtime (new connections) | Percentage of queries to log for this route; overrides global `log_query_sampling`.                                                                                        |
 | ldap_pool_size                    | integer                                | 0             | runtime (new connections) | **Deprecated.** Accepted but ignored.                                                                                                                                      |
 | ldap_pool_timeout                 | integer (ms)                           | 0             | runtime (new connections) | **Deprecated.** Accepted but ignored.                                                                                                                                      |
 | ldap_pool_ttl                     | integer (sec)                          | 0             | runtime (new connections) | **Deprecated.** Accepted but ignored.                                                                                                                                      |
@@ -943,6 +944,18 @@ globally. Overrides the global `log_query` setting for connections
 matched by this route.
 
 `log_query yes`
+
+---
+
+## **log\_query\_sampling** *(per-route)*
+
+*integer (0..100)*
+
+Percentage of queries logged for this route when query logging is
+enabled (globally or per-route). When unset, the global
+`log_query_sampling` value is used.
+
+`log_query_sampling 10`
 
 ---
 

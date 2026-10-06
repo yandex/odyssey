@@ -454,6 +454,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_BOOL(cfg->log_config, config->log_config);
 	COPY_BOOL(cfg->log_session, config->log_session);
 	COPY_BOOL(cfg->log_query, config->log_query);
+	COPY_INT(cfg->log_query_sampling, config->log_query_sampling);
 	COPY_BOOL(cfg->log_stats, config->log_stats);
 	COPY_BOOL(cfg->log_async, config->log_async);
 	COPY_BOOL(cfg->log_syslog, config->log_syslog);
@@ -833,6 +834,10 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	}
 	COPY_BOOL(cfg->log_debug, rule->log_debug);
 	COPY_BOOL(cfg->log_query, rule->log_query);
+	COPY_INT(cfg->log_query_sampling, rule->log_query_sampling);
+	if (cfg->log_query_sampling.seen.is_set) {
+		rule->log_query_sampling_set = 1;
+	}
 	COPY_INT(cfg->keepalive, rule->keepalive);
 	COPY_INT(cfg->keepalive_keep_interval, rule->keepalive_keep_interval);
 	COPY_INT(cfg->keepalive_probes, rule->keepalive_probes);

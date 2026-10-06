@@ -61,6 +61,7 @@ typedef struct od_cfg_global {
 	od_cfg_bool_field_t log_config;
 	od_cfg_bool_field_t log_session;
 	od_cfg_bool_field_t log_query;
+	od_cfg_int_field_t log_query_sampling;
 	od_cfg_bool_field_t log_stats;
 	od_cfg_bool_field_t log_async;
 	od_cfg_bool_field_t log_syslog;
@@ -393,6 +394,7 @@ struct od_cfg_route {
 	od_cfg_string_field_t storage_password;
 	od_cfg_bool_field_t log_debug;
 	od_cfg_bool_field_t log_query;
+	od_cfg_int_field_t log_query_sampling;
 	od_cfg_string_field_t ldap_endpoint_name;
 	od_cfg_string_field_t ldap_storage_credentials_attr;
 

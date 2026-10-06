@@ -134,6 +134,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_BOOL(dst, src, log_config);
 	MERGE_BOOL(dst, src, log_session);
 	MERGE_BOOL(dst, src, log_query);
+	MERGE_INT(dst, src, log_query_sampling);
 	MERGE_BOOL(dst, src, log_stats);
 	MERGE_BOOL(dst, src, log_async);
 	MERGE_BOOL(dst, src, log_syslog);

@@ -30,6 +30,7 @@ void od_config_init(od_config_t *config)
 	config->log_config = 0;
 	config->log_session = 1;
 	config->log_query = 0;
+	config->log_query_sampling = 100;
 	config->log_file = NULL;
 	config->log_stats = 1;
 	config->log_async = 1;
@@ -120,6 +121,7 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->log_config = new_config->log_config;
 	current_config->log_session = new_config->log_session;
 	current_config->log_query = new_config->log_query;
+	current_config->log_query_sampling = new_config->log_query_sampling;
 	current_config->log_stats = new_config->log_stats;
 	current_config->stats_interval = new_config->stats_interval;
 	current_config->client_max_set = new_config->client_max_set;
@@ -429,6 +431,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, log_session), 1 },
 	{ "log_query", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_query),
 	  1 },
+	{ "log_query_sampling", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, log_query_sampling), 1 },
 	{ "log_queue_depth", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, log_queue_depth), 0 },
 	{ "log_async", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_async),
@@ -640,6 +644,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       od_config_yes_no(config->log_session));
 	od_log(logger, "config", NULL, NULL, "log_query               %s",
 	       od_config_yes_no(config->log_query));
+	od_log(logger, "config", NULL, NULL, "log_query_sampling      %d",
+	       config->log_query_sampling);
 	od_log(logger, "config", NULL, NULL, "log_stats               %s",
 	       od_config_yes_no(config->log_stats));
 	od_log(logger, "config", NULL, NULL, "log_general_stats_prom  %s",

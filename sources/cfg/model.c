@@ -343,6 +343,7 @@ static void dump_user(FILE *file, const char *type, const od_cfg_route_t *user)
 	dump_string(file, "storage_database", 2, &user->storage_database);
 	dump_bool(file, "log_debug", 2, &user->log_debug);
 	dump_bool(file, "log_query", 2, &user->log_query);
+	dump_int(file, "log_query_sampling", 2, &user->log_query_sampling);
 	dump_string(file, "ldap_endpoint_name", 2, &user->ldap_endpoint_name);
 	dump_string(file, "ldap_storage_credentials_attr", 2,
 		    &user->ldap_storage_credentials_attr);
@@ -411,6 +412,8 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 	dump_bool(file, "log_config", 0, &model->global.log_config);
 	dump_bool(file, "log_session", 0, &model->global.log_session);
 	dump_bool(file, "log_query", 0, &model->global.log_query);
+	dump_int(file, "log_query_sampling", 0,
+		 &model->global.log_query_sampling);
 	dump_bool(file, "log_stats", 0, &model->global.log_stats);
 	dump_bool(file, "log_async", 0, &model->global.log_async);
 	dump_bool(file, "log_syslog", 0, &model->global.log_syslog);
@@ -813,6 +816,7 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 	od_cfg_string_field_free(&user->storage_password);
 	od_cfg_bool_field_free(&user->log_debug);
 	od_cfg_bool_field_free(&user->log_query);
+	od_cfg_int_field_free(&user->log_query_sampling);
 	od_cfg_string_field_free(&user->ldap_endpoint_name);
 	od_cfg_string_field_free(&user->ldap_storage_credentials_attr);
 	od_cfg_string_field_free(&user->watchdog_lag_query);
@@ -880,6 +884,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_bool_field_free(&g->log_config);
 	od_cfg_bool_field_free(&g->log_session);
 	od_cfg_bool_field_free(&g->log_query);
+	od_cfg_int_field_free(&g->log_query_sampling);
 	od_cfg_bool_field_free(&g->log_stats);
 	od_cfg_bool_field_free(&g->log_async);
 	od_cfg_bool_field_free(&g->log_syslog);

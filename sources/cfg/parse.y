@@ -149,6 +149,7 @@
 %token LOG_CONFIG "log_config"
 %token LOG_SESSION "log_session"
 %token LOG_QUERY "log_query"
+%token LOG_QUERY_SAMPLING "log_query_sampling"
 %token LOG_STATS "log_stats"
 %token LOG_ASYNC "log_async"
 %token LOG_SYSLOG "log_syslog"
@@ -466,6 +467,16 @@ top_item:
 							$2,
 							@1,
 							"log_query");
+		}
+	| LOG_QUERY_SAMPLING int_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+							&ctx->model->global.log_query_sampling,
+							$2,
+							0,
+							100,
+							@1,
+							"log_query_sampling");
 		}
 	| LOG_STATS bool_value
 		{
@@ -1717,6 +1728,17 @@ route_item:
 							$2,
 							@1,
 							"log_query");
+		}
+	| LOG_QUERY_SAMPLING int_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_int_range_from_i64(ctx->diags,
+							&ur->log_query_sampling,
+							$2,
+							0,
+							100,
+							@1,
+							"log_query_sampling");
 		}
 	| LDAP_ENDPOINT_NAME string_value
 		{

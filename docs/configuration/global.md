@@ -24,6 +24,7 @@ for all Odyssey rules.
 | `log_config`                               | int (bool)       | `no`        | SIGHUP  | Log config at start/reload                            |
 | `log_session`                              | int (bool)       | `yes`       | SIGHUP  | Log client connect/disconnect                         |
 | `log_query`                                | int (bool)       | `no`        | SIGHUP  | ⚠️ Logs client SQL queries                            |
+| `log_query_sampling`                       | int (%)          | `100`       | SIGHUP  | Percentage of queries to log when `log_query` is on   |
 | `log_stats`                                | int (bool)       | `yes`       | SIGHUP  | Log periodic route statistics                         |
 | `promhttp_server_port`                     | int              | unset       | SIGHUP  | Enable Prometheus endpoint                            |
 | `log_general_stats_prom`                   | int (bool)       | `no`        | SIGHUP  | Prometheus general stats                              |
@@ -261,6 +262,19 @@ Write client connect and disconnect events to the log.
 Write client queries text to the log. Disabled by default.
 
 `log_query no`
+
+## **log\_query\_sampling**
+*integer (0..100)*
+
+Percentage of client queries that are written to the log when
+`log_query` is enabled. `100` (default) logs every query, `10` logs
+roughly every tenth query. Can also be set per-route (see
+[rules](rules.md)) to override the global value. Sampling is applied
+independently to each logged message, so for the extended query
+protocol (`parse`/`bind`/`execute`) each message type is sampled
+separately.
+
+`log_query_sampling 100`
 
 ## **log\_stats**
 *yes|no*
