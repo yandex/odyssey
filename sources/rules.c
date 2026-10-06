@@ -312,7 +312,7 @@ static void do_group_check_poll_connected(od_instance_t *instance,
 		member->value = NULL;
 	}
 
-	if (instance->config.log_debug || rule->log_debug) {
+	if (od_logger_debug_enabled(&instance->logger, client, server)) {
 		char buff[1024] = { 0 };
 		char *out = buff;
 		char *end = buff + sizeof(buff);

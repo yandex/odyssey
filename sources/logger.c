@@ -1037,12 +1037,9 @@ od_logger_json_add_string(char *dst, char *dst_end, const char *key,
 
 __attribute__((hot)) static inline int
 od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
-		      char *context, void *client_ptr, void *server_ptr,
+		      char *context, od_client_t *client, od_server_t *server,
 		      char *fmt, va_list args, char *output, int output_len)
 {
-	od_client_t *client = client_ptr;
-	od_server_t *server = server_ptr;
-
 	char *dst = output;
 	char *dst_end = output + output_len - 2;
 	int add_comma = 0;
@@ -1233,9 +1230,56 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	return dst - output;
 }
 
+static void od_logger_debug_resolve(od_client_t *client, od_server_t *server,
+				    od_rule_t **rule, int **sampled)
+{
+	*rule = NULL;
+	if (sampled != NULL) {
+		*sampled = NULL;
+	}
+
+	if (client != NULL) {
+		*rule = client->rule;
+		if (sampled != NULL) {
+			*sampled = &client->debug_log_sampled;
+		}
+	} else if (server != NULL) {
+		if (server->client != NULL) {
+			/*
+			 * backend messages follow the decision of
+			 * the attached client, so the whole
+			 * client session is logged as one
+			 */
+			*rule = server->client->rule;
+			if (sampled != NULL) {
+				*sampled = &server->client->debug_log_sampled;
+			}
+		} else if (server->route != NULL) {
+			*rule = server->route->rule;
+		}
+	}
+}
+
+int od_logger_debug_enabled(od_logger_t *logger, od_client_t *client,
+			    od_server_t *server)
+{
+	if (logger == OD_LOGGER_GLOBAL) {
+		logger = od_global_get_logger();
+	}
+
+	od_rule_t *debug_rule;
+	od_logger_debug_resolve(client, server, &debug_rule, NULL);
+
+	if (logger->log_debug) {
+		return 1;
+	}
+
+	return debug_rule != NULL && debug_rule->log_debug;
+}
+
 void od_logger_write(od_logger_t *logger, od_logger_level_t level,
-		     char *context, void *client, void *server, char *fmt,
-		     va_list args)
+		     char *context, od_client_t *client, od_server_t *server,
+		     char *fmt, va_list args)
 {
 	if (logger == OD_LOGGER_GLOBAL) {
 		logger = od_global_get_logger();
@@ -1253,28 +1297,12 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 
 	if (level == OD_DEBUG) {
+		od_rule_t *debug_rule;
+		int *debug_sampled;
+		od_logger_debug_resolve(client, server, &debug_rule,
+					&debug_sampled);
+
 		int is_debug = logger->log_debug;
-		od_rule_t *debug_rule = NULL;
-		int *debug_sampled = NULL;
-		od_client_t *client_ref = client;
-		od_server_t *server_ref = server;
-		if (client_ref != NULL) {
-			debug_rule = client_ref->rule;
-			debug_sampled = &client_ref->debug_log_sampled;
-		} else if (server_ref != NULL) {
-			if (server_ref->client != NULL) {
-				/*
-				 * backend messages follow the decision of
-				 * the attached client, so the whole
-				 * client session is logged as one
-				 */
-				debug_rule = server_ref->client->rule;
-				debug_sampled =
-					&server_ref->client->debug_log_sampled;
-			} else if (server_ref->route != NULL) {
-				debug_rule = server_ref->route->rule;
-			}
-		}
 		if (!is_debug && debug_rule != NULL) {
 			is_debug = debug_rule->log_debug;
 		}
