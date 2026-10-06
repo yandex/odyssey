@@ -14,7 +14,7 @@
 
 #include <status.h>
 #include <tls.h>
-#include <tls_thread_pool.h>
+#include <tls_workers.h>
 #include <client.h>
 #include <server.h>
 #include <frontend.h>
@@ -169,26 +169,18 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 		return -1; /* prevent possible buffer, protecting against CVE-2021-23214-like attacks */
 	}
 
-	if (od_tls_thread_pool_enabled()) {
-		rc = od_tls_handshake_offload(client->io.io, tls,
+	if (od_tls_workers_enabled()) {
+		rc = od_tls_workers_handshake(client->io.io, tls,
 					      config->client_login_timeout);
 	} else {
 		rc = mm_io_set_tls(client->io.io, tls,
 				   config->client_login_timeout);
 	}
 	if (rc == -1) {
-		if (od_tls_thread_pool_enabled() &&
-		    client->io.io->tls_error_msg[0] != '\0') {
-			od_error(logger, "tls", client, NULL,
-				 "error: %s, login time %" PRIu64 " us",
-				 client->io.io->tls_error_msg,
-				 machine_time_us() - client->time_accept);
-		} else {
-			od_error(logger, "tls", client, NULL,
-				 "error: %s, login time %" PRIu64 " us",
-				 od_io_error(&client->io),
-				 machine_time_us() - client->time_accept);
-		}
+		od_error(logger, "tls", client, NULL,
+			 "error: %s, login time %" PRIu64 " us",
+			 od_io_error(&client->io),
+			 machine_time_us() - client->time_accept);
 		return -1;
 	}
 

@@ -32,6 +32,7 @@ for all Odyssey rules.
 | `log_route_stats_prom`                     | int (bool)       | `no`        | SIGHUP  | Prometheus per-route stats                            |
 | `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging                            |
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
+| `tls_workers`                              | int              | `0`         | restart | Threads for client TLS handshakes; 0 = in worker      |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
 | `readahead`                                | int (bytes)      | one page    | SIGHUP  | Per-connection read buffer                            |
 | `cache_coroutine`                          | int              | `1024`      | restart | Coroutines cache size                                  |
@@ -334,6 +335,22 @@ N: Add additional worker threads, if your server experience heavy load,
 especially using TLS setup.
 
 `workers 1`
+
+## **tls_workers**
+*integer*
+
+Number of threads used for client TLS handshakes. Handshake crypto is
+CPU-bound and blocks the worker event loop while it runs, so with many
+connecting TLS clients it can slow down all clients of the worker.
+
+0: By default, handshakes are performed in worker threads.
+
+N: Handshakes are offloaded to N dedicated threads. Each handshake runs
+in its own coroutine, so slow clients do not block each other.
+
+"auto": Use half of available CPUs, the same as for `workers`.
+
+`tls_workers 0`
 
 ## **resolvers**
 *integer*

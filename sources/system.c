@@ -39,7 +39,7 @@
 #include <worker_pool.h>
 #include <cfg_import.h>
 #include <tls.h>
-#include <tls_thread_pool.h>
+#include <tls_workers.h>
 #include <memory.h>
 #include <od_error.h>
 #include <systemd_notify.h>
@@ -875,10 +875,10 @@ static inline void od_system(void *arg)
 	}
 #endif
 
-	rc = od_tls_thread_pool_init((size_t)instance->config.tls_workers);
+	rc = od_tls_workers_init((size_t)instance->config.tls_workers);
 	if (rc == -1) {
-		od_error(&instance->logger, "system", NULL, NULL,
-			 "failed to start tls pool, errno = %d (%s)",
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to start tls workers, errno = %d (%s)",
 			 machine_errno(), strerror(machine_errno()));
 		return;
 	}
@@ -1069,7 +1069,7 @@ static inline void od_system(void *arg)
 	od_ldap_workers_destroy();
 #endif
 
-	od_tls_thread_pool_destroy();
+	od_tls_workers_destroy();
 
 	if (instance->config.host_watcher_enabled) {
 		od_host_watcher_destroy(&global->host_watcher);
