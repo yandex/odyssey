@@ -104,6 +104,7 @@ static void dump_listen(FILE *file, const od_cfg_listen_t *l)
 		  &l->auto_route_ro_on_standby);
 	dump_balancing(file, 1, &l->balancing);
 	dump_int(file, "client_login_timeout", 1, &l->client_login_timeout);
+	dump_bool(file, "compression", 1, &l->compression);
 	dump_int(file, "reserved_clients", 1, &l->reserved_clients);
 	dump_int(file, "backlog", 1, &l->backlog);
 	dump_string(file, "tls", 1, &l->tls);

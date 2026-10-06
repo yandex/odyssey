@@ -1104,7 +1104,7 @@ static int convert_listen(convert_ctx_t *ctx, const od_cfg_listen_t *cfg)
 	COPY_STR(cfg->tls_cert_file, listen->tls_opts->tls_cert_file, diags);
 	COPY_STR(cfg->tls_protocols, listen->tls_opts->tls_protocols, diags);
 
-	/* no compression field */
+	COPY_BOOL(cfg->compression, listen->compression);
 
 	listen->storage_count = cfg->storages_count;
 	if (listen->storage_count > 0) {

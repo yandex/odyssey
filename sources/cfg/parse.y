@@ -2507,9 +2507,11 @@ listen_item:
 		}
 	| COMPRESSION bool_value
 		{
-			od_cfg_diag_deprecated_ignored(ctx->diags,
-										@1,
-										"compression");
+			od_cfg_set_bool(ctx->diags,
+							&ctx->current_listen->compression,
+							$2,
+							@1,
+							"compression");
 		}
 	| STORAGE string_value
 		{
