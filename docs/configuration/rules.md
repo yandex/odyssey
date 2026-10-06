@@ -794,10 +794,11 @@ Possible values are:
 
 *yes|no*
 
-Switch for automatic routing of read-only queries (simple protocol, outside
-transactions) to standby replicas, while the rest of the traffic is routed to
-the primary. Has no effect when `target_session_attrs` is set for the
-connection (rule, listen or client `odyssey.target_session_attrs`).
+Switch for automatic routing of read-only queries (simple and extended
+protocols, outside transactions) to standby replicas, while the rest of the
+traffic is routed to the primary. Has no effect when `target_session_attrs`
+is set for the connection (rule, listen or client
+`odyssey.target_session_attrs`).
 
 Specifying `target_session_attrs` and `auto_route_ro_on_standby` in the same
 section is a configuration error.

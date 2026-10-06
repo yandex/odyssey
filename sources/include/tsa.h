@@ -38,3 +38,5 @@ od_target_session_attrs_to_str(od_target_session_attrs_t tsa)
 od_target_session_attrs_t od_tsa_get_effective(od_client_t *client);
 
 int od_tsa_match_rw_state(od_target_session_attrs_t attrs, int is_rw);
+
+int od_tsa_auto_route_ro_enabled(od_client_t *client);

@@ -18,6 +18,14 @@
 
 typedef struct {
 	machine_msg_t *msg;
+
+	/*
+	 * pstmt resolved while seeding the query ctx (checking the batch
+	 * for standby friendliness), the ref is held until the xbuf is
+	 * cleared so that the plan resolves the same pstmt desc from the
+	 * global map cache without a re-parse; may be NULL
+	 */
+	od_pstmt_t *pstmt;
 } od_xbuf_msg_t;
 
 struct od_relay_xbuf {
