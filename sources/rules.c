@@ -2080,6 +2080,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 	}
 
 	od_list_t *i;
+	od_list_t *li;
 	od_list_foreach (&rules->storages, i) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
@@ -2140,6 +2141,39 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			} else {
 				od_error(logger, "rules", NULL, NULL,
 					 "unknown storage tls_opts->tls mode");
+				return -1;
+			}
+		}
+	}
+
+	/*
+	 * auto_route_ro_on_standby decisions are driven by the full query
+	 * parser: with any other query_parsing mode it silently degrades
+	 * to routing everything to the primary
+	 */
+	if (config->query_parsing.mode != OD_CONFIG_QUERY_PARSING_MODE_FULL) {
+		od_list_foreach (&config->listen, li) {
+			od_config_listen_t *listen;
+			listen = od_container_of(li, od_config_listen_t, link);
+			if (listen->auto_route_ro_on_standby) {
+				od_error(
+					logger, "rules", NULL, NULL,
+					"listen '%s:%d': auto_route_ro_on_standby requires query_parsing mode 'full'",
+					od_config_listen_host_name(listen),
+					listen->port);
+				return -1;
+			}
+		}
+
+		od_list_foreach (&rules->rules, i) {
+			od_rule_t *rule;
+			rule = od_container_of(i, od_rule_t, link);
+			if (rule->auto_route_ro_on_standby) {
+				od_error(
+					logger, "rules", NULL, NULL,
+					"rule '%s.%s %s': auto_route_ro_on_standby requires query_parsing mode 'full'",
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
 				return -1;
 			}
 		}

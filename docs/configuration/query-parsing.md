@@ -25,12 +25,22 @@ Selects the SQL parsing mode:
 * `disabled` — queries are not parsed at all.
 * `minimal` — a lightweight parser recognizes a small subset of
   statements (`SHOW`, `SET`, `BEGIN`, `DEALLOCATE`, `DISCARD`,
-  `UNLISTEN`) and treats plain `SELECT` statements as read-only.
+  `UNLISTEN`). All other statements, including plain `SELECT`, are not
+  classified and are treated as read-write.
 * `full` — the complete PostgreSQL grammar is used. Queries which can
   not be parsed or can not be classified as read-only require the
   primary.
 
 Default: `minimal`
+
+Required to be `full` when [auto_route_ro_on_standby](rules.md#auto_route_ro_on_standby)
+is enabled for at least one listen endpoint or rule, otherwise the
+configuration is rejected.
+
+When `full` is set globally, clients without `auto_route_ro_on_standby`
+(neither on the rule nor on the listen) automatically use the cheaper
+`minimal` parser, so the full parser only runs where it is actually
+needed.
 
 `mode full`
 
@@ -76,9 +86,7 @@ schema-qualified name (`myschema.my_func()`) is never treated as
 standby-friendly.
 
 Used in the `full` mode only: in the `minimal` mode function calls are
-not parsed, and a `SELECT` containing a function call is considered
-read-only. Note that with the `minimal` mode a `SELECT` calling a
-function with side effects (for example `pg_sleep()`) can be routed to
-a standby replica.
+not parsed, and a `SELECT` containing a function call can not be
+recognized as read-only.
 
 Default: built-in list of standby-friendly functions.
