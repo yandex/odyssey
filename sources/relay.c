@@ -979,9 +979,19 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_instance_t *instance = client->global->instance;
 
+	od_config_query_parsing_t parsing = instance->config.query_parsing;
+	if (parsing.mode == OD_CONFIG_QUERY_PARSING_MODE_FULL &&
+	    !od_tsa_auto_route_ro_enabled(client)) {
+		/*
+		 * auto routing is the only consumer of the full-parser-only
+		 * results (is_select) - for clients without it the cheaper
+		 * minimal parser is enough
+		 */
+		parsing.mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
+	}
+
 	od_query_parse_fill_ctx(query, query_len - 1 /* zero included */, arena,
-				&client->query_ctx,
-				&instance->config.query_parsing);
+				&client->query_ctx, &parsing);
 
 	status = try_virtual_process_query(client, &client->query_ctx);
 	od_linear_alloc_reset(arena, 0);

@@ -806,6 +806,11 @@ section is a configuration error.
 When set on a [listen](listen.md#auto_route_ro_on_standby) endpoint, the
 listen value overrides the rule value.
 
+Requires [query_parsing](query-parsing.md) `mode full` in the global config,
+otherwise the configuration is rejected. With `full` parsing enabled globally,
+clients without `auto_route_ro_on_standby` (neither on the rule nor on the
+listen) still use the cheaper `minimal` parser automatically.
+
 Incompatible with session pooling.
 
 `auto_route_ro_on_standby yes`
