@@ -840,25 +840,12 @@ attach_to_first_with_fail_fast(od_client_t *client, char *context,
 	return status;
 }
 
-static int auto_route_ro_enabled(od_client_t *client)
-{
-	int by_rule = client->rule->auto_route_ro_on_standby;
-	int by_cfg = 0;
-
-	od_config_listen_t *listencfg = client->source->config;
-	if (listencfg != NULL) {
-		by_cfg = listencfg->auto_route_ro_on_standby;
-	}
-
-	return by_rule || by_cfg;
-}
-
 static od_target_session_attrs_t attach_effective_tsa(od_client_t *client,
 						      char *context)
 {
 	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
 
-	if (!auto_route_ro_enabled(client)) {
+	if (!od_tsa_auto_route_ro_enabled(client)) {
 		return tsa;
 	}
 
@@ -870,8 +857,7 @@ static od_target_session_attrs_t attach_effective_tsa(od_client_t *client,
 	od_instance_t *instance = client->global->instance;
 
 	const od_query_ctx_t *qctx = &client->query_ctx;
-	if (!od_query_ctx_has(qctx, OD_QUERY_CTX_IS_SELECT) ||
-	    od_query_ctx_has(qctx, OD_QUERY_CTX_PARSE_ERROR)) {
+	if (!od_query_ctx_standby_friendly(qctx)) {
 		od_debug(
 			&instance->logger, context, client, NULL,
 			"auto_route_ro_on_standby: read-write query, route to master");

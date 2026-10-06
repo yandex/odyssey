@@ -55,7 +55,61 @@
 static void xbuf_msg_destroy(void *a)
 {
 	od_xbuf_msg_t *m = a;
+
+	if (m->pstmt != NULL) {
+		od_pstmt_unref(m->pstmt);
+	}
+
 	machine_msg_free_safe(m->msg);
+}
+
+static inline kiwi_fe_type_t xbuf_msg_fe_type(machine_msg_t *msg)
+{
+	return *(uint8_t *)machine_msg_data(msg);
+}
+
+/*
+ * client pstmt name (Parse) or portal name (Bind/Execute)
+ * of the msg, points into the msg data
+ *
+ * returns NULL if the msg has no name or can not be read
+ */
+static const char *xbuf_msg_name(machine_msg_t *msg, kiwi_fe_type_t type)
+{
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	char *name;
+	uint32_t name_len;
+
+	switch (type) {
+	case KIWI_FE_PARSE: {
+		char *query;
+		uint32_t query_len;
+		if (kiwi_be_read_parse(data, size, &name, &name_len, &query,
+				       &query_len) != 0) {
+			return NULL;
+		}
+		return name;
+	}
+	case KIWI_FE_BIND: {
+		char *pstmt_name;
+		uint32_t pstmt_name_len;
+		if (kiwi_be_read_bind_names(data, size, &name, &name_len,
+					    &pstmt_name,
+					    &pstmt_name_len) != 0) {
+			return NULL;
+		}
+		return name;
+	}
+	case KIWI_FE_EXECUTE:
+		if (kiwi_be_read_execute(data, size, &name, &name_len) != 0) {
+			return NULL;
+		}
+		return name;
+	default:
+		return NULL;
+	}
 }
 
 static void xbuf_init(od_relay_xbuf_t *xbuf)
@@ -1025,6 +1079,238 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 	return 0;
 }
 
+/*
+ * check whether a Parse msg defining the pstmt name exists in xbuf,
+ * searching backwards from idx (exclusive)
+ *
+ * the batch is evaluated in msg order and stops at the first
+ * non-friendly msg (see xproto_batch_standby_friendly), so a Parse
+ * msg found in the already evaluated prefix is known to be
+ * standby friendly
+ */
+static int xbuf_has_parse(od_relay_t *relay, const char *name, size_t idx)
+{
+	od_relay_xbuf_t *xbuf = &relay->xbuf;
+
+	for (size_t i = idx; i > 0; --i) {
+		od_xbuf_msg_t *m = mm_vector_get(&xbuf->msgs, i - 1);
+		if (xbuf_msg_fe_type(m->msg) != KIWI_FE_PARSE) {
+			continue;
+		}
+
+		const char *pstmt_name = xbuf_msg_name(m->msg, KIWI_FE_PARSE);
+		if (pstmt_name != NULL && strcmp(pstmt_name, name) == 0) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * check whether a Bind msg creating the portal name exists in xbuf,
+ * searching backwards from idx (exclusive); the msg ordering
+ * invariant is the same as for xbuf_has_parse
+ */
+static int xbuf_has_bind(od_relay_t *relay, const char *name, size_t idx)
+{
+	od_relay_xbuf_t *xbuf = &relay->xbuf;
+
+	for (size_t i = idx; i > 0; --i) {
+		od_xbuf_msg_t *m = mm_vector_get(&xbuf->msgs, i - 1);
+		if (xbuf_msg_fe_type(m->msg) != KIWI_FE_BIND) {
+			continue;
+		}
+
+		const char *portal_name = xbuf_msg_name(m->msg, KIWI_FE_BIND);
+		if (portal_name != NULL && strcmp(portal_name, name) == 0) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static int parse_standby_friendly(od_relay_t *relay, od_xbuf_msg_t *m)
+{
+	od_client_t *client = relay->client;
+	od_instance_t *instance = client->global->instance;
+
+	if (m->pstmt == NULL) {
+		od_pstmt_desc_t desc = od_pstmt_desc_from_parse(m->msg);
+		if (desc.data == NULL) {
+			return 0;
+		}
+
+		od_global_pstmt_map_t *global =
+			od_instance_get_pstmts_map(instance);
+		od_pstmt_t *pstmt = od_pstmt_create_or_get(
+			global, desc, od_worker_get_local_linear_alloc(),
+			&instance->config.query_parsing);
+		if (pstmt == NULL) {
+			return 0;
+		}
+
+		m->pstmt = pstmt;
+	}
+
+	return od_query_ctx_standby_friendly(&m->pstmt->query_ctx);
+}
+
+static int pstmt_standby_friendly_by_name(od_relay_t *relay, const char *name,
+					  size_t idx)
+{
+	if (xbuf_has_parse(relay, name, idx)) {
+		/*
+		 * the pstmt is defined by this very batch - it is not in
+		 * the client map yet; the matching Parse msg is in the
+		 * already evaluated prefix, so it is known to be
+		 * standby friendly
+		 */
+		return 1;
+	}
+
+	od_pstmt_t *pstmt = od_client_get_pstmt(relay->client, name);
+	if (pstmt != NULL) {
+		return od_query_ctx_standby_friendly(&pstmt->query_ctx);
+	}
+
+	return 0;
+}
+
+static int bind_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
+				 size_t idx)
+{
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	char *portal, *pstmt_name;
+	uint32_t portal_len, pstmt_name_len;
+	if (kiwi_be_read_bind_names(data, size, &portal, &portal_len,
+				    &pstmt_name, &pstmt_name_len) != 0) {
+		return 0;
+	}
+
+	(void)portal;
+	(void)portal_len;
+
+	return pstmt_standby_friendly_by_name(relay, pstmt_name, idx);
+}
+
+static int execute_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
+				    size_t idx)
+{
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	char *portal;
+	uint32_t portal_len;
+	if (kiwi_be_read_execute(data, size, &portal, &portal_len) != 0) {
+		return 0;
+	}
+
+	(void)portal_len;
+
+	if (xbuf_has_bind(relay, portal, idx)) {
+		/*
+		 * the portal is created by this very batch - the matching
+		 * Bind msg is in the already evaluated prefix, so it is
+		 * known to be standby friendly
+		 */
+		return 1;
+	}
+
+	od_pstmt_t *pstmt = od_client_get_portal(relay->client, portal);
+	if (pstmt != NULL) {
+		return od_query_ctx_standby_friendly(&pstmt->query_ctx);
+	}
+
+	return 0;
+}
+
+static inline int describe_standby_friendly(od_relay_t *relay,
+					    machine_msg_t *msg)
+{
+	/*
+	* Describe does not execute anything itself - it is neutral
+	* for the routing decision
+	*/
+
+	(void)relay;
+	(void)msg;
+
+	return 1;
+}
+
+static int xproto_batch_standby_friendly(od_relay_t *relay)
+{
+	od_relay_xbuf_t *xbuf = &relay->xbuf;
+	size_t count = mm_vector_size(&xbuf->msgs);
+	for (size_t i = 0; i < count; ++i) {
+		od_xbuf_msg_t *m = mm_vector_get(&xbuf->msgs, i);
+
+		switch (xbuf_msg_fe_type(m->msg)) {
+		case KIWI_FE_PARSE:
+			if (!parse_standby_friendly(relay, m)) {
+				return 0;
+			}
+			break;
+		case KIWI_FE_BIND:
+			if (!bind_standby_friendly(relay, m->msg, i)) {
+				return 0;
+			}
+			break;
+		case KIWI_FE_EXECUTE:
+			if (!execute_standby_friendly(relay, m->msg, i)) {
+				return 0;
+			}
+			break;
+		case KIWI_FE_DESCRIBE:
+			if (!describe_standby_friendly(relay, m->msg)) {
+				return 0;
+			}
+			break;
+		case KIWI_FE_CLOSE:
+		case KIWI_FE_FLUSH:
+		case KIWI_FE_SYNC:
+			/* does not execute anything - neutral */
+			break;
+		default:
+			/*
+			 * Query (deferred begin), Copy* and any unexpected
+			 * msg - can not tell anything, be conservative
+			 */
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+static inline void xproto_seed_query_ctx(od_relay_t *relay)
+{
+	od_client_t *client = relay->client;
+
+	od_query_ctx_reset(&client->query_ctx);
+
+	if (!od_tsa_auto_route_ro_enabled(client)) {
+		return;
+	}
+
+	if (!client->rule->pool->reserve_prepared_statement) {
+		/*
+		 * TODO: without the client pstmt maps Bind/Execute
+		 * references can not be resolved, so nothing can be
+		 * told about the batch - stay conservative
+		 */
+		return;
+	}
+
+	if (xproto_batch_standby_friendly(relay)) {
+		od_query_ctx_set(&client->query_ctx, OD_QUERY_CTX_IS_SELECT);
+	}
+}
+
 /* note: does not free the buffers */
 static od_frontend_status_t execute_xbuf(od_relay_t *relay, machine_msg_t *msg,
 					 uint32_t timeout_ms)
@@ -1035,6 +1321,7 @@ static od_frontend_status_t execute_xbuf(od_relay_t *relay, machine_msg_t *msg,
 
 	if (server == NULL) {
 		/* we will write/read to/from server - attach if needed */
+		xproto_seed_query_ctx(relay);
 		return OD_ATTACH;
 	}
 
@@ -1116,6 +1403,8 @@ od_frontend_status_t od_relay_process_xflush(od_relay_t *relay,
 	od_frontend_status_t status =
 		process_possible_attach(execute_xbuf, relay, msg, timeout_ms);
 
+	od_query_ctx_reset(&relay->client->query_ctx);
+
 	/* never reuse this ones */
 	xbuf_clear(&relay->xbuf);
 	od_xplan_clear(&relay->xplan);
@@ -1129,6 +1418,8 @@ od_frontend_status_t od_relay_process_xsync(od_relay_t *relay,
 {
 	od_frontend_status_t status =
 		process_possible_attach(execute_xbuf, relay, msg, timeout_ms);
+
+	od_query_ctx_reset(&relay->client->query_ctx);
 
 	/* never reuse this ones */
 	xbuf_clear(&relay->xbuf);

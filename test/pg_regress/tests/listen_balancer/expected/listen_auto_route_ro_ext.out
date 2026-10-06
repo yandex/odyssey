@@ -1,0 +1,55 @@
+\connect 'host=localhost port=8433 user=rruser dbname=postgres'
+select pg_is_in_recovery() \parse ext_ro_stmt
+NOTICE:  select host tcp://localhost:5434
+\bind_named ext_ro_stmt
+\g
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+select pg_is_in_recovery() \parse ext_ro_stmt2
+NOTICE:  select host tcp://localhost:5434
+\g
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+\bind_named ext_ro_stmt2
+\g
+NOTICE:  select host tcp://localhost:5434
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+select pg_is_in_recovery() \bind
+\g
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+
+create temporary table auto_ro_ext_baz(i int) \parse ext_rw_stmt
+NOTICE:  select host tcp://localhost:5432
+\bind_named ext_rw_stmt
+\g
+NOTICE:  select host tcp://localhost:5432
+-- will not produce the NOTICE because of pinning on temporary table
+drop table auto_ro_ext_baz \parse ext_rw_stmt2
+\bind_named ext_rw_stmt2
+\g
+select pg_is_in_recovery() \parse ext_ro_stmt3
+NOTICE:  select host tcp://localhost:5434
+\bind_named ext_ro_stmt3
+\g
+NOTICE:  select host tcp://localhost:5433
+ pg_is_in_recovery 
+-------------------
+ t
+(1 row)
+

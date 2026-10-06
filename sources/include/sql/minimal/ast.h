@@ -95,6 +95,16 @@ typedef struct {
 #define od_query_ctx_set(ctx, flag) ((ctx)->flags |= (flag))
 #define od_query_ctx_clear(ctx, flag) ((ctx)->flags &= ~(uint64_t)(flag))
 
+static inline int od_query_ctx_standby_friendly(const od_query_ctx_t *ctx)
+{
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR |
+					  OD_QUERY_CTX_TOO_LONG)) {
+		return 0;
+	}
+
+	return od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SELECT);
+}
+
 od_sql_minimal_node_t *od_sql_minimal_node_alloc(od_linear_alloc_t *al,
 						 od_sql_minimal_node_tag_t type,
 						 size_t size);

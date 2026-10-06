@@ -81,3 +81,16 @@ int od_tsa_match_rw_state(od_target_session_attrs_t attrs, int is_rw)
 		abort();
 	}
 }
+
+int od_tsa_auto_route_ro_enabled(od_client_t *client)
+{
+	int by_rule = client->rule->auto_route_ro_on_standby;
+	int by_listen = 0;
+
+	od_config_listen_t *listencfg = client->source->config;
+	if (listencfg != NULL) {
+		by_listen = listencfg->auto_route_ro_on_standby;
+	}
+
+	return by_rule || by_listen;
+}

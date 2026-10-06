@@ -1,3 +1,4 @@
 test: listen_rr_default
 test: listen_leastconn_override
 test: listen_auto_route_ro
+test: listen_auto_route_ro_ext
