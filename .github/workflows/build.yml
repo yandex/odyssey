@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os-version: ['jammy', 'noble', 'plucky', 'questing', 'resolute']
+        os-version: ['jammy', 'noble', 'plucky', 'questing', 'resolute', 'stonking']
         build-type: ['build_release']
     steps:
     - uses: actions/checkout@v7
