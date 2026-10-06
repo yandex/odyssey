@@ -18,12 +18,18 @@ jobs:
   unit:
     name: unit
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # s390x is built and run under qemu emulation, which is much slower
+    timeout-minutes: ${{ matrix.target-arch == 'linux/s390x' && 90 || 20 }}
     strategy:
       matrix:
         build-type: ['build_release', 'build_dbg', 'build_asan']
         target-arch: ['linux/amd64']
         cc: ['gcc', 'clang']
+        include:
+          # big-endian target without inline 128-bit CAS
+          - build-type: 'build_release'
+            target-arch: 'linux/s390x'
+            cc: 'gcc'
     steps:
     - uses: actions/checkout@v7
       with:
