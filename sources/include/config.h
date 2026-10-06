@@ -91,6 +91,7 @@ struct od_config {
 	/* logging */
 	int log_to_stdout;
 	int log_debug;
+	int log_debug_sampling;
 	int log_config;
 	int log_session;
 	int log_query;

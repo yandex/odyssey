@@ -21,6 +21,7 @@ for all Odyssey rules.
 | `log_to_stdout`                            | int (bool)       | `yes`       | SIGHUP  | Logs to stdout                                        |
 | `log_syslog`                               | int (bool)       | `no`        | SIGHUP  | Enable syslog output                                  |
 | `log_debug`                                | int (bool)       | `no`        | SIGHUP  | Verbose debugging logs                                |
+| `log_debug_sampling`                       | int (%)          | `100`       | SIGHUP  | Percentage of client connections with debug logging when `log_debug` is on |
 | `log_config`                               | int (bool)       | `no`        | SIGHUP  | Log config at start/reload                            |
 | `log_session`                              | int (bool)       | `yes`       | SIGHUP  | Log client connect/disconnect                         |
 | `log_query`                                | int (bool)       | `no`        | SIGHUP  | ⚠️ Logs client SQL queries                            |
@@ -241,6 +242,21 @@ It is also possible to enable verbose logging for specific users
 (see routes section).
 
 `log_debug no`
+
+## **log\_debug\_sampling**
+*integer (0..100)*
+
+Percentage of client connections for which debug messages are written
+to the log when `log_debug` is enabled. `100` (default) logs debug
+messages of every connection, `10` — of every tenth. The decision is
+made once per client connection, so all debug messages of a sampled
+client (including backend messages of the server it is using) are
+logged as one consistent picture. Debug messages without a client
+context (system messages, idle server connections) are not sampled and
+are always logged. Can also be set per-route (see [rules](rules.md)) to
+override the global value.
+
+`log_debug_sampling 100`
 
 ## **log\_config**
 *yes|no*

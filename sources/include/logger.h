@@ -75,6 +75,7 @@ typedef struct {
 struct od_logger {
 	od_pid_t *pid;
 	int log_debug;
+	int log_debug_sampling;
 	int log_stdout;
 	int log_syslog;
 	int async;
@@ -116,9 +117,11 @@ extern od_retcode_t od_logger_load(od_logger_t *logger);
 
 void od_logger_stat(od_logger_t *logger);
 
-static inline void od_logger_set_debug(od_logger_t *logger, int enable)
+static inline void od_logger_set_debug(od_logger_t *logger, int enable,
+				       int sampling)
 {
 	logger->log_debug = enable;
+	logger->log_debug_sampling = sampling;
 }
 
 static inline void od_logger_set_stdout(od_logger_t *logger, int enable)

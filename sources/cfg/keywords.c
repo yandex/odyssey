@@ -25,6 +25,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "bindwith_reuseport", BINDWITH_REUSEPORT },
 	{ "enable_host_watcher", ENABLE_HOST_WATCHER },
 	{ "log_debug", LOG_DEBUG },
+	{ "log_debug_sampling", LOG_DEBUG_SAMPLING },
 	{ "log_to_stdout", LOG_TO_STDOUT },
 	{ "log_config", LOG_CONFIG },
 	{ "log_session", LOG_SESSION },

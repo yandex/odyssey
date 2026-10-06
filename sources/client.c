@@ -67,6 +67,7 @@ void od_client_init(od_client_t *client)
 	memset(&client->query_ctx, 0, sizeof(client->query_ctx));
 
 	client->pending_begin = 0;
+	client->debug_log_sampled = -1;
 
 	memset(client->scram_client_key, 0, sizeof(client->scram_client_key));
 	memset(client->scram_server_key, 0, sizeof(client->scram_server_key));

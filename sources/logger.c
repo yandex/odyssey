@@ -33,6 +33,7 @@
 #include <msg.h>
 #include <global.h>
 #include <util.h>
+#include <log_sampling.h>
 
 typedef struct {
 	char *name;
@@ -91,6 +92,7 @@ od_retcode_t od_logger_init(od_logger_t *logger, od_pid_t *pid)
 {
 	logger->pid = pid;
 	logger->log_debug = 0;
+	logger->log_debug_sampling = 100;
 	logger->log_stdout = 1;
 	logger->log_syslog = 0;
 	logger->format = NULL;
@@ -1252,19 +1254,57 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 
 	if (level == OD_DEBUG) {
 		int is_debug = logger->log_debug;
-		if (!is_debug) {
-			od_client_t *client_ref = client;
-			od_server_t *server_ref = server;
-			if (client_ref && client_ref->rule) {
-				is_debug = client_ref->rule->log_debug;
-			} else if (server_ref && server_ref->route) {
-				od_route_t *route = server_ref->route;
-				is_debug = route->rule->log_debug;
+		od_rule_t *debug_rule = NULL;
+		int *debug_sampled = NULL;
+		od_client_t *client_ref = client;
+		od_server_t *server_ref = server;
+		if (client_ref != NULL) {
+			debug_rule = client_ref->rule;
+			debug_sampled = &client_ref->debug_log_sampled;
+		} else if (server_ref != NULL) {
+			if (server_ref->client != NULL) {
+				/*
+				 * backend messages follow the decision of
+				 * the attached client, so the whole
+				 * client session is logged as one
+				 */
+				debug_rule = server_ref->client->rule;
+				debug_sampled =
+					&server_ref->client->debug_log_sampled;
+			} else if (server_ref->route != NULL) {
+				debug_rule = server_ref->route->rule;
 			}
+		}
+		if (!is_debug && debug_rule != NULL) {
+			is_debug = debug_rule->log_debug;
 		}
 		if (!is_debug) {
 			return;
 		}
+
+		if (debug_sampled != NULL) {
+			/*
+			 * the decision is made once per client connection,
+			 * so a sampled client is logged as a whole
+			 */
+			if (*debug_sampled < 0) {
+				int sampling = logger->log_debug_sampling;
+				if (debug_rule != NULL &&
+				    debug_rule->log_debug_sampling_set) {
+					sampling =
+						debug_rule->log_debug_sampling;
+				}
+				*debug_sampled = od_log_sampling_hit(sampling);
+			}
+			if (*debug_sampled == 0) {
+				return;
+			}
+		}
+
+		/*
+		 * messages without a client context (system, idle
+		 * servers) are not sampled and are always logged
+		 */
 	}
 
 	int len;
