@@ -253,6 +253,8 @@ psql -h localhost -p 5432 -U "postgres" -c 'GRANT ALL ON SCHEMA public TO "spqr-
     exit 1
 }
 
+# PostgreSQL emits a WARNING on every connection to broken_collation.
+# Used by tests/lagpolling_startup_notice and tests/auth_query_startup_notice.
 psql -h localhost -p 5432 -U postgres -c 'CREATE DATABASE broken_collation' -d postgres >> $SETUP_LOG 2>&1 || {
     echo 'ERROR: CREATE DATABASE broken_collation'
     cat "$SETUP_LOG"
