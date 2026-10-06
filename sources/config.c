@@ -26,6 +26,7 @@ void od_config_init(od_config_t *config)
 	config->priority = 0;
 	config->sequential_routing = 0;
 	config->log_debug = 0;
+	config->log_debug_sampling = 100;
 	config->log_to_stdout = 1;
 	config->log_config = 0;
 	config->log_session = 1;
@@ -118,6 +119,7 @@ void od_config_init(od_config_t *config)
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 {
 	current_config->log_debug = new_config->log_debug;
+	current_config->log_debug_sampling = new_config->log_debug_sampling;
 	current_config->log_config = new_config->log_config;
 	current_config->log_session = new_config->log_session;
 	current_config->log_query = new_config->log_query;
@@ -425,6 +427,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, log_to_stdout), 0 },
 	{ "log_debug", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_debug),
 	  1 },
+	{ "log_debug_sampling", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, log_debug_sampling), 1 },
 	{ "log_config", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_config),
 	  1 },
 	{ "log_session", OD_CONFIG_FIELD_BOOL,
@@ -638,6 +642,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	}
 	od_log(logger, "config", NULL, NULL, "log_debug               %s",
 	       od_config_yes_no(config->log_debug));
+	od_log(logger, "config", NULL, NULL, "log_debug_sampling      %d",
+	       config->log_debug_sampling);
 	od_log(logger, "config", NULL, NULL, "log_config              %s",
 	       od_config_yes_no(config->log_config));
 	od_log(logger, "config", NULL, NULL, "log_session             %s",

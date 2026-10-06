@@ -130,6 +130,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_BOOL(dst, src, bindwith_reuseport);
 	MERGE_BOOL(dst, src, enable_host_watcher);
 	MERGE_BOOL(dst, src, log_debug);
+	MERGE_INT(dst, src, log_debug_sampling);
 	MERGE_BOOL(dst, src, log_to_stdout);
 	MERGE_BOOL(dst, src, log_config);
 	MERGE_BOOL(dst, src, log_session);

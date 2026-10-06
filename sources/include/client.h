@@ -105,6 +105,12 @@ struct od_client {
 
 	int pending_begin;
 
+	/*
+	 * Per-connection debug log sampling decision:
+	 * -1 = not decided yet, 0/1 - decision made
+	 */
+	int debug_log_sampled;
+
 	uint8_t scram_client_key[OD_SCRAM_MAX_KEY_LEN];
 	uint8_t scram_server_key[OD_SCRAM_MAX_KEY_LEN];
 	int scram_key_valid;

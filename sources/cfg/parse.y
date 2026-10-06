@@ -145,6 +145,7 @@
 %token BINDWITH_REUSEPORT "bindwith_reuseport"
 %token ENABLE_HOST_WATCHER "enable_host_watcher"
 %token LOG_DEBUG "log_debug"
+%token LOG_DEBUG_SAMPLING "log_debug_sampling"
 %token LOG_TO_STDOUT "log_to_stdout"
 %token LOG_CONFIG "log_config"
 %token LOG_SESSION "log_session"
@@ -435,6 +436,16 @@ top_item:
 							$2,
 							@1,
 							"log_debug");
+		}
+	| LOG_DEBUG_SAMPLING int_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+							&ctx->model->global.log_debug_sampling,
+							$2,
+							0,
+							100,
+							@1,
+							"log_debug_sampling");
 		}
 	| LOG_TO_STDOUT bool_value
 		{
@@ -1719,6 +1730,17 @@ route_item:
 							$2,
 							@1,
 							"log_debug");
+		}
+	| LOG_DEBUG_SAMPLING int_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_int_range_from_i64(ctx->diags,
+							&ur->log_debug_sampling,
+							$2,
+							0,
+							100,
+							@1,
+							"log_debug_sampling");
 		}
 	| LOG_QUERY bool_value
 		{

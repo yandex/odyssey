@@ -297,9 +297,9 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 		od_stat_query_end(&route->stats, &server->stats_state,
 				  server->is_transaction, &query_time);
 		if (instance->config.log_debug && query_time > 0) {
-			od_log(&instance->logger, ctx, server->client, server,
-			       "query time: %" PRIi64 " microseconds",
-			       query_time);
+			od_debug(&instance->logger, ctx, server->client, server,
+				 "query time: %" PRIi64 " microseconds",
+				 query_time);
 		}
 		break;
 	case KIWI_BE_COMMAND_COMPLETE:

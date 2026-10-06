@@ -38,7 +38,7 @@
 #include <deploy.h>
 #include <router_cancel.h>
 #include <misc.h>
-#include <log_query.h>
+#include <log_sampling.h>
 #include <server.h>
 
 static inline void od_frontend_close(od_client_t *client)
@@ -1958,10 +1958,9 @@ static inline int od_log_query_enabled(od_instance_t *instance,
 		return 0;
 	}
 
-	return od_log_query_sampling_hit(
-		route->rule->log_query_sampling_set ?
-			route->rule->log_query_sampling :
-			instance->config.log_query_sampling);
+	return od_log_sampling_hit(route->rule->log_query_sampling_set ?
+					   route->rule->log_query_sampling :
+					   instance->config.log_query_sampling);
 }
 
 static od_frontend_status_t client_process_message_full(od_client_t *client,

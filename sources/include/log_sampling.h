@@ -8,7 +8,7 @@
 
 #include <machinarium/machinarium.h>
 
-static inline int od_log_query_sampling_hit(int sampling_percent)
+static inline int od_log_sampling_hit(int sampling_percent)
 {
 	if (sampling_percent >= 100) {
 		return 1;

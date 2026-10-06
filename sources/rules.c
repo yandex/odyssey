@@ -2896,6 +2896,11 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  log_debug                         %s",
 		       od_rules_yes_no(rule->log_debug));
+		if (rule->log_debug_sampling_set) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  log_debug_sampling                %d",
+			       rule->log_debug_sampling);
+		}
 		od_log(logger, "rules", NULL, NULL,
 		       "  log_query                         %s",
 		       od_rules_yes_no(rule->log_query));

@@ -30,7 +30,7 @@
 #include <msg.h>
 #include <worker.h>
 #include <console/parser.h>
-#include <log_query.h>
+#include <log_sampling.h>
 
 static inline int od_console_show_stats_add(machine_msg_t *stream,
 					    char *database, int database_len,
@@ -2598,10 +2598,9 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 	}
 
 	if (instance->config.log_query &&
-	    od_log_query_sampling_hit(
-		    client->rule->log_query_sampling_set ?
-			    client->rule->log_query_sampling :
-			    instance->config.log_query_sampling)) {
+	    od_log_sampling_hit(client->rule->log_query_sampling_set ?
+					client->rule->log_query_sampling :
+					instance->config.log_query_sampling)) {
 		od_debug(&instance->logger, "console", client, NULL, "%.*s",
 			 query_len, query);
 	}

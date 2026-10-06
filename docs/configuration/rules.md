@@ -65,6 +65,7 @@ A special `user default` is used when no user is matched.
 | server_pstmt_cache_size           | integer                                | 0             | runtime (new connections) | Per-server limit of reserved prepared statements; evicts statements not recently used (SIEVE policy) on server reset; 0 = unlimited. Only meaningful with prepared statement support enabled. |
 | pool_pin_on_listen          | boolean                        | no (0)             | runtime (new connections) | Enable pinning client to server after LISTEN execution                                                                                    |
 | log_debug                         | boolean                                | no (0)        | runtime (new connections) | Enable debug logging for this route.                                                                                                                                       |
+| log_debug_sampling (per-route)    | integer (0..100)                       | — (global)    | runtime (new connections) | Percentage of client connections with debug logging for this route; overrides global `log_debug_sampling`.                                                                |
 | group_checker_interval            | integer (ms)                           | 7000 (global) | runtime (global)          | Global setting: interval for checking group membership changes (7 seconds default).                                                                                        |
 | maintain_params                   | boolean                                | yes (1)       | runtime (new connections) | Maintain client connection parameters across backend connections for compatibility.                                                                                        |
 | target_session_attrs              | string enum                            | — (not set)   | runtime (new connections) | Target session attributes for connection routing; defaults to undefined behavior.                                                                                          |
@@ -944,6 +945,20 @@ globally. Overrides the global `log_query` setting for connections
 matched by this route.
 
 `log_query yes`
+
+---
+
+## **log\_debug\_sampling** *(per-route)*
+
+*integer (0..100)*
+
+Percentage of client connections for which debug messages are logged
+for this route when debug logging is enabled (globally or per-route).
+The decision is made once per client connection, so a sampled client is
+logged as a whole. When unset, the global `log_debug_sampling` value is
+used.
+
+`log_debug_sampling 10`
 
 ---
 

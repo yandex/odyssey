@@ -450,6 +450,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_BOOL(cfg->bindwith_reuseport, config->bindwith_reuseport);
 	COPY_BOOL(cfg->enable_host_watcher, config->host_watcher_enabled);
 	COPY_BOOL(cfg->log_debug, config->log_debug);
+	COPY_INT(cfg->log_debug_sampling, config->log_debug_sampling);
 	COPY_BOOL(cfg->log_to_stdout, config->log_to_stdout);
 	COPY_BOOL(cfg->log_config, config->log_config);
 	COPY_BOOL(cfg->log_session, config->log_session);
@@ -833,6 +834,10 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 		rule->storage_password_len = strlen(rule->storage_password);
 	}
 	COPY_BOOL(cfg->log_debug, rule->log_debug);
+	COPY_INT(cfg->log_debug_sampling, rule->log_debug_sampling);
+	if (cfg->log_debug_sampling.seen.is_set) {
+		rule->log_debug_sampling_set = 1;
+	}
 	COPY_BOOL(cfg->log_query, rule->log_query);
 	COPY_INT(cfg->log_query_sampling, rule->log_query_sampling);
 	if (cfg->log_query_sampling.seen.is_set) {
