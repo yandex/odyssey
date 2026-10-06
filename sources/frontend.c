@@ -38,6 +38,7 @@
 #include <deploy.h>
 #include <router_cancel.h>
 #include <misc.h>
+#include <log_query.h>
 #include <server.h>
 
 static inline void od_frontend_close(od_client_t *client)
@@ -1950,6 +1951,19 @@ client_read_full_msg(od_client_t *client, const kiwi_header_t *header,
 	return OD_OK;
 }
 
+static inline int od_log_query_enabled(od_instance_t *instance,
+				       od_route_t *route)
+{
+	if (!(instance->config.log_query || route->rule->log_query)) {
+		return 0;
+	}
+
+	return od_log_query_sampling_hit(
+		route->rule->log_query_sampling_set ?
+			route->rule->log_query_sampling :
+			instance->config.log_query_sampling);
+}
+
 static od_frontend_status_t client_process_message_full(od_client_t *client,
 							machine_msg_t *msg,
 							uint32_t timeout_ms)
@@ -1992,7 +2006,7 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 			}
 		}
 
-		if (instance->config.log_query || route->rule->log_query) {
+		if (od_log_query_enabled(instance, route)) {
 			char *query;
 			uint32_t query_len;
 			rc = kiwi_be_read_query(data, size, &query, &query_len);
@@ -2014,7 +2028,7 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 			od_relay_process_fcall(&client->relay, msg, timeout_ms);
 		break;
 	case KIWI_FE_FLUSH:
-		if (instance->config.log_query || route->rule->log_query) {
+		if (od_log_query_enabled(instance, route)) {
 			od_log(&instance->logger, "flush", client,
 			       client->server, "flush");
 		}
@@ -2022,7 +2036,7 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 						 timeout_ms);
 		break;
 	case KIWI_FE_SYNC:
-		if (instance->config.log_query || route->rule->log_query) {
+		if (od_log_query_enabled(instance, route)) {
 			od_log(&instance->logger, "sync", client,
 			       client->server, "sync");
 		}
@@ -2030,33 +2044,33 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 			od_relay_process_xsync(&client->relay, msg, timeout_ms);
 		break;
 	case KIWI_FE_PARSE:
-		if (instance->config.log_query || route->rule->log_query) {
+		if (od_log_query_enabled(instance, route)) {
 			od_frontend_log_parse(instance, client, "parse", data,
 					      size);
 		}
 		status = od_relay_process_xmsg(&client->relay, msg, timeout_ms);
 		break;
 	case KIWI_FE_BIND:
-		if (instance->config.log_query || route->rule->log_query) {
+		if (od_log_query_enabled(instance, route)) {
 			od_frontend_log_bind(instance, client, "bind", data,
 					     size);
 		}
 		status = od_relay_process_xmsg(&client->relay, msg, timeout_ms);
 		break;
 	case KIWI_FE_DESCRIBE:
-		if (instance->config.log_query || route->rule->log_query) {
+		if (od_log_query_enabled(instance, route)) {
 			od_frontend_log_describe(instance, client, data, size);
 		}
 		status = od_relay_process_xmsg(&client->relay, msg, timeout_ms);
 		break;
 	case KIWI_FE_EXECUTE:
-		if (instance->config.log_query || route->rule->log_query) {
+		if (od_log_query_enabled(instance, route)) {
 			od_frontend_log_execute(instance, client, data, size);
 		}
 		status = od_relay_process_xmsg(&client->relay, msg, timeout_ms);
 		break;
 	case KIWI_FE_CLOSE:
-		if (instance->config.log_query || route->rule->log_query) {
+		if (od_log_query_enabled(instance, route)) {
 			char *name;
 			uint32_t name_len;
 			kiwi_fe_close_type_t type;

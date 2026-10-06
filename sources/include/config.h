@@ -94,6 +94,7 @@ struct od_config {
 	int log_config;
 	int log_session;
 	int log_query;
+	int log_query_sampling;
 	int log_queue_depth;
 	int log_async;
 	char *log_file;

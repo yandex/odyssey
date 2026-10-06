@@ -2865,6 +2865,11 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "rules", NULL, NULL,
 		       "  log_query                         %s",
 		       od_rules_yes_no(rule->log_query));
+		if (rule->log_query_sampling_set) {
+			od_log(logger, "rules", NULL, NULL,
+			       "  log_query_sampling                %d",
+			       rule->log_query_sampling);
+		}
 
 		for (int vi = 0; vi < KIWI_VAR_MAX; vi++) {
 			kiwi_var_t *v = &rule->vars.vars[vi];

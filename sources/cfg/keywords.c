@@ -29,6 +29,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "log_config", LOG_CONFIG },
 	{ "log_session", LOG_SESSION },
 	{ "log_query", LOG_QUERY },
+	{ "log_query_sampling", LOG_QUERY_SAMPLING },
 	{ "log_stats", LOG_STATS },
 	{ "log_async", LOG_ASYNC },
 	{ "log_syslog", LOG_SYSLOG },
