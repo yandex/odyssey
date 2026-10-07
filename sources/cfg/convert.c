@@ -56,13 +56,13 @@ typedef struct {
 
 static int tls_workers_auto(int workers)
 {
-	if (workers < 2) {
+	if (workers <= 2) {
 		return 0;
 	}
 	if (workers <= 4) {
 		return 1;
 	}
-	if (workers <= 8) {
+	if (workers < 8) {
 		return 2;
 	}
 	return workers / 2;
