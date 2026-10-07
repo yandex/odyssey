@@ -115,6 +115,7 @@ typedef int od_console_yyltype_t;
 %token KW_SHOW
 %token KW_KILL_CLIENT
 %token KW_RELOAD
+%token KW_LOAD
 %token KW_PAUSE
 %token KW_RESUME
 %token KW_SET
@@ -136,6 +137,7 @@ typedef int od_console_yyltype_t;
 %type <node> show_stmt
 %type <node> kill_client_stmt
 %type <node> reload_stmt
+%type <node> load_stmt
 %type <node> pause_stmt
 %type <node> resume_stmt
 %type <node> set_stmt
@@ -165,6 +167,7 @@ stmt:
 	  show_stmt
 	| kill_client_stmt
 	| reload_stmt
+	| load_stmt
 	| pause_stmt
 	| resume_stmt
 	| set_stmt
@@ -234,6 +237,17 @@ kill_client_stmt:
 /*
  * RELOAD
  */
+load_stmt:
+	  KW_LOAD col_id
+		{
+			od_console_load_stmt_t *n = ALLOC_NODE(ctx, load,
+				OD_CONSOLE_NODE_TYPE_LOAD_STMT);
+			if (n == NULL) YYABORT;
+			n->name = $2; $2 = NULL;
+			$$ = (od_console_node_t *)n;
+		}
+	;
+
 reload_stmt:
 	  KW_RELOAD
 		{

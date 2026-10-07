@@ -216,7 +216,7 @@ static void plan_entry_destroy(void *a)
 	}
 
 	if (entry->delta.pstmt != NULL) {
-		od_pstmt_unref(entry->delta.pstmt);
+		od_pstmt_unref_dbg(entry->delta.pstmt, __func__);
 	}
 
 	memset(entry, 0, sizeof(od_xplan_entry_t));
@@ -242,7 +242,7 @@ static void entry_init_internal(od_xplan_entry_t *e, od_xplan_entry_type_t type,
 	e->delta.portal_name = portal_name;
 
 	if (e->delta.pstmt != NULL) {
-		od_pstmt_ref(e->delta.pstmt);
+		od_pstmt_ref_dbg(e->delta.pstmt, __func__);
 	}
 }
 
@@ -802,7 +802,7 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		}
 	}
 
-	od_pstmt_unref(pstmt);
+	od_pstmt_unref_dbg(pstmt, __func__);
 
 	return st;
 }

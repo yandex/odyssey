@@ -16,6 +16,7 @@ typedef enum {
 	OD_CONSOLE_NODE_TYPE_SHOW_STMT,
 	OD_CONSOLE_NODE_TYPE_KILL_CLIENT_STMT,
 	OD_CONSOLE_NODE_TYPE_RELOAD_STMT,
+	OD_CONSOLE_NODE_TYPE_LOAD_STMT,
 	OD_CONSOLE_NODE_TYPE_PAUSE_STMT,
 	OD_CONSOLE_NODE_TYPE_RESUME_STMT,
 	OD_CONSOLE_NODE_TYPE_SET_STMT,
@@ -37,6 +38,11 @@ typedef struct {
 	od_console_node_tag_t type;
 	char *id;
 } od_console_kill_client_stmt_t;
+
+typedef struct {
+	od_console_node_tag_t type;
+	char *name;
+} od_console_load_stmt_t;
 
 typedef struct {
 	od_console_node_tag_t type;
