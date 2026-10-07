@@ -16,6 +16,7 @@
 #include <types.h>
 #include <router.h>
 #include <config.h>
+#include <cfg/model.h>
 #include <tls.h>
 #include <od_memory.h>
 #include <util.h>
@@ -71,7 +72,11 @@ void od_config_init(od_config_t *config)
 	// od_affinity_config_init(&config->cpu_affinity);
 
 	config->workers = 1;
+#ifdef TLS_WORKERS_DEFAULT_AUTO
+	config->tls_workers = OD_CFG_TLS_WORKERS_AUTO;
+#else
 	config->tls_workers = 0;
+#endif
 	config->resolvers = 1;
 	config->client_max_set = 0;
 	config->client_max = 0;
@@ -565,6 +570,12 @@ void od_config_field_value(od_config_t *config, const od_config_field_t *field,
 			   char *buf, size_t size)
 {
 	char *at = (char *)config + field->offset;
+
+	if (field->offset == offsetof(od_config_t, tls_workers) &&
+	    *(int *)at == OD_CFG_TLS_WORKERS_AUTO) {
+		od_snprintf(buf, size, "auto");
+		return;
+	}
 
 	switch (field->type) {
 	case OD_CONFIG_FIELD_INT:

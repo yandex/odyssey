@@ -358,6 +358,9 @@ of threads stays the same:
 | 5 - 8     | `workers` - 2  | 2           |
 | > 8       | `workers` / 2 (rounded up) | `workers` / 2 (rounded down) |
 
+Odyssey built with `-DTLS_WORKERS_DEFAULT_AUTO=ON` uses `"auto"` when
+`tls_workers` is not set in the config (`+tls-auto` in `odyssey --version`).
+
 `tls_workers 0`
 
 ## **resolvers**
