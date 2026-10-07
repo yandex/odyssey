@@ -48,6 +48,8 @@ typedef struct {
 	od_cfg_seen_t seen;
 } od_cfg_string_list_field_t;
 
+#define OD_CFG_TLS_WORKERS_AUTO -1
+
 typedef struct od_cfg_global {
 	od_cfg_bool_field_t daemonize;
 	od_cfg_bool_field_t sequential_routing;
@@ -114,6 +116,7 @@ typedef struct od_cfg_global {
 	od_cfg_int_field_t promhttp_server_port;
 	od_cfg_int_field_t group_checker_interval;
 	od_cfg_int_field_t workers;
+	/* OD_CFG_TLS_WORKERS_AUTO for "auto", resolved in convert */
 	od_cfg_int_field_t tls_workers;
 
 } od_cfg_global_t;

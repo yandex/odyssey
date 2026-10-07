@@ -54,6 +54,20 @@ typedef struct {
 		}                            \
 	} while (0)
 
+static int tls_workers_auto(int workers)
+{
+	if (workers < 2) {
+		return 0;
+	}
+	if (workers <= 4) {
+		return 1;
+	}
+	if (workers <= 8) {
+		return 2;
+	}
+	return workers / 2;
+}
+
 #define COPY_BOOL(field, out)                \
 	do {                                 \
 		if ((field).seen.is_set) {   \
@@ -509,6 +523,11 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_INT(cfg->group_checker_interval, config->group_checker_interval);
 	COPY_INT(cfg->workers, config->workers);
 	COPY_INT(cfg->tls_workers, config->tls_workers);
+	if (config->tls_workers == OD_CFG_TLS_WORKERS_AUTO) {
+		/* tls workers are taken from workers threads */
+		config->tls_workers = tls_workers_auto(config->workers);
+		config->workers -= config->tls_workers;
+	}
 
 	if (config->keepalive_usr_timeout < 0) {
 		config->keepalive_usr_timeout =

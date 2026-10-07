@@ -492,7 +492,12 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 	dump_int(file, "group_checker_interval", 0,
 		 &model->global.group_checker_interval);
 	dump_int(file, "workers", 0, &model->global.workers);
-	dump_int(file, "tls_workers", 0, &model->global.tls_workers);
+	if (model->global.tls_workers.seen.is_set &&
+	    model->global.tls_workers.value == OD_CFG_TLS_WORKERS_AUTO) {
+		fprintf(file, "tls_workers \"auto\"\n");
+	} else {
+		dump_int(file, "tls_workers", 0, &model->global.tls_workers);
+	}
 
 	for (size_t i = 0; i < model->listens_count; ++i) {
 		dump_listen(file, model->listens[i]);

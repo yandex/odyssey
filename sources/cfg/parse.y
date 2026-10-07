@@ -943,7 +943,7 @@ top_item:
 
 			od_cfg_set_int_from_i64(ctx->diags,
 						&ctx->model->global.tls_workers,
-						(1 + od_get_ncpu()) / 2,
+						OD_CFG_TLS_WORKERS_AUTO,
 						@1,
 						"tls_workers");
 			od_free($2);
