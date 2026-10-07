@@ -5,8 +5,7 @@ set -e
 pushd /tests/tls-workers/
 
 openssl genrsa -out root.key 2048
-openssl req -new -key root.key -out root.csr -nodes -subj "/CN=odyssey-test-cn"
-openssl x509 -req -days 2 -in root.csr -signkey root.key -out root.pem
+openssl req -x509 -new -key root.key -out root.pem -nodes -days 2 -subj "/CN=odyssey-test-cn"
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr -nodes -subj "/CN=localhost"
