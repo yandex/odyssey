@@ -353,10 +353,10 @@ of threads stays the same:
 
 | `workers` | worker threads | TLS workers |
 |-----------|----------------|-------------|
-| 1         | 1              | 0           |
-| 2 - 4     | `workers` - 1  | 1           |
-| 5 - 8     | `workers` - 2  | 2           |
-| > 8       | `workers` / 2 (rounded up) | `workers` / 2 (rounded down) |
+| 1 - 2     | `workers`      | 0           |
+| 3 - 4     | `workers` - 1  | 1           |
+| 5 - 7     | `workers` - 2  | 2           |
+| 8 and more | `workers` / 2 (rounded up) | `workers` / 2 (rounded down) |
 
 Odyssey built with `-DTLS_WORKERS_DEFAULT_AUTO=ON` uses `"auto"` when
 `tls_workers` is not set in the config (`+tls-auto` in `odyssey --version`).
