@@ -240,6 +240,13 @@ static void test_select_from_errors(void)
 	parse_fail("SELECT * FROM CONFIG log_debug;");
 }
 
+static void test_load(void)
+{
+	test(strcmp(parse_ok("LOAD pdbg_point"), "(load pdbg_point)") == 0);
+	parse_fail("LOAD");
+	parse_fail("LOAD 42");
+}
+
 /*
  * KILL_CLIENT tests
  */
@@ -411,6 +418,8 @@ void odyssey_test_console_parser(void)
 	test_show_with_block_comment();
 	test_select_from_alias();
 	test_select_from_errors();
+
+	test_load();
 
 	test_kill_client_basic();
 	test_kill_client_case_insensitive_cmd();

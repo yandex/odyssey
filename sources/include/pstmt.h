@@ -149,12 +149,16 @@ machine_msg_t *od_pstmt_describe_of(const od_pstmt_t *pstmt);
 static inline void od_pstmt_ref(od_pstmt_t *pstmt)
 {
 	atomic_fetch_add_explicit(&pstmt->refs, 1, memory_order_relaxed);
+	od_log(NULL, "dbgpstmt", NULL, NULL, "ref %s -> %lu",
+		pstmt->name, (unsigned long)atomic_load(&pstmt->refs));
 }
 
 static inline void od_pstmt_unref(od_pstmt_t *pstmt)
 {
 	uint64_t v = atomic_fetch_sub_explicit(&pstmt->refs, 1,
 					       memory_order_release);
+	od_log(NULL, "dbgpstmt", NULL, NULL, "unref %s -> %lu",
+		pstmt->name, (unsigned long)(v - 1));
 	od_assert(v > 1);
 	if (v == 2) {
 		/*
@@ -163,4 +167,21 @@ static inline void od_pstmt_unref(od_pstmt_t *pstmt)
 		 */
 		od_global_pstmt_try_remove(pstmt->source, pstmt);
 	}
+}
+
+/*
+ * temp debug wrappers: log the caller before ref/unref
+ */
+static inline void od_pstmt_ref_dbg(od_pstmt_t *pstmt, const char *who)
+{
+	od_log(NULL, "dbgwho", NULL, NULL, "ref by %s (%s)", who,
+	       pstmt->name);
+	od_pstmt_ref(pstmt);
+}
+
+static inline void od_pstmt_unref_dbg(od_pstmt_t *pstmt, const char *who)
+{
+	od_log(NULL, "dbgwho", NULL, NULL, "unref by %s (%s)", who,
+	       pstmt->name);
+	od_pstmt_unref(pstmt);
 }
