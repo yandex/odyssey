@@ -102,6 +102,7 @@ set(od_src
     deploy.c
     reset.c
     pstmt.c
+    clients_map.c
     frontend.c
     backend.c
     instance.c
@@ -468,6 +469,7 @@ set(od_test_src
     tests/odyssey/test_address.c
     tests/odyssey/test_affinity.c
     tests/odyssey/test_pstmt.c
+    tests/odyssey/test_clients_map.c
     tests/odyssey/test_duration_parse.c
     tests/odyssey/test_thread_pool.c
     tests/odyssey/test_linear_alloc.c

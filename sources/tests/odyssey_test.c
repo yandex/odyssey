@@ -126,6 +126,7 @@ extern void odyssey_test_hba(void);
 extern void odyssey_test_address_parse(void);
 extern void odyssey_test_address_cmp(void);
 extern void odyssey_test_pstmt(void);
+extern void odyssey_test_clients_map(void);
 extern void odyssey_test_affinity(void);
 extern void odyssey_test_duration_parse(void);
 extern void odyssey_test_thread_pool(void);
@@ -254,6 +255,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_address_parse);
 	odyssey_test(odyssey_test_address_cmp);
 	odyssey_test(odyssey_test_pstmt);
+	odyssey_test(odyssey_test_clients_map);
 	odyssey_test(odyssey_test_affinity);
 	odyssey_test(odyssey_test_duration_parse);
 	odyssey_test(odyssey_test_thread_pool);

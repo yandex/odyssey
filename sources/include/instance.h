@@ -14,6 +14,7 @@
 #include <logger.h>
 #include <pid.h>
 #include <pstmt.h>
+#include <clients_map.h>
 
 typedef struct timeval od_timeval_t;
 
@@ -35,6 +36,7 @@ struct od_instance {
 	} cmdline;
 
 	od_global_pstmt_map_t *pstmts;
+	od_global_clients_map_t *clients_by_key;
 };
 
 od_instance_t *od_instance_create(void);

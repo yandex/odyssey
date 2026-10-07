@@ -24,7 +24,6 @@
 #include <ejection.h>
 #include <stream.h>
 #include <module.h>
-#include <cancel.h>
 #include <auth.h>
 #include <reset.h>
 #include <system.h>
@@ -36,7 +35,6 @@
 #include <compression.h>
 #include <extension.h>
 #include <deploy.h>
-#include <router_cancel.h>
 #include <misc.h>
 #include <log_sampling.h>
 #include <server.h>
@@ -3072,28 +3070,7 @@ void od_frontend(void *arg)
 			return;
 		}
 
-		od_router_cancel_t cancel;
-		od_router_cancel_init(&cancel);
-		rc = od_router_cancel(router, &client->startup.key, &cancel);
-		if (rc == 0) {
-			/*
-			 * server might be free during cancel end
-			 * so need to preserve it route ptr
-			 */
-			od_route_t *srv_route = cancel.server->route;
-			od_stat_cancel(&srv_route->stats);
-
-			od_cancel(client->global, cancel.storage,
-				  cancel.address, &cancel.key, &cancel.id);
-
-			od_route_lock(srv_route);
-			od_server_cancel_end(cancel.server);
-			/* signal about possible free connection */
-			od_route_signal_locked(srv_route, NULL);
-			od_route_unlock(srv_route);
-
-			od_router_cancel_free(&cancel);
-		}
+		od_router_cancel(router, &client->startup.key);
 
 		cancel_finished(global, instance);
 
@@ -3111,6 +3088,13 @@ void od_frontend(void *arg)
 	 */
 	client->key.key_pid = client->id.id_a;
 	client->key.key = client->id.id_b;
+
+	rc = od_global_clients_map_add(instance->clients_by_key, client);
+	if (rc == -1) {
+		od_frontend_close(client);
+		od_routing_slot_release(global);
+		return;
+	}
 
 	/* route client */
 	od_router_status_t router_status;
@@ -3227,6 +3211,7 @@ void od_frontend(void *arg)
 			break;
 		}
 
+		od_global_clients_map_remove(instance->clients_by_key, client);
 		od_frontend_close(client);
 		return;
 	}
@@ -3371,8 +3356,11 @@ void od_frontend(void *arg)
 	/* cleanup */
 
 cleanup:
+	od_global_clients_map_remove(instance->clients_by_key, client);
+
 	/* detach client from its route */
 	od_router_unroute(router, client);
+
 	/* close frontend connection */
 	od_frontend_close(client);
 }
