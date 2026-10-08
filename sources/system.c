@@ -456,6 +456,19 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 		memcpy(saddr_un.sun_path, addr_name, addr_name_len);
 	}
 
+	if (server->addr == NULL) {
+		struct stat st;
+		if (stat(saddr_un.sun_path, &st) == 0) {
+			if (S_ISSOCK(st.st_mode)) {
+				unlink(saddr_un.sun_path);
+			} else {
+				od_error(&instance->logger, "server", NULL, NULL,
+					 "refusing to remove non-socket file %s",
+					 saddr_un.sun_path);
+			}
+		}
+	}
+
 	/* bind */
 	int rc;
 	if (instance->config.bindwith_reuseport &&
