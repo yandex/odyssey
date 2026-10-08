@@ -8,6 +8,7 @@ option(MM_MEM_PROF "Built-in memory profiling" off)
 option(USE_TCMALLOC "Use TCMalloc" off)
 option(USE_TCMALLOC_PROFILE "Use TCMalloc with profiling" off)
 option(ENABLE_SSL_KEYLOG "Enable OpenSSL TLS key logging support" off)
+option(TLS_WORKERS_DEFAULT_AUTO "Use tls_workers \"auto\" by default" off)
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
@@ -140,6 +141,7 @@ set(od_src
     external_auth.c
     group.c
     thread_pool.c
+    tls_workers.c
     xplan.c
     common/base64.c
     common/saslprep.c
@@ -317,6 +319,7 @@ message(STATUS "USE_UCONTEXT:           ${USE_UCONTEXT}")
 message(STATUS "MM_MEM_PROF:            ${MM_MEM_PROF}")
 message(STATUS "USE_TCMALLOC:           ${USE_TCMALLOC}")
 message(STATUS "USE_TCMALLOC_PROFILE:   ${USE_TCMALLOC_PROFILE}")
+message(STATUS "TLS_WORKERS_DEFAULT_AUTO: ${TLS_WORKERS_DEFAULT_AUTO}")
 
 configure_file("include/build.h.cmake" "build.h")
 configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")
@@ -383,6 +386,7 @@ set(od_test_src
     tests/machinarium/test_sleep_yield.c
     tests/machinarium/test_sleep_cancel0.c
     tests/machinarium/test_join.c
+    tests/odyssey/test_tls_workers.c
     tests/machinarium/test_condition0.c
     tests/machinarium/test_stat.c
     tests/machinarium/test_eventfd.c

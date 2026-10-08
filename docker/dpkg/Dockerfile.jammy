@@ -36,6 +36,6 @@ COPY . /odyssey
 WORKDIR /odyssey
 
 # RUN OPENSSL_LIBRARIES='/aws-lc/build/ssl/libssl.a;/aws-lc/build/crypto/libcrypto.a' OPENSSL_INCLUDE_DIR=/aws-lc/include BUILD_TYPE=build_relwithdbginfo dpkg-buildpackage -us -uc
-RUN BUILD_TYPE=build_relwithdbginfo dpkg-buildpackage -us -uc
+RUN BUILD_TYPE=build_relwithdbginfo EXTRA_CMAKE_FLAGS=-DTLS_WORKERS_DEFAULT_AUTO=ON dpkg-buildpackage -us -uc
 
 RUN /odyssey/docker/dpkg/copy-package-files.sh

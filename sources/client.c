@@ -7,6 +7,7 @@
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/machine.h>
 #include <kiwi/kiwi.h>
 
 #include <status.h>
@@ -43,6 +44,9 @@ void od_client_init(od_client_t *client)
 	client->logical_rep = false;
 
 	kiwi_be_startup_init(&client->startup);
+	client->startup_received = false;
+	client->startup_ssl_done = false;
+	client->startup_gss_done = false;
 	kiwi_vars_init(&client->vars);
 	kiwi_key_init(&client->key);
 
@@ -128,4 +132,16 @@ uint32_t od_client_login_timeout(const od_client_t *client)
 
 	/* TODO: do not use infinite timeout */
 	return UINT32_MAX;
+}
+
+uint32_t od_client_startup_timeout(const od_client_t *client)
+{
+	uint32_t timeout = od_client_login_timeout(client);
+	if (timeout == UINT32_MAX || client->time_accept == 0) {
+		return timeout;
+	}
+	/* Include both worker queues and protocol negotiation in the budget. */
+	mm_clock_reset(&mm_self->loop.clock);
+	uint64_t elapsed = (machine_time_us() - client->time_accept) / 1000;
+	return elapsed >= timeout ? 0 : timeout - elapsed;
 }

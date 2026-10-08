@@ -135,6 +135,12 @@ void fill_supported_features_string(char *out, size_t max)
 #else
 	out += od_snprintf(out, end - out, " -prom");
 #endif
+
+#ifdef TLS_WORKERS_DEFAULT_AUTO
+	out += od_snprintf(out, end - out, " +tls-auto");
+#else
+	out += od_snprintf(out, end - out, " -tls-auto");
+#endif
 }
 
 static inline void free_cmdline(od_instance_t *instance)
