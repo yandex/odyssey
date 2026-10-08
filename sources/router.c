@@ -1224,13 +1224,12 @@ void od_router_close(od_router_t *router, od_client_t *client)
 
 	od_server_t *server = client->server;
 
-	od_backend_close_connection(server);
-
 	od_route_lock(route);
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 	od_server_detach_client(server);
 	od_server_set_pool_state(server, OD_SERVER_UNDEF);
+	od_backend_close_connection(server);
 	server->route = NULL;
 
 	od_route_signal_locked(route, NULL);
