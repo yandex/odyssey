@@ -107,7 +107,7 @@ static inline void od_worker(void *arg)
 
 	(*gl)->wid = worker->id;
 
-	bool run = true;
+	bool draining = false;
 
 	memset(&linear_alloc, 0, sizeof(linear_alloc));
 	if (instance->config.query_parsing.mode !=
@@ -126,14 +126,17 @@ static inline void od_worker(void *arg)
 		mm_machine_atexit(od_free, (void *)linear_alloc_buf);
 	}
 
-	while (run) {
-		uint32_t task_wait_timout_ms = 10 * 1000;
+	for (;;) {
+		uint32_t task_wait_timout_ms = draining ? 0 : 10 * 1000;
 
 		machine_msg_t *msg;
 		/* Inverse priorities of cliend routing to decrease chances of timeout */
 		msg = machine_channel_read_back(worker->task_channel,
 						task_wait_timout_ms);
 		if (msg == NULL) {
+			if (draining) {
+				break;
+			}
 			/* no tasks within timeout, this is not an error */
 			continue;
 		}
@@ -146,27 +149,6 @@ static inline void od_worker(void *arg)
 			client = *(od_client_t **)machine_msg_data(msg);
 			client->global = worker->global;
 
-			/*
-			 * Allocate readahead buffer from this worker's
-			 * thread-local vrb cache. od_io_prepare() was not
-			 * called in od_system (only io->io was assigned),
-			 * so the buffer is obtained here, in the worker
-			 * thread that owns it.
-			 */
-			rc = od_readahead_prepare(&client->io.readahead);
-			if (rc == -1) {
-				od_error(
-					&instance->logger, "worker", client,
-					NULL,
-					"failed to allocate readahead buffer, errno = %d (%s)",
-					machine_errno(),
-					strerror(machine_errno()));
-				od_io_close(&client->io);
-				od_client_free(client);
-				od_routing_slot_release(worker->global);
-				break;
-			}
-
 			/* for NULL-terminator and prefix, just in case */
 			char coro_name[10 + OD_ID_LEN];
 			od_id_write_to_string(&client->id, coro_name,
@@ -178,8 +160,7 @@ static inline void od_worker(void *arg)
 			if (coroutine_id == -1) {
 				od_error(&instance->logger, "worker", client,
 					 NULL, "failed to create coroutine");
-				od_io_close(&client->io);
-				od_client_free(client);
+				od_frontend_close(client);
 				od_routing_slot_release(worker->global);
 				break;
 			}
@@ -222,7 +203,9 @@ static inline void od_worker(void *arg)
 			od_log(&instance->logger, "worker", NULL, NULL,
 			       "worker[%d]: shutdown message received",
 			       worker->id);
-			run = false;
+			/* read_back sees shutdown before older client messages. All
+			 * producers have stopped; drain those clients before exiting. */
+			draining = true;
 			break;
 		default:
 			od_assert(0);

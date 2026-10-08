@@ -385,6 +385,7 @@ set(od_test_src
     tests/machinarium/test_sleep_yield.c
     tests/machinarium/test_sleep_cancel0.c
     tests/machinarium/test_join.c
+    tests/odyssey/test_tls_workers.c
     tests/machinarium/test_condition0.c
     tests/machinarium/test_stat.c
     tests/machinarium/test_eventfd.c

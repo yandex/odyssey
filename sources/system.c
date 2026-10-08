@@ -270,14 +270,13 @@ static inline void od_system_server(void *arg)
 		}
 		od_id_generate(&client->id, "c");
 		/*
-		 * Only assign the io handle here; defer readahead buffer
-		 * allocation to the worker thread so it comes from the
-		 * worker's thread-local vrb cache (avoids cross-thread
-		 * cache ownership).
+		 * Allocate readahead on the worker that first handles the client
+		 * (TLS negotiation or regular frontend), using its local cache.
 		 */
 		client->io.io = client_io;
 		client->rule = NULL;
 		client->source = server;
+		client->global = global;
 		client->tls = server->tls;
 		client->time_accept = 0;
 		client->time_accept = machine_time_us();
@@ -313,8 +312,13 @@ static inline void od_system_server(void *arg)
 			od_client_free(client);
 			continue;
 		}
-		od_worker_pool_t *worker_pool = server->global->worker_pool;
-		od_worker_pool_feed(worker_pool, msg);
+		if (od_tls_workers_enabled() &&
+		    server->config->tls_opts->tls_mode !=
+			    OD_CONFIG_TLS_DISABLE) {
+			od_tls_workers_feed(msg);
+		} else {
+			od_worker_pool_feed(global->worker_pool, msg);
+		}
 	}
 
 	mm_eventfd_remove_peer_to(&server->shutdown_efd, server->io);
@@ -981,6 +985,15 @@ static inline void od_system(void *arg)
 
 	od_cron_stop(global->cron);
 
+	/* Finish all producers before stopping their consumers: acceptors ->
+	 * TLS negotiation -> regular workers. */
+	od_list_foreach_safe (&router->servers, i, n) {
+		od_system_server_t *server;
+		server = od_container_of(i, od_system_server_t, link);
+		machine_join(server->coro_id);
+	}
+	od_tls_workers_destroy();
+
 	/* stop workers first so client/server coroutines release
 	 * their storage refs — otherwise od_rules_cleanup won't
 	 * reach r==2 and watchdogs won't get set_offline */
@@ -988,12 +1001,6 @@ static inline void od_system(void *arg)
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 
 	machine_wait_nb(system->sighandler_machine);
-
-	od_list_foreach_safe (&router->servers, i, n) {
-		od_system_server_t *server;
-		server = od_container_of(i, od_system_server_t, link);
-		machine_join(server->coro_id);
-	}
 
 	/* collect watchdog coroutine IDs before rules are freed */
 	int watchdog_count = 0;
@@ -1068,8 +1075,6 @@ static inline void od_system(void *arg)
 #ifdef LDAP_FOUND
 	od_ldap_workers_destroy();
 #endif
-
-	od_tls_workers_destroy();
 
 	if (instance->config.host_watcher_enabled) {
 		od_host_watcher_destroy(&global->host_watcher);
