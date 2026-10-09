@@ -68,6 +68,8 @@ for all Odyssey rules.
 | `cancel_max_inflight`                      | int              | `-1` (2 × workers) | SIGHUP  | Max concurrent in-flight cancel requests; -1 = 2 × workers       |
 | `cancel_rate_limit`                        | int              | `0` (none)  | restart | Max cancels per second; 0 = unlimited                              |
 | `virtual_transaction`                           | int (bool)       | `yes`       | restart  | Enable virtual transaction features    |
+| `replication_proxy_phys`                   | int (bool)       | `no`        | SIGHUP  | Forward physical replication connections as is to the first endpoint of the first remote storage, bypassing all Odyssey logic |
+| `replication_proxy_logic`                  | int (bool)       | `no`        | SIGHUP  | Forward logical replication connections as is to the first endpoint of the first remote storage, bypassing all Odyssey logic |
 | `dns_cache_ttl`                            | int (ms)         | `30000`     | SIGHUP  | TTL for DNS cache entries                                         |
 | `cache_msg_gc_size`                        | int (bytes)      | `0`         | SIGHUP  | Max single message buffer size for caching; 0 = caching disabled   |
 | `cache_msg_gc_count`                      | int              | `0`         | SIGHUP  | Message GC cache max count; 0 = unlimited                         |
@@ -742,6 +744,52 @@ garbage-collection cache. When the cache exceeds this limit, the oldest
 cached messages are freed. Default: 1024.
 
 `cache_msg_gc_count 1000`
+
+## **replication\_proxy\_phys**, **replication\_proxy\_logic**
+*yes|no*
+
+When enabled, all replication connections of the corresponding type
+(startup packets with `replication=true` for
+`replication_proxy_phys`, `replication=database` for
+`replication_proxy_logic`, i.e. physical or logical walsender
+connections) are treated as a full proxy: Odyssey reads the
+startup packet, takes the **first `remote` storage** of the
+configuration, opens a dedicated connection to its **first endpoint**,
+forwards the original startup packet as is and pipes all further bytes
+in both directions — bypassing all of the Odyssey logic.
+
+This means for replication connections Odyssey does **not** perform:
+
+* rule matching (no `database`/`user` rules are involved at all);
+* client authentication (the client is authenticated by the server
+  directly through the proxy, so credentials must be valid on the
+  server side);
+* HBA checks;
+* connection pooling (each replication client gets its own dedicated
+  server connection which is closed when the client disconnects);
+* parameter deploy / maintain, `auth_query`, `catchup_timeout`,
+  `client_max` and other rule-level features;
+* target session attrs, balancing and storage endpoint fallbacks —
+  always the first endpoint of the first remote storage.
+
+Client-server protocol negotiation, TLS to the backend (as configured
+in the storage `tls` options) and compression happen end-to-end between
+the client and the server.
+
+Known limitations:
+
+* `CancelRequest` cannot cancel such a connection: the backend key data
+  returned by the server is not known to Odyssey, so the cancel request
+  will not find the target connection.
+
+Default is `no`.
+
+`replication_proxy_phys yes`
+
+When `replication_proxy_logic` is enabled instead, logical replication
+(`replication=database`) connections are proxied the same way.
+
+`replication_proxy_logic yes`
 
 ## **virtual\_transaction**
 *yes|no*
