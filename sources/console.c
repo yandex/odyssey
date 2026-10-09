@@ -516,7 +516,9 @@ static inline od_retcode_t
 od_console_show_quantiles(machine_msg_t *stream, int offset,
 			  const int quantiles_count, const double *quantiles,
 			  td_histogram_t *transactions_hgram,
-			  td_histogram_t *queries_hgram)
+			  td_histogram_t *queries_hgram,
+			  td_histogram_t *client_lifetime_hgram
+			)
 {
 	char data[64];
 	int data_len;
@@ -527,6 +529,11 @@ od_console_show_quantiles(machine_msg_t *stream, int offset,
 		double query_quantile = td_value_at(queries_hgram, q);
 		double transaction_quantile =
 			td_value_at(transactions_hgram, q);
+		double client_lifetime_quantile =
+			td_value_at(client_lifetime_hgram, q);
+		if (isnan(client_lifetime_quantile)) {
+			client_lifetime_quantile = 0;
+		}
 		if (isnan(query_quantile)) {
 			query_quantile = 0;
 		}
@@ -546,6 +553,13 @@ od_console_show_quantiles(machine_msg_t *stream, int offset,
 		if (rc == NOT_OK_RESPONSE) {
 			return rc;
 		}
+		/* client lifetime quantile */
+		data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+					   (uint64_t)client_lifetime_quantile);
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			return rc;
+		}
 	}
 	return rc;
 }
@@ -559,11 +573,13 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	int *quantiles_count = argv[3];
 	td_histogram_t *common_transactions_hgram = argv[4];
 	td_histogram_t *common_queries_hgram = argv[5];
+	td_histogram_t *common_client_lifetime_hgram = argv[6];
 
 	machine_msg_t *msg;
 	td_histogram_t *transactions_hgram = NULL;
 	td_histogram_t *queries_hgram = NULL;
 	td_histogram_t *freeze_hgram = NULL;
+	td_histogram_t *client_lifetime_hgram = NULL;
 	msg = kiwi_be_write_data_row(stream, &offset);
 	if (msg == NULL) {
 		return NOT_OK_RESPONSE;
@@ -709,6 +725,7 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 
 		transactions_hgram = td_new(QUANTILES_COMPRESSION);
 		queries_hgram = td_new(QUANTILES_COMPRESSION);
+		client_lifetime_hgram = td_new(QUANTILES_COMPRESSION);
 		freeze_hgram = td_new(QUANTILES_COMPRESSION);
 		if (route->stats.enable_quantiles) {
 			for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
@@ -718,13 +735,17 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 				td_copy(freeze_hgram,
 					route->stats.query_hgram[i]);
 				td_merge(queries_hgram, freeze_hgram);
+				td_copy(freeze_hgram,
+					route->stats.client_lifetime_hgram[i]);
+				td_merge(client_lifetime_hgram, freeze_hgram);
 			}
 			td_merge(common_transactions_hgram, transactions_hgram);
 			td_merge(common_queries_hgram, queries_hgram);
+			td_merge(common_client_lifetime_hgram, client_lifetime_hgram);
 		}
 		rc = od_console_show_quantiles(stream, offset, *quantiles_count,
 					       quantiles, transactions_hgram,
-					       queries_hgram);
+					       queries_hgram, client_lifetime_hgram);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
@@ -732,12 +753,14 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
 	td_safe_free(freeze_hgram);
+	td_safe_free(client_lifetime_hgram);
 	od_route_unlock(route);
 	return 0;
 error:
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
 	td_safe_free(freeze_hgram);
+	td_safe_free(client_lifetime_hgram);
 	od_route_unlock(route);
 	return NOT_OK_RESPONSE;
 }
@@ -966,17 +989,29 @@ static inline int od_console_show_pools(od_client_t *client,
 			if (rc == NOT_OK_RESPONSE) {
 				return NOT_OK_RESPONSE;
 			}
+			caption_len =
+				od_snprintf(caption, sizeof(caption),
+						"client_lifetime_%.6g",
+						quantiles[i]);
+			rc = kiwi_be_write_row_description_add(
+				msg, 0, caption, caption_len, 0, 0,
+				20 /* INT8OID */, 8, 0, 0);
+			if (rc == NOT_OK_RESPONSE) {
+				return NOT_OK_RESPONSE;
+			}
 		}
 	}
 
 	td_histogram_t *transactions_hgram = NULL;
 	td_histogram_t *queries_hgram = NULL;
+	td_histogram_t *client_lifetime_hgram = NULL;
 	if (extended) {
 		transactions_hgram = td_new(QUANTILES_COMPRESSION);
 		queries_hgram = td_new(QUANTILES_COMPRESSION);
+		client_lifetime_hgram = td_new(QUANTILES_COMPRESSION);
 	}
 	void *argv[] = { stream,	   &extended,	       quantiles,
-			 &quantiles_count, transactions_hgram, queries_hgram };
+			 &quantiles_count, transactions_hgram, queries_hgram, client_lifetime_hgram };
 	rc = od_router_foreach(router, od_console_show_pools_add_cb, argv);
 	if (rc == NOT_OK_RESPONSE) {
 		goto error;
@@ -1008,17 +1043,19 @@ static inline int od_console_show_pools(od_client_t *client,
 		}
 		rc = od_console_show_quantiles(stream, offset, quantiles_count,
 					       quantiles, transactions_hgram,
-					       queries_hgram);
+					       queries_hgram, client_lifetime_hgram);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
 	}
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
+	td_safe_free(client_lifetime_hgram);
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 error:
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
+	td_safe_free(client_lifetime_hgram);
 	return NOT_OK_RESPONSE;
 }
 

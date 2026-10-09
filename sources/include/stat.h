@@ -41,6 +41,7 @@ struct od_stat {
 
 	td_histogram_t *transaction_hgram[QUANTILES_WINDOW];
 	td_histogram_t *query_hgram[QUANTILES_WINDOW];
+	td_histogram_t *client_lifetime_hgram[QUANTILES_WINDOW];
 };
 
 static inline void od_stat_state_init(od_stat_state_t *state)
@@ -58,6 +59,7 @@ static inline void od_stat_free(od_stat_t *stat)
 	for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
 		td_free(stat->transaction_hgram[i]);
 		td_free(stat->query_hgram[i]);
+		td_free(stat->client_lifetime_hgram[i]);
 	}
 }
 
@@ -133,6 +135,14 @@ static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 			}
 		}
 		state->tx_time_start = 0;
+	}
+}
+
+static inline void od_stat_client_lifetime(od_stat_t *stat, uint64_t lifetime_us)
+{
+	if (stat->enable_quantiles) {
+		td_add(stat->client_lifetime_hgram[stat->current_tdigest],
+			   lifetime_us, 1);
 	}
 }
 

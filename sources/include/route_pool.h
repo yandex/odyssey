@@ -111,6 +111,8 @@ static inline od_route_t *od_route_pool_new(od_route_pool_t *pool,
 				td_new(QUANTILES_COMPRESSION);
 			route->stats.query_hgram[i] =
 				td_new(QUANTILES_COMPRESSION);
+			route->stats.client_lifetime_hgram[i] =
+				td_new(QUANTILES_COMPRESSION);
 		}
 	}
 	od_list_append(&pool->list, &route->link);
@@ -179,6 +181,7 @@ static inline void od_route_pool_stat(od_route_pool_t *pool,
 			next_tdigest = (current_tdigest + 1) % QUANTILES_WINDOW;
 			td_reset(route->stats.transaction_hgram[next_tdigest]);
 			td_reset(route->stats.query_hgram[next_tdigest]);
+			td_reset(route->stats.client_lifetime_hgram[next_tdigest]);
 			route->stats.current_tdigest = next_tdigest;
 		}
 
