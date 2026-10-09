@@ -823,7 +823,10 @@ Incompatible with session pooling.
 
 *string*
 
-Compute quantiles of query and transaction times
+Compute quantiles of query times, transaction times, and disconnected client
+lifetimes. Client lifetime observations are collected by the session disconnect
+handler. See [client lifetime metrics](../features/prometheus-metrics.md#client-lifetime)
+for collection and export details.
 
 `quantiles "0.99,0.95,0.5"`
 

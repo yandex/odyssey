@@ -55,6 +55,7 @@ The Go-based exporter scrapes `SHOW POOLS_EXTENDED;` and `SHOW DATABASES;` and n
 | `odyssey_route_tcp_connections_total` | `user`, `database` | Counter | Client TCP connections opened toward the route. |
 | `odyssey_route_query_duration_seconds` | `user`, `database`, `quantile` | Gauge | Query latency quantiles (available when the `quantiles` rule option is set). |
 | `odyssey_route_transaction_duration_seconds` | `user`, `database`, `quantile` | Gauge | Transaction latency quantiles. |
+| `odyssey_route_client_lifetime_seconds` | `user`, `database`, `quantile` | Gauge | Lifetime quantiles of disconnected clients, from connection accept to disconnect handling. |
 
 Saturation examples:
 
@@ -81,6 +82,39 @@ sustained starvation. Note that a client that starts to queue moves out of
 `waiting` series can fall exactly when saturation begins.
 
 Quantiles (`*_duration_seconds`) are instantaneous TDigest estimates; treat thresholds like gauges (for example, `odyssey_route_query_duration_seconds{quantile="0.95"} > 0.5`).
+
+### Client lifetime
+
+Enable the `quantiles` rule option on both the client route and the console route
+used by the exporter, for example `quantiles "0.5,0.95,0.99"`. The console rule
+selects the quantiles returned by `SHOW POOLS_EXTENDED;`; each client rule controls
+whether observations are collected for its route.
+
+`odyssey_route_client_lifetime_seconds` measures elapsed time from accepting a
+connection to handling its disconnect, including startup and idle time. An
+observation is added only when the client disconnects through the session
+disconnect handler and has an assigned route. Exit paths that bypass this
+handler, including failures during initial startup or authentication, are not
+included. Collection does not depend on `log_session` or on having an attached
+backend server.
+
+The metric uses the same rotating t-digest windows as query and transaction
+quantiles. It is a gauge, not a cumulative Prometheus histogram: it has no
+`_bucket`, `_sum`, or `_count` series. Empty windows are reported as zero. Route
+quantiles cannot be averaged to obtain a percentile across routes or instances.
+
+`SHOW POOLS_EXTENDED;` exposes `client_lifetime_<quantile>` columns as 64-bit
+integer microseconds. The exporter converts these values to seconds and skips
+the `aggregated` row. SQL-based collectors such as a custom Telegraf input can
+read these columns directly; divide by `1000` for milliseconds or by `1e6` for
+seconds. Exporters also remain compatible with Odyssey versions without these
+columns; those versions simply do not produce the new metric.
+
+For example, the p95 lifetime on each route is:
+
+```promql
+odyssey_route_client_lifetime_seconds{quantile="0.95"}
+```
 
 ## Database-level averages
 

@@ -138,11 +138,12 @@ static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 	}
 }
 
-static inline void od_stat_client_lifetime(od_stat_t *stat, uint64_t lifetime_us)
+static inline void od_stat_client_lifetime(od_stat_t *stat,
+					   uint64_t lifetime_us)
 {
 	if (stat->enable_quantiles) {
 		td_add(stat->client_lifetime_hgram[stat->current_tdigest],
-			   lifetime_us, 1);
+		       lifetime_us, 1);
 	}
 }
 
