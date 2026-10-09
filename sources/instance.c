@@ -37,13 +37,24 @@ int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
 		  od_global_t *global, od_hba_rules_t *hba_rules,
 		  const char *config_file)
 {
+	return od_cfg_import_with_autoconf(logger, config, rules, global,
+					   hba_rules, config_file, NULL);
+}
+
+int od_cfg_import_with_autoconf(od_logger_t *logger, od_config_t *config,
+				od_rules_t *rules, od_global_t *global,
+				od_hba_rules_t *hba_rules,
+				const char *config_file,
+				const char *autoconf_file)
+{
 	od_cfg_model_t model;
 	od_cfg_diag_list_t diags;
 
 	od_cfg_model_init(&model);
 	od_cfg_diag_list_init(&diags);
 
-	int rc = od_cfg_parse_file(config_file, &model, &diags);
+	int rc = od_cfg_parse_file_with_autoconf(config_file, autoconf_file,
+						 &model, &diags);
 
 	for (size_t i = 0; i < diags.count; i++) {
 		od_cfg_diag_t *d = &diags.items[i];
@@ -227,51 +238,50 @@ void od_usage(od_instance_t *instance, char *path)
 	       path);
 }
 
+int od_cfg_check(od_logger_t *logger, od_global_t *global,
+		 const char *config_file, const char *autoconf_file)
+{
+	od_config_t config;
+	od_config_init(&config);
+
+	od_rules_t rules;
+	od_rules_init(&rules);
+
+	od_hba_rules_t hba_rules;
+	od_hba_rules_init(&hba_rules);
+
+	/* the same checks as od_system_config_reload(), nothing is applied */
+	int rc = od_cfg_import_with_autoconf(logger, &config, &rules, global,
+					     &hba_rules, config_file,
+					     autoconf_file);
+	if (rc == 0) {
+		rc = od_config_validate(&config, logger);
+	}
+	if (rc == 0) {
+		rc = od_rules_validate(&rules, &config, logger);
+	}
+
+	od_hba_rules_free(&hba_rules);
+	/* od_rules_free() keeps the storages, they are released separately */
+	od_rules_cleanup(&rules);
+	od_rules_free(&rules);
+	od_config_free(&config);
+	return rc == 0 ? 0 : -1;
+}
+
 int od_config_testing(od_instance_t *instance)
 {
-	od_error_t error;
-	od_router_t router;
-	od_hba_t hba;
+	/* no running instance: no cron, router or workers to apply to */
 	od_global_t global;
-	od_extension_t extensions;
+	memset(&global, 0, sizeof(global));
 
-	od_error_init(&error);
-	od_router_init(&router, &global);
-	od_hba_init(&hba);
-	if (od_extensions_init(&extensions) != 0) {
-		od_error(&instance->logger, "config", NULL, NULL,
-			 "failed to init extensions");
-		goto error;
-	};
-
-	int rc;
-	rc = od_cfg_import(&instance->logger, &instance->config, &router.rules,
-			   &global, &hba.rules, instance->config_file);
-	if (rc == -1) {
-		goto error;
-	}
-
-	/* validate configuration */
-	rc = od_config_validate(&instance->config, &instance->logger);
-	if (rc == -1) {
-		goto error;
-	}
-
-	/* validate rules */
-	rc = od_rules_validate(&router.rules, &instance->config,
-			       &instance->logger);
-	if (rc == -1) {
-		goto error;
+	if (od_cfg_check(&instance->logger, &global, instance->config_file,
+			 NULL) != 0) {
+		return 1;
 	}
 
 	od_log(&instance->logger, "config", NULL, NULL, "config is valid");
-
 	return 0;
-
-error:
-	od_router_free(&router);
-
-	return 1;
 }
 
 static inline od_retcode_t od_args_init(od_arguments_t *args,

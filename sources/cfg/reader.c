@@ -90,7 +90,6 @@ static int read_file(const char *path, char **out, size_t *out_size,
 }
 
 #define OD_CFG_MAX_INCLUDE_DEPTH 16
-#define OD_CFG_AUTOCONF_SUFFIX ".autoconf"
 
 #define MERGE_PLAIN_FLD(d, s, f)                              \
 	do {                                                  \
@@ -194,24 +193,10 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 #undef MERGE_STR
 }
 
-static int od_cfg_try_autoconf(const char *config_path, od_cfg_model_t *model,
+static int od_cfg_try_autoconf(const char *autoconf_path, od_cfg_model_t *model,
 			       od_cfg_diag_list_t *diags)
 {
-	size_t path_len = strlen(config_path);
-	size_t autoconf_path_len =
-		path_len + strlen(OD_CFG_AUTOCONF_SUFFIX) + 1;
-	char *autoconf_path = od_malloc(autoconf_path_len);
-	if (autoconf_path == NULL) {
-		od_cfg_diag_error(diags, od_cfg_location_empty(config_path),
-				  "out of memory while building autoconf path");
-		return -1;
-	}
-
-	od_snprintf(autoconf_path, autoconf_path_len, "%s%s", config_path,
-		    OD_CFG_AUTOCONF_SUFFIX);
-
 	if (access(autoconf_path, F_OK) != 0) {
-		od_free(autoconf_path);
 		return 0;
 	}
 
@@ -219,8 +204,7 @@ static int od_cfg_try_autoconf(const char *config_path, od_cfg_model_t *model,
 	od_cfg_global_t saved_global = model->global;
 	memset(&model->global, 0, sizeof(model->global));
 
-	int rc = od_cfg_parse_file_depth(autoconf_path, model, diags, 1, 0);
-	od_free(autoconf_path);
+	int rc = od_cfg_parse_autoconf(autoconf_path, model, diags);
 
 	if (rc != 0) {
 		/* autoconf failed */
@@ -295,21 +279,49 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 		return -1;
 	}
 
-	/* validate only at top level, not for each included file */
-	if (depth == 0) {
-		/* include autoconf, override all previous options */
-		rc = od_cfg_try_autoconf(path, model, diags);
-		if (rc != 0) {
-			return -1;
-		}
-		return od_cfg_validate_model(model, diags);
+	return 0;
+}
+
+int od_cfg_parse_file_with_autoconf(const char *path, const char *autoconf_path,
+				    od_cfg_model_t *model,
+				    od_cfg_diag_list_t *diags)
+{
+	if (od_cfg_parse_file_depth(path, model, diags, 0, 1) != 0) {
+		return -1;
 	}
 
-	return 0;
+	char *default_path = NULL;
+	if (autoconf_path == NULL) {
+		if (od_asprintf(&default_path, "%s%s", path,
+				OD_CFG_AUTOCONF_SUFFIX) != OK_RESPONSE) {
+			od_cfg_diag_error(
+				diags, od_cfg_location_empty(path),
+				"out of memory while building autoconf path");
+			return -1;
+		}
+		autoconf_path = default_path;
+	}
+
+	/* include autoconf, override all previous options */
+	int rc = od_cfg_try_autoconf(autoconf_path, model, diags);
+	od_free(default_path);
+	if (rc != 0) {
+		return -1;
+	}
+
+	/* validate only at top level, not for each included file */
+	return od_cfg_validate_model(model, diags);
 }
 
 int od_cfg_parse_file(const char *path, od_cfg_model_t *model,
 		      od_cfg_diag_list_t *diags)
 {
-	return od_cfg_parse_file_depth(path, model, diags, 0, 1);
+	return od_cfg_parse_file_with_autoconf(path, NULL, model, diags);
+}
+
+int od_cfg_parse_autoconf(const char *path, od_cfg_model_t *model,
+			  od_cfg_diag_list_t *diags)
+{
+	/* nested level, includes are forbidden */
+	return od_cfg_parse_file_depth(path, model, diags, 1, 0);
 }
