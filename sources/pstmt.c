@@ -748,11 +748,26 @@ void od_global_pstmt_try_remove(od_global_pstmt_map_t *gm, od_pstmt_t *pstmt)
 	}
 
 	/*
-	 * every pstmt must be created from global hashmap,
-	 * so no need to check the klock.kvp != NULL
+	 * A concurrent remover may have already unlinked the entry before
+	 * we took the bucket lock: in the no-create mode
+	 * mm_hashmap_lock_key() reports a miss with an already released
+	 * bucket lock and klock.kvp == NULL. This is a benign miss - the
+	 * entry is gone and there is nothing left to remove.
 	 */
-	od_assert(klock.kvp != NULL);
-	od_assert((od_pstmt_t *)mm_hashmap_kvp_val(gm->hm, klock.kvp) == pstmt);
+	if (klock.kvp == NULL) {
+		return;
+	}
+
+	/*
+	 * The same name could have been re-created (DEALLOCATE + Parse)
+	 * after our entry was unlinked: in this case the map holds a
+	 * different od_pstmt_t under the same key and we must not touch
+	 * it - our own entry is not in the map anymore.
+	 */
+	if ((od_pstmt_t *)mm_hashmap_kvp_val(gm->hm, klock.kvp) != pstmt) {
+		mm_hashmap_unlock_key(gm->hm, &klock);
+		return;
+	}
 
 	/*
 	 * note: ref can be done only with the lock held (create_or_get)
