@@ -552,6 +552,135 @@ const od_config_field_t *od_config_field_at(size_t index)
 	return &od_config_fields[index];
 }
 
+/* listed for SHOW CONFIG, but the parser accepts them only to ignore them */
+static const char *od_config_deprecated_keys[] = { "graceful_die_on_errors",
+						   NULL };
+
+int od_config_field_deprecated(const od_config_field_t *field)
+{
+	for (size_t i = 0; od_config_deprecated_keys[i] != NULL; i++) {
+		if (strcmp(field->key, od_config_deprecated_keys[i]) == 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+const od_config_field_t *od_config_field_by_key(const char *key)
+{
+	for (size_t i = 0; i < od_config_fields_count(); ++i) {
+		const od_config_field_t *field = &od_config_fields[i];
+		if (strcmp(field->key, key) == 0) {
+			return field;
+		}
+	}
+	return NULL;
+}
+
+/* -?[0-9]+, the only integer form the configuration grammar accepts */
+static int od_config_field_is_int(const char *value)
+{
+	const char *p = value;
+	if (*p == '-') {
+		p++;
+	}
+	if (*p == '\0') {
+		return 0;
+	}
+	for (; *p; p++) {
+		if (*p < '0' || *p > '9') {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+/*
+ * The configuration lexer knows a single escape sequence inside a string:
+ * \" for a quote. Line breaks are rejected because the autoconf file is
+ * edited line by line, and a trailing backslash is rejected because it
+ * would escape the closing quote.
+ */
+static int od_config_field_format_string(const char *key, const char *value,
+					 char *buf, size_t size)
+{
+	size_t len = strlen(value);
+	if (len > 0 && value[len - 1] == '\\') {
+		return -1;
+	}
+
+	int n = snprintf(buf, size, "%s \"", key);
+	if (n < 0 || (size_t)n >= size) {
+		return -1;
+	}
+
+	/* every write below keeps at least one byte free for the terminator */
+	size_t pos = (size_t)n;
+	for (const char *p = value; *p; p++) {
+		if (*p == '\n' || *p == '\r') {
+			return -1;
+		}
+		if (*p == '"') {
+			if (pos + 2 >= size) {
+				return -1;
+			}
+			buf[pos++] = '\\';
+		} else if (pos + 1 >= size) {
+			return -1;
+		}
+		buf[pos++] = *p;
+	}
+
+	if (pos + 1 >= size) {
+		return -1;
+	}
+	buf[pos++] = '"';
+	buf[pos] = '\0';
+	return 0;
+}
+
+int od_config_field_format(const od_config_field_t *field, const char *value,
+			   char *buf, size_t size)
+{
+	int n;
+
+	switch (field->type) {
+	case OD_CONFIG_FIELD_INT:
+		/* workers "auto" means half of the CPUs, see cfg/parse.y */
+		if (strcmp(field->key, "workers") == 0 &&
+		    strcmp(value, "auto") == 0) {
+			n = snprintf(buf, size, "%s \"auto\"", field->key);
+			break;
+		}
+		if (!od_config_field_is_int(value)) {
+			return -1;
+		}
+		n = snprintf(buf, size, "%s %s", field->key, value);
+		break;
+	case OD_CONFIG_FIELD_BOOL:
+		if (strcasecmp(value, "yes") == 0) {
+			n = snprintf(buf, size, "%s yes", field->key);
+		} else if (strcasecmp(value, "no") == 0) {
+			n = snprintf(buf, size, "%s no", field->key);
+		} else {
+			return -1;
+		}
+		break;
+	case OD_CONFIG_FIELD_STRING:
+	case OD_CONFIG_FIELD_STRING_INLINE:
+		return od_config_field_format_string(field->key, value, buf,
+						     size);
+	default:
+		return -1;
+	}
+
+	/* od_snprintf() hides truncation, plain snprintf() reports it */
+	if (n < 0 || (size_t)n >= size) {
+		return -1;
+	}
+	return 0;
+}
+
 void od_config_field_value(od_config_t *config, const od_config_field_t *field,
 			   char *buf, size_t size)
 {

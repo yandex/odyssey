@@ -38,6 +38,8 @@
 #include <setproctitle.h>
 #include <worker_pool.h>
 #include <cfg_import.h>
+#include <autoconf.h>
+#include <thread_pool.h>
 #include <tls.h>
 #include <memory.h>
 #include <od_error.h>
@@ -613,6 +615,72 @@ static inline int od_config_listen_host_cmp(char *host_listen,
 	return strcmp(host_listen, host_server);
 }
 
+/* a new autoconf file must pass the checks RELOAD would run */
+static int od_system_alter_system_check(const char *autoconf_path, void *arg)
+{
+	od_global_t *global = arg;
+	od_instance_t *instance = global->instance;
+	return od_cfg_check(&instance->logger, global, instance->config_file,
+			    autoconf_path);
+}
+
+static od_thread_pool_t od_system_alter_system_pool;
+
+typedef struct {
+	od_global_t *global;
+	const char *key;
+	const char *line;
+	char *err;
+	size_t err_size;
+	int result;
+} od_system_alter_system_task_t;
+
+static void *od_system_alter_system_task(void *arg)
+{
+	od_system_alter_system_task_t *task = arg;
+	od_instance_t *instance = task->global->instance;
+	task->result =
+		od_autoconf_update(instance->config_file, task->key, task->line,
+				   od_system_alter_system_check, task->global,
+				   task->err, task->err_size);
+	return NULL;
+}
+
+int od_system_alter_system(od_global_t *global, const char *key,
+			   const char *line, char *err, size_t err_size)
+{
+	od_system_alter_system_task_t task = {
+		.global = global,
+		.key = key,
+		.line = line,
+		.err = err,
+		.err_size = err_size,
+		.result = -1,
+	};
+
+	od_future_t *future =
+		od_thread_pool_submit(&od_system_alter_system_pool,
+				      od_system_alter_system_task, &task, NULL,
+				      NULL, 0);
+	if (future == NULL) {
+		od_snprintf(err, (int)err_size,
+			    "could not submit the change: %s",
+			    strerror(machine_errno()));
+		return -1;
+	}
+
+	/* the task writes into task, so it must finish before we return */
+	int rc = od_thread_pool_wait(future, UINT32_MAX);
+	od_future_unref(future);
+	if (rc != 0) {
+		od_snprintf(err, (int)err_size,
+			    "waiting for the change failed: %s",
+			    strerror(machine_errno()));
+		return -1;
+	}
+	return task.result;
+}
+
 void od_system_config_reload(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
@@ -874,6 +942,16 @@ static inline void od_system(void *arg)
 	}
 #endif
 
+	/* ALTER SYSTEM file work, off the accepting system thread */
+	rc = od_thread_pool_init(&od_system_alter_system_pool, "alter_system",
+				 1, 16);
+	if (rc == -1) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to start alter system pool, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+		return;
+	}
+
 	/* start worker threads */
 	od_worker_pool_t *worker_pool = system->global->worker_pool;
 	rc = od_worker_pool_start(worker_pool, system->global,
@@ -1059,6 +1137,8 @@ static inline void od_system(void *arg)
 #ifdef LDAP_FOUND
 	od_ldap_workers_destroy();
 #endif
+
+	od_thread_pool_destroy(&od_system_alter_system_pool);
 
 	if (instance->config.host_watcher_enabled) {
 		od_host_watcher_destroy(&global->host_watcher);

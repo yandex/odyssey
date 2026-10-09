@@ -30,6 +30,7 @@
 #include <msg.h>
 #include <worker.h>
 #include <console/parser.h>
+#include <autoconf.h>
 #include <log_sampling.h>
 
 static inline int od_console_show_stats_add(machine_msg_t *stream,
@@ -209,6 +210,7 @@ static inline int od_console_show_help(machine_msg_t *stream)
 		"\tPAUSE\n"
 		"\tRESUME\n"
 		"\tSET key=arg\n"
+		"\tALTER SYSTEM SET key = value|RESET key|RESET ALL\n"
 		"\tCREATE <module_path>\n"
 		"\tDROP SERVERS|MODULE <servers>|<module>";
 	stream = kiwi_be_write_notice_console_usage(stream, message);
@@ -2555,6 +2557,115 @@ static inline od_retcode_t od_console_drop_servers(od_client_t *client,
 	return OK_RESPONSE;
 }
 
+/*
+ * Warns that a saved value takes effect only after a restart: RELOAD
+ * does not copy such parameters into the running instance.
+ */
+static inline od_retcode_t
+od_console_alter_system_restart_notice(machine_msg_t *stream,
+				       const od_config_field_t *field)
+{
+	char message[128];
+	int len = od_snprintf(message, sizeof(message),
+			      "parameter \"%s\" cannot be changed without "
+			      "restarting odyssey",
+			      field->key);
+	char *hint = "The value is saved in the autoconf file and takes "
+		     "effect after restart.";
+
+	machine_msg_t *msg =
+		kiwi_be_write_notice_as(stream, "NOTICE", sizeof("NOTICE"),
+					KIWI_CANT_CHANGE_RUNTIME_PARAM, NULL, 0,
+					hint, strlen(hint), message, len);
+	return msg == NULL ? NOT_OK_RESPONSE : OK_RESPONSE;
+}
+
+/*
+ * field and line follow od_autoconf_update(): SET passes both, RESET
+ * passes a NULL line, RESET ALL passes NULL for both. desc tells what was
+ * done, for the log.
+ */
+static inline od_retcode_t
+od_console_alter_system_done(od_client_t *client, machine_msg_t *stream,
+			     const od_config_field_t *field, const char *line,
+			     const char *desc)
+{
+	od_instance_t *instance = client->global->instance;
+	const char *key = field != NULL ? field->key : NULL;
+	char err[256];
+
+	if (od_system_alter_system(client->global, key, line, err,
+				   sizeof(err)) != 0) {
+		od_error(&instance->logger, "console", client, NULL,
+			 "alter system %s failed: %s", desc, err);
+		od_frontend_errorf(client, stream, KIWI_IO_ERROR,
+				   "could not update autoconf file: %s", err);
+		return 0;
+	}
+
+	od_log(&instance->logger, "console", client, NULL, "alter system: %s",
+	       desc);
+
+	if (field != NULL && !field->reloadable &&
+	    od_console_alter_system_restart_notice(stream, field) !=
+		    OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+	return kiwi_be_write_complete(stream, "ALTER SYSTEM",
+				      sizeof("ALTER SYSTEM"));
+}
+
+static inline od_retcode_t
+od_console_alter_system(od_client_t *client, machine_msg_t *stream,
+			od_console_alter_system_stmt_t *stmt)
+{
+	char line[OD_CONFIG_FIELD_VALUE_MAX + 64];
+	char desc[OD_CONFIG_FIELD_VALUE_MAX + 64];
+	const od_config_field_t *field = NULL;
+
+	/* RESET ALL has no key, SET and RESET name a parameter */
+	if (stmt->key != NULL) {
+		field = od_config_field_by_key(stmt->key);
+		if (field == NULL) {
+			od_frontend_errorf(
+				client, stream, KIWI_UNDEFINED_OBJECT,
+				"unrecognized configuration parameter \"%s\"",
+				stmt->key);
+			return 0;
+		}
+	}
+
+	switch (stmt->action) {
+	case OD_CONSOLE_ALTER_SYSTEM_SET:
+		if (od_config_field_deprecated(field)) {
+			od_frontend_errorf(
+				client, stream, KIWI_FEATURE_NOT_SUPPORTED,
+				"parameter \"%s\" is deprecated and has no effect",
+				field->key);
+			return 0;
+		}
+		if (od_config_field_format(field, stmt->value, line,
+					   sizeof(line)) != 0) {
+			od_frontend_errorf(
+				client, stream, KIWI_INVALID_PARAMETER_VALUE,
+				"invalid value for parameter \"%s\": \"%s\"",
+				stmt->key, stmt->value);
+			return 0;
+		}
+		return od_console_alter_system_done(client, stream, field, line,
+						    line);
+	case OD_CONSOLE_ALTER_SYSTEM_RESET:
+		snprintf(desc, sizeof(desc), "reset %s", field->key);
+		return od_console_alter_system_done(client, stream, field, NULL,
+						    desc);
+	case OD_CONSOLE_ALTER_SYSTEM_RESET_ALL:
+		return od_console_alter_system_done(client, stream, NULL, NULL,
+						    "reset all");
+	}
+
+	return NOT_OK_RESPONSE;
+}
+
 typedef struct {
 	char msg[256];
 	int position;
@@ -2715,6 +2826,18 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 			goto bad_query;
 		}
 		break;
+	case OD_CONSOLE_NODE_TYPE_ALTER_SYSTEM_STMT: {
+		if (!is_admin) {
+			goto incorrect_role;
+		}
+		od_console_alter_system_stmt_t *n =
+			(od_console_alter_system_stmt_t *)ast;
+		rc = od_console_alter_system(client, stream, n);
+		if (rc == NOT_OK_RESPONSE) {
+			goto bad_query;
+		}
+		break;
+	}
 	default:
 		goto bad_query;
 	}
