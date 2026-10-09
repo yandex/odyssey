@@ -54,6 +54,12 @@ struct od_client {
 	kiwi_vars_t vars;
 	kiwi_key_t key;
 
+	/*
+	 * raw bytes of the startup packet, kept only when
+	 * the replication proxy mode is enabled
+	 */
+	machine_msg_t *startup_raw;
+
 	/* do not set this field directly, use od_server_attach_client */
 	od_server_t *server;
 	od_route_t *route;

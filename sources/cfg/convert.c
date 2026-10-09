@@ -465,6 +465,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_BOOL(cfg->disable_nolinger, config->disable_nolinger);
 	COPY_BOOL(cfg->log_general_stats_prom, config->log_general_stats_prom);
 	COPY_BOOL(cfg->log_route_stats_prom, config->log_route_stats_prom);
+	COPY_BOOL(cfg->replication_proxy, config->replication_proxy);
 
 	COPY_INT(cfg->priority, config->priority);
 	COPY_INT(cfg->graceful_shutdown_timeout_ms,

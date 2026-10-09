@@ -424,6 +424,8 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 		  &model->global.log_general_stats_prom);
 	dump_bool(file, "log_route_stats_prom", 0,
 		  &model->global.log_route_stats_prom);
+	dump_bool(file, "replication_proxy", 0,
+		  &model->global.replication_proxy);
 	dump_bool(file, "smart_search_path_enquoting", 0,
 		  &model->global.smart_search_path_enquoting);
 	dump_bool(file, "nodelay", 0, &model->global.nodelay);
@@ -898,6 +900,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_bool_field_free(&g->disable_nolinger);
 	od_cfg_bool_field_free(&g->log_general_stats_prom);
 	od_cfg_bool_field_free(&g->log_route_stats_prom);
+	od_cfg_bool_field_free(&g->replication_proxy);
 
 	/* global string fields */
 	od_cfg_string_field_free(&g->pid_file);

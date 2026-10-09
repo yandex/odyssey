@@ -159,6 +159,7 @@
 %token DISABLE_NOLINGER "disable_nolinger"
 %token LOG_GENERAL_STATS_PROM "log_general_stats_prom"
 %token LOG_ROUTE_STATS_PROM "log_route_stats_prom"
+%token REPLICATION_PROXY "replication_proxy"
 %token PID_FILE "pid_file"
 %token UNIX_SOCKET_DIR "unix_socket_dir"
 %token UNIX_SOCKET_MODE "unix_socket_mode"
@@ -552,6 +553,14 @@ top_item:
 							$2,
 							@1,
 							"log_route_stats_prom");
+		}
+	| REPLICATION_PROXY bool_value
+		{
+			od_cfg_set_bool(ctx->diags,
+							&ctx->model->global.replication_proxy,
+							$2,
+							@1,
+							"replication_proxy");
 		}
 	| PID_FILE string_value
 		{

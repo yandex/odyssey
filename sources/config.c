@@ -93,6 +93,7 @@ void od_config_init(od_config_t *config)
 	config->cancel_max_inflight = -1;
 	config->cancel_rate_limit = 0;
 	config->virtual_processing = 0;
+	config->replication_proxy = 0;
 
 	config->graceful_shutdown_timeout_ms = 30 * 1000; /* 30 seconds */
 
@@ -138,6 +139,7 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->smart_search_path_enquoting =
 		new_config->smart_search_path_enquoting;
 	current_config->disable_nolinger = new_config->disable_nolinger;
+	current_config->replication_proxy = new_config->replication_proxy;
 	current_config->keepalive = new_config->keepalive;
 	current_config->keepalive_keep_interval =
 		new_config->keepalive_keep_interval;
@@ -537,6 +539,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, host_watcher_enabled), 0 },
 	{ "smart_search_path_enquoting", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, smart_search_path_enquoting), 1 },
+	{ "replication_proxy", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, replication_proxy), 1 },
 };
 
 size_t od_config_fields_count(void)
@@ -718,6 +722,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       od_config_yes_no(config->virtual_processing));
 	od_log(logger, "config", NULL, NULL, "virtual_transaction     %s",
 	       od_config_yes_no(config->virtual_transaction));
+	od_log(logger, "config", NULL, NULL, "replication_proxy       %s",
+	       od_config_yes_no(config->replication_proxy));
 	od_log(logger, "config", NULL, NULL, "smart_search_path_enquoting %s",
 	       od_config_yes_no(config->smart_search_path_enquoting));
 	od_log(logger, "config", NULL, NULL, "query_parsing mode       %s",
