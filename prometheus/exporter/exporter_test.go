@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql/driver"
 	"errors"
 	"io"
 	"log/slog"
@@ -84,6 +85,84 @@ func TestSendPoolsExtendedMetricsHandlesByteColumns(t *testing.T) {
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
+func TestSendPoolsExtendedMetricsExportsClientLifetimeQuantiles(t *testing.T) {
+	tests := []struct {
+		name    string
+		columns []string
+		values  []driver.Value
+		want    map[string]float64
+	}{
+		{
+			name: "microseconds and INT8 values",
+			columns: []string{"database", "user", "client_lifetime_0.5",
+				"client_lifetime_0.95", "client_lifetime_0.99"},
+			values: []driver.Value{"db1", "user1", int64(1500000),
+				int64(3600123456), []byte("7200000000")},
+			want: map[string]float64{"0.5": 1.5, "0.95": 3600.123456, "0.99": 7200},
+		},
+		{
+			name:    "empty window",
+			columns: []string{"database", "user", "client_lifetime_0.95"},
+			values:  []driver.Value{"db1", "user1", int64(0)},
+			want:    map[string]float64{"0.95": 0},
+		},
+		{
+			name:    "older Odyssey without lifetime columns",
+			columns: []string{"database", "user", "cl_active"},
+			values:  []driver.Value{"db1", "user1", int64(2)},
+			want:    map[string]float64{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			aggregated := append([]driver.Value(nil), tt.values...)
+			aggregated[0], aggregated[1] = "aggregated", "aggregated"
+			rows := sqlmock.NewRows(tt.columns).AddRow(tt.values...).AddRow(aggregated...)
+			mock.ExpectQuery(regexp.QuoteMeta(showPoolsExtendedCommand)).WillReturnRows(rows)
+			exporter := &Exporter{}
+			ch := make(chan prometheus.Metric, 32)
+			if err := exporter.sendPoolsExtendedMetrics(context.Background(), ch, db, nil); err != nil {
+				t.Fatal(err)
+			}
+			close(ch)
+			seen := make(map[string]bool)
+			for metric := range ch {
+				if metric.Desc().String() != routeClientLifetimeSecondsDescription.String() {
+					continue
+				}
+				var written dto.Metric
+				if err := metric.Write(&written); err != nil {
+					t.Fatal(err)
+				}
+				labels := make(map[string]string)
+				for _, label := range written.GetLabel() {
+					labels[label.GetName()] = label.GetValue()
+				}
+				quantile := labels["quantile"]
+				want, ok := tt.want[quantile]
+				if !ok || seen[quantile] || labels["user"] != "user1" || labels["database"] != "db1" {
+					t.Fatalf("unexpected or duplicate lifetime metric: %v", &written)
+				}
+				if written.Gauge == nil || written.GetGauge().GetValue() != want {
+					t.Fatalf("quantile %s: got %v, want gauge %v seconds", quantile, &written, want)
+				}
+				seen[quantile] = true
+			}
+			if len(seen) != len(tt.want) {
+				t.Fatalf("got %d lifetime metrics, want %d", len(seen), len(tt.want))
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
