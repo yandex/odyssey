@@ -52,6 +52,7 @@ int od_backend_startup_preallocated(od_server_t *server,
 				    od_client_t *client);
 
 void od_backend_close_connection(od_server_t *);
+void od_backend_abort_connection(od_server_t *);
 void od_backend_close(od_server_t *);
 void od_backend_error(od_server_t *, char *, char *, uint32_t);
 
