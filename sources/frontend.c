@@ -216,6 +216,23 @@ static void reject_unsupported_proto_version(od_client_t *client)
 		PG_PROTOCOL_MAJOR(PG_PROTOCOL_LATEST),
 		PG_PROTOCOL_MINOR(PG_PROTOCOL_LATEST));
 }
+static void reject_options_error(od_client_t *client)
+{
+	od_log(&client->global->instance->logger, "startup", client, NULL,
+	       "rejecting oversized startup options (BUG-28 fix active)");
+	/*
+	 * The startup `options` parameter carries arbitrary GUCs; kiwi
+	 * keeps variables in fixed 128-byte slots, so an option whose
+	 * name or value does not fit cannot be represented. Refuse the
+	 * connection with a proper ErrorResponse instead of silently
+	 * closing the socket, mirroring the storage behaviour.
+	 */
+	od_frontend_fatal_detailed(
+		client, KIWI_PROTOCOL_VIOLATION, "", "",
+		"invalid startup options: name or value exceeds %d bytes",
+		KIWI_MAX_VAR_SIZE - 1);
+}
+
 
 static int has_unsupported_features(od_client_t *client)
 {
@@ -288,6 +305,9 @@ static int od_frontend_startup(od_client_t *client)
 		if (rc == -1) {
 			if (parse_rc == KIWI_STARTUP_INVALID_MAJOR_ERROR) {
 				reject_unsupported_proto_version(client);
+			} else if (parse_rc ==
+				   KIWI_STARTUP_READ_OPTIONS_ERROR) {
+				reject_options_error(client);
 			}
 			goto error;
 		}
