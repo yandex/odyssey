@@ -46,6 +46,8 @@ void od_client_init(od_client_t *client)
 	kiwi_vars_init(&client->vars);
 	kiwi_key_init(&client->key);
 
+	client->startup_raw = NULL;
+
 	od_io_init(&client->io);
 
 	kiwi_password_init(&client->password);
@@ -114,6 +116,7 @@ void od_client_free(od_client_t *client)
 	client->scram_key_valid = 0;
 
 	machine_msg_free_safe(client->read_msg);
+	machine_msg_free_safe(client->startup_raw);
 
 	od_address_destroy(&client->execute_on_host);
 

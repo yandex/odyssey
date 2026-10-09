@@ -190,7 +190,22 @@ static int read_and_parse_startup(od_client_t *client, int *parse_rc)
 				      machine_msg_size(msg) -
 					      1 /* extra 0-terminator */,
 				      &client->startup, &client->vars);
-	machine_msg_free(msg);
+
+	if (instance->config.replication_proxy) {
+		/*
+		 * keep the raw packet: in replication proxy mode
+		 * it is forwarded to the server as is
+		 *
+		 * the last parsed packet is the one to keep, the
+		 * previous one (e.g. an ssl request) is dropped
+		 */
+		if (client->startup_raw != NULL) {
+			machine_msg_free(client->startup_raw);
+		}
+		client->startup_raw = msg;
+	} else {
+		machine_msg_free(msg);
+	}
 
 	if (parse_rc) {
 		*parse_rc = rc;
@@ -359,6 +374,18 @@ static int od_frontend_startup(od_client_t *client)
 		od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
 				  "SSL is required");
 		return -1;
+	}
+
+	if (instance->config.replication_proxy &&
+	    (client->physical_rep || client->logical_rep)) {
+		/*
+		 * replication full proxy mode: nothing more is sent
+		 * to the client, the raw startup packet is forwarded
+		 * to the server as is and all further communication
+		 * (including authentication, protocol negotiation and
+		 * compression) is proxied byte to byte
+		 */
+		return 0;
 	}
 
 	if (PG_PROTOCOL_MINOR(client->startup.proto_version) >
@@ -1277,7 +1304,7 @@ static inline bool od_eject_conn_with_rate(od_client_t *client,
 		return false;
 	}
 
-	if (server == NULL &&
+	if (server == NULL && client->rule != NULL &&
 	    client->rule->pool->pool_type == OD_RULE_POOL_SESSION) {
 		od_log(&instance->logger, "shutdown", client, server,
 		       "drop client because it was never attached to server");
@@ -1348,8 +1375,9 @@ od_process_drop_on_restart(od_client_t *client)
 		return OD_OK;
 	}
 
-	if (od_unlikely(client->rule->storage->storage_type ==
-			OD_RULE_STORAGE_LOCAL)) {
+	if (od_unlikely(client->rule != NULL &&
+			client->rule->storage->storage_type ==
+				OD_RULE_STORAGE_LOCAL)) {
 		/* local server is not very important (db like console, pgbouncer used for stats) */
 		return OD_EGRACEFUL_SHUTDOWN;
 	}
@@ -2285,7 +2313,11 @@ static void od_frontend_replication_pipe(void *arg_)
 	od_client_t *client = arg->client;
 	od_server_t *server = arg->server;
 	int is_client_to_server = arg->is_client_to_server;
-	od_stat_t *stats = &client->route->stats;
+	/*
+	 * replication proxy clients are not routed, so there is
+	 * no route stats to update for them
+	 */
+	od_stat_t *stats = client->route != NULL ? &client->route->stats : NULL;
 	od_instance_t *instance = client->global->instance;
 
 	od_io_t *src = NULL;
@@ -2340,14 +2372,18 @@ static void od_frontend_replication_pipe(void *arg_)
 			rc = od_io_read_some(src, 1000);
 			errno_ = machine_errno();
 			if (rc == 0) {
-				if (is_client_to_server) {
-					od_stat_recv_client(
-						stats,
-						od_readahead_unread(readahead));
-				} else {
-					od_stat_recv_server(
-						stats,
-						od_readahead_unread(readahead));
+				if (stats != NULL) {
+					if (is_client_to_server) {
+						od_stat_recv_client(
+							stats,
+							od_readahead_unread(
+								readahead));
+					} else {
+						od_stat_recv_server(
+							stats,
+							od_readahead_unread(
+								readahead));
+					}
 				}
 			} else if (errno_ != EAGAIN && errno_ != ETIMEDOUT) {
 				status = read_err;
@@ -2490,6 +2526,382 @@ static od_frontend_status_t od_frontend_remote_replication(od_client_t *client)
 	od_router_close(client->global->router, client);
 
 	return status;
+}
+
+static void od_frontend_on_client_disconnect(od_frontend_status_t status,
+					     od_client_t *client, char *context,
+					     int force_server_close);
+
+static void od_frontend_replication_proxy_server_close(od_client_t *client)
+{
+	od_server_t *server = client->server;
+	od_assert(server != NULL);
+	od_assert(server->client == client);
+	od_assert(server->route == NULL);
+	od_assert(server->pool_element == NULL);
+
+	/*
+	 * the server is not a part of the route pool,
+	 * so it is detached manually
+	 */
+	client->server = NULL;
+	server->client = NULL;
+
+	od_backend_close_connection(server);
+
+	server->is_transaction = 0;
+	server->idle_time = 0;
+	kiwi_key_init(&server->key);
+	kiwi_key_init(&server->key_client);
+
+	od_server_free(server);
+}
+
+static od_frontend_status_t
+od_frontend_replication_proxy_attach(od_client_t *client, char *context,
+				     od_rule_storage_t *storage,
+				     od_storage_endpoint_t *endpoint)
+{
+	od_instance_t *instance = client->global->instance;
+
+	char addr[256];
+	od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
+
+	od_debug(&instance->logger, context, client, NULL,
+		 "replication proxy: trying to connect to %s...", addr);
+
+	od_server_t *server = od_server_allocate(0 /* reserve_prep_stmts */);
+	if (server == NULL) {
+		return OD_EOOM;
+	}
+	od_id_generate(&server->id, "s");
+	server->global = client->global;
+	server->endpoint = endpoint;
+	od_rules_storage_ref(endpoint->storage);
+
+	/*
+	 * the server is dedicated to this client and is never returned
+	 * to the pool, so it is attached manually, without any pool
+	 * manipulations
+	 */
+	server->client = client;
+	client->server = server;
+	server->key_client = client->key;
+
+	int rc;
+	rc = od_backend_connect_to(server, context, &endpoint->address,
+				   storage->tls_opts, OD_BACKEND_TLS_DEFAULT);
+	if (rc == NOT_OK_RESPONSE) {
+		od_error(&instance->logger, context, client, NULL,
+			 "replication proxy: failed to connect to %s", addr);
+		goto error;
+	}
+
+	/* forward the original client startup packet to the server as is */
+	machine_msg_t *raw = client->startup_raw;
+	od_assert(raw != NULL);
+	size_t size = machine_msg_size(raw) - 1 /* extra 0-terminator */;
+	size_t written = 0;
+	rc = od_io_write_raw(&server->io, machine_msg_data(raw), size, &written,
+			     1000, 0);
+	machine_msg_free(raw);
+	client->startup_raw = NULL;
+	if (rc != 0 || written != size) {
+		od_error(
+			&instance->logger, context, client, server,
+			"replication proxy: failed to forward startup packet: %s",
+			od_io_error(&server->io));
+		goto error;
+	}
+
+	od_debug(&instance->logger, context, client, server,
+		 "replication proxy: connected to %s, start proxying", addr);
+
+	return OD_OK;
+
+error:
+	client->server = NULL;
+	server->client = NULL;
+	od_backend_close_connection(server);
+	od_server_free(server);
+	return OD_ESERVER_CONNECT;
+}
+
+typedef struct {
+	od_client_t *client;
+	od_server_t *server;
+	int is_client_to_server;
+	atomic_uint_fast64_t *stop;
+	uint64_t transferred;
+} replication_proxy_pipe_arg_t;
+
+static void od_frontend_replication_proxy_pipe(void *arg_)
+{
+	replication_proxy_pipe_arg_t *arg = arg_;
+	od_client_t *client = arg->client;
+	od_server_t *server = arg->server;
+	int is_client_to_server = arg->is_client_to_server;
+	od_instance_t *instance = client->global->instance;
+
+	/*
+	 * the pipe does a single thing: read raw bytes from one side
+	 * and write them to the other side as is, until any of the
+	 * sides is gone
+	 */
+	mm_io_t *src = is_client_to_server ? client->io.io : server->io.io;
+	mm_io_t *dst = is_client_to_server ? server->io.io : client->io.io;
+
+	od_frontend_status_t status = OD_OK;
+	char buf[8192];
+
+	while (!atomic_load(arg->stop)) {
+		if (od_frontend_ctl(client) != OD_OK) {
+			status = OD_ECLIENT_KILLED;
+			break;
+		}
+
+		ssize_t rc = machine_read_raw(src, buf, sizeof(buf));
+		if (rc == 0) {
+			/* eof */
+			status = is_client_to_server ? OD_ECLIENT_READ :
+						       OD_ESERVER_READ;
+			break;
+		}
+		if (rc < 0) {
+			int errno_ = machine_errno();
+			if (!machine_errno_retryable(errno_)) {
+				status = is_client_to_server ? OD_ECLIENT_READ :
+							       OD_ESERVER_READ;
+				break;
+			}
+			/* nothing to read yet, wait for the readability
+			 * or for the peer io activity */
+			mm_io_set_deadline(src, 1000);
+			if (mm_io_wait_deadline(src) == MM_COND_WAIT_FAIL) {
+				/*
+				 * timeout or cancellation, the loop
+				 * will recheck the stop flag and retry
+				 */
+			}
+			continue;
+		}
+
+		size_t left = (size_t)rc;
+		char *pos = buf;
+		while (left > 0) {
+			rc = machine_write_raw(dst, pos, left, NULL);
+			if (rc > 0) {
+				pos += rc;
+				left -= (size_t)rc;
+				arg->transferred += (uint64_t)rc;
+				continue;
+			}
+			int errno_ = machine_errno();
+			if (!machine_errno_retryable(errno_)) {
+				status = is_client_to_server ?
+						 OD_ESERVER_WRITE :
+						 OD_ECLIENT_WRITE;
+				goto done;
+			}
+			mm_io_set_deadline(dst, 1000);
+			if (mm_io_wait_deadline(dst) == MM_COND_WAIT_FAIL) {
+				;
+			}
+		}
+	}
+
+done:
+	atomic_store(arg->stop, 1);
+
+	od_log(&instance->logger, "main", client, server,
+	       "%s replication proxy pipe finished with status %d (%s), "
+	       "%" PRIu64 " bytes transferred",
+	       is_client_to_server ? "client->server" : "server->client",
+	       status, od_frontend_status_to_str(status), arg->transferred);
+}
+
+static void od_frontend_replication_proxy_pump(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	od_server_t *server = client->server;
+
+	od_assert(server != NULL);
+
+	atomic_uint_fast64_t stop;
+	atomic_init(&stop, 0);
+
+	replication_proxy_pipe_arg_t cl_srv_arg;
+	memset(&cl_srv_arg, 0, sizeof(replication_proxy_pipe_arg_t));
+	cl_srv_arg.client = client;
+	cl_srv_arg.server = server;
+	cl_srv_arg.is_client_to_server = 1;
+	cl_srv_arg.stop = &stop;
+
+	replication_proxy_pipe_arg_t srv_cl_arg;
+	memset(&srv_cl_arg, 0, sizeof(replication_proxy_pipe_arg_t));
+	srv_cl_arg.client = client;
+	srv_cl_arg.server = server;
+	srv_cl_arg.is_client_to_server = 0;
+	srv_cl_arg.stop = &stop;
+
+	/*
+	 * link the ios, so a blocked read on one side is woken up
+	 * by the activity on the other one
+	 */
+	od_io_set_peer(&client->io, &server->io);
+	od_io_set_peer(&server->io, &client->io);
+
+	char coro_name[OD_ID_LEN + 16 /* '>s' or '<s' */];
+	memset(coro_name, 0, sizeof(coro_name));
+	od_id_write_to_string(&client->id, coro_name, sizeof(coro_name));
+	int idlen = strlen(coro_name);
+	memcpy(coro_name + idlen, ">s", 2);
+	int64_t cl_srv = machine_coroutine_create_named(
+		od_frontend_replication_proxy_pipe, &cl_srv_arg, coro_name);
+	if (cl_srv == -1) {
+		od_error(
+			&instance->logger, "main", client, server,
+			"can't start client->server replication proxy pipe, errno=%d (%s)",
+			machine_errno(), strerror(machine_errno()));
+		goto out;
+	}
+
+	memcpy(coro_name + idlen, "<s", 2);
+	int64_t srv_cl = machine_coroutine_create_named(
+		od_frontend_replication_proxy_pipe, &srv_cl_arg, coro_name);
+	if (srv_cl == -1) {
+		machine_cancel(cl_srv);
+		machine_join(cl_srv);
+		od_error(
+			&instance->logger, "main", client, server,
+			"can't start server->client replication proxy pipe, errno=%d (%s)",
+			machine_errno(), strerror(machine_errno()));
+		goto out;
+	}
+
+	machine_join(srv_cl);
+	machine_join(cl_srv);
+
+out:
+	od_io_remove_peer(&client->io, &server->io);
+	od_io_remove_peer(&server->io, &client->io);
+}
+
+static od_rule_storage_t *
+od_frontend_replication_proxy_storage(od_client_t *client)
+{
+	/*
+	 * the first remote storage of the configuration is used as
+	 * the target for all replication connections
+	 */
+	od_router_t *router = client->global->router;
+	od_instance_t *instance = client->global->instance;
+
+	od_rules_lock(&router->rules);
+
+	od_rule_storage_t *storage = NULL;
+	od_list_t *i;
+	od_list_foreach (&router->rules.storages, i) {
+		od_rule_storage_t *s;
+		s = od_container_of(i, od_rule_storage_t, link);
+		if (s->storage_type != OD_RULE_STORAGE_REMOTE) {
+			continue;
+		}
+		storage = od_rules_storage_ref(s);
+		break;
+	}
+
+	od_rules_unlock(&router->rules);
+
+	if (storage == NULL) {
+		od_error(&instance->logger, "main", client, NULL,
+			 "replication proxy: no remote storage found");
+	}
+
+	return storage;
+}
+
+static void od_frontend_replication_proxy(od_client_t *client)
+{
+	/*
+	 * replication_proxy is on: replication connections are forwarded
+	 * to the server as is, bypassing all of the odyssey logic
+	 *
+	 * no rules matching, authentication, hba, pooling, deploy and
+	 * catchup checks is done: the first remote storage of the
+	 * configuration is the target, the client and the server just
+	 * talk to each other through two raw byte pipes
+	 */
+
+	od_instance_t *instance = client->global->instance;
+	od_extension_t *extensions = client->global->extensions;
+	od_module_t *modules = extensions->modules;
+
+	if (instance->config.log_session) {
+		od_log(&instance->logger, "main", client, NULL,
+		       "replication connection, full proxy mode");
+	}
+
+	od_frontend_status_t status = OD_OK;
+
+	od_rule_storage_t *storage =
+		od_frontend_replication_proxy_storage(client);
+	if (storage == NULL) {
+		od_frontend_fatal(
+			client, KIWI_CONNECTION_FAILURE,
+			"no remote storage found for replication connection");
+		status = OD_EATTACH;
+		goto done;
+	}
+
+	if (storage->endpoints_count == 0) {
+		od_error(&instance->logger, "main", client, NULL,
+			 "replication proxy: storage '%s' has no endpoints",
+			 storage->name);
+		od_frontend_fatal(
+			client, KIWI_CONNECTION_FAILURE,
+			"storage for replication connection has no endpoints");
+		od_rules_storage_unref(storage);
+		status = OD_EATTACH;
+		goto done;
+	}
+
+	/* the first endpoint only, no fallbacks */
+	status = od_frontend_replication_proxy_attach(client, "main", storage,
+						      &storage->endpoints[0]);
+
+	od_rules_storage_unref(storage);
+
+	if (status != OD_OK) {
+		od_frontend_fatal(
+			client, KIWI_CONNECTION_FAILURE,
+			"failed to connect to remote server for replication connection");
+		goto done;
+	}
+
+	/* proxy all the bytes in both directions */
+	od_frontend_replication_proxy_pump(client);
+
+	/*
+	 * the replication server connection is never returned
+	 * to the pool, it is force closed
+	 */
+	od_frontend_replication_proxy_server_close(client);
+
+	status = OD_STOP;
+
+done:
+	od_frontend_on_client_disconnect(status, client, "main",
+					 0 /* force server close */);
+
+	od_list_t *i;
+	od_list_foreach (&modules->link, i) {
+		od_module_t *module;
+		module = od_container_of(i, od_module_t, link);
+		module->disconnect_cb(client, status);
+	}
+
+	od_frontend_close(client);
 }
 
 static od_frontend_status_t process_server_async_msg(od_client_t *client,
@@ -3075,6 +3487,24 @@ void od_frontend(void *arg)
 		cancel_finished(global, instance);
 
 		od_frontend_close(client);
+		return;
+	}
+
+	/*
+	 * replication full proxy mode: when the global replication_proxy
+	 * option is enabled, all replication connections are forwarded
+	 * to the server as is, bypassing all of the odyssey logic -
+	 * no rules matching, authentication, hba, pooling, deploy etc.
+	 *
+	 * the first remote storage of the configuration is used as the
+	 * target, its first endpoint in particular
+	 */
+	if (instance->config.replication_proxy &&
+	    (client->physical_rep || client->logical_rep)) {
+		od_routing_slot_release(global);
+
+		od_frontend_replication_proxy(client);
+
 		return;
 	}
 

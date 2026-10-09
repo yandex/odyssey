@@ -163,6 +163,12 @@ struct od_config {
 	int virtual_processing; /* enables some cases for full-virtual query processing */
 	int virtual_transaction;
 
+	/*
+	 * forward replication connections to the server as is,
+	 * bypassing all of the odyssey logic (authentication, pooling etc.)
+	 */
+	int replication_proxy;
+
 	char availability_zone[OD_MAX_AVAILABILITY_ZONE_LENGTH];
 
 	int max_sigterms_to_die;
