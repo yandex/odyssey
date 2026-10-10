@@ -15,6 +15,8 @@
 
 void od_server_free(od_server_t *server)
 {
+	kiwi_vars_free(&server->vars);
+
 	od_io_close(&server->io);
 	od_io_free(&server->io);
 

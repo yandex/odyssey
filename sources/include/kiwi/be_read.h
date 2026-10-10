@@ -31,6 +31,13 @@ static inline void kiwi_be_startup_init(kiwi_be_startup_t *su)
 	kiwi_var_init(&su->replication, NULL, 0);
 }
 
+static inline void kiwi_be_startup_free(kiwi_be_startup_t *su)
+{
+	kiwi_var_free(&su->user);
+	kiwi_var_free(&su->database);
+	kiwi_var_free(&su->replication);
+}
+
 static inline int kiwi_be_read_options(kiwi_be_startup_t *su, char *pos,
 				       uint32_t pos_size, kiwi_vars_t *vars)
 {
