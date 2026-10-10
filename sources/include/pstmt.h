@@ -55,7 +55,7 @@ typedef struct {
 } od_global_pstmt_map_t;
 
 struct od_pstmt {
-	/* own the desc->data copy */
+	/* desc.data points to desc_data */
 	od_pstmt_desc_t desc;
 	od_pstmt_name_t name;
 
@@ -77,7 +77,22 @@ struct od_pstmt {
 	 */
 	atomic_uint_fast64_t refs;
 
+	/*
+	 * pins keep the pstmt alive while the pointer may still be
+	 * dereferenced:
+	 *
+	 * - one pin is held by the global pstmts map entry, released
+	 *   by the value dtor when the entry is removed
+	 * - one transient pin is held by od_pstmt_unref between the
+	 *   refs decrement and od_global_pstmt_try_remove completion
+	 *
+	 * the last unpin frees the pstmt itself
+	 */
+	atomic_uint_fast64_t pins;
+
 	od_global_pstmt_map_t *source;
+
+	_Alignas(max_align_t) uint8_t desc_data[];
 };
 
 /* "P_0" -> *od_pstmt_t */
@@ -136,10 +151,16 @@ void od_global_pstmt_foreach(od_global_pstmt_map_t *gm, od_global_pstmt_cb cb,
 /* helpers */
 char *od_pstmt_name_from_parse(machine_msg_t *msg);
 od_pstmt_desc_t od_pstmt_desc_from_parse(machine_msg_t *msg);
-od_pstmt_desc_t od_pstmt_desc_copy(const od_pstmt_desc_t desc);
 
 machine_msg_t *od_pstmt_parse_of(const od_pstmt_t *pstmt);
 machine_msg_t *od_pstmt_describe_of(const od_pstmt_t *pstmt);
+
+static inline void od_pstmt_pin(od_pstmt_t *pstmt)
+{
+	atomic_fetch_add_explicit(&pstmt->pins, 1, memory_order_relaxed);
+}
+
+void od_pstmt_unpin(od_pstmt_t *pstmt);
 
 /*
  * should be called only with
@@ -153,6 +174,14 @@ static inline void od_pstmt_ref(od_pstmt_t *pstmt)
 
 static inline void od_pstmt_unref(od_pstmt_t *pstmt)
 {
+	/*
+	 * keep the pstmt (and its desc bytes) alive while this unref
+	 * is in flight: another thread can take a ref, use the pstmt
+	 * and remove it from the global map while we go from the refs
+	 * decrement to od_global_pstmt_try_remove
+	 */
+	od_pstmt_pin(pstmt);
+
 	uint64_t v = atomic_fetch_sub_explicit(&pstmt->refs, 1,
 					       memory_order_release);
 	od_assert(v > 1);
@@ -163,4 +192,6 @@ static inline void od_pstmt_unref(od_pstmt_t *pstmt)
 		 */
 		od_global_pstmt_try_remove(pstmt->source, pstmt);
 	}
+
+	od_pstmt_unpin(pstmt);
 }

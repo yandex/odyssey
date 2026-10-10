@@ -578,8 +578,8 @@ int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
  * global map
  *
  * key:   od_pstmt_desc_t (inline, non-owning — desc.data points into
- *        the value's desc.data, so the key is a "view" of the value)
- * value: od_pstmt_t (inline, owns its own copy of desc.data)
+ *        the value's desc bytes, so the key is a "view" of the value)
+ * value: od_pstmt_t*
  */
 
 static mm_hash_t xxh_pstmt_desc(const void *data)
@@ -616,12 +616,33 @@ pstmt_is_correct_deletion(od_pstmt_t *p)
 	return r == 1 || (r == 0 && p->desc.data == NULL);
 }
 
-static void pstmt_desc_val_dtor(void *val)
+void od_pstmt_unpin(od_pstmt_t *pstmt)
 {
-	od_pstmt_t *pstmt = val;
+	uint64_t v = atomic_fetch_sub_explicit(&pstmt->pins, 1,
+					       memory_order_release);
+	if (v > 1) {
+		return;
+	}
+
 	od_assert(pstmt_is_correct_deletion(pstmt));
 	od_query_ctx_reset(&pstmt->query_ctx);
-	od_free(pstmt->desc.data);
+	od_free(pstmt);
+}
+
+static void pstmt_desc_val_dtor(void *val)
+{
+	od_pstmt_t *pstmt = *(od_pstmt_t **)val;
+
+	if (pstmt == NULL) {
+		/*
+		 * the entry was created but its struct was never set -
+		 * this happens when the struct allocation failed and the
+		 * entry was removed right away
+		 */
+		return;
+	}
+
+	od_pstmt_unpin(pstmt);
 }
 
 static void pstmt_init_new(od_global_pstmt_map_t *hm, od_pstmt_t *out)
@@ -630,6 +651,7 @@ static void pstmt_init_new(od_global_pstmt_map_t *hm, od_pstmt_t *out)
 						 memory_order_relaxed);
 	od_release_assert(num <= OD_MAX_PSTMT_NUM);
 
+	atomic_init(&out->pins, 1);
 	atomic_init(&out->refs, 1);
 	out->source = hm;
 
@@ -642,11 +664,11 @@ od_global_pstmt_map_t *od_global_pstmts_map_create(size_t nlocks)
 	mm_hashmap_t *hm = mm_hashmap_create(
 		10000 /* XXX: big enough? */, nlocks,
 		sizeof(od_pstmt_desc_t) /* key size */,
-		sizeof(od_pstmt_t) /* value size */,
+		sizeof(od_pstmt_t *) /* value size */,
 		pstmt_desc_cmp /* key comparator */,
 		xxh_pstmt_desc /* key hash */,
 		NULL /* key does not own desc.data */,
-		pstmt_desc_val_dtor /* value owns desc.data */,
+		pstmt_desc_val_dtor /* value owns the pstmt pointer */,
 		NULL /* no key copy — raw memcpy, data ptr overwritten after insert */
 	);
 
@@ -681,6 +703,7 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 	int rc;
 	od_pstmt_desc_t *key;
 	od_pstmt_t *value;
+	od_pstmt_t **slot;
 
 	/*
 	 * lock_key will creates a key that is binary-copy of desc
@@ -693,26 +716,45 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 		return NULL;
 	}
 
-	value = (od_pstmt_t *)mm_hashmap_kvp_val(pstmts->hm, klock.kvp);
+	slot = (od_pstmt_t **)mm_hashmap_kvp_val(pstmts->hm, klock.kvp);
 	key = (od_pstmt_desc_t *)mm_hashmap_kvp_key(pstmts->hm, klock.kvp);
 
 	if (!klock.found) {
-		/* init new prep stmt */
-		memset(value, 0, sizeof(od_pstmt_t));
-		pstmt_init_new(pstmts, value);
-
-		value->desc = od_pstmt_desc_copy(desc);
-		if (value->desc.data == NULL) {
+		/*
+		 * init new prep stmt: the struct and the desc bytes are
+		 * one allocation, desc.data points to the trailing bytes
+		 */
+		value = od_malloc(sizeof(od_pstmt_t) + desc.len);
+		if (value == NULL) {
+			/* slot is still NULL, the value dtor handles this */
 			mm_hashmap_remove(pstmts->hm, &klock);
 			return NULL;
 		}
+
+		/*
+		 * the dtor owns the struct from now on, even if the
+		 * steps below fail
+		 */
+		*slot = value;
+
+		memset(value, 0, sizeof(od_pstmt_t));
+		pstmt_init_new(pstmts, value);
+
+		if (desc.data == NULL) {
+			mm_hashmap_remove(pstmts->hm, &klock);
+			return NULL;
+		}
+
+		value->desc.len = desc.len;
+		value->desc.data = value->desc_data;
+		memcpy(value->desc_data, desc.data, desc.len);
 
 		/*
 		 * rewrite the key's data pointer to point into the value
 		 * so the key becomes a non-owning view of the value, instead of
 		 * memcpy of find key (desc)
 		 */
-		key->data = value->desc.data;
+		key->data = value->desc_data;
 
 		/*
 		 * parse the query text once and cache the query context flags
@@ -725,6 +767,7 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 					&value->query_ctx, parsing);
 	} else {
 		/* the key already exists and has a copy of desc.data, do nothing */
+		value = *slot;
 	}
 
 	/* the call-side now holds the ref too */
@@ -748,11 +791,17 @@ void od_global_pstmt_try_remove(od_global_pstmt_map_t *gm, od_pstmt_t *pstmt)
 	}
 
 	/*
-	 * every pstmt must be created from global hashmap,
-	 * so no need to check the klock.kvp != NULL
+	 * while this thread was going from the refs decrement to the
+	 * lock acquisition, another thread could remove the entry
+	 * (klock.kvp == NULL) or re-create it for the same desc (the
+	 * found kvp belongs to another pstmt) — in both cases this
+	 * entry is not ours anymore
 	 */
-	od_assert(klock.kvp != NULL);
-	od_assert((od_pstmt_t *)mm_hashmap_kvp_val(gm->hm, klock.kvp) == pstmt);
+	if (klock.kvp == NULL ||
+	    *(od_pstmt_t **)mm_hashmap_kvp_val(gm->hm, klock.kvp) != pstmt) {
+		mm_hashmap_unlock_key(gm->hm, &klock);
+		return;
+	}
 
 	/*
 	 * note: ref can be done only with the lock held (create_or_get)
@@ -800,7 +849,7 @@ static int foreach_wrapper(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp, void **argv)
 	arg = argv[1];
 
 	const od_pstmt_t *pstmt =
-		(const od_pstmt_t *)mm_hashmap_kvp_val(hm, kvp);
+		*(od_pstmt_t *const *)mm_hashmap_kvp_val(hm, kvp);
 
 	return p.cb(pstmt, arg);
 }
@@ -868,23 +917,4 @@ machine_msg_t *od_pstmt_describe_of(const od_pstmt_t *pstmt)
 						     strlen(srv_name) + 1);
 
 	return dmsg;
-}
-
-od_pstmt_desc_t od_pstmt_desc_copy(const od_pstmt_desc_t desc)
-{
-	if (desc.data == NULL) {
-		return desc;
-	}
-
-	od_pstmt_desc_t copy;
-	memset(&copy, 0, sizeof(od_pstmt_desc_t));
-
-	copy.data = od_malloc(desc.len);
-	if (copy.data != NULL) {
-		copy.len = desc.len;
-		memcpy(copy.data, desc.data, desc.len);
-		return copy;
-	}
-
-	return copy;
 }
