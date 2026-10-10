@@ -18,7 +18,7 @@ void mm_compression_free(mm_io_t *io)
 	}
 }
 
-int mm_compression_writev(mm_io_t *io, struct iovec *iov, int n,
+int mm_compression_writev(mm_io_t *io, const struct iovec *iov, int n,
 			  size_t *processed)
 {
 	int size = mm_iov_size_of(iov, n);

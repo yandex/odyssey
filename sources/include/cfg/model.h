@@ -148,6 +148,7 @@ typedef struct od_cfg_listen {
 	od_cfg_balancing_t balancing;
 
 	od_cfg_int_field_t client_login_timeout;
+	od_cfg_bool_field_t compression;
 	od_cfg_int_field_t backlog;
 
 	od_cfg_string_field_t tls;
