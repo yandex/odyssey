@@ -265,7 +265,12 @@ static int run_refresh_task(od_global_t *global, od_instance_t *instance,
 	arg->instance = instance;
 	arg->route = route;
 	arg->rule = rule;
-	strcpy(arg->user, user->value);
+	if (user->value_len > (int)sizeof(arg->user)) {
+		od_error(&instance->logger, "auth_query", client, NULL,
+			 "user name is too long: %d bytes", user->value_len);
+		goto error;
+	}
+	memcpy(arg->user, user->value, user->value_len);
 
 	char *format_pos = rule->auth_query;
 	char *format_end = rule->auth_query + strlen(rule->auth_query);

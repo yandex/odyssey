@@ -121,7 +121,7 @@ static inline int kiwi_parse_option_and_update_var(kiwi_vars_t *vars,
 						   const char *str, size_t len)
 {
 	char name[KIWI_MAX_VAR_SIZE];
-	char val[KIWI_MAX_VAR_SIZE];
+	char val_buf[KIWI_MAX_VAR_SIZE];
 
 	size_t equal_pos = find_eq_pos(str, len);
 	if (equal_pos == len) {
@@ -136,7 +136,23 @@ static inline int kiwi_parse_option_and_update_var(kiwi_vars_t *vars,
 		return -1;
 	}
 
-	if (unescape(str + equal_pos + 1, vlen, val, sizeof(val), &vlen) != 0) {
+	/*
+	 * an unescaped value is never longer than the raw one,
+	 * but it may not fit into the stack buffer - fall back
+	 * to the heap in that case
+	 */
+	char *val = val_buf;
+	char *val_heap = NULL;
+	if (vlen + 1 > sizeof(val_buf)) {
+		val_heap = malloc(vlen + 1);
+		if (val_heap == NULL) {
+			return -1;
+		}
+		val = val_heap;
+	}
+
+	if (unescape(str + equal_pos + 1, vlen, val, vlen + 1, &vlen) != 0) {
+		free(val_heap);
 		return -1;
 	}
 
@@ -147,6 +163,8 @@ static inline int kiwi_parse_option_and_update_var(kiwi_vars_t *vars,
 	 * silently skip them, only malformed tokens are fatal here
 	 */
 	kiwi_vars_update(vars, name, (int)nlen + 1, val, (int)vlen + 1);
+
+	free(val_heap);
 
 	return 0;
 }
