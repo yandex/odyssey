@@ -445,6 +445,7 @@ set(od_test_src
     tests/machinarium/test_read_timeout.c
     tests/machinarium/test_read_cancel.c
     tests/machinarium/test_read_var.c
+    tests/machinarium/test_read_close.c
     tests/machinarium/test_ring_buffer.c
     tests/machinarium/test_tls0.c
     tests/machinarium/test_tls_verify_error.c

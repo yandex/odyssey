@@ -1280,7 +1280,16 @@ void od_router_cancel(od_router_t *router, kiwi_key_t *key)
 	od_route_unlock(route);
 
 	od_stat_cancel(&route->stats);
-	od_cancel(global, storage, address, &server->key, &server->id);
+	int status =
+		od_cancel(global, storage, address, &server->key, &server->id);
+	if (status != OK_RESPONSE) {
+		/* The packet can arrive after our transport has failed. The client
+		 * key lock prevents detach until this backend is marked offline;
+		 * it must never be assigned to another frontend afterward. */
+		od_route_lock(route);
+		server->offline = 1;
+		od_route_unlock(route);
+	}
 
 	od_global_clients_map_unlock(global->instance->clients_by_key,
 				     &client_klock);

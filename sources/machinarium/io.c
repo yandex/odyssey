@@ -35,7 +35,12 @@ static void mm_io_on_err_cb(mm_fd_t *handle)
 	mm_cond_signal(&io->cond);
 
 	io->errored = 1;
-	io->error = mm_socket_error(handle->fd);
+	/* SO_ERROR is cleared when read. Repeated error notifications must not
+	 * erase the error already consumed by an earlier callback. */
+	int error = mm_socket_error(handle->fd);
+	if (error != 0) {
+		io->error = error;
+	}
 	io->connected = 0;
 }
 
@@ -469,6 +474,12 @@ ssize_t mm_io_write(mm_io_t *io, const void *buf, size_t size)
 ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 {
 	mm_errno_set(0);
+	/* The event loop consumes SO_ERROR on reset. Preserve the latched error
+	 * so a subsequent recv cannot turn an uncertain reset into clean EOF. */
+	if (io->error) {
+		mm_errno_set(io->error);
+		return -1;
+	}
 	ssize_t rc;
 	if (mm_tls_is_active(io)) {
 		rc = mm_tls_read(io, buf, size);

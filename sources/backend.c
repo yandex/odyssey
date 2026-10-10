@@ -54,14 +54,14 @@ static inline int od_backend_terminate(od_server_t *server)
 	return od_write(&server->io, msg);
 }
 
-void od_backend_close_connection(od_server_t *server)
+static void od_backend_disconnect(od_server_t *server, int graceful)
 {
 	od_assert(server != NULL);
 	/* failed to connect to endpoint, so notring to do */
 	if (od_backend_not_connected(server)) {
 		return;
 	}
-	if (mm_io_connected(server->io.io)) {
+	if (graceful && mm_io_connected(server->io.io)) {
 		od_backend_terminate(server);
 	}
 
@@ -76,6 +76,17 @@ void od_backend_close_connection(od_server_t *server)
 		machine_tls_free(server->tls);
 		server->tls = NULL;
 	}
+}
+
+void od_backend_close_connection(od_server_t *server)
+{
+	od_backend_disconnect(server, 1);
+}
+
+void od_backend_abort_connection(od_server_t *server)
+{
+	/* CancelRequest connections have no startup session to terminate. */
+	od_backend_disconnect(server, 0);
 }
 
 void od_backend_error(od_server_t *server, char *context, char *data,
@@ -1059,14 +1070,18 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	 * but there is no that powerful function in mm
 	 * so just do the things older pg did - it will work too
 	 * https://github.com/postgres/postgres/blob/REL_16_0/src/interfaces/libpq/fe-connect.c#L4946-L4960
+	 *
+	 * CancelRequest has no response packet: a clean EOF acknowledges delivery
+	 * A timeout/reset cannot prove PostgreSQL processed the packet
 	 */
-	machine_msg_t *unused =
-		od_read(&server->io, cancel_timeout, OD_READ_BE);
-	if (unused != NULL) {
-		machine_msg_free(unused);
+	machine_msg_t *response =
+		machine_read(server->io.io, 1, cancel_timeout);
+	if (response != NULL) {
+		machine_msg_free(response);
+		return NOT_OK_RESPONSE;
 	}
 
-	return 0;
+	return machine_errno() == 0 ? OK_RESPONSE : NOT_OK_RESPONSE;
 }
 
 int od_backend_update_parameter(od_server_t *server, char *context, char *data,
