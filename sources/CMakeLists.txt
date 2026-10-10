@@ -99,6 +99,7 @@ set(od_src
     cancel.c
     client.c
     console.c
+    injection.c
     deploy.c
     reset.c
     pstmt.c

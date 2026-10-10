@@ -54,6 +54,13 @@ int od_console_node_print(const od_console_node_t *node, char *buf,
 		return snprintf(buf, buflen, "(kill-client %s)", n->id);
 	}
 
+	case OD_CONSOLE_NODE_TYPE_LOAD_STMT: {
+		const od_console_load_stmt_t *n =
+			(const od_console_load_stmt_t *)node;
+		return snprintf(buf, buflen, "(load %s)",
+				n->name ? n->name : "");
+	}
+
 	case OD_CONSOLE_NODE_TYPE_RELOAD_STMT:
 		return snprintf(buf, buflen, "(reload)");
 

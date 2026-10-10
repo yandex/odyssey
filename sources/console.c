@@ -27,6 +27,7 @@
 #include <extension.h>
 #include <cron.h>
 #include <option.h>
+#include <injection.h>
 #include <msg.h>
 #include <worker.h>
 #include <console/parser.h>
@@ -2452,6 +2453,17 @@ static inline int od_console_kill_client(od_client_t *client,
 	return 0;
 }
 
+static inline int od_console_load(od_client_t *client, machine_msg_t *stream,
+				  const char *name)
+{
+	od_instance_t *instance = client->global->instance;
+
+	od_log(&instance->logger, "console", NULL, NULL, "LOAD %s", name);
+	od_injection_load(name);
+
+	return kiwi_be_write_complete(stream, "LOAD", 5);
+}
+
 static inline int od_console_reload(od_client_t *client, machine_msg_t *stream)
 {
 	od_instance_t *instance = client->global->instance;
@@ -2692,6 +2704,17 @@ int od_console_query(od_client_t *client, machine_msg_t *stream,
 		default:
 			goto bad_query;
 		}
+		if (rc == NOT_OK_RESPONSE) {
+			goto bad_query;
+		}
+		break;
+	}
+	case OD_CONSOLE_NODE_TYPE_LOAD_STMT: {
+		if (!is_admin) {
+			goto incorrect_role;
+		}
+		rc = od_console_load(client, stream,
+				     ((od_console_load_stmt_t *)ast)->name);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}
