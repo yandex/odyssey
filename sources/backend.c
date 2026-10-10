@@ -1070,9 +1070,10 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	 * but there is no that powerful function in mm
 	 * so just do the things older pg did - it will work too
 	 * https://github.com/postgres/postgres/blob/REL_16_0/src/interfaces/libpq/fe-connect.c#L4946-L4960
+	 *
+	 * CancelRequest has no response packet: a clean EOF acknowledges delivery
+	 * A timeout/reset cannot prove PostgreSQL processed the packet
 	 */
-	/* CancelRequest has no response packet: a clean EOF acknowledges delivery.
-	 * A timeout/reset cannot prove PostgreSQL processed the packet. */
 	machine_msg_t *response =
 		machine_read(server->io.io, 1, cancel_timeout);
 	if (response != NULL) {
