@@ -523,7 +523,9 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 
 	if (cfg->promhttp_server_port.seen.is_set) {
 #ifdef PROMHTTP_FOUND
-		if (od_prom_set_port(cfg->promhttp_server_port.value,
+		/* odyssey --test only checks the config and has no cron */
+		if (global->cron != NULL &&
+		    od_prom_set_port(cfg->promhttp_server_port.value,
 				     global->cron->metrics) != OK_RESPONSE) {
 			od_cfg_diag_error(
 				diags, cfg->promhttp_server_port.seen.location,

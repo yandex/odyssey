@@ -200,6 +200,10 @@ typedef struct {
 
 size_t od_config_fields_count(void);
 const od_config_field_t *od_config_field_at(size_t index);
+const od_config_field_t *od_config_field_by_key(const char *key);
+int od_config_field_deprecated(const od_config_field_t *field);
+int od_config_field_format(const od_config_field_t *field, const char *value,
+			   char *buf, size_t size);
 void od_config_field_value(od_config_t *config, const od_config_field_t *field,
 			   char *buf, size_t size);
 void od_config_field_default(const od_config_field_t *field, char *buf,

@@ -82,6 +82,7 @@ set(od_src
     pool.c
     rules.c
     config.c
+    autoconf.c
     dns.c
     route.c
     router.c
@@ -478,7 +479,9 @@ set(od_test_src
     tests/odyssey/test_scram.c
     tests/odyssey/test_sql_parser.c
     tests/odyssey/test_sql_full_parser.c
-    tests/odyssey/test_console_parser.c)
+    tests/odyssey/test_console_parser.c
+    tests/odyssey/test_config_field.c
+    tests/odyssey/test_autoconf.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")
