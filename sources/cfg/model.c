@@ -621,6 +621,7 @@ static void od_cfg_listen_free(od_cfg_listen_t *listen)
 	od_cfg_bool_field_free(&listen->auto_route_ro_on_standby);
 	od_cfg_balancing_free(&listen->balancing);
 	od_cfg_int_field_free(&listen->client_login_timeout);
+	od_cfg_bool_field_free(&listen->compression);
 	od_cfg_int_field_free(&listen->backlog);
 	od_cfg_string_field_free(&listen->tls);
 	od_cfg_string_field_free(&listen->tls_ca_file);
