@@ -17,7 +17,6 @@
 #include <client.h>
 #include <server.h>
 #include <pstmt.h>
-#include <injection.h>
 #include <query.h>
 
 /* XXX: randomize seed ? */
@@ -741,8 +740,6 @@ void od_global_pstmt_try_remove(od_global_pstmt_map_t *gm, od_pstmt_t *pstmt)
 	mm_hashmap_keylock_t klock;
 	int rc;
 	uint64_t refs;
-
-	od_injection_wait("pstmt_try_remove");
 
 	rc = mm_hashmap_lock_key(gm->hm, &klock, &pstmt->desc,
 				 0 /* no create */);
