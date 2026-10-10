@@ -2454,7 +2454,7 @@ static inline int od_console_kill_client(od_client_t *client,
 }
 
 static inline int od_console_load(od_client_t *client, machine_msg_t *stream,
-				   const char *name)
+				  const char *name)
 {
 	od_instance_t *instance = client->global->instance;
 

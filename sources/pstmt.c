@@ -81,7 +81,7 @@ static int unref_pstmt_entry(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
 
 	od_pstmt_t *pstmt = *(od_pstmt_t **)mm_hashmap_kvp_val(hm, kvp);
 
-	od_pstmt_unref_dbg(pstmt, __func__);
+	od_pstmt_unref(pstmt);
 
 	return 0;
 }
@@ -144,7 +144,7 @@ int od_client_add_pstmt(od_client_t *client, const char *name,
 	if (!klock.found || unnamed) {
 		/* new or "" - save */
 		memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
-		od_pstmt_ref_dbg(pstmt, __func__);
+		od_pstmt_ref(pstmt);
 		ret = 0;
 	} else {
 		/* already exists - skip */
@@ -155,7 +155,7 @@ int od_client_add_pstmt(od_client_t *client, const char *name,
 	mm_hashmap_unlock_key(client->prep_stmt_ids, &klock);
 
 	if (to_unref != NULL) {
-		od_pstmt_unref_dbg(to_unref, __func__);
+		od_pstmt_unref(to_unref);
 	}
 
 	return ret;
@@ -178,7 +178,7 @@ int od_client_remove_pstmt(od_client_t *client, const char *name)
 			client->prep_stmt_ids, klock.kvp);
 		mm_hashmap_remove(client->prep_stmt_ids, &klock);
 		if (pstmt != NULL) {
-			od_pstmt_unref_dbg(pstmt, __func__);
+			od_pstmt_unref(pstmt);
 		}
 	}
 
@@ -265,11 +265,11 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 	void *val = mm_hashmap_kvp_val(client->portals, klock.kvp);
 	to_unref = *(od_pstmt_t **)(val);
 	memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
-	od_pstmt_ref_dbg(pstmt, __func__);
+	od_pstmt_ref(pstmt);
 	mm_hashmap_unlock_key(client->portals, &klock);
 
 	if (to_unref != NULL) {
-		od_pstmt_unref_dbg(to_unref, __func__);
+		od_pstmt_unref(to_unref);
 	}
 
 	return 0;
@@ -289,7 +289,7 @@ int od_client_remove_portal(od_client_t *client, const char *portal_name)
 		mm_hashmap_remove(client->portals, &klock);
 
 		if (pstmt != NULL) {
-			od_pstmt_unref_dbg(pstmt, __func__);
+			od_pstmt_unref(pstmt);
 		}
 	}
 
@@ -324,7 +324,7 @@ static int unref_server_pstmt_slot(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
 
 	od_server_pstmt_slot_t *slot = mm_hashmap_kvp_val(hm, kvp);
 
-	od_pstmt_unref_dbg(slot->pstmt, __func__);
+	od_pstmt_unref(slot->pstmt);
 
 	return 0;
 }
@@ -425,7 +425,7 @@ int od_server_add_pstmt(od_server_t *server, od_pstmt_t *pstmt)
 		od_list_append(&server->pstmt_fifo, &slot->link);
 		server->pstmt_count++;
 
-		od_pstmt_ref_dbg(pstmt, __func__);
+		od_pstmt_ref(pstmt);
 		ret = 0;
 	} else {
 		/* count a duplicate add as a hit */
@@ -463,7 +463,7 @@ int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 		od_pstmt_t *p = slot->pstmt;
 		mm_hashmap_remove(server->prep_stmts, &klock);
 		if (p != NULL) {
-			od_pstmt_unref_dbg(p, __func__);
+			od_pstmt_unref(p);
 		}
 	}
 
@@ -542,7 +542,7 @@ int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
 			mm_hashmap_unlock_key(server->prep_stmts, &klock);
 			od_list_unlink(&slot->link);
 			server->pstmt_count--;
-			od_pstmt_unref_dbg(pstmt, __func__);
+			od_pstmt_unref(pstmt);
 			continue;
 		}
 
@@ -567,7 +567,7 @@ int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
 		mm_hashmap_remove(server->prep_stmts, &klock);
 
 		/* last use of pstmt: the unref may free it */
-		od_pstmt_unref_dbg(pstmt, __func__);
+		od_pstmt_unref(pstmt);
 
 		evicted++;
 	}
@@ -729,7 +729,7 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 	}
 
 	/* the call-side now holds the ref too */
-	od_pstmt_ref_dbg(value, __func__);
+	od_pstmt_ref(value);
 
 	mm_hashmap_unlock_key(pstmts->hm, &klock);
 

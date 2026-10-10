@@ -35,8 +35,8 @@ void od_injection_load(const char *name)
 	od_injection_point_t *ip = od_injection_find(name);
 	if (ip != NULL) {
 		/* already loaded - release parked waiters */
-		od_log(NULL, "dbginject", NULL, NULL,
-		       "injection %s: release", name);
+		od_log(NULL, "dbginject", NULL, NULL, "injection %s: release",
+		       name);
 		ip->loaded = false;
 		atomic_store_explicit(&ip->tokens, OD_INJECTION_RELEASE_TOKENS,
 				      memory_order_release);
@@ -65,8 +65,8 @@ void od_injection_wait(const char *name)
 	od_log(NULL, "dbginject", NULL, NULL, "injection %s: parking", name);
 
 	for (;;) {
-		uint64_t v = atomic_load_explicit(&ip->tokens,
-						  memory_order_acquire);
+		uint64_t v =
+			atomic_load_explicit(&ip->tokens, memory_order_acquire);
 		if (v == 0) {
 			machine_sleep(1);
 			continue;

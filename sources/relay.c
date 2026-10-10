@@ -57,7 +57,7 @@ static void xbuf_msg_destroy(void *a)
 	od_xbuf_msg_t *m = a;
 
 	if (m->pstmt != NULL) {
-		od_pstmt_unref_dbg(m->pstmt, __func__);
+		od_pstmt_unref(m->pstmt);
 	}
 
 	machine_msg_free_safe(m->msg);
