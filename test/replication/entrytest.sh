@@ -208,7 +208,41 @@ do_replication_blocked_test() {
     restore_config
 }
 
+do_replication_proxy_test() {
+    # with replication_proxy all replication connections are full proxies:
+    # odyssey does not authenticate the client (server does), does not
+    # pool or deploy anything - just pipes the bytes both ways
+    use_config odyssey_proxy.conf
+
+    do_logical_repl_test
+    do_physical_repl_test
+    do_replication_proxy_no_route_test
+
+    restore_config
+}
+
+do_replication_proxy_no_route_test() {
+    # rules are not involved at all: a replication client from a user
+    # and a database which are not present in any rule still must be
+    # proxied to the first remote storage of the configuration
+    psql -h primary -p 5432 -U postgres -d postgres -c 'drop role if exists no_route_user' || true
+    psql -h primary -p 5432 -U postgres -d postgres -c 'create role no_route_user login replication'
+
+    [ "$(psql "host=odyssey port=6432 user=no_route_user dbname=no_such_db replication=yes" -Atqc 'IDENTIFY_SYSTEM' | wc -l)" -eq 1 ] || {
+        echo "physical replication from a client not present in rules should be proxied"
+        exit 1
+    }
+
+    [ "$(psql "host=odyssey port=6432 user=no_route_user dbname=postgres replication=database" -Atqc 'IDENTIFY_SYSTEM' | wc -l)" -eq 1 ] || {
+        echo "logical replication from a client not present in rules should be proxied"
+        exit 1
+    }
+
+    psql -h primary -p 5432 -U postgres -d postgres -c 'drop role no_route_user'
+}
+
 do_logical_repl_test
 do_physical_repl_test
 do_replication_db_test
 do_replication_blocked_test
+do_replication_proxy_test
