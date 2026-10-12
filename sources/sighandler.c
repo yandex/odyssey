@@ -138,6 +138,8 @@ void od_system_signal_handler(void *arg)
 			    instance->config.max_sigterms_to_die) {
 				exit(1);
 			}
+			/* Prevent late READY after STOPPING or MAINPID change. */
+			od_system_requests_close(system);
 
 			/*
 			 * If we're being replaced by a new process (online restart),
@@ -185,29 +187,19 @@ void od_system_signal_handler(void *arg)
 				       "performing online restart now, SIGHUP is ignored");
 				break;
 			}
-			od_systemd_notify_reloading("Reloading configuration");
-			mm_wait_flag_t *reload_done = mm_wait_flag_create();
-			if (reload_done == NULL) {
-				od_error(&instance->logger, "system", NULL,
-					 NULL,
-					 "failed to create wait flag for "
-					 "reload, notifying ready anyway");
-				od_systemd_notify_ready();
-				break;
+			/* The system loop notifies READY on completion. Keep
+			 * receiving signals here, including SIGTERM during I/O. */
+			od_system_request_t *request;
+			request = od_system_request_create(true);
+			if (request == NULL ||
+			    od_system_request_submit(system, OD_MSG_RELOAD,
+						     request) != 0) {
+				od_error(&instance->logger, "system", NULL, NULL,
+					 "failed to send reload request");
 			}
-			if (od_system_send_msg(system, OD_MSG_RELOAD,
-					       reload_done) != 0) {
-				mm_wait_flag_destroy(reload_done);
-				od_error(&instance->logger, "system", NULL,
-					 NULL,
-					 "failed to send reload request, "
-					 "notifying ready anyway");
-				od_systemd_notify_ready();
-				break;
+			if (request != NULL) {
+				od_system_request_unref(request);
 			}
-			mm_wait_flag_wait(reload_done, UINT32_MAX);
-			mm_wait_flag_destroy(reload_done);
-			od_systemd_notify_ready();
 			break;
 		case OD_SIG_LOG_ROTATE:
 			if (instance->config.log_file) {

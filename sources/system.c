@@ -46,6 +46,82 @@
 #include <restart_sync.h>
 #include <od_ldap.h>
 
+struct od_system_request {
+	atomic_uint refs;
+	mm_wait_flag_t *done;
+	int status;
+	bool notify_ready;
+	od_list_t link;
+};
+
+od_system_request_t *od_system_request_create(bool notify_ready)
+{
+	od_system_request_t *request = od_malloc(sizeof(*request));
+	if (request == NULL) {
+		return NULL;
+	}
+	request->done = mm_wait_flag_create();
+	if (request->done == NULL) {
+		od_free(request);
+		return NULL;
+	}
+	atomic_init(&request->refs, 1);
+	request->status = -1;
+	request->notify_ready = notify_ready;
+	od_list_init(&request->link);
+	return request;
+}
+
+void od_system_request_unref(od_system_request_t *request)
+{
+	if (atomic_fetch_sub(&request->refs, 1) == 1) {
+		mm_wait_flag_destroy(request->done);
+		od_free(request);
+	}
+}
+
+int od_system_request_wait(od_system_request_t *request)
+{
+	if (mm_wait_flag_wait(request->done, UINT32_MAX) != 0) {
+		return -1;
+	}
+	return request->status;
+}
+
+void od_system_requests_close(od_system_t *system)
+{
+	pthread_mutex_lock(&system->request_lock);
+	system->requests_closed = true;
+	pthread_mutex_unlock(&system->request_lock);
+}
+
+static bool od_system_requests_closed(od_system_t *system)
+{
+	pthread_mutex_lock(&system->request_lock);
+	bool closed = system->requests_closed;
+	pthread_mutex_unlock(&system->request_lock);
+	return closed;
+}
+
+static void od_system_request_finish(od_system_t *system,
+				     od_system_request_t *request,
+				     bool canceled)
+{
+	request->status = canceled ? -1 : 0;
+	if (request->notify_ready) {
+		pthread_mutex_lock(&system->request_lock);
+		assert(system->pending_signal_reloads > 0);
+		system->pending_signal_reloads--;
+		if (!canceled && !system->requests_closed &&
+		    system->pending_signal_reloads == 0) {
+			od_systemd_notify_ready();
+		}
+		pthread_mutex_unlock(&system->request_lock);
+	}
+	mm_wait_flag_set(request->done);
+	od_system_request_unref(request);
+}
+
 int od_system_send_msg(od_system_t *system, int msg_type, void *arg)
 {
 	od_instance_t *instance = system->global->instance;
@@ -61,6 +137,32 @@ int od_system_send_msg(od_system_t *system, int msg_type, void *arg)
 	}
 	machine_channel_write(system->system_channel, msg);
 	return 0;
+}
+
+int od_system_request_submit(od_system_t *system, int type,
+			     od_system_request_t *request)
+{
+	assert(type == OD_MSG_RELOAD || type == OD_MSG_GC);
+	/* The unlimited channel write does not suspend a coroutine. */
+	pthread_mutex_lock(&system->request_lock);
+	int rc = -1;
+	if (!system->requests_closed) {
+		atomic_fetch_add(&request->refs, 1);
+		if (request->notify_ready) {
+			od_systemd_notify_reloading("Reloading configuration");
+			system->pending_signal_reloads++;
+		}
+		rc = od_system_send_msg(system, type, request);
+		if (rc != 0) {
+			if (request->notify_ready &&
+			    --system->pending_signal_reloads == 0) {
+				od_systemd_notify_ready();
+			}
+			od_system_request_unref(request);
+		}
+	}
+	pthread_mutex_unlock(&system->request_lock);
+	return rc;
 }
 
 static void *killer(void *arg)
@@ -83,7 +185,9 @@ static void *killer(void *arg)
 		duration = rem;
 	}
 
-	exit(124);
+	/* exit() can wait on a FILE lock held by the loader in fgets().
+	 * The graceful deadline must terminate the process immediately. */
+	_exit(124);
 }
 
 static void start_timeout_thread(uint64_t timeout_ms)
@@ -927,52 +1031,115 @@ static int od_system_reload_apply(od_system_t *system,
 	return 0;
 }
 
-void od_system_config_reload(od_system_t *system)
+typedef struct {
+	od_system_t *system;
+	od_system_request_t *request;
+	od_system_reload_t *reload;
+	od_future_t *future;
+	machine_msg_t *done;
+	int64_t coro_id;
+} od_system_reload_job_t;
+
+static void od_system_reload_wait(void *arg)
+{
+	od_system_reload_job_t *job = arg;
+	if (od_system_requests_closed(job->system)) {
+		od_system_reload_free(job->reload);
+		job->reload = NULL;
+		machine_channel_write(job->system->system_channel, job->done);
+		return;
+	}
+	job->future = od_thread_pool_submit(
+		&job->system->reload_pool, od_system_reload_task, job->reload,
+		NULL, od_system_reload_free, 1);
+	if (job->future != NULL) {
+		/* This coroutine is joined, never canceled, during shutdown. */
+		od_thread_pool_wait(job->future, UINT32_MAX);
+	} else {
+		od_system_reload_free(job->reload);
+	}
+	job->reload = NULL;
+	machine_channel_write(job->system->system_channel, job->done);
+}
+
+static void od_system_reload_status(od_system_t *system, int rc)
 {
 	od_instance_t *instance = system->global->instance;
-
-	od_log(&instance->logger, "config", NULL, NULL,
-	       "importing changes from '%s'", instance->config_file);
-
-	int rc = -1;
-	od_system_reload_t *reload = od_system_reload_create(system);
-	if (reload == NULL) {
-		od_error(&instance->logger, "reload-config", NULL, NULL,
-			 "failed to snapshot configuration for reload");
-		goto done;
-	}
-
-	/* The future owns the job, including when a wait is interrupted. */
-	od_future_t *future = od_thread_pool_submit(
-		&system->reload_pool, od_system_reload_task, reload, NULL,
-		od_system_reload_free, 1);
-	if (future == NULL) {
-		od_system_reload_free(reload);
-		od_error(&instance->logger, "reload-config", NULL, NULL,
-			 "failed to submit configuration reload");
-		goto done;
-	}
-
-	/* Suspend this coroutine so listen coroutines keep accepting clients. */
-	if (od_thread_pool_wait(future, UINT32_MAX) == 0) {
-		reload = od_future_get_result(future);
-		rc = reload->status;
-		if (rc == 0) {
-			rc = od_system_reload_apply(system, reload);
-		}
-	} else {
-		od_error(&instance->logger, "reload-config", NULL, NULL,
-			 "interrupted while waiting for configuration reload");
-	}
-	od_future_unref(future);
-
-done:
-	/* A failed candidate leaves the running configuration in place. */
 	atomic_store(&instance->config_load_failed, rc != 0);
 	if (rc != 0) {
 		od_error(&instance->logger, "reload-config", NULL, NULL,
 			 "failed to load '%s', keeping the running configuration",
 			 instance->config_file);
+	}
+}
+
+static od_system_reload_job_t *od_system_reload_start(od_system_t *system,
+						    od_list_t *requests)
+{
+	/* Only snapshot a queued request after the previous one was applied. */
+	if (od_system_requests_closed(system)) {
+		return NULL;
+	}
+	while (!od_list_empty(requests)) {
+		od_system_request_t *request = od_container_of(
+			od_list_pop(requests), od_system_request_t, link);
+		od_system_reload_job_t *job = od_malloc(sizeof(*job));
+		if (job == NULL) {
+			goto failed;
+		}
+		memset(job, 0, sizeof(*job));
+		job->system = system;
+		job->request = request;
+		job->reload = od_system_reload_create(system);
+		/* Reserve completion before starting work so OOM cannot lose it. */
+		job->done = machine_msg_create(0);
+		if (job->reload != NULL && job->done != NULL) {
+			machine_msg_set_type(job->done, OD_MSG_RELOAD_DONE);
+			job->coro_id = machine_coroutine_create(
+				od_system_reload_wait, job);
+			if (job->coro_id != -1) {
+				od_instance_t *instance;
+				instance = system->global->instance;
+				od_log(&instance->logger, "config", NULL, NULL,
+				       "importing changes from '%s'",
+				       instance->config_file);
+				return job;
+			}
+		}
+		if (job->reload != NULL) {
+			od_system_reload_free(job->reload);
+		}
+		if (job->done != NULL) {
+			machine_msg_free(job->done);
+		}
+		od_free(job);
+failed:
+		od_system_reload_status(system, -1);
+		od_system_request_finish(system, request, false);
+	}
+	return NULL;
+}
+
+static void od_system_reload_job_free(od_system_reload_job_t *job)
+{
+	if (job->future != NULL) {
+		od_future_unref(job->future);
+	}
+	od_free(job);
+}
+
+/* Submission is closed before draining, so no new waiter can be stranded. */
+static void od_system_cancel_messages(od_system_t *system)
+{
+	machine_msg_t *msg;
+	while ((msg = machine_channel_read(system->system_channel, 0)) != NULL) {
+		int type = machine_msg_type(msg);
+		if (type == OD_MSG_RELOAD || type == OD_MSG_GC) {
+			od_system_request_t *request;
+			memcpy(&request, machine_msg_data(msg), sizeof(request));
+			od_system_request_finish(system, request, true);
+		}
+		machine_msg_free(msg);
 	}
 }
 
@@ -1075,6 +1242,9 @@ static inline void od_system(void *arg)
 	}
 
 	/* event loop: handle reload and shutdown requests */
+	od_list_t reload_requests;
+	od_list_init(&reload_requests);
+	od_system_reload_job_t *active_reload = NULL;
 	bool shutdown = false;
 	while (!shutdown) {
 		machine_msg_t *msg = machine_channel_read(
@@ -1095,20 +1265,41 @@ static inline void od_system(void *arg)
 
 		switch (type) {
 		case OD_MSG_RELOAD:
-			od_system_config_reload(system);
-
-			if (msg_arg != NULL) {
-				mm_wait_flag_set((mm_wait_flag_t *)msg_arg);
+			od_list_append(&reload_requests,
+				       &((od_system_request_t *)msg_arg)->link);
+			if (active_reload == NULL) {
+				active_reload = od_system_reload_start(
+					system, &reload_requests);
 			}
 			break;
+		case OD_MSG_RELOAD_DONE: {
+			assert(active_reload != NULL);
+			machine_join(active_reload->coro_id);
+			od_system_reload_t *reload = NULL;
+			if (active_reload->future != NULL) {
+				reload = od_future_get_result(active_reload->future);
+			}
+			int reload_rc = reload != NULL ? reload->status : -1;
+			bool canceled = od_system_requests_closed(system);
+			if (reload_rc == 0 && !canceled) {
+				reload_rc = od_system_reload_apply(system,
+							  reload);
+			}
+			if (!canceled) {
+				od_system_reload_status(system, reload_rc);
+			}
+			od_system_request_finish(system, active_reload->request,
+						 canceled);
+			od_system_reload_job_free(active_reload);
+			active_reload = od_system_reload_start(system,
+						      &reload_requests);
+			break;
+		}
 		case OD_MSG_GC:
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "GC request");
 			od_cron_expire_now(global->cron);
-
-			if (msg_arg != NULL) {
-				mm_wait_flag_set((mm_wait_flag_t *)msg_arg);
-			}
+			od_system_request_finish(system, msg_arg, false);
 			break;
 		case OD_MSG_SHUTDOWN:
 			od_log(&instance->logger, "system", NULL, NULL,
@@ -1128,8 +1319,17 @@ static inline void od_system(void *arg)
 			instance->config.graceful_shutdown_timeout_ms);
 	}
 
-	/* Drain the loader before freeing any global objects used by its jobs. */
-	od_thread_pool_destroy(&system->reload_pool);
+	od_system_requests_close(system);
+	od_system_cancel_messages(system);
+	while (!od_list_empty(&reload_requests)) {
+		od_system_request_t *request = od_container_of(
+			od_list_pop(&reload_requests), od_system_request_t, link);
+		od_system_request_finish(system, request, true);
+	}
+	if (active_reload != NULL) {
+		od_system_request_finish(system, active_reload->request, true);
+		active_reload->request = NULL;
+	}
 
 	od_list_t *i, *n;
 	od_list_foreach_safe (&router->servers, i, n) {
@@ -1146,6 +1346,15 @@ static inline void od_system(void *arg)
 	 * their storage refs — otherwise od_rules_cleanup won't
 	 * reach r==2 and watchdogs won't get set_offline */
 	od_worker_pool_shutdown(worker_pool);
+	/* Close listeners and release waiters first. Keep globals alive until
+	 * slow I/O finishes; the existing graceful timeout bounds this wait. */
+	if (active_reload != NULL) {
+		machine_join(active_reload->coro_id);
+		od_system_cancel_messages(system);
+		od_system_reload_job_free(active_reload);
+	}
+	od_thread_pool_destroy(&system->reload_pool);
+
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 
 	machine_wait_nb(system->sighandler_machine);
@@ -1259,6 +1468,9 @@ void od_system_init(od_system_t *system)
 	system->sighandler_machine = -1;
 	system->system_channel = NULL;
 	system->global = NULL;
+	pthread_mutex_init(&system->request_lock, NULL);
+	system->requests_closed = false;
+	system->pending_signal_reloads = 0;
 }
 
 int od_system_start(od_system_t *system, od_global_t *global)
@@ -1288,5 +1500,6 @@ od_system_t *od_system_create(void)
 
 void od_system_free(od_system_t *system)
 {
+	pthread_mutex_destroy(&system->request_lock);
 	od_free(system);
 }

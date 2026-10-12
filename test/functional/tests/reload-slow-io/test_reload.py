@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""New clients must remain usable while RELOAD waits on config file I/O."""
+"""Clients, GC and shutdown must remain usable during slow RELOAD file I/O."""
 
 import argparse
 import errno
@@ -146,7 +146,7 @@ def wait_fifo_open(process):
     raise AssertionError("could not observe blocked FIFO open in /proc/<pid>/task/*/wchan")
 
 
-def stop(process):
+def stop(process, expected_exit=0):
     if process.poll() is None:
         process.terminate()
         try:
@@ -155,7 +155,7 @@ def stop(process):
             process.kill()
             process.wait(timeout=TIMEOUT)
             raise AssertionError("Odyssey did not shut down after releasing the FIFO")
-    assert process.returncode == 0, f"Odyssey exited with {process.returncode}"
+    assert process.returncode == expected_exit, f"Odyssey exited with {process.returncode}"
 
     # Match ody-stop's sanitizer checks even though we reap our own child.
     for options, fallback in (("ASAN_OPTIONS", "/asan-output.log"),
@@ -220,6 +220,7 @@ def run_case(odyssey, workers, trigger, port, source):
                     expect_config(port, "workers", str(workers))
                     expect_config(port, "log_debug", "no")
                     expect_load_failed(port, 0)
+                    console(port, "gc")
                     if reload_process is not None:
                         assert reload_process.poll() is None, "RELOAD completed before FIFO release"
                 except (AssertionError, subprocess.CalledProcessError,
@@ -298,6 +299,170 @@ def run_case(odyssey, workers, trigger, port, source):
                             reload_process.wait(timeout=TIMEOUT)
 
 
+class ReloadScenario:
+    """Own only the processes and FIFOs created by one lifecycle test."""
+
+    def __init__(self, odyssey, workers, port):
+        self.odyssey = odyssey
+        self.workers = workers
+        self.port = port
+        self.children = []
+        self.writers = []
+
+    def __enter__(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="odyssey-reload-lifecycle-")
+        self.workdir = Path(self.tmp.name)
+        self.config = self.workdir / "odyssey.conf"
+        self.hba = self.workdir / "hba.conf"
+        self.logfile = self.workdir / "odyssey.log"
+        self.write_config("no")
+        self.hba.write_bytes(HBA)
+        self.log = self.logfile.open("w")
+        self.process = subprocess.Popen(
+            [self.odyssey, str(self.config)], stdout=self.log, stderr=self.log,
+        )
+        # Startup is checked in the body, so __exit__ also handles its failure.
+        return self
+
+    def __exit__(self, kind, error, traceback):
+        if error is not None:
+            print(self.logfile.read_text(), flush=True)
+        try:
+            for writer in self.writers:
+                os.close(writer)
+            if self.hba.is_fifo():
+                try:
+                    writer = os.open(self.hba, os.O_WRONLY | os.O_NONBLOCK)
+                except OSError as failure:
+                    if failure.errno != errno.ENXIO:
+                        raise
+                else:
+                    os.close(writer)
+            # Timeout cases assert their expected exit explicitly in the body.
+            stop(self.process, expected_exit=124 if self.process.returncode == 124 else 0)
+        finally:
+            for child in self.children:
+                if child.poll() is None:
+                    child.kill()
+                child.wait(timeout=TIMEOUT)
+            self.log.close()
+            self.tmp.cleanup()
+
+    def write_config(self, debug):
+        self.config.write_text(config_text(self.workdir, self.workers, self.port, debug))
+
+    def reload(self):
+        child = subprocess.Popen(
+            console_command(self.port, "reload"), stdout=self.log, stderr=self.log,
+        )
+        self.children.append(child)
+        return child
+
+    def hold_hba(self):
+        writer = open_fifo_writer(self.hba, self.process)
+        self.writers.append(writer)
+        return writer
+
+    def release_hba(self, writer, replace=False):
+        if replace:
+            self.hba.unlink()
+            self.hba.write_bytes(HBA)
+        os.write(writer, HBA)
+        os.close(writer)
+        self.writers.remove(writer)
+
+    def expect_count(self, message, count):
+        actual = self.logfile.read_text().count(message)
+        assert actual == count, f"expected {count} occurrences of {message!r}, got {actual}"
+
+
+def run_queue_case(odyssey, workers, port):
+    label = f"queue and disconnected waiter, workers={workers}"
+    print(label, flush=True)
+    with ReloadScenario(odyssey, workers, port) as case:
+        wait_ready(case.process, port)
+        case.write_config("yes")
+        case.hba.unlink()
+        os.mkfifo(case.hba)
+        first = case.reload()
+        writer = case.hold_hba()
+
+        # The first candidate has already read 'yes'. The queued one must
+        # read the newer file only after the first candidate is applied.
+        case.write_config("no")
+        second = case.reload()
+        wait_for_check(lambda: case.expect_count("RELOAD command received", 2))
+        console(port, "gc")
+        case.expect_count("importing changes from", 1)
+        assert first.poll() is None and second.poll() is None
+        expect_config(port, "log_debug", "no")
+
+        case.release_hba(writer)
+        first.wait(timeout=TIMEOUT)
+        assert first.returncode == 0
+        wait_fifo_open(case.process)
+        expect_config(port, "log_debug", "yes")
+        assert second.poll() is None, "queued RELOAD replied before its own preparation"
+        writer = case.hold_hba()
+
+        disconnected = case.reload()
+        wait_for_check(lambda: case.expect_count("RELOAD command received", 3))
+        disconnected.kill()
+        disconnected.wait(timeout=TIMEOUT)
+        console(port, "gc")
+        case.expect_count("importing changes from", 2)
+
+        case.release_hba(writer, replace=True)
+        second.wait(timeout=TIMEOUT)
+        assert second.returncode == 0
+        # A fourth request serves as a barrier after the disconnected third.
+        console(port, "reload")
+        wait_for_check(lambda: case.expect_count("importing changes from", 4))
+        expect_config(port, "log_debug", "no")
+        expect_load_failed(port, 0)
+        stop(case.process)
+    print(f"{label}: passed", flush=True)
+
+
+def run_shutdown_case(odyssey, workers, trigger, port, release):
+    label = f"shutdown, workers={workers}, trigger={trigger}, release={release}"
+    print(label, flush=True)
+    with ReloadScenario(odyssey, workers, port) as case:
+        wait_ready(case.process, port)
+        case.write_config("yes")
+        case.hba.unlink()
+        os.mkfifo(case.hba)
+        if trigger == "console":
+            active = case.reload()
+        else:
+            active = None
+            case.process.send_signal(signal.SIGHUP)
+        writer = case.hold_hba()
+        queued = case.reload()
+        count = 2 if active is not None else 1
+        wait_for_check(lambda: case.expect_count("RELOAD command received", count))
+        console(port, "gc")
+        case.process.terminate()
+        wait_for_check(lambda: expect_log(case.logfile, "shutdown request"))
+        queued.wait(timeout=TIMEOUT)
+        assert queued.returncode != 0, "queued RELOAD reported success during shutdown"
+        if active is not None:
+            active.wait(timeout=TIMEOUT)
+            assert active.returncode != 0, "active RELOAD reported success during shutdown"
+        case.expect_count("importing changes from", 1)
+        if release:
+            # The successfully prepared late candidate must be discarded.
+            case.release_hba(writer, replace=True)
+            case.process.wait(timeout=TIMEOUT)
+            stop(case.process)
+            assert "reconfigure rules" not in case.logfile.read_text(), "late candidate applied"
+        else:
+            # Keep the FIFO blocked: SIGTERM must start the existing timer.
+            case.process.wait(timeout=TIMEOUT)
+            stop(case.process, expected_exit=124)
+    print(f"{label}: passed", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--odyssey", default="odyssey")
@@ -317,6 +482,20 @@ def main():
                 except Exception as error:
                     failures.append(
                         f"source={source}, workers={workers}, trigger={trigger}: "
+                        f"{error_details(error)}"
+                    )
+    for workers in (1, 2):
+        try:
+            run_queue_case(args.odyssey, workers, args.port)
+        except Exception as error:
+            failures.append(f"queue, workers={workers}: {error_details(error)}")
+        for trigger in ("console", "sighup"):
+            for release in (True, False):
+                try:
+                    run_shutdown_case(args.odyssey, workers, trigger, args.port, release)
+                except Exception as error:
+                    failures.append(
+                        f"shutdown, workers={workers}, trigger={trigger}, release={release}: "
                         f"{error_details(error)}"
                     )
     if failures:

@@ -130,6 +130,7 @@ extern void odyssey_test_clients_map(void);
 extern void odyssey_test_affinity(void);
 extern void odyssey_test_duration_parse(void);
 extern void odyssey_test_thread_pool(void);
+extern void odyssey_test_system_request(void);
 extern void odyssey_test_linear_alloc(void);
 extern void odyssey_test_scram(void);
 extern void odyssey_test_sql_minimal_parser(void);
@@ -259,6 +260,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_affinity);
 	odyssey_test(odyssey_test_duration_parse);
 	odyssey_test(odyssey_test_thread_pool);
+	odyssey_test(odyssey_test_system_request);
 	odyssey_test(odyssey_test_linear_alloc);
 	odyssey_test(odyssey_test_scram);
 	odyssey_test(odyssey_test_sql_minimal_parser);
