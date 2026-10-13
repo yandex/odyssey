@@ -152,6 +152,10 @@ int main(int argc, char *argv[])
 	 */
 	signal(SIGPIPE, SIG_IGN);
 
+	/* Match Odyssey's default stack size. AWS-LC's ML-KEM key generation
+	 * needs more than Machinarium's default of four pages. */
+	machinarium_set_stack_size(16);
+
 	odyssey_test(kiwi_test_enquote);
 	odyssey_test(kiwi_test_pgoptions);
 	odyssey_test(kiwi_test_be_read_startup_options);
