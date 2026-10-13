@@ -51,6 +51,10 @@ struct od_client {
 	bool is_watchdog;
 
 	kiwi_be_startup_t startup;
+	/* Negotiation state survives the TLS -> frontend ownership transfer. */
+	bool startup_received;
+	bool startup_ssl_done;
+	bool startup_gss_done;
 	kiwi_vars_t vars;
 	kiwi_key_t key;
 
@@ -167,3 +171,4 @@ static inline void od_client_kill(od_client_t *client)
 }
 
 uint32_t od_client_login_timeout(const od_client_t *client);
+uint32_t od_client_startup_timeout(const od_client_t *client);

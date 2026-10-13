@@ -83,7 +83,7 @@ build_release:
 
 build_relwithdbginfo:
 	mkdir -p $(BUILD_REL_DIR)
-	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo && make -j$(CONCURRENCY)
+	cd $(BUILD_REL_DIR) && $(CMAKE_BIN) .. -DCMAKE_BUILD_TYPE=RelWithDbgInfo $(EXTRA_CMAKE_FLAGS) && make -j$(CONCURRENCY)
 
 build_relmemprof:
 	mkdir -p $(BUILD_REL_DIR)

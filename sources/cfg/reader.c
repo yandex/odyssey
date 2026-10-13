@@ -186,6 +186,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_INT(dst, src, promhttp_server_port);
 	MERGE_INT(dst, src, group_checker_interval);
 	MERGE_INT(dst, src, workers);
+	MERGE_INT(dst, src, tls_workers);
 
 #undef MERGE_PLAIN_FLD
 #undef MERGE_BOOL

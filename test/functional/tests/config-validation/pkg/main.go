@@ -55,6 +55,7 @@ func makeTests(field string, isValid bool) {
 func runTests() {
 	tests := []string{
 		"workers",
+		"tls_workers",
 		"resolvers",
 		"coroutine_stack_size",
 		"log_format",

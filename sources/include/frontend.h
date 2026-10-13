@@ -142,6 +142,8 @@ int od_frontend_fatal_detailed(od_client_t *client, const char *code,
 			       const char *detail, const char *hint,
 			       const char *fmt, ...);
 void od_frontend(void *);
+void od_frontend_tls(void *);
+void od_frontend_close(od_client_t *);
 
 typedef struct {
 	od_storage_endpoint_t *endpoint;

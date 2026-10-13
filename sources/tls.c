@@ -168,7 +168,12 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 		return -1; /* prevent possible buffer, protecting against CVE-2021-23214-like attacks */
 	}
 
-	rc = mm_io_set_tls(client->io.io, tls, config->client_login_timeout);
+	uint32_t timeout = od_client_startup_timeout(client);
+	if (timeout == 0) {
+		mm_errno_set(ETIMEDOUT);
+		return -1;
+	}
+	rc = mm_io_set_tls(client->io.io, tls, timeout);
 	if (rc == -1) {
 		od_error(logger, "tls", client, NULL,
 			 "error: %s, login time %" PRIu64 " us",
