@@ -31,10 +31,10 @@ od_tls_opts_t *od_tls_opts_copy(const od_tls_opts_t *source)
 	copy->tls_mode = source->tls_mode;
 
 	const char *values[] = { source->tls, source->tls_ca_file,
-				source->tls_key_file, source->tls_cert_file,
-				source->tls_protocols };
+				 source->tls_key_file, source->tls_cert_file,
+				 source->tls_protocols };
 	char **fields[] = { &copy->tls, &copy->tls_ca_file, &copy->tls_key_file,
-			   &copy->tls_cert_file, &copy->tls_protocols };
+			    &copy->tls_cert_file, &copy->tls_protocols };
 	for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
 		if (values[i] == NULL) {
 			continue;

@@ -194,8 +194,8 @@ void od_system_signal_handler(void *arg)
 			if (request == NULL ||
 			    od_system_request_submit(system, OD_MSG_RELOAD,
 						     request) != 0) {
-				od_error(&instance->logger, "system", NULL, NULL,
-					 "failed to send reload request");
+				od_error(&instance->logger, "system", NULL,
+					 NULL, "failed to send reload request");
 			}
 			if (request != NULL) {
 				od_system_request_unref(request);

@@ -20,8 +20,8 @@ static void canceled_waiter(void *arg)
 
 static od_system_request_t *read_request(od_system_t *system)
 {
-	machine_msg_t *msg = machine_channel_read(system->system_channel,
-						  UINT32_MAX);
+	machine_msg_t *msg =
+		machine_channel_read(system->system_channel, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_type(msg) == OD_MSG_RELOAD);
 	od_system_request_t *request;
@@ -52,8 +52,8 @@ static void test_request_lifetime(void *arg)
 	waiter.request = od_system_request_create(false);
 	waiter.entered = mm_wait_flag_create();
 	test(waiter.request != NULL && waiter.entered != NULL);
-	test(od_system_request_submit(system, OD_MSG_RELOAD,
-				      waiter.request) == 0);
+	test(od_system_request_submit(system, OD_MSG_RELOAD, waiter.request) ==
+	     0);
 	int64_t coro = machine_coroutine_create(canceled_waiter, &waiter);
 	test(coro != -1);
 	test(mm_wait_flag_wait(waiter.entered, UINT32_MAX) == 0);
@@ -74,14 +74,14 @@ static void test_request_lifetime(void *arg)
 	od_system_request_unref(request);
 
 	/* Race releases from the caller and another OS thread. */
-	int64_t consumer = machine_create("request-consumer", request_consumer,
-					  system);
+	int64_t consumer =
+		machine_create("request-consumer", request_consumer, system);
 	test(consumer != -1);
 	for (int i = 0; i < 100; i++) {
 		request = od_system_request_create(false);
 		test(request != NULL);
-		test(od_system_request_submit(system, OD_MSG_RELOAD,
-					      request) == 0);
+		test(od_system_request_submit(system, OD_MSG_RELOAD, request) ==
+		     0);
 		od_system_request_unref(request);
 	}
 	test(machine_wait(consumer) == 0);
@@ -99,8 +99,8 @@ static void test_request_lifetime(void *arg)
 void odyssey_test_system_request(void)
 {
 	test(machinarium_init() == 0);
-	int64_t machine = machine_create("request-test", test_request_lifetime,
-					 NULL);
+	int64_t machine =
+		machine_create("request-test", test_request_lifetime, NULL);
 	test(machine != -1);
 	test(machine_wait(machine) == 0);
 	machinarium_free();

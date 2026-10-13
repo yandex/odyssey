@@ -868,8 +868,7 @@ static int od_system_reload_prepare(od_system_reload_t *reload)
 				od_container_of(j, od_config_listen_t, link);
 			if (listen_config->port == previous->port &&
 			    od_config_listen_host_cmp(listen_config->host,
-						      previous->host) ==
-				    0) {
+						      previous->host) == 0) {
 				/* we have found matched listen config rule */
 				break;
 			}
@@ -1049,9 +1048,9 @@ static void od_system_reload_wait(void *arg)
 		machine_channel_write(job->system->system_channel, job->done);
 		return;
 	}
-	job->future = od_thread_pool_submit(
-		&job->system->reload_pool, od_system_reload_task, job->reload,
-		NULL, od_system_reload_free, 1);
+	job->future = od_thread_pool_submit(&job->system->reload_pool,
+					    od_system_reload_task, job->reload,
+					    NULL, od_system_reload_free, 1);
 	if (job->future != NULL) {
 		/* This coroutine is joined, never canceled, during shutdown. */
 		od_thread_pool_wait(job->future, UINT32_MAX);
@@ -1067,14 +1066,15 @@ static void od_system_reload_status(od_system_t *system, int rc)
 	od_instance_t *instance = system->global->instance;
 	atomic_store(&instance->config_load_failed, rc != 0);
 	if (rc != 0) {
-		od_error(&instance->logger, "reload-config", NULL, NULL,
-			 "failed to load '%s', keeping the running configuration",
-			 instance->config_file);
+		od_error(
+			&instance->logger, "reload-config", NULL, NULL,
+			"failed to load '%s', keeping the running configuration",
+			instance->config_file);
 	}
 }
 
 static od_system_reload_job_t *od_system_reload_start(od_system_t *system,
-						    od_list_t *requests)
+						      od_list_t *requests)
 {
 	/* Only snapshot a queued request after the previous one was applied. */
 	if (od_system_requests_closed(system)) {
@@ -1113,7 +1113,7 @@ static od_system_reload_job_t *od_system_reload_start(od_system_t *system,
 			machine_msg_free(job->done);
 		}
 		od_free(job);
-failed:
+	failed:
 		od_system_reload_status(system, -1);
 		od_system_request_finish(system, request, false);
 	}
@@ -1132,11 +1132,13 @@ static void od_system_reload_job_free(od_system_reload_job_t *job)
 static void od_system_cancel_messages(od_system_t *system)
 {
 	machine_msg_t *msg;
-	while ((msg = machine_channel_read(system->system_channel, 0)) != NULL) {
+	while ((msg = machine_channel_read(system->system_channel, 0)) !=
+	       NULL) {
 		int type = machine_msg_type(msg);
 		if (type == OD_MSG_RELOAD || type == OD_MSG_GC) {
 			od_system_request_t *request;
-			memcpy(&request, machine_msg_data(msg), sizeof(request));
+			memcpy(&request, machine_msg_data(msg),
+			       sizeof(request));
 			od_system_request_finish(system, request, true);
 		}
 		machine_msg_free(msg);
@@ -1277,13 +1279,14 @@ static inline void od_system(void *arg)
 			machine_join(active_reload->coro_id);
 			od_system_reload_t *reload = NULL;
 			if (active_reload->future != NULL) {
-				reload = od_future_get_result(active_reload->future);
+				reload = od_future_get_result(
+					active_reload->future);
 			}
 			int reload_rc = reload != NULL ? reload->status : -1;
 			bool canceled = od_system_requests_closed(system);
 			if (reload_rc == 0 && !canceled) {
-				reload_rc = od_system_reload_apply(system,
-							  reload);
+				reload_rc =
+					od_system_reload_apply(system, reload);
 			}
 			if (!canceled) {
 				od_system_reload_status(system, reload_rc);
@@ -1291,8 +1294,8 @@ static inline void od_system(void *arg)
 			od_system_request_finish(system, active_reload->request,
 						 canceled);
 			od_system_reload_job_free(active_reload);
-			active_reload = od_system_reload_start(system,
-						      &reload_requests);
+			active_reload = od_system_reload_start(
+				system, &reload_requests);
 			break;
 		}
 		case OD_MSG_GC:
@@ -1322,8 +1325,9 @@ static inline void od_system(void *arg)
 	od_system_requests_close(system);
 	od_system_cancel_messages(system);
 	while (!od_list_empty(&reload_requests)) {
-		od_system_request_t *request = od_container_of(
-			od_list_pop(&reload_requests), od_system_request_t, link);
+		od_system_request_t *request =
+			od_container_of(od_list_pop(&reload_requests),
+					od_system_request_t, link);
 		od_system_request_finish(system, request, true);
 	}
 	if (active_reload != NULL) {
