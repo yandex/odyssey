@@ -2471,26 +2471,19 @@ static inline int od_console_reload(od_client_t *client, machine_msg_t *stream)
 	od_log(&instance->logger, "console", NULL, NULL,
 	       "RELOAD command received");
 
-	/* send reload request to system thread and wait for completion */
-	od_system_t *system = client->global->system;
-	mm_wait_flag_t *done = mm_wait_flag_create();
-	if (done == NULL) {
-		od_error(&instance->logger, "console", client, NULL,
-			 "failed to create wait flag for reload");
+	od_system_request_t *request = od_system_request_create(false);
+	if (request == NULL) {
 		return -1;
 	}
-
-	int rc = od_system_send_msg(system, OD_MSG_RELOAD, done);
+	int rc = od_system_request_submit(client->global->system, OD_MSG_RELOAD,
+					  request);
+	if (rc == 0) {
+		rc = od_system_request_wait(request);
+	}
+	od_system_request_unref(request);
 	if (rc != 0) {
-		mm_wait_flag_destroy(done);
-		od_error(&instance->logger, "console", client, NULL,
-			 "failed to send reload request to system thread");
 		return -1;
 	}
-
-	/* wait for system thread to finish reload */
-	mm_wait_flag_wait(done, UINT32_MAX);
-	mm_wait_flag_destroy(done);
 
 	return kiwi_be_write_complete(stream, "RELOAD", 7);
 }
@@ -2501,26 +2494,19 @@ static inline int od_console_gc(od_client_t *client, machine_msg_t *stream)
 
 	od_log(&instance->logger, "console", NULL, NULL, "GC command received");
 
-	/* send GC request to system thread and wait for completion */
-	od_system_t *system = client->global->system;
-	mm_wait_flag_t *done = mm_wait_flag_create();
-	if (done == NULL) {
-		od_error(&instance->logger, "console", client, NULL,
-			 "failed to create wait flag for GC");
+	od_system_request_t *request = od_system_request_create(false);
+	if (request == NULL) {
 		return -1;
 	}
-
-	int rc = od_system_send_msg(system, OD_MSG_GC, done);
+	int rc = od_system_request_submit(client->global->system, OD_MSG_GC,
+					  request);
+	if (rc == 0) {
+		rc = od_system_request_wait(request);
+	}
+	od_system_request_unref(request);
 	if (rc != 0) {
-		mm_wait_flag_destroy(done);
-		od_error(&instance->logger, "console", client, NULL,
-			 "failed to send GC request to system thread");
 		return -1;
 	}
-
-	/* wait for system thread to finish GC */
-	mm_wait_flag_wait(done, UINT32_MAX);
-	mm_wait_flag_destroy(done);
 
 	return kiwi_be_write_complete(stream, "GC", 3);
 }

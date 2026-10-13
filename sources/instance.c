@@ -35,10 +35,13 @@
 
 int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
 		  od_global_t *global, od_hba_rules_t *hba_rules,
-		  const char *config_file)
+		  const char *config_file, int *promhttp_server_port)
 {
 	od_cfg_model_t model;
 	od_cfg_diag_list_t diags;
+	if (promhttp_server_port != NULL) {
+		*promhttp_server_port = 0;
+	}
 
 	od_cfg_model_init(&model);
 	od_cfg_diag_list_init(&diags);
@@ -76,7 +79,7 @@ int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
 	od_cfg_diag_list_init(&diags);
 
 	rc = od_cfg_convert_model(&model, config, rules, global, hba_rules,
-				  &diags);
+				  &diags, promhttp_server_port);
 
 	for (size_t i = 0; i < diags.count; i++) {
 		od_cfg_diag_t *d = &diags.items[i];
@@ -246,7 +249,7 @@ int od_config_testing(od_instance_t *instance)
 
 	int rc;
 	rc = od_cfg_import(&instance->logger, &instance->config, &router.rules,
-			   &global, &hba.rules, instance->config_file);
+			   &global, &hba.rules, instance->config_file, NULL);
 	if (rc == -1) {
 		goto error;
 	}
@@ -420,7 +423,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	/* read config file */
 	int rc;
 	rc = od_cfg_import(&instance->logger, &instance->config, &router.rules,
-			   global, &hba.rules, instance->config_file);
+			   global, &hba.rules, instance->config_file, NULL);
 	if (rc == -1) {
 		goto error;
 	}

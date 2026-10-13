@@ -22,6 +22,32 @@ od_tls_opts_t *od_tls_opts_alloc(void)
 	return opts;
 }
 
+od_tls_opts_t *od_tls_opts_copy(const od_tls_opts_t *source)
+{
+	od_tls_opts_t *copy = od_tls_opts_alloc();
+	if (copy == NULL) {
+		return NULL;
+	}
+	copy->tls_mode = source->tls_mode;
+
+	const char *values[] = { source->tls, source->tls_ca_file,
+				 source->tls_key_file, source->tls_cert_file,
+				 source->tls_protocols };
+	char **fields[] = { &copy->tls, &copy->tls_ca_file, &copy->tls_key_file,
+			    &copy->tls_cert_file, &copy->tls_protocols };
+	for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); i++) {
+		if (values[i] == NULL) {
+			continue;
+		}
+		*fields[i] = od_strdup(values[i]);
+		if (*fields[i] == NULL) {
+			od_tls_opts_free(copy);
+			return NULL;
+		}
+	}
+	return copy;
+}
+
 static inline int od_tls_opts_str_eq(const char *a, const char *b)
 {
 	if (a == NULL || b == NULL) {

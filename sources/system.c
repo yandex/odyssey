@@ -46,6 +46,82 @@
 #include <restart_sync.h>
 #include <od_ldap.h>
 
+struct od_system_request {
+	atomic_uint refs;
+	mm_wait_flag_t *done;
+	int status;
+	bool notify_ready;
+	od_list_t link;
+};
+
+od_system_request_t *od_system_request_create(bool notify_ready)
+{
+	od_system_request_t *request = od_malloc(sizeof(*request));
+	if (request == NULL) {
+		return NULL;
+	}
+	request->done = mm_wait_flag_create();
+	if (request->done == NULL) {
+		od_free(request);
+		return NULL;
+	}
+	atomic_init(&request->refs, 1);
+	request->status = -1;
+	request->notify_ready = notify_ready;
+	od_list_init(&request->link);
+	return request;
+}
+
+void od_system_request_unref(od_system_request_t *request)
+{
+	if (atomic_fetch_sub(&request->refs, 1) == 1) {
+		mm_wait_flag_destroy(request->done);
+		od_free(request);
+	}
+}
+
+int od_system_request_wait(od_system_request_t *request)
+{
+	if (mm_wait_flag_wait(request->done, UINT32_MAX) != 0) {
+		return -1;
+	}
+	return request->status;
+}
+
+void od_system_requests_close(od_system_t *system)
+{
+	pthread_mutex_lock(&system->request_lock);
+	system->requests_closed = true;
+	pthread_mutex_unlock(&system->request_lock);
+}
+
+static bool od_system_requests_closed(od_system_t *system)
+{
+	pthread_mutex_lock(&system->request_lock);
+	bool closed = system->requests_closed;
+	pthread_mutex_unlock(&system->request_lock);
+	return closed;
+}
+
+static void od_system_request_finish(od_system_t *system,
+				     od_system_request_t *request,
+				     bool canceled)
+{
+	request->status = canceled ? -1 : 0;
+	if (request->notify_ready) {
+		pthread_mutex_lock(&system->request_lock);
+		assert(system->pending_signal_reloads > 0);
+		system->pending_signal_reloads--;
+		if (!canceled && !system->requests_closed &&
+		    system->pending_signal_reloads == 0) {
+			od_systemd_notify_ready();
+		}
+		pthread_mutex_unlock(&system->request_lock);
+	}
+	mm_wait_flag_set(request->done);
+	od_system_request_unref(request);
+}
+
 int od_system_send_msg(od_system_t *system, int msg_type, void *arg)
 {
 	od_instance_t *instance = system->global->instance;
@@ -61,6 +137,32 @@ int od_system_send_msg(od_system_t *system, int msg_type, void *arg)
 	}
 	machine_channel_write(system->system_channel, msg);
 	return 0;
+}
+
+int od_system_request_submit(od_system_t *system, int type,
+			     od_system_request_t *request)
+{
+	assert(type == OD_MSG_RELOAD || type == OD_MSG_GC);
+	/* The unlimited channel write does not suspend a coroutine. */
+	pthread_mutex_lock(&system->request_lock);
+	int rc = -1;
+	if (!system->requests_closed) {
+		atomic_fetch_add(&request->refs, 1);
+		if (request->notify_ready) {
+			od_systemd_notify_reloading("Reloading configuration");
+			system->pending_signal_reloads++;
+		}
+		rc = od_system_send_msg(system, type, request);
+		if (rc != 0) {
+			if (request->notify_ready &&
+			    --system->pending_signal_reloads == 0) {
+				od_systemd_notify_ready();
+			}
+			od_system_request_unref(request);
+		}
+	}
+	pthread_mutex_unlock(&system->request_lock);
+	return rc;
 }
 
 static void *killer(void *arg)
@@ -83,7 +185,9 @@ static void *killer(void *arg)
 		duration = rem;
 	}
 
-	exit(124);
+	/* exit() can wait on a FILE lock held by the loader in fgets().
+	 * The graceful deadline must terminate the process immediately. */
+	_exit(124);
 }
 
 static void start_timeout_thread(uint64_t timeout_ms)
@@ -613,95 +717,252 @@ static inline int od_config_listen_host_cmp(char *host_listen,
 	return strcmp(host_listen, host_server);
 }
 
-void od_system_config_reload(od_system_t *system)
+typedef struct {
+	/* Only the system thread uses this borrowed listener during apply. */
+	od_system_server_t *server;
+	/* Owned snapshot: the loader must not access the live listener. */
+	od_config_listen_t previous;
+	/* Borrowed from the candidate config. */
+	od_config_listen_t *listen_config;
+	machine_tls_t *tls;
+	int files_changed;
+} od_system_reload_tls_t;
+
+typedef struct {
+	od_global_t *global;
+	char *config_file;
+	od_config_t config;
+	od_rules_t rules;
+	od_hba_rules_t hba_rules;
+	mm_vector_t tls;
+	int promhttp_server_port;
+	int status;
+} od_system_reload_t;
+
+static void od_system_reload_tls_free(void *element)
+{
+	od_system_reload_tls_t *entry = element;
+	if (entry->tls != NULL) {
+		machine_tls_free(entry->tls);
+	}
+	od_free(entry->previous.host);
+	if (entry->previous.tls_opts != NULL) {
+		od_tls_opts_free(entry->previous.tls_opts);
+	}
+}
+
+static void od_system_reload_init(od_system_reload_t *reload)
+{
+	reload->global = NULL;
+	reload->config_file = NULL;
+	od_config_init(&reload->config);
+	od_rules_init(&reload->rules);
+	od_hba_rules_init(&reload->hba_rules);
+	mm_vector_init(&reload->tls, sizeof(od_system_reload_tls_t),
+		       od_system_reload_tls_free);
+	reload->promhttp_server_port = 0;
+	reload->status = -1;
+}
+
+static void od_system_reload_free(void *arg)
+{
+	od_system_reload_t *reload = arg;
+	mm_vector_destroy(&reload->tls);
+	od_config_free(&reload->config);
+	od_hba_rules_free(&reload->hba_rules);
+	od_rules_cleanup(&reload->rules);
+	od_rules_free(&reload->rules);
+	od_free(reload->config_file);
+	od_free(reload);
+}
+
+static od_system_reload_t *od_system_reload_create(od_system_t *system)
 {
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
-	od_hba_t *hba = system->global->hba;
+	od_system_reload_t *reload = od_malloc(sizeof(*reload));
+	if (reload == NULL) {
+		return NULL;
+	}
+	od_system_reload_init(reload);
+	reload->global = system->global;
+	reload->config_file = od_strdup(instance->config_file);
+	if (reload->config_file == NULL) {
+		goto error;
+	}
+
+	/* Snapshot listen identity and TLS options before handing off the job. */
 	od_list_t *i;
+	od_list_foreach (&router->servers, i) {
+		od_system_server_t *server =
+			od_container_of(i, od_system_server_t, link);
+		if (mm_vector_append(&reload->tls, NULL) != 0) {
+			goto error;
+		}
+		od_system_reload_tls_t *entry = mm_vector_back(&reload->tls);
+		entry->server = server;
+		entry->previous.port = server->config->port;
+		if (server->config->host != NULL) {
+			entry->previous.host = od_strdup(server->config->host);
+			if (entry->previous.host == NULL) {
+				goto error;
+			}
+		}
+		entry->previous.tls_opts =
+			od_tls_opts_copy(server->config->tls_opts);
+		if (entry->previous.tls_opts == NULL) {
+			goto error;
+		}
+	}
+	return reload;
 
-	od_log(&instance->logger, "config", NULL, NULL,
-	       "importing changes from '%s'", instance->config_file);
+error:
+	od_system_reload_free(reload);
+	return NULL;
+}
 
-	od_rules_lock(&router->rules);
-
-	od_rules_stop_checkers(&router->rules);
-
-	od_config_t config;
-	od_config_init(&config);
-
-	od_rules_t rules;
-	od_rules_init(&rules);
-
-	od_hba_rules_t hba_rules;
-	od_hba_rules_init(&hba_rules);
+static int od_system_reload_prepare(od_system_reload_t *reload)
+{
+	od_instance_t *instance = reload->global->instance;
 
 	int rc;
-	rc = od_cfg_import(&instance->logger, &config, &rules, system->global,
-			   &hba_rules, instance->config_file);
+	rc = od_cfg_import(&instance->logger, &reload->config, &reload->rules,
+			   reload->global, &reload->hba_rules,
+			   reload->config_file, &reload->promhttp_server_port);
 	if (rc == -1) {
-		goto error;
+		return -1;
 	}
 
-	rc = od_config_validate(&config, &instance->logger);
+	rc = od_config_validate(&reload->config, &instance->logger);
 	if (rc == -1) {
-		goto error;
+		return -1;
 	}
 
-	rc = od_rules_validate(&rules, &config, &instance->logger);
+	rc = od_rules_validate(&reload->rules, &reload->config,
+			       &instance->logger);
 	if (rc == -1) {
-		goto error;
+		return -1;
 	}
-	od_config_reload(&instance->config, &config);
-	od_logger_set_debug(&instance->logger, instance->config.log_debug,
-			    instance->config.log_debug_sampling);
-	od_hba_reload(hba, &hba_rules);
 
 	/* auto-generate default rule for auth_query if none specified */
-	rc = od_rules_autogenerate_defaults(&rules, &instance->logger);
-
-	od_rules_sort_for_matching(&rules);
-
+	rc = od_rules_autogenerate_defaults(&reload->rules, &instance->logger);
 	if (rc == -1) {
-		goto error;
+		return -1;
 	}
 
-	/*
-	 * Merge storages: reuse unchanged storages (keeping their watchdogs
-	 * and endpoint statuses alive), move new/changed storages into
-	 * router->rules, and unref removed/changed ones.  Running
-	 * watchdogs keep their storages alive via refcount and stop
-	 * automatically when the last non-watchdog ref is dropped.  After
-	 * this, rules in the freshly parsed config reference the correct
-	 * storages, so od_rules_merge can compare origin->storage and
-	 * rule->storage by pointer.
-	 */
-	od_rules_storage_merge(&router->rules, &rules);
+	if (od_rules_sort_for_matching(&reload->rules) != 0) {
+		od_error(&instance->logger, "reload-config", NULL, NULL,
+			 "failed to sort configuration rules");
+		return -1;
+	}
 
-	od_rules_unlock(&router->rules);
-
-	machine_tls_cache_invalidate();
-
-	/* Reload TLS certificates */
-	od_list_foreach (&router->servers, i) {
-		od_system_server_t *server;
+	/* Prepare TLS replacements without changing live listeners. */
+	for (size_t n = 0; n < mm_vector_size(&reload->tls); n++) {
+		od_system_reload_tls_t *entry = mm_vector_get(&reload->tls, n);
+		od_config_listen_t *previous = &entry->previous;
 		od_config_listen_t *listen_config = NULL;
-		server = od_container_of(i, od_system_server_t, link);
 
 		od_list_t *j;
-		od_list_foreach (&config.listen, j) {
+		od_list_foreach (&reload->config.listen, j) {
 			listen_config =
 				od_container_of(j, od_config_listen_t, link);
-			if (listen_config->port == server->config->port &&
+			if (listen_config->port == previous->port &&
 			    od_config_listen_host_cmp(listen_config->host,
-						      server->config->host) ==
-				    0) {
+						      previous->host) == 0) {
 				/* we have found matched listen config rule */
 				break;
 			}
 			listen_config = NULL;
 		}
 
+		char *host_name = od_config_listen_host_name(previous);
+
+		entry->listen_config = listen_config;
+
+		/* build tls from the new config, so that changed cert paths apply */
+		od_config_listen_t *tls_source =
+			listen_config != NULL ? listen_config : previous;
+
+		if (tls_source->tls_opts->tls_mode == OD_CONFIG_TLS_DISABLE) {
+			continue;
+		}
+
+		entry->files_changed =
+			listen_config != NULL &&
+			!od_tls_opts_files_eq(previous->tls_opts,
+					      listen_config->tls_opts);
+
+		/* do not let a broken certificate replace a working one */
+		char tls_error[256];
+		if (od_tls_frontend_validate(tls_source, tls_error,
+					     sizeof(tls_error)) !=
+		    OK_RESPONSE) {
+			od_error(
+				&instance->logger, "reload-config", NULL, NULL,
+				"failed to load tls certificate for %s:%d, keeping previous certificate: %s",
+				host_name, previous->port, tls_error);
+			continue;
+		}
+
+		entry->tls = od_tls_frontend(tls_source);
+		if (entry->tls == NULL) {
+			od_error(
+				&instance->logger, "reload-config", NULL, NULL,
+				"failed to build tls handler for %s:%d, keeping previous certificate",
+				host_name, previous->port);
+			continue;
+		}
+	}
+
+	return 0;
+}
+
+static void *od_system_reload_task(void *arg)
+{
+	od_system_reload_t *reload = arg;
+	reload->status = od_system_reload_prepare(reload);
+	return reload;
+}
+
+static int od_system_reload_apply(od_system_t *system,
+				  od_system_reload_t *reload)
+{
+	od_instance_t *instance = system->global->instance;
+	od_router_t *router = system->global->router;
+
+#ifdef PROMHTTP_FOUND
+	if (reload->promhttp_server_port > 0 &&
+	    od_prom_set_port(reload->promhttp_server_port,
+			     system->global->cron->metrics) != OK_RESPONSE) {
+		od_error(&instance->logger, "reload-config", NULL, NULL,
+			 "can't set prom http server port %d",
+			 reload->promhttp_server_port);
+		return -1;
+	}
+#endif
+
+	od_rules_lock(&router->rules);
+	od_rules_stop_checkers(&router->rules);
+
+	od_config_reload(&instance->config, &reload->config);
+	od_logger_set_debug(&instance->logger, instance->config.log_debug,
+			    instance->config.log_debug_sampling);
+	od_hba_reload(system->global->hba, &reload->hba_rules);
+
+	/*
+	 * Reuse unchanged storages, preserving watchdogs and endpoint status.
+	 * Move changed/new storages into router->rules and re-point candidate
+	 * rules so the subsequent rules merge can compare storage pointers.
+	 */
+	od_rules_storage_merge(&router->rules, &reload->rules);
+	od_rules_unlock(&router->rules);
+
+	machine_tls_cache_invalidate();
+
+	for (size_t n = 0; n < mm_vector_size(&reload->tls); n++) {
+		od_system_reload_tls_t *entry = mm_vector_get(&reload->tls, n);
+		od_system_server_t *server = entry->server;
+		od_config_listen_t *listen_config = entry->listen_config;
 		char *host_name = od_config_listen_host_name(server->config);
 
 		if (listen_config == NULL) {
@@ -713,51 +974,16 @@ void od_system_config_reload(od_system_t *system)
 			od_log(&instance->logger, "reload-config", NULL, NULL,
 			       "reloaded tls mode for %s:%d", host_name,
 			       server->config->port);
-
 			server->config->tls_opts->tls_mode =
 				listen_config->tls_opts->tls_mode;
 		}
 
-		/* build tls from the new config, so that changed cert paths apply */
-		od_config_listen_t *tls_source =
-			listen_config != NULL ? listen_config : server->config;
-
-		if (tls_source->tls_opts->tls_mode == OD_CONFIG_TLS_DISABLE) {
+		if (entry->tls == NULL) {
 			continue;
 		}
 
-		int files_changed =
-			listen_config != NULL &&
-			!od_tls_opts_files_eq(server->config->tls_opts,
-					      listen_config->tls_opts);
-
-		/* do not let a broken certificate replace a working one */
-		char tls_error[256];
-		if (od_tls_frontend_validate(tls_source, tls_error,
-					     sizeof(tls_error)) !=
-		    OK_RESPONSE) {
-			od_error(
-				&instance->logger, "reload-config", NULL, NULL,
-				"failed to load tls certificate for %s:%d, keeping previous certificate: %s",
-				host_name, server->config->port, tls_error);
-			continue;
-		}
-
-		machine_tls_t *tls = od_tls_frontend(tls_source);
-		if (tls == NULL) {
-			od_error(
-				&instance->logger, "reload-config", NULL, NULL,
-				"failed to build tls handler for %s:%d, keeping previous certificate",
-				host_name, server->config->port);
-			continue;
-		}
-
-		/*
-		 * The replaced handle stays alive until shutdown: clients
-		 * accepted earlier still point at it.
-		 */
+		/* Live clients retain the old handle until shutdown. */
 		if (od_system_server_retire_tls(server) != OK_RESPONSE) {
-			machine_tls_free(tls);
 			od_error(
 				&instance->logger, "reload-config", NULL, NULL,
 				"failed to retire tls handler for %s:%d, keeping previous certificate",
@@ -765,19 +991,17 @@ void od_system_config_reload(od_system_t *system)
 			continue;
 		}
 
-		server->tls = tls;
-
-		if (files_changed) {
+		server->tls = entry->tls;
+		entry->tls = NULL; /* ownership transferred to the listener */
+		if (entry->files_changed) {
 			od_log(&instance->logger, "reload-config", NULL, NULL,
 			       "reloaded tls certificate files for %s:%d",
 			       host_name, server->config->port);
 		}
 	}
 
-	od_config_free(&config);
-
 	if (instance->config.log_config) {
-		od_rules_print(&rules, &instance->logger);
+		od_rules_print(&reload->rules, &instance->logger);
 	}
 
 	/* Merge configuration changes.
@@ -788,7 +1012,7 @@ void od_system_config_reload(od_system_t *system)
 	 * Force obsolete clients to disconnect.
 	 */
 	od_log(&instance->logger, "rules", NULL, NULL, "reconfigure rules");
-	int updates = od_router_reconfigure(router, &rules);
+	int updates = od_router_reconfigure(router, &reload->rules);
 
 	/* start watchdogs and group checkers for new/changed storages
 	 * and rules — directly in system thread scheduler */
@@ -800,30 +1024,125 @@ void od_system_config_reload(od_system_t *system)
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
 	od_router_unlock(router);
 
-	/* free unused rules */
-	od_rules_free(&rules);
-
 	od_log(&instance->logger, "rules", NULL, NULL,
 	       "%d routes created/deleted and scheduled for removal", updates);
 
-	/* the file on disk loaded, so a restart would come up on it */
-	atomic_store(&instance->config_load_failed, 0);
-	return;
+	return 0;
+}
 
-error:
-	/*
-	 * Keep running on the config already in memory. The file on disk is
-	 * not usable, so a restart would not come up on it.
-	 */
-	atomic_store(&instance->config_load_failed, 1);
+typedef struct {
+	od_system_t *system;
+	od_system_request_t *request;
+	od_system_reload_t *reload;
+	od_future_t *future;
+	machine_msg_t *done;
+	int64_t coro_id;
+} od_system_reload_job_t;
 
-	od_rules_unlock(&router->rules);
-	od_config_free(&config);
-	od_rules_free(&rules);
+static void od_system_reload_wait(void *arg)
+{
+	od_system_reload_job_t *job = arg;
+	if (od_system_requests_closed(job->system)) {
+		od_system_reload_free(job->reload);
+		job->reload = NULL;
+		machine_channel_write(job->system->system_channel, job->done);
+		return;
+	}
+	job->future = od_thread_pool_submit(&job->system->reload_pool,
+					    od_system_reload_task, job->reload,
+					    NULL, od_system_reload_free, 1);
+	if (job->future != NULL) {
+		/* This coroutine is joined, never canceled, during shutdown. */
+		od_thread_pool_wait(job->future, UINT32_MAX);
+	} else {
+		od_system_reload_free(job->reload);
+	}
+	job->reload = NULL;
+	machine_channel_write(job->system->system_channel, job->done);
+}
 
-	od_error(&instance->logger, "reload-config", NULL, NULL,
-		 "failed to load '%s', keeping the running configuration",
-		 instance->config_file);
+static void od_system_reload_status(od_system_t *system, int rc)
+{
+	od_instance_t *instance = system->global->instance;
+	atomic_store(&instance->config_load_failed, rc != 0);
+	if (rc != 0) {
+		od_error(
+			&instance->logger, "reload-config", NULL, NULL,
+			"failed to load '%s', keeping the running configuration",
+			instance->config_file);
+	}
+}
+
+static od_system_reload_job_t *od_system_reload_start(od_system_t *system,
+						      od_list_t *requests)
+{
+	/* Only snapshot a queued request after the previous one was applied. */
+	if (od_system_requests_closed(system)) {
+		return NULL;
+	}
+	while (!od_list_empty(requests)) {
+		od_system_request_t *request = od_container_of(
+			od_list_pop(requests), od_system_request_t, link);
+		od_system_reload_job_t *job = od_malloc(sizeof(*job));
+		if (job == NULL) {
+			goto failed;
+		}
+		memset(job, 0, sizeof(*job));
+		job->system = system;
+		job->request = request;
+		job->reload = od_system_reload_create(system);
+		/* Reserve completion before starting work so OOM cannot lose it. */
+		job->done = machine_msg_create(0);
+		if (job->reload != NULL && job->done != NULL) {
+			machine_msg_set_type(job->done, OD_MSG_RELOAD_DONE);
+			job->coro_id = machine_coroutine_create(
+				od_system_reload_wait, job);
+			if (job->coro_id != -1) {
+				od_instance_t *instance;
+				instance = system->global->instance;
+				od_log(&instance->logger, "config", NULL, NULL,
+				       "importing changes from '%s'",
+				       instance->config_file);
+				return job;
+			}
+		}
+		if (job->reload != NULL) {
+			od_system_reload_free(job->reload);
+		}
+		if (job->done != NULL) {
+			machine_msg_free(job->done);
+		}
+		od_free(job);
+	failed:
+		od_system_reload_status(system, -1);
+		od_system_request_finish(system, request, false);
+	}
+	return NULL;
+}
+
+static void od_system_reload_job_free(od_system_reload_job_t *job)
+{
+	if (job->future != NULL) {
+		od_future_unref(job->future);
+	}
+	od_free(job);
+}
+
+/* Submission is closed before draining, so no new waiter can be stranded. */
+static void od_system_cancel_messages(od_system_t *system)
+{
+	machine_msg_t *msg;
+	while ((msg = machine_channel_read(system->system_channel, 0)) !=
+	       NULL) {
+		int type = machine_msg_type(msg);
+		if (type == OD_MSG_RELOAD || type == OD_MSG_GC) {
+			od_system_request_t *request;
+			memcpy(&request, machine_msg_data(msg),
+			       sizeof(request));
+			od_system_request_finish(system, request, true);
+		}
+		machine_msg_free(msg);
+	}
 }
 
 static inline void od_system(void *arg)
@@ -916,7 +1235,18 @@ static inline void od_system(void *arg)
 	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
 
+	/* Isolate slow config file I/O from DNS resolvers and client workers. */
+	rc = od_thread_pool_init(&system->reload_pool, "reload", 1, 2);
+	if (rc != 0) {
+		od_fatal(&instance->logger, "system", NULL, NULL,
+			 "failed to start configuration reload thread");
+		exit(1);
+	}
+
 	/* event loop: handle reload and shutdown requests */
+	od_list_t reload_requests;
+	od_list_init(&reload_requests);
+	od_system_reload_job_t *active_reload = NULL;
 	bool shutdown = false;
 	while (!shutdown) {
 		machine_msg_t *msg = machine_channel_read(
@@ -937,20 +1267,42 @@ static inline void od_system(void *arg)
 
 		switch (type) {
 		case OD_MSG_RELOAD:
-			od_system_config_reload(system);
-
-			if (msg_arg != NULL) {
-				mm_wait_flag_set((mm_wait_flag_t *)msg_arg);
+			od_list_append(&reload_requests,
+				       &((od_system_request_t *)msg_arg)->link);
+			if (active_reload == NULL) {
+				active_reload = od_system_reload_start(
+					system, &reload_requests);
 			}
 			break;
+		case OD_MSG_RELOAD_DONE: {
+			assert(active_reload != NULL);
+			machine_join(active_reload->coro_id);
+			od_system_reload_t *reload = NULL;
+			if (active_reload->future != NULL) {
+				reload = od_future_get_result(
+					active_reload->future);
+			}
+			int reload_rc = reload != NULL ? reload->status : -1;
+			bool canceled = od_system_requests_closed(system);
+			if (reload_rc == 0 && !canceled) {
+				reload_rc =
+					od_system_reload_apply(system, reload);
+			}
+			if (!canceled) {
+				od_system_reload_status(system, reload_rc);
+			}
+			od_system_request_finish(system, active_reload->request,
+						 canceled);
+			od_system_reload_job_free(active_reload);
+			active_reload = od_system_reload_start(
+				system, &reload_requests);
+			break;
+		}
 		case OD_MSG_GC:
 			od_log(&instance->logger, "system", NULL, NULL,
 			       "GC request");
 			od_cron_expire_now(global->cron);
-
-			if (msg_arg != NULL) {
-				mm_wait_flag_set((mm_wait_flag_t *)msg_arg);
-			}
+			od_system_request_finish(system, msg_arg, false);
 			break;
 		case OD_MSG_SHUTDOWN:
 			od_log(&instance->logger, "system", NULL, NULL,
@@ -970,6 +1322,19 @@ static inline void od_system(void *arg)
 			instance->config.graceful_shutdown_timeout_ms);
 	}
 
+	od_system_requests_close(system);
+	od_system_cancel_messages(system);
+	while (!od_list_empty(&reload_requests)) {
+		od_system_request_t *request =
+			od_container_of(od_list_pop(&reload_requests),
+					od_system_request_t, link);
+		od_system_request_finish(system, request, true);
+	}
+	if (active_reload != NULL) {
+		od_system_request_finish(system, active_reload->request, true);
+		active_reload->request = NULL;
+	}
+
 	od_list_t *i, *n;
 	od_list_foreach_safe (&router->servers, i, n) {
 		od_system_server_t *server;
@@ -985,6 +1350,15 @@ static inline void od_system(void *arg)
 	 * their storage refs — otherwise od_rules_cleanup won't
 	 * reach r==2 and watchdogs won't get set_offline */
 	od_worker_pool_shutdown(worker_pool);
+	/* Close listeners and release waiters first. Keep globals alive until
+	 * slow I/O finishes; the existing graceful timeout bounds this wait. */
+	if (active_reload != NULL) {
+		machine_join(active_reload->coro_id);
+		od_system_cancel_messages(system);
+		od_system_reload_job_free(active_reload);
+	}
+	od_thread_pool_destroy(&system->reload_pool);
+
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
 
 	machine_wait_nb(system->sighandler_machine);
@@ -1098,6 +1472,9 @@ void od_system_init(od_system_t *system)
 	system->sighandler_machine = -1;
 	system->system_channel = NULL;
 	system->global = NULL;
+	pthread_mutex_init(&system->request_lock, NULL);
+	system->requests_closed = false;
+	system->pending_signal_reloads = 0;
 }
 
 int od_system_start(od_system_t *system, od_global_t *global)
@@ -1127,5 +1504,6 @@ od_system_t *od_system_create(void)
 
 void od_system_free(od_system_t *system)
 {
+	pthread_mutex_destroy(&system->request_lock);
 	od_free(system);
 }

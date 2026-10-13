@@ -48,5 +48,6 @@ struct od_tls_opts {
 typedef struct od_tls_opts od_tls_opts_t;
 
 od_tls_opts_t *od_tls_opts_alloc(void);
+od_tls_opts_t *od_tls_opts_copy(const od_tls_opts_t *);
 od_retcode_t od_tls_opts_free(od_tls_opts_t *);
 int od_tls_opts_files_eq(const od_tls_opts_t *, const od_tls_opts_t *);

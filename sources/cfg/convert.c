@@ -439,7 +439,7 @@ static int import_hba(const od_cfg_string_field_t *hba_file,
 
 int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 		   od_global_t *global, od_hba_rules_t *hba_rules,
-		   od_cfg_diag_list_t *diags)
+		   od_cfg_diag_list_t *diags, int *promhttp_server_port)
 {
 	COPY_BOOL(cfg->daemonize, config->daemonize);
 	COPY_BOOL(cfg->sequential_routing, config->sequential_routing);
@@ -523,8 +523,16 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 
 	if (cfg->promhttp_server_port.seen.is_set) {
 #ifdef PROMHTTP_FOUND
-		if (od_prom_set_port(cfg->promhttp_server_port.value,
-				     global->cron->metrics) != OK_RESPONSE) {
+		int port = cfg->promhttp_server_port.value;
+		int rc;
+		if (promhttp_server_port != NULL) {
+			/* Reload preparation must not change live metrics. */
+			rc = port > 0 ? OK_RESPONSE : NOT_OK_RESPONSE;
+			*promhttp_server_port = port;
+		} else {
+			rc = od_prom_set_port(port, global->cron->metrics);
+		}
+		if (rc != OK_RESPONSE) {
 			od_cfg_diag_error(
 				diags, cfg->promhttp_server_port.seen.location,
 				"can't set prom http server port %d",
@@ -533,6 +541,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 		}
 #else
 		(void)global;
+		(void)promhttp_server_port;
 		od_cfg_diag_error(
 			diags, cfg->promhttp_server_port.seen.location,
 			"can't set prom http server port: current build does not support PROMHTTP");
@@ -1850,7 +1859,8 @@ static int convert_rules(convert_ctx_t *ctx, const od_cfg_model_t *cfg)
 
 int od_cfg_convert_model(const od_cfg_model_t *model, od_config_t *config,
 			 od_rules_t *rules, od_global_t *global,
-			 od_hba_rules_t *hba_rules, od_cfg_diag_list_t *diags)
+			 od_hba_rules_t *hba_rules, od_cfg_diag_list_t *diags,
+			 int *promhttp_server_port)
 {
 	od_list_t *i, *s;
 	convert_ctx_t ctx;
@@ -1892,7 +1902,8 @@ int od_cfg_convert_model(const od_cfg_model_t *model, od_config_t *config,
 		goto to_return;
 	}
 
-	rc = convert_global(&model->global, config, global, hba_rules, diags);
+	rc = convert_global(&model->global, config, global, hba_rules, diags,
+			    promhttp_server_port);
 	if (rc != 0) {
 		goto to_return;
 	}

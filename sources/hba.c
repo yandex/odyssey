@@ -49,6 +49,7 @@ void od_hba_reload(od_hba_t *hba, od_hba_rules_t *rules)
 		od_hba_rule_t *rule;
 		rule = od_container_of(i, od_hba_rule_t, link);
 
+		od_list_unlink(&rule->link);
 		od_hba_rules_add(&hba->rules, rule);
 	}
 
