@@ -61,15 +61,20 @@ static inline void od_stat_free(od_stat_t *stat)
 	}
 }
 
+static inline void od_stat_tx_start(od_stat_state_t *state)
+{
+	if (!state->tx_time_start) {
+		state->tx_time_start = machine_time_us();
+	}
+}
+
 static inline void od_stat_query_start(od_stat_state_t *state)
 {
 	if (!state->query_time_start) {
 		state->query_time_start = machine_time_us();
 	}
 
-	if (!state->tx_time_start) {
-		state->tx_time_start = machine_time_us();
-	}
+	od_stat_tx_start(state);
 }
 
 static inline void od_stat_wait_time(od_stat_t *stat, uint64_t wait_time_us)
@@ -95,6 +100,17 @@ static inline void od_stat_cancel(od_stat_t *stat)
 	atomic_fetch_add_explicit(&stat->count_cancel, 1, memory_order_relaxed);
 }
 
+/* Record one completed query without ending its transaction. */
+static inline void od_stat_query_record(od_stat_t *stat, uint64_t query_time)
+{
+	atomic_fetch_add_explicit(&stat->query_time, query_time,
+				  memory_order_relaxed);
+	atomic_fetch_add_explicit(&stat->count_query, 1, memory_order_relaxed);
+	if (stat->enable_quantiles) {
+		td_add(stat->query_hgram[stat->current_tdigest], query_time, 1);
+	}
+}
+
 static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 				     int in_transaction, int64_t *query_time)
 {
@@ -103,14 +119,7 @@ static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 		diff = machine_time_us() - state->query_time_start;
 		if (diff > 0) {
 			*query_time = diff;
-			atomic_fetch_add_explicit(&stat->query_time, diff,
-						  memory_order_relaxed);
-			atomic_fetch_add_explicit(&stat->count_query, 1,
-						  memory_order_relaxed);
-			if (stat->enable_quantiles) {
-				td_add(stat->query_hgram[stat->current_tdigest],
-				       diff, 1);
-			}
+			od_stat_query_record(stat, diff);
 		}
 		state->query_time_start = 0;
 	}

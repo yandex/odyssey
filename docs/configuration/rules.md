@@ -823,7 +823,21 @@ Incompatible with session pooling.
 
 *string*
 
-Compute quantiles of query and transaction times
+Compute quantiles of query and transaction times.
+
+In the extended protocol, each completed `Execute` contributes one query sample
+and increments the query count. Its latency runs from the start of sending the
+batch to its terminating response (`CommandComplete`, `EmptyQueryResponse`,
+`PortalSuspended`, or `ErrorResponse`). All `Execute` messages in a batch share
+the same start time, so samples include waiting for earlier operations and
+backend response buffering. Each batch sent on `Flush` or `Sync` gets a new
+start time. Locally handled `Execute` messages also contribute a sample.
+
+`Parse`, `Bind`, `Describe`, `Close`, `Flush`, and `Sync` do not contribute query
+samples. An `Execute` skipped after an earlier error is not counted. In the
+simple protocol, a `Query` message is still measured until `ReadyForQuery`.
+Transaction samples continue to span until `ReadyForQuery` reports that the
+transaction has ended, including client pauses inside the transaction.
 
 `quantiles "0.99,0.95,0.5"`
 
