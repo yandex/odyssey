@@ -303,7 +303,8 @@ static int od_frontend_startup(od_client_t *client)
 		if (rc == -1) {
 			if (parse_rc == KIWI_STARTUP_INVALID_MAJOR_ERROR) {
 				reject_unsupported_proto_version(client);
-			} else if (parse_rc == KIWI_STARTUP_READ_OPTIONS_ERROR) {
+			} else if (parse_rc ==
+				   KIWI_STARTUP_READ_OPTIONS_ERROR) {
 				reject_invalid_startup_parameters(client);
 			}
 			goto error;
