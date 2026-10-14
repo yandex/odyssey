@@ -1809,7 +1809,8 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 
 			status = run_virtual_error(entry, client, timeout_ms);
 			if (status == OD_OK) {
-				record_execute(entry, client, server, started_at);
+				record_execute(entry, client, server,
+					       started_at);
 			}
 			break;
 		case OD_XPLAN_VIRTUAL_PARSE_COMPLETE:
@@ -1824,7 +1825,8 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 			status = run_virtual_command_complete(entry, client,
 							      timeout_ms);
 			if (status == OD_OK) {
-				record_execute(entry, client, server, started_at);
+				record_execute(entry, client, server,
+					       started_at);
 			}
 			break;
 		case OD_XPLAN_FORWARD:
@@ -1854,7 +1856,8 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	if (forward_begin != -1) {
 		/* need to handle tail forwards range */
 		status = run_forward_batch(xp, (size_t)forward_begin, count,
-					   client, server, started_at, timeout_ms);
+					   client, server, started_at,
+					   timeout_ms);
 	}
 
 	return status;
