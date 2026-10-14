@@ -1,4 +1,8 @@
-"""Query statistics over the PostgreSQL wire protocol, in both pstmt modes."""
+"""Query statistics over the PostgreSQL wire protocol, in both pstmt modes.
+
+Run through runner.sh after the functional harness prepares PostgreSQL.
+The filename deliberately avoids pytest's automatic test discovery.
+"""
 
 import argparse
 import contextlib
