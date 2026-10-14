@@ -97,6 +97,8 @@ void od_backend_error(od_server_t *server, char *context, char *data,
 	od_instance_t *instance = server->global->instance;
 	kiwi_fe_error_t error;
 
+	server->error_responses++;
+
 	int rc;
 	rc = kiwi_fe_read_error(data, size, &error);
 	if (rc == -1) {

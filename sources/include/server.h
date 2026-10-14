@@ -77,6 +77,9 @@ struct od_server {
 	od_list_t *pstmt_hand;
 	size_t pstmt_count;
 
+	/* number of ErrorResponse messages received */
+	uint64_t error_responses;
+
 	int need_startup;
 };
 
