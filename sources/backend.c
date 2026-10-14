@@ -57,16 +57,15 @@ static inline int od_backend_terminate(od_server_t *server)
 static void od_backend_disconnect(od_server_t *server, int graceful)
 {
 	od_assert(server != NULL);
-	/* failed to connect to endpoint, so notring to do */
-	if (od_backend_not_connected(server)) {
-		return;
-	}
-	if (graceful && mm_io_connected(server->io.io)) {
-		od_backend_terminate(server);
+	if (!od_backend_not_connected(server)) {
+		if (graceful && mm_io_connected(server->io.io)) {
+			od_backend_terminate(server);
+		}
+
+		od_io_close(&server->io);
 	}
 
-	od_io_close(&server->io);
-
+	/* TLS may already exist even if connect failed before io publication. */
 	if (server->error_connect) {
 		machine_msg_free(server->error_connect);
 		server->error_connect = NULL;
@@ -182,7 +181,8 @@ static inline void od_backend_reset_for_retry(od_server_t *server)
 	if (route != NULL) {
 		od_route_lock(route);
 	}
-	od_backend_close_connection(server);
+	/* A failed startup needs no Terminate; do not wait on io under the lock. */
+	od_backend_abort_connection(server);
 
 	od_io_free(&server->io);
 	od_io_init(&server->io);
