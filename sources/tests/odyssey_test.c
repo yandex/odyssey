@@ -134,6 +134,8 @@ extern void odyssey_test_scram(void);
 extern void odyssey_test_sql_minimal_parser(void);
 extern void odyssey_test_sql_full_parser(void);
 extern void odyssey_test_console_parser(void);
+extern void odyssey_test_config_field(void);
+extern void odyssey_test_autoconf(void);
 
 extern void machinarium_test_tsan_simple_race_example(void);
 
@@ -262,6 +264,8 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_sql_minimal_parser);
 	odyssey_test(odyssey_test_sql_full_parser);
 	odyssey_test(odyssey_test_console_parser);
+	odyssey_test(odyssey_test_config_field);
+	odyssey_test(odyssey_test_autoconf);
 
 	odyssey_playground_test(machinarium_test_tsan_simple_race_example);
 

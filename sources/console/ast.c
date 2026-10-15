@@ -87,6 +87,24 @@ int od_console_node_print(const od_console_node_t *node, char *buf,
 	case OD_CONSOLE_NODE_TYPE_GC_STMT:
 		return snprintf(buf, buflen, "(gc)");
 
+	case OD_CONSOLE_NODE_TYPE_ALTER_SYSTEM_STMT: {
+		const od_console_alter_system_stmt_t *n =
+			(const od_console_alter_system_stmt_t *)node;
+		switch (n->action) {
+		case OD_CONSOLE_ALTER_SYSTEM_SET:
+			return snprintf(buf, buflen, "(alter system set %s=%s)",
+					n->key ? n->key : "",
+					n->value ? n->value : "");
+		case OD_CONSOLE_ALTER_SYSTEM_RESET:
+			return snprintf(buf, buflen, "(alter system reset %s)",
+					n->key ? n->key : "");
+		case OD_CONSOLE_ALTER_SYSTEM_RESET_ALL:
+			return snprintf(buf, buflen,
+					"(alter system reset all)");
+		}
+		return snprintf(buf, buflen, "(alter system unknown)");
+	}
+
 	default:
 		return snprintf(buf, buflen, "(unknown:%d)", (int)node->type);
 	}

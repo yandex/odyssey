@@ -53,3 +53,13 @@ void od_system_config_reload(od_system_t *);
 void od_system_free(od_system_t *system);
 
 int od_system_send_msg(od_system_t *system, int msg_type, void *arg);
+
+/*
+ * Applies one ALTER SYSTEM change with od_autoconf_update() and waits for
+ * it with machine_wait_nb(). Each change runs on its own machine, keeping
+ * file I/O off the accepting system thread and giving the configuration
+ * parser a system-size stack. A mutex serializes autoconf updates.
+ * Returns 0 on success, -1 on error with a message in err.
+ */
+int od_system_alter_system(od_global_t *global, const char *key,
+			   const char *line, char *err, size_t err_size);

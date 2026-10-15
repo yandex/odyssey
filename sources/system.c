@@ -38,6 +38,7 @@
 #include <setproctitle.h>
 #include <worker_pool.h>
 #include <cfg_import.h>
+#include <autoconf.h>
 #include <tls.h>
 #include <memory.h>
 #include <od_error.h>
@@ -611,6 +612,71 @@ static inline int od_config_listen_host_cmp(char *host_listen,
 		return 1;
 	}
 	return strcmp(host_listen, host_server);
+}
+
+/* a new autoconf file must pass the checks RELOAD would run */
+static int od_system_alter_system_check(const char *autoconf_path, void *arg)
+{
+	od_global_t *global = arg;
+	od_instance_t *instance = global->instance;
+	return od_cfg_check(&instance->logger, instance->config_file,
+			    autoconf_path);
+}
+
+typedef struct {
+	od_global_t *global;
+	const char *key;
+	const char *line;
+	char *err;
+	size_t err_size;
+	int result;
+} od_system_alter_system_task_t;
+
+static void od_system_alter_system_task(void *arg)
+{
+	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+	od_system_alter_system_task_t *task = arg;
+	od_instance_t *instance = task->global->instance;
+	/* Each command has its own machine, but shares the autoconf file. */
+	pthread_mutex_lock(&mutex);
+	task->result =
+		od_autoconf_update(instance->config_file, task->key, task->line,
+				   od_system_alter_system_check, task->global,
+				   task->err, task->err_size);
+	pthread_mutex_unlock(&mutex);
+}
+
+int od_system_alter_system(od_global_t *global, const char *key,
+			   const char *line, char *err, size_t err_size)
+{
+	od_system_alter_system_task_t task = {
+		.global = global,
+		.key = key,
+		.line = line,
+		.err = err,
+		.err_size = err_size,
+		.result = -1,
+	};
+
+	int64_t machine = machine_create("alter_system",
+					 od_system_alter_system_task, &task);
+	if (machine == -1) {
+		od_snprintf(err, (int)err_size,
+			    "could not start the change: %s",
+			    strerror(machine_errno()));
+		return -1;
+	}
+
+	/* the task writes into task, so it must finish before we return */
+	int rc = machine_wait_nb(machine);
+	if (rc != 0) {
+		od_snprintf(err, (int)err_size,
+			    "waiting for the change failed: %s",
+			    strerror(machine_errno()));
+		return -1;
+	}
+	return task.result;
 }
 
 void od_system_config_reload(od_system_t *system)
