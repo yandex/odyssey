@@ -11,6 +11,8 @@
 #include <machinarium/dns.h>
 #include <machinarium/ds/vector.h>
 
+#include <sys/types.h>
+
 #include <types.h>
 #include <id.h>
 #include <config.h>
@@ -24,6 +26,12 @@ struct od_system_server {
 	od_config_listen_t *config;
 	mm_addrinfo_t *addr;
 	od_global_t *global;
+	/* Unix listener ownership, protected by a lock held until cleanup. */
+	char *unix_socket_path;
+	int unix_socket_lock_fd;
+	dev_t unix_socket_dev;
+	ino_t unix_socket_ino;
+	bool unix_socket_owned;
 	od_list_t link;
 	od_id_t sid;
 
