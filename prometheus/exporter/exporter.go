@@ -25,20 +25,21 @@ import (
 )
 
 const (
-	namespace                  = "odyssey"
-	metricsHandlePath          = "/metrics"
-	showVersionCommand         = "show version;"
-	showVersionExtendedCommand = "show version_extended;"
-	showListsCommand           = "show lists;"
-	showInstanceCommand        = "show instance;"
-	showIsPausedCommand        = "show is_paused;"
-	showErrorsCommand          = "show errors;"
-	showStatsCommand           = "show stats;"
-	showDatabasesCommand       = "show databases;"
-	showPoolsExtendedCommand   = "show pools_extended;"
-	poolModeColumnName         = "pool_mode"
-	queryQuantilePrefix        = "query_"
-	transactionQuantilePrefix  = "transaction_"
+	namespace                    = "odyssey"
+	metricsHandlePath            = "/metrics"
+	showVersionCommand           = "show version;"
+	showVersionExtendedCommand   = "show version_extended;"
+	showListsCommand             = "show lists;"
+	showInstanceCommand          = "show instance;"
+	showIsPausedCommand          = "show is_paused;"
+	showErrorsCommand            = "show errors;"
+	showStatsCommand             = "show stats;"
+	showDatabasesCommand         = "show databases;"
+	showPoolsExtendedCommand     = "show pools_extended;"
+	poolModeColumnName           = "pool_mode"
+	queryQuantilePrefix          = "query_"
+	transactionQuantilePrefix    = "transaction_"
+	clientLifetimeQuantilePrefix = "client_lifetime_"
 )
 
 var (
@@ -171,6 +172,12 @@ var (
 		[]string{"user", "database", "quantile"}, nil,
 	)
 
+	routeClientLifetimeSecondsDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "route", "client_lifetime_seconds"),
+		"Route client lifetime quantiles for disconnected clients",
+		[]string{"user", "database", "quantile"}, nil,
+	)
+
 	errorsTotalDescription = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "errors", "total"),
 		"Total number of Odyssey errors grouped by type",
@@ -244,6 +251,7 @@ var (
 		routeTCPConnectionsTotalDescription,
 		routeQueryDurationSecondsDescription,
 		routeTransactionDurationSecondsDescription,
+		routeClientLifetimeSecondsDescription,
 		errorsTotalDescription,
 		serverPoolStateRouteDescription,
 	}
@@ -1137,6 +1145,21 @@ func (exporter *Exporter) processPoolRow(columns []string, values []any, capacit
 				routeTransactionDurationSecondsDescription,
 				prometheus.GaugeValue,
 				value,
+				user, database, quantile,
+			)
+			continue
+		}
+
+		if strings.HasPrefix(columnName, clientLifetimeQuantilePrefix) {
+			value, _, err := extractFloat(val, columnName)
+			if err != nil {
+				return err
+			}
+			quantile := strings.TrimPrefix(columnName, clientLifetimeQuantilePrefix)
+			ch <- prometheus.MustNewConstMetric(
+				routeClientLifetimeSecondsDescription,
+				prometheus.GaugeValue,
+				value/1e6,
 				user, database, quantile,
 			)
 			continue
