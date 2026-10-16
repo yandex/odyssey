@@ -77,6 +77,7 @@ void od_client_init(od_client_t *client)
 
 	/* Init GUCs. */
 	client->backend_pin = false;
+	client->backend_pin_listen = false;
 	client->opportunistic_acquire = false;
 	od_address_init(&client->execute_on_host);
 }
