@@ -618,8 +618,21 @@ pstmt_is_correct_deletion(od_pstmt_t *p)
 
 void od_pstmt_unpin(od_pstmt_t *pstmt)
 {
+	/*
+	 * the decrement must be acq_rel: the release part publishes
+	 * this thread's accesses, while the acquire part (which only
+	 * matters when the last pin is observed) synchronizes with the
+	 * release unpins of the other pin holders, so all their
+	 * accesses to the pstmt happen before the destruction below;
+	 * the map lock does not cover every final-unpin path, so it
+	 * cannot be relied upon here
+	 *
+	 * note: an acquire fence after a release-only decrement would
+	 * be enough per the memory model, but tsan does not model
+	 * fences, so the acquire has to be part of the RMW itself
+	 */
 	uint64_t v = atomic_fetch_sub_explicit(&pstmt->pins, 1,
-					       memory_order_release);
+					       memory_order_acq_rel);
 	if (v > 1) {
 		return;
 	}
