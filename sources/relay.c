@@ -1039,6 +1039,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		client->pending_begin = 0;
 	}
 
+	uint64_t errors_before = server->error_responses;
+
 	status = od_stream_server_until_rfq("main", server, timeout_ms);
 
 	if (status == OD_COPY_IN_RECEIVED) {
@@ -1051,8 +1053,11 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 						  timeout_ms);
 	}
 
-	if (status == OD_OK) {
-		/* process only after success query completion */
+	if (status == OD_OK && server->error_responses == errors_before) {
+		/*
+		 * process only after successful query completion: a failed
+		 * DISCARD ALL or UNLISTEN * still ends with ReadyForQuery
+		 */
 		process_discard(client, server);
 		process_unlisten(client, server);
 	}
