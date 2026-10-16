@@ -80,6 +80,12 @@ struct od_client {
 	/* client-side GUC state. XXX: maybe use embedded struct here */
 	bool backend_pin;
 	bool opportunistic_acquire;
+
+	/*
+	 * only meaningful when backend_pin is set: marks the pin as
+	 * LISTEN-owned; UNLISTEN * drops only such pin
+	 */
+	bool backend_pin_listen;
 	/*
 	 * SET odyssey.execute_on_host - explicit storage host to attach to,
 	 * host == NULL means not set

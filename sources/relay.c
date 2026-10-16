@@ -296,7 +296,8 @@ static od_frontend_status_t reply_set_ok(od_client_t *client)
 
 static od_frontend_status_t process_set_generic_bool(od_client_t *client,
 						     const od_query_ctx_t *ctx,
-						     bool *guc_val_ptr)
+						     bool *guc_val_ptr,
+						     bool *origin_to_reset)
 {
 	const char *option_value;
 	size_t option_value_len;
@@ -312,10 +313,16 @@ static od_frontend_status_t process_set_generic_bool(od_client_t *client,
 	    strncasecmp(option_value, "on", option_value_len) == 0 ||
 	    strncasecmp(option_value, "1", option_value_len) == 0) {
 		*guc_val_ptr = 1;
+		if (origin_to_reset != NULL) {
+			*origin_to_reset = 0;
+		}
 	} else if (strncasecmp(option_value, "false", option_value_len) == 0 ||
 		   strncasecmp(option_value, "off", option_value_len) == 0 ||
 		   strncasecmp(option_value, "0", option_value_len) == 0) {
 		*guc_val_ptr = 0;
+		if (origin_to_reset != NULL) {
+			*origin_to_reset = 0;
+		}
 	} else {
 		/* Reject this */
 		return reply_reject_guc(client, ctx->s1, option_value,
@@ -518,15 +525,17 @@ static od_frontend_status_t process_vset(od_client_t *client,
 
 	if (strcmp(ctx->s1, ODYSSEY_PIN_BACKEND) == 0) {
 		if (instance->config.virtual_processing) {
-			return process_set_generic_bool(client, ctx,
-							&client->backend_pin);
+			return process_set_generic_bool(
+				client, ctx, &client->backend_pin,
+				&client->backend_pin_listen);
 		}
 	}
 
 	if (strcmp(ctx->s1, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_set_generic_bool(
-				client, ctx, &client->opportunistic_acquire);
+				client, ctx, &client->opportunistic_acquire,
+				NULL);
 		}
 	}
 
@@ -887,11 +896,13 @@ static inline void process_unlisten(od_client_t *client, od_server_t *server)
 	}
 
 	if (od_query_ctx_has(&client->query_ctx,
-			     OD_QUERY_CTX_IS_UNLISTEN_ALL)) {
+			     OD_QUERY_CTX_IS_UNLISTEN_ALL) &&
+	    client->backend_pin_listen) {
 		od_debug(&instance->logger, "main", client, server,
 			 "UNLISTEN ALL detected, unpin client");
 
 		client->backend_pin = 0;
+		client->backend_pin_listen = 0;
 	}
 }
 

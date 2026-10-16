@@ -166,7 +166,11 @@ static inline void handle_server_command_complete(od_client_t *client,
 	if (strcmp(command_tag, "LISTEN") == 0) {
 		od_glog("main", client, server,
 			"LISTEN protocol detected, pin client to server");
-		client->backend_pin = 1;
+		if (!client->backend_pin) {
+			/* do not steal a manually set pin */
+			client->backend_pin = 1;
+			client->backend_pin_listen = 1;
+		}
 	}
 }
 

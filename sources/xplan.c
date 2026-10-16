@@ -1291,13 +1291,16 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 
 	/*
 	 * UNLISTEN * is forwarded (not virtualized) — the server must
-	 * actually drop the subscription. after success, clear
-	 * backend_pin, matching simple-protocol process_unlisten.
+	 * actually drop the subscription. after success, clear the
+	 * LISTEN-origin backend_pin, matching simple-protocol
+	 * process_unlisten.
 	 */
 	if (delta->pstmt != NULL &&
 	    od_query_ctx_has(&delta->pstmt->query_ctx,
-			     OD_QUERY_CTX_IS_UNLISTEN_ALL)) {
+			     OD_QUERY_CTX_IS_UNLISTEN_ALL) &&
+	    client->backend_pin_listen) {
 		client->backend_pin = 0;
+		client->backend_pin_listen = 0;
 	}
 
 	if (type == OD_XPLAN_DELTA_ADD_BOTH ||
