@@ -203,7 +203,7 @@ static inline int od_console_show_help(machine_msg_t *stream)
 		"Console usage\n"
 		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS|HOST_UTILIZATION\n"
 		"\tSHOW LISTS|INSTANCE|ERRORS|ERRORS_PER_ROUTE|VERSION|VERSION_EXTENDED|LISTEN|STORAGES\n"
-		"\tSHOW CONFIG|RULES|FDS|IS_PAUSED|GLOBAL_PREPARED_STATEMENTS\n"
+		"\tSHOW CONFIG|RULES|IS_PAUSED|GLOBAL_PREPARED_STATEMENTS\n"
 		"\tKILL_CLIENT <client_id>\n"
 		"\tRELOAD\n"
 		"\tGC\n"
@@ -1181,56 +1181,6 @@ static inline int od_console_show_servers_server_cb(od_server_t *server,
 	return 0;
 }
 
-static inline int od_console_show_fds_server_cb(od_server_t *server,
-						void **argv)
-{
-	int offset;
-	int mmask;
-	machine_msg_t *stream = argv[0];
-	machine_msg_t *msg;
-	msg = kiwi_be_write_data_row(stream, &offset);
-	if (msg == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-
-	/* type */
-	char data[64];
-	size_t data_len;
-	data_len = od_snprintf(data, sizeof(data), "S");
-	int rc;
-
-	rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* ptr */
-	data_len =
-		od_snprintf(data, sizeof(data), "%s%.*s", server->id.id_prefix,
-			    (signed)sizeof(server->id.id), server->id.id);
-	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* system fd */
-	data_len = od_snprintf(data, sizeof(data), "%d",
-			       machine_io_sysfd(server->io.io));
-	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-	/* machine fd mask */
-	mmask = machine_io_sysfd(server->io.io);
-	data_len =
-		od_snprintf(data, sizeof(data), "%s/%s",
-			    mmask & 1 ? "R" : "NOR", mmask & 2 ? "W" : "NOW");
-	rc = kiwi_be_write_data_row_add(msg, offset, data, data_len);
-	if (rc == NOT_OK_RESPONSE) {
-		return NOT_OK_RESPONSE;
-	}
-
-	return 0;
-}
-
 static inline int show_server_pstmt_cb_internal(mm_hashmap_t *server_map,
 						mm_hashmap_kvp_t *kvp,
 						void **argv)
@@ -1338,20 +1288,6 @@ static inline int od_console_show_servers_cb(od_route_t *route, void **argv)
 	return 0;
 }
 
-static inline int od_console_show_fds_cb(od_route_t *route, void **argv)
-{
-	od_route_lock(route);
-
-	od_route_server_pool_foreach_locked(
-		route, OD_SERVER_ACTIVE, od_console_show_fds_server_cb, argv);
-
-	od_route_server_pool_foreach_locked(
-		route, OD_SERVER_IDLE, od_console_show_fds_server_cb, argv);
-
-	od_route_unlock(route);
-	return 0;
-}
-
 static inline int od_console_show_server_prep_stmts_cb(od_route_t *route,
 						       void **argv)
 {
@@ -1387,25 +1323,6 @@ static inline int od_console_show_servers(od_client_t *client,
 
 	void *argv[] = { stream };
 	od_router_foreach(router, od_console_show_servers_cb, argv);
-
-	return kiwi_be_write_complete(stream, "SHOW", 5);
-}
-
-static inline int od_console_show_fds(od_client_t *client,
-				      machine_msg_t *stream)
-{
-	od_assert(stream);
-	od_router_t *router = client->global->router;
-
-	machine_msg_t *msg;
-	msg = kiwi_be_write_row_descriptionf(stream, "ssds", "type", "ptr",
-					     "machine fd", "machine fd mask");
-	if (msg == NULL) {
-		return NOT_OK_RESPONSE;
-	}
-
-	void *argv[] = { stream };
-	od_router_foreach(router, od_console_show_fds_cb, argv);
 
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
@@ -2311,7 +2228,6 @@ typedef enum {
 	OD_SHOW_VERSION_EXTENDED,
 	OD_SHOW_LISTEN,
 	OD_SHOW_STORAGES,
-	OD_SHOW_FDS,
 	OD_SHOW_IS_PAUSED,
 	OD_SHOW_HOST_UTILIZATION,
 	OD_SHOW_RULES,
@@ -2341,7 +2257,6 @@ static od_show_target_id_t od_console_show_target_lookup(const char *name)
 		{ "version_extended", OD_SHOW_VERSION_EXTENDED },
 		{ "listen", OD_SHOW_LISTEN },
 		{ "storages", OD_SHOW_STORAGES },
-		{ "fds", OD_SHOW_FDS },
 		{ "is_paused", OD_SHOW_IS_PAUSED },
 		{ "host_utilization", OD_SHOW_HOST_UTILIZATION },
 		{ "rules", OD_SHOW_RULES },
@@ -2399,8 +2314,6 @@ static inline int od_console_show(od_client_t *client, machine_msg_t *stream,
 		return od_console_show_listen(client, stream);
 	case OD_SHOW_STORAGES:
 		return od_console_show_storages(client, stream);
-	case OD_SHOW_FDS:
-		return od_console_show_fds(client, stream);
 	case OD_SHOW_IS_PAUSED:
 		return od_console_show_is_paused(client, stream);
 	case OD_SHOW_HOST_UTILIZATION:
