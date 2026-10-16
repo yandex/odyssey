@@ -56,6 +56,9 @@ static inline void do_pgoptions_test(const char *str, int expected_rc,
 		}
 	}
 
+	kiwi_vars_free(&expected_vars);
+	kiwi_vars_free(&vars);
+
 	va_end(ap);
 }
 
@@ -158,19 +161,21 @@ void kiwi_test_pgoptions(void)
 		char opts[512];
 		char value[256];
 
+		/* long values are allowed now, they go to the heap */
 		memset(value, 'a', 200);
 		value[200] = 0;
 		snprintf(opts, sizeof(opts), "--search_path=%s", value);
-		do_pgoptions_test(opts, -1 /* expected_rc */,
-				  0 /* vars count */);
+		do_pgoptions_test(opts, 0 /* expected_rc */, 1 /* vars count */,
+				  var(KIWI_VAR_SEARCH_PATH, value));
 
+		/* long names are still rejected */
 		memset(value, 'a', 200);
 		value[200] = 0;
 		snprintf(opts, sizeof(opts), "--%s=x", value);
 		do_pgoptions_test(opts, -1 /* expected_rc */,
 				  0 /* vars count */);
 
-		/* max allowed value is KIWI_MAX_VAR_SIZE - 1 chars */
+		/* short values still go to the inline buffer */
 		memset(value, 'a', KIWI_MAX_VAR_SIZE - 1);
 		value[KIWI_MAX_VAR_SIZE - 1] = 0;
 		snprintf(opts, sizeof(opts), "--search_path=%s", value);
@@ -237,8 +242,10 @@ void kiwi_test_be_read_startup_options(void)
 	test(var != NULL);
 	test(var->value_len == (int)(strlen("public") + 1));
 	test(strcmp(var->value, "public") == 0);
+	kiwi_be_startup_free(&su);
+	kiwi_vars_free(&vars);
 
-	/* too long option value must reject the whole startup packet */
+	/* long option value is accepted now and stored on the heap */
 	{
 		char value[256];
 		memset(value, 'a', 200);
@@ -249,7 +256,15 @@ void kiwi_test_be_read_startup_options(void)
 		kiwi_be_startup_init(&su);
 		kiwi_vars_init(&vars);
 		test(kiwi_be_read_startup(buf, len, &su, &vars) ==
-		     KIWI_STARTUP_READ_OPTIONS_ERROR);
+		     KIWI_STARTUP_READ_OK);
+		kiwi_var_t *long_var =
+			kiwi_vars_get(&vars, KIWI_VAR_SEARCH_PATH);
+		test(long_var != NULL);
+		test(long_var->value_len == (int)(strlen(value) + 1));
+		test(long_var->value_len > KIWI_MAX_VAR_SIZE);
+		test(strncmp(long_var->value, value, long_var->value_len) == 0);
+		kiwi_be_startup_free(&su);
+		kiwi_vars_free(&vars);
 	}
 
 	/* unknown GUC in options must not reject the whole startup packet */
@@ -259,6 +274,8 @@ void kiwi_test_be_read_startup_options(void)
 	kiwi_vars_init(&vars);
 	test(kiwi_be_read_startup(buf, len, &su, &vars) ==
 	     KIWI_STARTUP_READ_OK);
+	kiwi_be_startup_free(&su);
+	kiwi_vars_free(&vars);
 
 	/* unexpected token must reject the whole startup packet */
 	build_startup_packet(buf, sizeof(buf), &len, "-x search_path=public");
@@ -266,4 +283,6 @@ void kiwi_test_be_read_startup_options(void)
 	kiwi_vars_init(&vars);
 	test(kiwi_be_read_startup(buf, len, &su, &vars) ==
 	     KIWI_STARTUP_READ_OPTIONS_ERROR);
+	kiwi_be_startup_free(&su);
+	kiwi_vars_free(&vars);
 }

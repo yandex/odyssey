@@ -187,6 +187,7 @@ static inline void od_backend_reset_for_retry(od_server_t *server)
 	od_scram_state_init(&server->scram_state);
 
 	kiwi_key_init(&server->key);
+	kiwi_vars_free(&server->vars);
 	kiwi_vars_init(&server->vars);
 
 	/*

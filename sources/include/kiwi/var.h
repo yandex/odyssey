@@ -59,7 +59,8 @@ struct kiwi_var {
 	kiwi_var_type_t type;
 	char *name;
 	int name_len;
-	char value[KIWI_MAX_VAR_SIZE];
+	char value_buf[KIWI_MAX_VAR_SIZE];
+	char *value;
 	int value_len;
 };
 
@@ -79,6 +80,7 @@ static inline void kiwi_var_init(kiwi_var_t *var, char *name, int name_len)
 	var->type = KIWI_VAR_UNDEF;
 	var->name = name;
 	var->name_len = name_len;
+	var->value = var->value_buf;
 	var->value_len = 0;
 }
 
@@ -86,10 +88,33 @@ static inline int kiwi_var_set(kiwi_var_t *var, kiwi_var_type_t type,
 			       const char *value, int value_len)
 {
 	var->type = type;
-	if (value_len > (int)sizeof(var->value)) {
-		return -1;
+	if (value_len > (int)sizeof(var->value_buf)) {
+		/*
+		 * the value does not fit into the inline buffer,
+		 * keep it on the heap;
+		 * a heap buffer always has at least value_len bytes,
+		 * so it can be reused for a shorter value
+		 */
+		char *heap;
+		if (var->value == var->value_buf) {
+			heap = malloc(value_len);
+		} else if (value_len > var->value_len) {
+			heap = realloc(var->value, value_len);
+		} else {
+			heap = var->value;
+		}
+		if (heap == NULL) {
+			return -1;
+		}
+		memcpy(heap, value, value_len);
+		var->value = heap;
+	} else {
+		if (var->value != var->value_buf) {
+			free(var->value);
+			var->value = var->value_buf;
+		}
+		memcpy(var->value, value, value_len);
 	}
-	memcpy(var->value, value, value_len);
 	var->value_len = value_len;
 	return 0;
 }
@@ -97,7 +122,25 @@ static inline int kiwi_var_set(kiwi_var_t *var, kiwi_var_type_t type,
 static inline void kiwi_var_unset(kiwi_var_t *var)
 {
 	var->type = KIWI_VAR_UNDEF;
+	if (var->value != var->value_buf) {
+		free(var->value);
+		var->value = var->value_buf;
+	}
 	var->value_len = 0;
+}
+
+static inline void kiwi_var_free(kiwi_var_t *var)
+{
+	kiwi_var_unset(var);
+}
+
+static inline void kiwi_vars_free(kiwi_vars_t *vars)
+{
+	kiwi_var_type_t type;
+	type = KIWI_VAR_CLIENT_ENCODING;
+	for (; type < KIWI_VAR_MAX; type++) {
+		kiwi_var_free(&vars->vars[type]);
+	}
 }
 
 static inline int kiwi_var_compare(kiwi_var_t *a, kiwi_var_t *b)

@@ -91,6 +91,9 @@ void od_client_free(od_client_t *client)
 		od_rules_unref(client->rule);
 	}
 
+	kiwi_be_startup_free(&client->startup);
+	kiwi_vars_free(&client->vars);
+
 	od_relay_destroy(&client->relay);
 
 	od_query_ctx_reset(&client->query_ctx);

@@ -649,6 +649,8 @@ void od_rules_rule_free(od_rule_t *rule)
 
 static void od_rules_rule_free_now(od_rule_t *rule)
 {
+	kiwi_vars_free(&rule->vars);
+
 	if (rule->password) {
 		od_free(rule->password);
 	}
