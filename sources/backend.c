@@ -84,7 +84,7 @@ void od_backend_close_connection(od_server_t *server)
 
 void od_backend_abort_connection(od_server_t *server)
 {
-	/* CancelRequest connections have no startup session to terminate. */
+	/* Close without sending Terminate or waiting on io. */
 	od_backend_disconnect(server, 0);
 }
 

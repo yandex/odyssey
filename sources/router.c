@@ -372,6 +372,9 @@ od_router_create_connected_server(od_route_t *route,
 	od_route_lock(route);
 
 	if (rc != OK_RESPONSE) {
+		/* No startup session: close without waiting on io under the lock. */
+		od_backend_abort_connection(server);
+		server->route = NULL;
 		od_backend_close(server);
 		return NULL;
 	}
@@ -403,7 +406,9 @@ static inline int od_router_create_idle_server(od_route_t *route,
 		 * so just release this connection and exit
 		 */
 
-		od_backend_close_connection(server);
+		/* This connection has not performed startup either. */
+		od_backend_abort_connection(server);
+		server->route = NULL;
 		od_backend_close(server);
 
 		return NOT_OK_RESPONSE;
