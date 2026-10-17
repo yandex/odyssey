@@ -175,6 +175,8 @@ struct od_rule {
 
 	/* Should we deploy user GUCS when attaching? */
 	int maintain_params;
+	/* set when maintain_params was set on the rule level */
+	int maintain_params_set;
 
 	/* group */
 	od_group_t *group; /* set if rule is group */

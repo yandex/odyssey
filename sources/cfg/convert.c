@@ -816,7 +816,16 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	}
 
 	/* ignore ldap_pool_* */
-	COPY_BOOL(cfg->maintain_params, rule->maintain_params);
+	/*
+	 * route-level maintain_params, when set, overrides the global one;
+	 * otherwise the global value (set in convert_global below) is the
+	 * default -- but only for rules created from the config file,
+	 * so stash the "explicitly set" marker in the rule
+	 */
+	if (cfg->maintain_params.seen.is_set) {
+		rule->maintain_params = cfg->maintain_params.value;
+		rule->maintain_params_set = 1;
+	}
 	COPY_STR(cfg->pool, rule->pool->pool_type_str, diags);
 	COPY_STR(cfg->pool_routing, rule->pool->routing_type, diags);
 	COPY_INT(cfg->min_pool_size, rule->pool->min_size);
@@ -1996,6 +2005,20 @@ int od_cfg_convert_model(const od_cfg_model_t *model, od_config_t *config,
 	rc = convert_rules(&ctx, model);
 	if (rc != 0) {
 		goto to_return;
+	}
+
+	/*
+	 * rules without an explicit route-level maintain_params inherit
+	 * the global value (od_rules_add_new_rule defaults it to 1)
+	 */
+	if (model->global.maintain_params.seen.is_set) {
+		od_list_foreach (&rules->rules, i) {
+			od_rule_t *rule = od_container_of(i, od_rule_t, link);
+			if (!rule->maintain_params_set) {
+				rule->maintain_params =
+					model->global.maintain_params.value;
+			}
+		}
 	}
 
 to_return:

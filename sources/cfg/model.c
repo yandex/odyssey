@@ -422,6 +422,7 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 	dump_bool(file, "log_debug", 0, &model->global.log_debug);
 	dump_int(file, "log_debug_sampling", 0,
 		 &model->global.log_debug_sampling);
+	dump_bool(file, "maintain_params", 0, &model->global.maintain_params);
 	dump_bool(file, "log_to_stdout", 0, &model->global.log_to_stdout);
 	dump_bool(file, "log_config", 0, &model->global.log_config);
 	dump_bool(file, "log_session", 0, &model->global.log_session);
@@ -903,6 +904,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_bool_field_free(&g->enable_host_watcher);
 	od_cfg_bool_field_free(&g->log_debug);
 	od_cfg_int_field_free(&g->log_debug_sampling);
+	od_cfg_bool_field_free(&g->maintain_params);
 	od_cfg_bool_field_free(&g->log_to_stdout);
 	od_cfg_bool_field_free(&g->log_config);
 	od_cfg_bool_field_free(&g->log_session);
