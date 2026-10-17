@@ -217,6 +217,21 @@ static void reject_unsupported_proto_version(od_client_t *client)
 		PG_PROTOCOL_MINOR(PG_PROTOCOL_LATEST));
 }
 
+static void reject_invalid_startup_parameters(od_client_t *client)
+{
+	od_log(&client->global->instance->logger, "startup", client, NULL,
+	       "rejecting invalid startup packet parameters");
+	/*
+	 * KIWI_STARTUP_READ_OPTIONS_ERROR also covers malformed parameter
+	 * lists and a missing user, so do not assume an oversized option.
+	 */
+	od_frontend_fatal_detailed(
+		client, KIWI_PROTOCOL_VIOLATION, "", "",
+		"invalid startup packet parameters "
+		"(option names and values must not exceed %d bytes)",
+		KIWI_MAX_VAR_SIZE - 1);
+}
+
 static int has_unsupported_features(od_client_t *client)
 {
 	kiwi_var_t *pq_tpn = kiwi_vars_get(
@@ -288,6 +303,9 @@ static int od_frontend_startup(od_client_t *client)
 		if (rc == -1) {
 			if (parse_rc == KIWI_STARTUP_INVALID_MAJOR_ERROR) {
 				reject_unsupported_proto_version(client);
+			} else if (parse_rc ==
+				   KIWI_STARTUP_READ_OPTIONS_ERROR) {
+				reject_invalid_startup_parameters(client);
 			}
 			goto error;
 		}
