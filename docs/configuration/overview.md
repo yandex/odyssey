@@ -53,3 +53,22 @@ database "console" {
 It contains global section with common parameters like `log_debug`
 and tuple of `database` sections which allows to specify pooling
 settings for each pair of `[database, user]`.
+
+## Boolean values
+
+Parameters of type `int (bool)` accept the following forms,
+case-insensitive:
+
+- `yes` / `no` (canonical form, as printed by `SHOW`)
+- `true` / `false`
+- `on` / `off`
+- `1` / `0` (numbers)
+
+All of the following are equivalent:
+
+```conf
+log_session yes
+log_session True
+log_session ON
+log_session 1
+```
