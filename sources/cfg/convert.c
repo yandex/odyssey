@@ -1848,6 +1848,41 @@ static int convert_rules(convert_ctx_t *ctx, const od_cfg_model_t *cfg)
 	return 0;
 }
 
+static int apply_default_pool(od_rules_t *rules, const od_cfg_model_t *model,
+			      od_cfg_diag_list_t *diags)
+{
+	const od_cfg_global_t *global = &model->global;
+	const char *value = "session";
+	if (global->default_pool.seen.is_set) {
+		value = global->default_pool.value;
+		if (strcmp(value, "session") != 0 &&
+		    strcmp(value, "transaction") != 0 &&
+		    strcmp(value, "statement") != 0) {
+			od_cfg_diag_error(diags,
+					  global->default_pool.seen.location,
+					  "unknown pool mode \"%s\"", value);
+			return -1;
+		}
+	}
+
+	od_list_t *i;
+	od_list_foreach (&rules->rules, i) {
+		od_rule_t *rule = od_container_of(i, od_rule_t, link);
+		if (rule->pool->pool_type_str != NULL) {
+			/* explicit pool takes precedence */
+			continue;
+		}
+		rule->pool->pool_type_str = od_strdup(value);
+		if (rule->pool->pool_type_str == NULL) {
+			od_cfg_diag_error(diags, model->location,
+					  "can't allocate pool mode string");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 int od_cfg_convert_model(const od_cfg_model_t *model, od_config_t *config,
 			 od_rules_t *rules, od_global_t *global,
 			 od_hba_rules_t *hba_rules, od_cfg_diag_list_t *diags)
@@ -1915,6 +1950,11 @@ int od_cfg_convert_model(const od_cfg_model_t *model, od_config_t *config,
 #endif
 
 	rc = convert_rules(&ctx, model);
+	if (rc != 0) {
+		goto to_return;
+	}
+
+	rc = apply_default_pool(rules, model, diags);
 	if (rc != 0) {
 		goto to_return;
 	}

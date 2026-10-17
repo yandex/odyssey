@@ -157,6 +157,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_STR(dst, src, log_syslog_facility);
 	MERGE_STR(dst, src, cpu_affinity);
 	MERGE_STR(dst, src, hba_file);
+	MERGE_STR(dst, src, default_pool);
 
 	MERGE_INT(dst, src, priority);
 	MERGE_INT(dst, src, graceful_shutdown_timeout_ms);

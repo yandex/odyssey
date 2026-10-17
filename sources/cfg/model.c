@@ -912,6 +912,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_string_field_free(&g->log_syslog_facility);
 	od_cfg_string_field_free(&g->cpu_affinity);
 	od_cfg_string_field_free(&g->hba_file);
+	od_cfg_string_field_free(&g->default_pool);
 
 	/* global int fields */
 	od_cfg_int_field_free(&g->priority);
