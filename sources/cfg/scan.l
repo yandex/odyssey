@@ -12,6 +12,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #include <odyssey.h>
+#include <duration.h>
 #include <cfg/parse.tab.h>
 #include <cfg/ctx.h>
 #include <cfg/keywords.h>
@@ -91,6 +92,14 @@ IDENT_CONT  [A-Za-z0-9_]
 IDENT       {IDENT_START}{IDENT_CONT}*
 NUMBER_SIGNED    -?{DIGIT}+
 SIZE_SUFFIX  [kK][bB]?|[mM][bB]?|[gG][bB]?|[bB]
+/*
+ * Go-style duration component: a number followed by at least one letter.
+ * The token matches compounds like 1h30m as a single token.  Placed after
+ * the SIZE_NUMBER rule, so an ambiguous bare "Nm" (e.g. 512m) still lexes
+ * as a size: unambiguous durations (1h, 30s, 500ms, 1h30m, 1m30s) win by
+ * longest match.  Suffix validation happens in the token action.
+ */
+DUR_COMP     {DIGIT}+[A-Za-z]+
 
 %%
 
@@ -122,6 +131,25 @@ SIZE_SUFFIX  [kK][bB]?|[mM][bB]?|[gG][bB]?|[bB]
 
 					yylval->num = v * mult;
 					return SIZE_NUMBER;
+				}
+
+{DUR_COMP}({DUR_COMP})* {
+					uint64_t us = 0;
+					int rc = od_duration_parse(
+						yytext, (size_t)yyleng, 1,
+						&us);
+					if (rc < 0 ||
+					    (size_t)rc != (size_t)yyleng) {
+						od_cfg_diag_error(
+							yyextra->diags,
+							*yylloc,
+							"invalid duration value '%s'",
+							yytext);
+						return ERROR_TOKEN;
+					}
+
+					yylval->num = (int64_t)us;
+					return DURATION;
 				}
 
 {NUMBER_SIGNED}  {

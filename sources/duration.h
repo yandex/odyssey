@@ -53,3 +53,14 @@ static inline int od_duration_parse_s(const char *str, size_t len,
 {
 	return od_duration_parse(str, len, 1000000LL, out_us);
 }
+
+/*
+ * Round a microsecond duration up to whole milliseconds.
+ * Zero stays zero; sub-millisecond values become exactly 1 ms so that a
+ * small nonzero duration never silently degrades to a zeroed (often
+ * "disabled") configuration field.
+ */
+static inline uint64_t od_duration_us_to_ms_ceil(uint64_t us)
+{
+	return us / 1000ULL + (us % 1000ULL != 0 ? 1ULL : 0ULL);
+}

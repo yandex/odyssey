@@ -178,7 +178,7 @@ static int read_and_parse_startup(od_client_t *client, int *parse_rc)
 	od_instance_t *instance = client->global->instance;
 
 	machine_msg_t *msg = od_read_startup(
-		&client->io, client->source->config->client_login_timeout);
+		&client->io, client->source->config->client_login_timeout_ms);
 	if (msg == NULL) {
 		if (parse_rc) {
 			*parse_rc = KIWI_STARTUP_READ_LEN_ERROR;
@@ -560,15 +560,17 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 				* waiting for a idle server connection for pool_timeout ms
 				*/
 				wait_for_idle =
-					route->rule->pool->timeout > 0 &&
+					route->rule->pool->timeout_ms > 0 &&
 					od_frontend_error_is_too_many_connections(
 						client);
 				if (wait_for_idle) {
 					od_router_close(router, client);
-					if (instance->config.server_login_retry) {
+					if (instance->config
+						    .server_login_retry_ms) {
 						machine_sleep(
-							instance->config
-								.server_login_retry);
+							(uint32_t)instance
+								->config
+								.server_login_retry_ms);
 					}
 					continue;
 				}

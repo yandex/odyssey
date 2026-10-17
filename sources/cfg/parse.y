@@ -51,6 +51,7 @@
 	#include <odyssey.h>
 	#include <od_memory.h>
 	#include <cfg/loc.h>
+	#include <cfg/model.h>
 
 #ifndef YY_TYPEDEF_YY_SCANNER_T
 #define YY_TYPEDEF_YY_SCANNER_T
@@ -140,9 +141,13 @@
 		char *address;
 		int   conn_type;
 	} selector;
+	od_cfg_time_value_t time;
 }
 
 %token ERROR_TOKEN
+
+/* Go-style duration value, e.g. 1h30m or 500ms (lexer-validated) */
+%token <num> DURATION
 
 %token <str> IDENT
 %token <str> STRING
@@ -353,6 +358,7 @@
 %type <str> string_value
 %type <num> int_value
 %type <num> size_value
+%type <time> time_value
 %type <num> conn_type
 %type <selector> route_selector
 
@@ -686,13 +692,13 @@ top_item:
 							@1,
 							"priority");
 		}
-	| GRACEFUL_SHUTDOWN_TIMEOUT_MS int_value
+	| GRACEFUL_SHUTDOWN_TIMEOUT_MS time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.graceful_shutdown_timeout_ms,
-							$2,
-							@1,
-							"graceful_shutdown_timeout_ms");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.graceful_shutdown_timeout_ms,
+						&$2, 1, 0, INT64_MAX,
+						@1,
+						"graceful_shutdown_timeout_ms");
 		}
 	| LOG_QUEUE_DEPTH int_value
 		{
@@ -702,13 +708,13 @@ top_item:
 							@1,
 							"log_queue_depth");
 		}
-	| STATS_INTERVAL int_value
+	| STATS_INTERVAL time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.stats_interval,
-							$2,
-							@1,
-							"stats_interval");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.stats_interval_ms,
+						&$2, 1000, 0, INT_MAX,
+						@1,
+						"stats_interval");
 		}
 	| CLIENT_MAX int_value
 		{
@@ -736,13 +742,13 @@ top_item:
 							@1,
 							"accept_rate_limit");
 		}
-	| SERVER_LOGIN_RETRY int_value
+	| SERVER_LOGIN_RETRY time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.server_login_retry,
-							$2,
-							@1,
-							"server_login_retry");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.server_login_retry_ms,
+						&$2, 1, 0, INT_MAX,
+						@1,
+						"server_login_retry");
 		}
 	| READAHEAD int_value
 		{
@@ -752,21 +758,21 @@ top_item:
 							@1,
 							"readahead");
 		}
-	| KEEPALIVE int_value
+	| KEEPALIVE time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.keepalive,
-							$2,
-							@1,
-							"keepalive");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.keepalive_ms,
+						&$2, 1000, 0, INT64_MAX,
+						@1,
+						"keepalive");
 		}
-	| KEEPALIVE_KEEP_INTERVAL int_value
+	| KEEPALIVE_KEEP_INTERVAL time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.keepalive_keep_interval,
-							$2,
-							@1,
-							"keepalive_keep_interval");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.keepalive_keep_interval_ms,
+						&$2, 1000, 0, INT64_MAX,
+						@1,
+						"keepalive_keep_interval");
 		}
 	| KEEPALIVE_PROBES int_value
 		{
@@ -776,13 +782,13 @@ top_item:
 							@1,
 							"keepalive_probes");
 		}
-	| KEEPALIVE_USR_TIMEOUT int_value
+	| KEEPALIVE_USR_TIMEOUT time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.keepalive_usr_timeout,
-							$2,
-							@1,
-							"keepalive_usr_timeout");
+			od_cfg_set_time_i64_ms(ctx->diags,
+						&ctx->model->global.keepalive_usr_timeout_ms,
+						&$2, 1, INT64_MIN, INT64_MAX,
+						@1,
+						"keepalive_usr_timeout");
 		}
 	| MAX_SIGTERMS_TO_DIE int_value
 		{
@@ -792,29 +798,29 @@ top_item:
 							@1,
 							"max_sigterms_to_die");
 		}
-	| BACKEND_CONNECT_TIMEOUT_MS int_value
+	| BACKEND_CONNECT_TIMEOUT_MS time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.backend_connect_timeout_ms,
-							$2,
-							@1,
-							"backend_connect_timeout_ms");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.backend_connect_timeout_ms,
+						&$2, 1, 0, INT_MAX,
+						@1,
+						"backend_connect_timeout_ms");
 		}
-	| CANCEL_TIMEOUT_MS int_value
+	| CANCEL_TIMEOUT_MS time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.cancel_timeout_ms,
-							$2,
-							@1,
-							"cancel_timeout_ms");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.cancel_timeout_ms,
+						&$2, 1, 0, INT_MAX,
+						@1,
+						"cancel_timeout_ms");
 		}
-	| CANCEL_QUEUE_TIMEOUT_MS int_value
+	| CANCEL_QUEUE_TIMEOUT_MS time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.cancel_queue_timeout_ms,
-							$2,
-							@1,
-							"cancel_queue_timeout_ms");
+			od_cfg_set_time_i64_ms(ctx->diags,
+						&ctx->model->global.cancel_queue_timeout_ms,
+						&$2, 1, INT64_MIN, INT_MAX,
+						@1,
+						"cancel_queue_timeout_ms");
 		}
 	| CANCEL_MAX_INFLIGHT int_value
 		{
@@ -844,13 +850,13 @@ top_item:
 							@1,
 							"resolvers");
 		}
-	| DNS_CACHE_TTL int_value
+	| DNS_CACHE_TTL time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.dns_cache_ttl,
-							$2,
-							@1,
-							"dns_cache_ttl");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.dns_cache_ttl_ms,
+						&$2, 1, 0, INT_MAX,
+						@1,
+						"dns_cache_ttl");
 		}
 	| CACHE_MSG_GC_SIZE int_value
 		{
@@ -901,13 +907,13 @@ top_item:
 							@1,
 							"promhttp_server_port");
 		}
-	| GROUP_CHECKER_INTERVAL int_value
+	| GROUP_CHECKER_INTERVAL time_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
-							&ctx->model->global.group_checker_interval,
-							$2,
-							@1,
-							"group_checker_interval");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.group_checker_interval_ms,
+						&$2, 1, 0, INT_MAX,
+						@1,
+						"group_checker_interval");
 		}
 	| WORKERS int_value
 		{
@@ -1424,19 +1430,13 @@ route_item:
 			od_cfg_set_bool(ctx->diags, &ur->server_drop_on_oom, $2,
 						@1, "server_drop_on_oom");
 		}
-	| SERVER_LIFETIME int_value
+	| SERVER_LIFETIME time_value
 		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "server_lifetime must be non-negative");
-			} else {
-				od_cfg_route_t *ur = ctx->current_user;
-				od_cfg_set_u64(ctx->diags,
-							   &ur->server_lifetime,
-							   (uint64_t)$2,
-							   @1,
-							   "server_lifetime");
-			}
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ctx->current_user->server_lifetime_ms,
+						   &$2, 1000, 0, INT64_MAX,
+						   @1,
+						   "server_lifetime");
 		}
 	| LDAP_POOL_SIZE int_value
 		{
@@ -1513,33 +1513,21 @@ route_item:
 							   "pool_size");
 			}
 		}
-	| POOL_TIMEOUT int_value
+	| POOL_TIMEOUT time_value
 		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "pool_timeout must be non-negative");
-			} else {
-				od_cfg_route_t *ur = ctx->current_user;
-				od_cfg_set_int(ctx->diags,
-							   &ur->pool_timeout,
-							   (uint64_t)$2,
-							   @1,
-							   "pool_timeout");
-			}
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ctx->current_user->pool_timeout_ms,
+						   &$2, 1, 0, INT64_MAX,
+						   @1,
+						   "pool_timeout");
 		}
-	| POOL_TTL int_value
+	| POOL_TTL time_value
 		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "pool_ttl must be non-negative");
-			} else {
-				od_cfg_route_t *ur = ctx->current_user;
-				od_cfg_set_int(ctx->diags,
-							   &ur->pool_ttl,
-							   (uint64_t)$2,
-							   @1,
-							   "pool_ttl");
-			}
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ctx->current_user->pool_ttl_ms,
+						   &$2, 1000, 0, INT64_MAX,
+						   @1,
+						   "pool_ttl");
 		}
 	| POOL_DISCARD bool_value
 		{
@@ -1587,19 +1575,13 @@ route_item:
 							@1,
 							"pool_rollback");
 		}
-	| POOL_RESET_TIMEOUT_MS int_value
+	| POOL_RESET_TIMEOUT_MS time_value
 		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "pool_reset_timeout_ms must be non-negative");
-			} else {
-				od_cfg_route_t *ur = ctx->current_user;
-				od_cfg_set_u64(ctx->diags,
-							   &ur->pool_reset_timeout_ms,
-							   (uint64_t)$2,
-							   @1,
-							   "pool_reset_timeout_ms");
-			}
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ctx->current_user->pool_reset_timeout_ms,
+						   &$2, 1, 0, INT64_MAX,
+						   @1,
+						   "pool_reset_timeout_ms");
 		}
 	| POOL_RESERVE_PREPARED_STATEMENT bool_value
 		{
@@ -1647,47 +1629,29 @@ route_item:
 							@1,
 							"pool_acquire_fail_fast");
 		}
-	| POOL_NOTICE_AFTER_WAITING_MS int_value
+	| POOL_NOTICE_AFTER_WAITING_MS time_value
 		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "pool_notice_after_waiting_ms must be non-negative");
-			} else {
-				od_cfg_route_t *ur = ctx->current_user;
-				od_cfg_set_u64(ctx->diags,
-							   &ur->pool_notice_after_waiting_ms,
-							   (uint64_t)$2,
-							   @1,
-							   "pool_notice_after_waiting_ms");
-			}
+			od_cfg_set_time_i64_ms(ctx->diags,
+						   &ctx->current_user->pool_notice_after_waiting_ms,
+						   &$2, 1, INT64_MIN, INT_MAX,
+						   @1,
+						   "pool_notice_after_waiting_ms");
 		}
-	| POOL_CLIENT_IDLE_TIMEOUT int_value
+	| POOL_CLIENT_IDLE_TIMEOUT time_value
 		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "pool_client_idle_timeout must be non-negative");
-			} else {
-				od_cfg_route_t *ur = ctx->current_user;
-				od_cfg_set_u64(ctx->diags,
-							   &ur->pool_client_idle_timeout,
-							   (uint64_t)$2,
-							   @1,
-							   "pool_client_idle_timeout");
-			}
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ctx->current_user->pool_client_idle_timeout_ms,
+						   &$2, 1000, 0, INT64_MAX,
+						   @1,
+						   "pool_client_idle_timeout");
 		}
-	| POOL_IDLE_IN_TRANSACTION_TIMEOUT int_value
+	| POOL_IDLE_IN_TRANSACTION_TIMEOUT time_value
 		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "pool_idle_in_transaction_timeout must be non-negative");
-			} else {
-				od_cfg_route_t *ur = ctx->current_user;
-				od_cfg_set_u64(ctx->diags,
-							   &ur->pool_idle_in_transaction_timeout,
-							   (uint64_t)$2,
-							   @1,
-							   "pool_idle_in_transaction_timeout");
-			}
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ctx->current_user->pool_idle_in_transaction_timeout_ms,
+						   &$2, 1000, 0, INT64_MAX,
+						   @1,
+						   "pool_idle_in_transaction_timeout");
 		}
 	| SHARED_POOL string_value
 		{
@@ -1840,42 +1804,29 @@ route_item:
 							  "watchdog_lag_query");
 			$2 = NULL;
 		}
-	| WATCHDOG_LAG_INTERVAL int_value
+	| WATCHDOG_LAG_INTERVAL time_value
 		{
-			if ($2 < 0) {
+			if (ctx->current_watchdog == NULL) {
 				od_cfg_diag_error(ctx->diags, @1,
-								  "watchdog_lag_interval must be non-negative");
-			} else {
-				od_cfg_route_t *ur = ctx->current_user;
-				od_cfg_database_t *db = ctx->current_database;
-
-				if (ctx->current_watchdog == NULL) {
-					od_cfg_diag_error(ctx->diags, @1,
-									"watchdog_lag_interval is not allowed outside watchdog, rule %s.%s",
-									db->name, ur->name);
-					YYERROR;
-				}
-
-				od_cfg_set_int(ctx->diags,
-							   &ur->watchdog_lag_interval,
-							   (uint64_t)$2,
-							   @1,
-							   "watchdog_lag_interval");
+						  "watchdog_lag_interval is not allowed outside watchdog, rule %s.%s",
+						  ctx->current_database->name,
+						  ctx->current_user->name);
+				YYERROR;
 			}
+
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ctx->current_user->watchdog_lag_interval_ms,
+						   &$2, 1000, 0, INT64_MAX,
+						   @1,
+						   "watchdog_lag_interval");
 		}
-	| CATCHUP_TIMEOUT int_value
+	| CATCHUP_TIMEOUT time_value
 		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "catchup_timeout must be non-negative");
-			} else {
-				od_cfg_route_t *ur = ctx->current_user;
-				od_cfg_set_int(ctx->diags,
-							   &ur->catchup_timeout,
-							   (uint64_t)$2,
-							   @1,
-							   "catchup_timeout");
-			}
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ctx->current_user->catchup_timeout_ms,
+						   &$2, 1000, 0, INT64_MAX,
+						   @1,
+						   "catchup_timeout");
 		}
 	| CATCHUP_CHECKS int_value
 		{
@@ -1956,21 +1907,21 @@ route_item:
 		{
 			ctx->current_kvp_list = NULL;
 		}
-	| KEEPALIVE int_value
+	| KEEPALIVE time_value
 		{
 			od_cfg_route_t *ur = ctx->current_user;
-			od_cfg_set_int(ctx->diags,
-						   &ur->keepalive,
-						   (uint64_t)$2,
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ur->keepalive_ms,
+						   &$2, 1000, 0, INT64_MAX,
 						   @1,
 						   "keepalive");
 		}
-	| KEEPALIVE_KEEP_INTERVAL int_value
+	| KEEPALIVE_KEEP_INTERVAL time_value
 		{
 			od_cfg_route_t *ur = ctx->current_user;
-			od_cfg_set_int(ctx->diags,
-						   &ur->keepalive_keep_interval,
-						   (uint64_t)$2,
+			od_cfg_set_time_u64_ms(ctx->diags,
+						   &ur->keepalive_keep_interval_ms,
+						   &$2, 1000, 0, INT64_MAX,
 						   @1,
 						   "keepalive_keep_interval");
 		}
@@ -1983,12 +1934,12 @@ route_item:
 						   @1,
 						   "keepalive_probes");
 		}
-	| KEEPALIVE_USR_TIMEOUT int_value
+	| KEEPALIVE_USR_TIMEOUT time_value
 		{
 			od_cfg_route_t *ur = ctx->current_user;
-			od_cfg_set_int(ctx->diags,
-						   &ur->keepalive_usr_timeout,
-						   (uint64_t)$2,
+			od_cfg_set_time_i64_ms(ctx->diags,
+						   &ur->keepalive_usr_timeout_ms,
+						   &$2, 1, INT64_MIN, INT64_MAX,
 						   @1,
 						   "keepalive_usr_timeout");
 		}
@@ -2270,13 +2221,12 @@ storage_item:
 									@1,
 									"server_max_routing");
 		}
-	| ENDPOINTS_STATUS_POLL_INTERVAL int_value
+	| ENDPOINTS_STATUS_POLL_INTERVAL time_value
 		{
-			od_cfg_set_int_range_from_i64(
+			od_cfg_set_time_u64_ms(
 				ctx->diags,
 				&ctx->current_storage->endpoints_status_poll_interval_ms,
-				$2,
-				1, INT_MAX,
+				&$2, 1, 1, INT_MAX,
 				@1,
 				"endpoints_status_poll_interval");
 		}
@@ -2472,14 +2422,13 @@ listen_item:
 							"auto_route_ro_on_standby");
 		}
 	| listen_balancing_section
-	| CLIENT_LOGIN_TIMEOUT int_value
+	| CLIENT_LOGIN_TIMEOUT time_value
 		{
-			od_cfg_set_int_range_from_i64(ctx->diags,
-									&ctx->current_listen->client_login_timeout,
-									$2,
-									0, INT_MAX,
-									@1,
-									"client_login_timeout");
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->current_listen->client_login_timeout_ms,
+						&$2, 1, 0, INT_MAX,
+						@1,
+						"client_login_timeout");
 		}
 	| BACKLOG int_value
 		{
@@ -2535,12 +2484,11 @@ listen_item:
 							  "tls_protocols");
 			$2 = NULL;
 		}
-	| CATCHUP_TIMEOUT int_value
+	| CATCHUP_TIMEOUT time_value
 		{
-			od_cfg_set_int_range_from_i64(ctx->diags,
-								&ctx->current_listen->catchup_timeout,
-								$2,
-								0, INT_MAX,
+			od_cfg_set_time_u64_ms(ctx->diags,
+								&ctx->current_listen->catchup_timeout_ms,
+								&$2, 1000, 0, INT64_MAX,
 								@1,
 								"catchup_timeout");
 		}
@@ -2763,12 +2711,11 @@ soft_oom_item:
 							  "process");
 			$2 = NULL;
 		}
-	| CHECK_INTERVAL_MS int_value
+	| CHECK_INTERVAL_MS time_value
 		{
-			od_cfg_set_int_range_from_i64(ctx->diags,
+			od_cfg_set_time_u64_ms(ctx->diags,
 									&ctx->current_soft_oom->check_interval_ms,
-									$2,
-									0, INT_MAX,
+									&$2, 1, 0, INT_MAX,
 									@1,
 									"check_interval_ms");
 		}
@@ -2852,12 +2799,11 @@ conn_drop_options_item:
 									@1,
 									"rate");
 		}
-	| INTERVAL_MS int_value
+	| INTERVAL_MS time_value
 		{
-			od_cfg_set_int_range_from_i64(ctx->diags,
+			od_cfg_set_time_u64_ms(ctx->diags,
 									&ctx->current_conn_drop_options->interval_ms,
-									$2,
-									1, INT_MAX,
+									&$2, 1, 1, INT_MAX,
 									@1,
 									"interval_ms");
 		}
@@ -2929,6 +2875,30 @@ int_value:
 size_value:
 	SIZE_NUMBER { $$ = $1; }
 	| NUMBER    { $$ = $1; }
+	;
+
+/*
+ * time_value — a value for a time-valued option.
+ *
+ * A bare NUMBER keeps its literal value in `bare` (it may be negative);
+ * the grammar action scales it with the per-rule bare unit via
+ * od_cfg_set_time_*_ms(), so old option names keep their historic units.
+ * A DURATION token is a Go-style duration (1h30m, 500ms, ...) already
+ * parsed by the lexer into microseconds in `us`.
+ */
+time_value:
+	NUMBER
+		{
+			$$.is_duration = 0;
+			$$.bare = $1;
+			$$.us = 0;
+		}
+	| DURATION
+		{
+			$$.is_duration = 1;
+			$$.bare = 0;
+			$$.us = (uint64_t)$1;
+		}
 	;
 
 %%

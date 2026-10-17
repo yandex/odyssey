@@ -35,7 +35,9 @@ struct od_rule_pool {
 
 	int min_size;
 	int size;
-	int timeout;
+	/* maximum wait for an idle server connection, milliseconds */
+	uint64_t timeout_ms;
+	/* time-to-live for idle server connections, seconds */
 	int ttl;
 	int discard;
 	int smart_discard;

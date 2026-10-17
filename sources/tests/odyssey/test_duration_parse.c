@@ -220,6 +220,33 @@ static void test_invalid_returns_false(void)
 	test(!try_parse_ms("+5s", &us));
 }
 
+/*
+ * Overflowing components must fail parsing instead of wrapping around.
+ */
+static void test_overflow_rejected(void)
+{
+	uint64_t us;
+
+	test(od_duration_parse("99999999999999999999d", 21, 1LL, &us) < 0);
+	test(od_duration_parse("100000000000d", 13, 1LL, &us) < 0);
+	test(od_duration_parse("18446744073709551616us", 22, 1LL, &us) < 0);
+
+	/* boundary: exactly UINT64_MAX microseconds still parses */
+	test(od_duration_parse("18446744073709551615us", 22, 1LL, &us) == 22);
+	test(us == UINT64_MAX);
+}
+
+static void test_us_to_ms_ceil(void)
+{
+	test(od_duration_us_to_ms_ceil(0) == 0ULL);
+	test(od_duration_us_to_ms_ceil(1) == 1ULL);
+	test(od_duration_us_to_ms_ceil(999) == 1ULL);
+	test(od_duration_us_to_ms_ceil(1000) == 1ULL);
+	test(od_duration_us_to_ms_ceil(1001) == 2ULL);
+	test(od_duration_us_to_ms_ceil(1500) == 2ULL);
+	test(od_duration_us_to_ms_ceil(60000000) == 60000ULL);
+}
+
 void odyssey_test_duration_parse(void)
 {
 	test_suffix_ns();
@@ -249,4 +276,6 @@ void odyssey_test_duration_parse(void)
 	test_ns_truncation();
 	test_leading_whitespace();
 	test_invalid_returns_false();
+	test_overflow_rejected();
+	test_us_to_ms_ceil();
 }

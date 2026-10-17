@@ -42,8 +42,13 @@ int od_duration_parse(const char *str, size_t len, int64_t default_unit_us,
 		/* read decimal integer */
 		uint64_t value = 0;
 		while (p < end && isdigit((unsigned char)*p)) {
-			value = value * 10 +
-				(uint64_t)((unsigned char)*p++ - '0');
+			if (__builtin_mul_overflow(value, 10ULL, &value)) {
+				return -1;
+			}
+			uint64_t digit = (uint64_t)((unsigned char)*p++ - '0');
+			if (__builtin_add_overflow(value, digit, &value)) {
+				return -1;
+			}
 		}
 		first = false;
 
@@ -54,39 +59,53 @@ int od_duration_parse(const char *str, size_t len, int64_t default_unit_us,
 		}
 		int sfx_len = (int)(p - sfx);
 
+		uint64_t unit_us;
 		if (sfx_len == 0) {
-			total += value * (uint64_t)default_unit_us;
-			break;
-		}
-
-		if (sfx_len == 1 && tolower((unsigned char)sfx[0]) == 'd') {
-			total += value * 86400000000ULL;
+			if (default_unit_us < 0) {
+				return -1;
+			}
+			unit_us = (uint64_t)default_unit_us;
+		} else if (sfx_len == 1 &&
+			   tolower((unsigned char)sfx[0]) == 'd') {
+			unit_us = 86400000000ULL;
 		} else if (sfx_len == 1 &&
 			   tolower((unsigned char)sfx[0]) == 'h') {
-			total += value * 3600000000ULL;
+			unit_us = 3600000000ULL;
 		} else if (sfx_len == 1 &&
 			   tolower((unsigned char)sfx[0]) == 'm') {
-			total += value * 60000000ULL;
+			unit_us = 60000000ULL;
 		} else if (sfx_len == 1 &&
 			   tolower((unsigned char)sfx[0]) == 's') {
-			total += value * 1000000ULL;
+			unit_us = 1000000ULL;
 		} else if (sfx_len == 2 &&
 			   tolower((unsigned char)sfx[0]) == 'm' &&
 			   tolower((unsigned char)sfx[1]) == 's') {
-			total += value * 1000ULL;
+			unit_us = 1000ULL;
 		} else if (sfx_len == 2 &&
 			   tolower((unsigned char)sfx[0]) == 'u' &&
 			   tolower((unsigned char)sfx[1]) == 's') {
-			total += value;
+			unit_us = 1ULL;
 		} else if (sfx_len == 2 &&
 			   tolower((unsigned char)sfx[0]) == 'n' &&
 			   tolower((unsigned char)sfx[1]) == 's') {
-			total += value / 1000ULL;
+			/* nanoseconds are truncated to microseconds */
+			value /= 1000ULL;
+			unit_us = 1ULL;
 		} else {
 			/* unrecognised suffix — stop and treat as bare number */
 			p = sfx;
-			total += value * (uint64_t)default_unit_us;
-			break;
+			if (default_unit_us < 0) {
+				return -1;
+			}
+			unit_us = (uint64_t)default_unit_us;
+		}
+
+		uint64_t component;
+		if (__builtin_mul_overflow(value, unit_us, &component)) {
+			return -1;
+		}
+		if (__builtin_add_overflow(total, component, &total)) {
+			return -1;
 		}
 	}
 

@@ -46,13 +46,13 @@ Consider something like `now() - pg_last_xact_replay_timestamp()` or
 [repl_mon](https://github.com/man-brain/repl_mon) for production  usages
 
 Also you need specify `catchup_timeout` parameter in user section,
-that sets maximum replication lag in seconds:
+that sets maximum replication lag in seconds (duration suffixes
+like `3s` are supported):
 ```plaintext
 database "db" {
     user "user" {
         ...
         catchup_timeout 3
-        catchup_checks 1
     }
 }
 ```
