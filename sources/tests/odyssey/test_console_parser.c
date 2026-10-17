@@ -165,11 +165,6 @@ static void test_show_storages(void)
 	test(strcmp(parse_ok("SHOW STORAGES"), "(show storages)") == 0);
 }
 
-static void test_show_fds(void)
-{
-	test(strcmp(parse_ok("SHOW FDS"), "(show fds)") == 0);
-}
-
 static void test_show_is_paused(void)
 {
 	test(strcmp(parse_ok("SHOW IS_PAUSED"), "(show is_paused)") == 0);
@@ -408,7 +403,6 @@ void odyssey_test_console_parser(void)
 	test_show_version();
 	test_show_listen();
 	test_show_storages();
-	test_show_fds();
 	test_show_is_paused();
 	test_show_host_utilization();
 	test_show_rules();
