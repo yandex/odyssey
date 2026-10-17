@@ -763,11 +763,14 @@ attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 	for (size_t i = 0; i < count; ++i) {
 		od_storage_endpoint_t *endpoint = endpoints[i];
 
-		char addr[256];
-		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
+		if (od_logger_debug_enabled(&instance->logger, client, NULL)) {
+			char addr[256];
+			od_address_to_str(&endpoint->address, addr,
+					  sizeof(addr) - 1);
 
-		od_debug(&instance->logger, context, client, NULL,
-			 "trying to attach to %s...", addr);
+			od_debug(&instance->logger, context, client, NULL,
+				 "trying to attach to %s...", addr);
+		}
 
 		/*
 		 * if client is attached now - previous attach failed
@@ -792,9 +795,15 @@ attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 			return status;
 		}
 
-		od_debug(&instance->logger, context, client, NULL,
-			 "attach to %s failed with status: %s", addr,
-			 od_frontend_status_to_str(status));
+		if (od_logger_debug_enabled(&instance->logger, client, NULL)) {
+			char addr[256];
+			od_address_to_str(&endpoint->address, addr,
+					  sizeof(addr) - 1);
+
+			od_debug(&instance->logger, context, client, NULL,
+				 "attach to %s failed with status: %s", addr,
+				 od_frontend_status_to_str(status));
+		}
 	}
 
 	return status;
