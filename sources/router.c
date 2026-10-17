@@ -372,6 +372,9 @@ od_router_create_connected_server(od_route_t *route,
 	od_route_lock(route);
 
 	if (rc != OK_RESPONSE) {
+		/* No startup session: close without waiting on io under the lock. */
+		od_backend_abort_connection(server);
+		server->route = NULL;
 		od_backend_close(server);
 		return NULL;
 	}
@@ -403,7 +406,9 @@ static inline int od_router_create_idle_server(od_route_t *route,
 		 * so just release this connection and exit
 		 */
 
-		od_backend_close_connection(server);
+		/* This connection has not performed startup either. */
+		od_backend_abort_connection(server);
+		server->route = NULL;
 		od_backend_close(server);
 
 		return NOT_OK_RESPONSE;
@@ -1224,8 +1229,6 @@ void od_router_close(od_router_t *router, od_client_t *client)
 
 	od_server_t *server = client->server;
 
-	od_backend_close_connection(server);
-
 	od_route_lock(route);
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
@@ -1242,6 +1245,9 @@ void od_router_close(od_router_t *router, od_client_t *client)
 			&client_klock);
 	}
 
+	/* Console readers cannot see this server after it leaves the pool. */
+	/* Terminate may wait on io, so send it without holding the pool lock. */
+	od_backend_close_connection(server);
 	od_assert(server->io.io == NULL);
 	od_server_free(server);
 }
