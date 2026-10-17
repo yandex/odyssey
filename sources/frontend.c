@@ -393,10 +393,8 @@ static int od_frontend_startup(od_client_t *client)
 		return -1;
 	}
 
-	if ((client->physical_rep &&
-	     instance->config.replication_proxy_phys) ||
-	    (client->logical_rep &&
-	     instance->config.replication_proxy_logic)) {
+	if ((client->physical_rep && instance->config.replication_proxy_phys) ||
+	    (client->logical_rep && instance->config.replication_proxy_logic)) {
 		/*
 		 * replication full proxy mode: nothing more is sent
 		 * to the client, the raw startup packet is forwarded
@@ -3523,10 +3521,8 @@ void od_frontend(void *arg)
 	 * the first remote storage of the configuration is used as the
 	 * target, its first endpoint in particular
 	 */
-	if ((client->physical_rep &&
-	     instance->config.replication_proxy_phys) ||
-	    (client->logical_rep &&
-	     instance->config.replication_proxy_logic)) {
+	if ((client->physical_rep && instance->config.replication_proxy_phys) ||
+	    (client->logical_rep && instance->config.replication_proxy_logic)) {
 		od_routing_slot_release(global);
 
 		od_frontend_replication_proxy(client);

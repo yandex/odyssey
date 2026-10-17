@@ -140,7 +140,8 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->smart_search_path_enquoting =
 		new_config->smart_search_path_enquoting;
 	current_config->disable_nolinger = new_config->disable_nolinger;
-	current_config->replication_proxy_phys = new_config->replication_proxy_phys;
+	current_config->replication_proxy_phys =
+		new_config->replication_proxy_phys;
 	current_config->replication_proxy_logic =
 		new_config->replication_proxy_logic;
 	current_config->keepalive = new_config->keepalive;
