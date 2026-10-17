@@ -1,0 +1,7 @@
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ session
+(1 row)
+
