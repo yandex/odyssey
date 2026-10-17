@@ -75,3 +75,49 @@ NOTICE:  processed virtually by odyssey
  off
 (1 row)
 
+-- pg-style bool spellings
+SET odyssey.pin_backend = "yes";
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+SET odyssey.pin_backend TO 'no';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ off
+(1 row)
+
+SET odyssey.pin_backend = "t";
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+SET odyssey.opportunistic_acquire = "yes";
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.opportunistic_acquire;
+NOTICE:  processed virtually by odyssey
+ odyssey.opportunistic_acquire 
+-------------------------------
+ on
+(1 row)
+
+SET odyssey.opportunistic_acquire TO '0';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.opportunistic_acquire;
+NOTICE:  processed virtually by odyssey
+ odyssey.opportunistic_acquire 
+-------------------------------
+ off
+(1 row)
+
