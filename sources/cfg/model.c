@@ -1477,10 +1477,11 @@ static int od_cfg_set_i64(od_cfg_diag_list_t *diags, od_cfg_i64_field_t *field,
 /*
  * Convert a parsed time value to whole milliseconds.
  *
- * Durations are rounded up (od_duration_us_to_ms_ceil) so that a small
- * nonzero duration can never degrade into a zeroed — and often "disabled" —
- * option value.  Bare numbers are scaled by bare_unit_ms, which keeps the
- * historic unit of an old option name (see od_cfg_set_time_*_ms).
+ * Values with an explicit PostgreSQL-style unit ("500ms", "30 min") arrive
+ * already converted and rounded by od_duration_parse_ms().  Bare values
+ * are scaled by bare_unit_ms — the historic base unit of the option (the
+ * same idea as a PostgreSQL per-GUC base unit) — and fractional values are
+ * rounded half-to-even with rint(), like PostgreSQL rounds a GUC value.
  */
 static int od_cfg_time_value_to_ms(od_cfg_diag_list_t *diags,
 				   od_cfg_location_t location,
@@ -1496,8 +1497,22 @@ static int od_cfg_time_value_to_ms(od_cfg_diag_list_t *diags,
 		return -1;
 	}
 
-	if (value->is_duration) {
-		*out_ms = (int64_t)od_duration_us_to_ms_ceil(value->us);
+	if (value->has_unit) {
+		*out_ms = value->ms;
+		return 0;
+	}
+
+	if (value->is_real) {
+		double ms = value->real * (double)bare_unit_ms;
+
+		if (!(ms >= (double)INT64_MIN && ms < (double)INT64_MAX)) {
+			od_cfg_diag_error(diags, location,
+					  "value for option '%s' is too large",
+					  field_name);
+			return -1;
+		}
+
+		*out_ms = (int64_t)rint(ms);
 		return 0;
 	}
 

@@ -44,15 +44,19 @@ typedef struct {
 
 /*
  * Value of a configuration option that accepts either a bare number or a
- * Go-style duration (e.g. 1h30m, 500ms).  For a bare number the grammar
- * action records the literal (possibly negative) value; the actual scaling
- * to milliseconds happens in od_cfg_set_time_*_ms() using the per-rule
- * bare_unit_ms factor (old option names keep their historic units).
+ * PostgreSQL GUC-style duration ("500ms", "30 min", "1.5h" — see
+ * duration.h).  For a bare value the grammar action records the literal
+ * (possibly negative) number; the actual scaling to milliseconds happens
+ * in od_cfg_set_time_*_ms() using the per-rule bare_unit_ms factor, so
+ * every option keeps its historic base unit for unitless values.  Values
+ * with an explicit unit arrive already converted to milliseconds.
  */
 typedef struct {
-	int is_duration;
+	int has_unit; /* explicit unit given, `ms` is valid */
+	int is_real; /* bare value is a float (`real`), not `bare` */
 	int64_t bare;
-	uint64_t us;
+	double real;
+	int64_t ms;
 } od_cfg_time_value_t;
 
 typedef struct {
@@ -556,19 +560,18 @@ int od_cfg_set_int_range_from_i64(od_cfg_diag_list_t *diags,
 int od_cfg_set_u64(od_cfg_diag_list_t *diags, od_cfg_u64_field_t *field,
 		   uint64_t value, od_cfg_location_t location,
 		   const char *field_name);
-
 /*
  * Set a time-valued option, storing the result as whole milliseconds.
  *
- * A duration value (is_duration != 0, `us` in microseconds) is converted
- * with ceil() so sub-millisecond durations never collapse to zero;
- * a bare number is scaled by bare_unit_ms — historic option names keep
- * their original units this way (e.g. the seconds-based catchup_timeout
- * alias uses bare_unit_ms = 1000, while catchup_timeout_ms uses 1).
+ * A value with an explicit PostgreSQL-style unit ("500ms", "30 min") is
+ * already converted by od_duration_parse_ms().  A bare value is scaled by
+ * bare_unit_ms — the historic base unit of the option — and fractional
+ * values are rounded half-to-even with rint(), like PostgreSQL rounds a
+ * GUC value to its base unit.
  *
  * min_ms/max_ms bound the resulting millisecond value (both inclusive).
- * Negative bare numbers are rejected for u64 fields and accepted for
- * i64 fields (options like keepalive_usr_timeout_ms use them as markers).
+ * Negative values are rejected for u64 fields and accepted for i64 fields
+ * (options like keepalive_usr_timeout use them as markers).
  */
 int od_cfg_set_time_u64_ms(od_cfg_diag_list_t *diags, od_cfg_u64_field_t *field,
 			   const od_cfg_time_value_t *value,
@@ -579,7 +582,6 @@ int od_cfg_set_time_i64_ms(od_cfg_diag_list_t *diags, od_cfg_i64_field_t *field,
 			   const od_cfg_time_value_t *value,
 			   int64_t bare_unit_ms, int64_t min_ms, int64_t max_ms,
 			   od_cfg_location_t location, const char *field_name);
-
 int od_cfg_set_string(od_cfg_diag_list_t *diags, od_cfg_string_field_t *field,
 		      char *value, od_cfg_location_t location,
 		      const char *field_name);

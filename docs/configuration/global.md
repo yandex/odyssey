@@ -9,34 +9,37 @@ for all Odyssey rules.
 
 Options that accept a time interval (parameters of type *duration*,
 e.g. `stats_interval`, `server_lifetime`, `pool_timeout`,
-`client_login_timeout`, ...) accept either a plain number or a
-Go-style duration with unit suffixes:
+`client_login_timeout`, ...) accept values in the PostgreSQL GUC
+syntax — the same format as `statement_timeout` in postgresql.conf:
 
 ```plain
 client_login_timeout 15s
-server_lifetime 1h30m
+server_lifetime 1h
 pool_timeout 500
-stats_interval 2m
+stats_interval 2min
 catchup_timeout 3s
 ```
 
-Supported suffixes (case-insensitive): `ms`, `s`, `m`, `h`, `d`, `us`,
-`ns`. Compound values like `1h30m` or `1d2h3m4s` are supported.
+Exactly one optional unit is allowed, and units are case-sensitive,
+like in PostgreSQL: `us`, `ms`, `s`, `min`, `h`, `d`.  Compound values
+(`1h30m`) are not supported.  Whitespace between the number and the
+unit is allowed (`30 min`), as are floating-point numbers (`1.5h`) and
+`0x`-hexadecimal integers (`0x10s`).
+
+The value is rounded half-to-even to whole milliseconds, exactly like
+PostgreSQL rounds a GUC value to its base unit (`1500us` is 2 ms,
+`500us` is 0 ms).  Some options have a one-second runtime granularity
+(TCP keepalive settings, statistics interval, catchup timeout): their
+values are rounded to whole seconds the same way.
 
 Bare numbers keep the historic unit of the option (for example
 `stats_interval 60` means 60 seconds, while `client_login_timeout
-15000` means 15000 milliseconds).  A duration suffix always overrides
+15000` means 15000 milliseconds).  An explicit unit always overrides
 the unit: `catchup_timeout 3s` is 3 seconds.
 
-Sub-millisecond durations are rounded up to 1 ms. Some options have a
-one-second runtime granularity (TCP keepalive settings, statistics
-interval, catchup timeout): sub-second durations for them are rounded
-up to one second.
-
-Note that a bare `m` suffix is reserved for size options (`512m` means
-512 megabytes), so a standalone value like `2m` is not accepted by
-time-valued options — write `120s` or a compound such as `1h30m`
-instead.
+Note that a bare `m` suffix is not a time unit (minutes are written as
+`min`): a standalone value like `2m` is a size (`512m` means 512
+megabytes) and is rejected by time-valued options.
 
 ## Configuration Parameters Reference
 | Parameter                                  | Type             | Default     | Reload  | Notes                                                 |

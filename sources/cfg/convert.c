@@ -79,30 +79,25 @@ typedef struct {
 /*
  * Convert a millisecond duration to whole seconds for options whose
  * runtime granularity is one second (cron ticks, TCP socket options,
- * replication lag comparisons).
- *
- * A positive duration is never rounded down to zero seconds, because zero
- * usually disables the option; such values are rounded up to one second
- * instead.  Sub-second precision beyond that is truncated with a warning.
+ * replication lag comparisons), rounding half-to-even like PostgreSQL
+ * rounds a GUC value to its base unit.
  */
 static inline int od_cfg_ms_to_sec(od_cfg_diag_list_t *diags,
 				   od_cfg_location_t location, const char *name,
 				   int64_t ms)
 {
-	int64_t sec = ms / 1000;
+	int64_t sec = (int64_t)rint((double)ms / 1000.0);
 
 	if (ms > 0 && sec == 0) {
 		od_cfg_diag_warning(
 			diags, location,
-			"%s: %lld ms is below one second, rounding up to 1 second",
+			"%s: %lld ms rounds down to 0 seconds, the option is treated as disabled",
 			name, (long long)ms);
-		sec = 1;
 	} else if (ms > 0 && (ms % 1000) != 0) {
 		od_cfg_diag_warning(
 			diags, location,
-			"%s: sub-second precision is not supported, "
-			"truncating to %lld seconds",
-			name, (long long)sec);
+			"%s: %lld ms is not a whole number of seconds, rounding to %lld s",
+			name, (long long)ms, (long long)sec);
 	}
 
 	return (int)sec;

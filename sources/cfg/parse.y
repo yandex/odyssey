@@ -75,6 +75,7 @@
 	#include <cfg/reader.h>
 	#include <cfg/keywords.h>
 	#include <misc.h>
+	#include <duration.h>
 	#include <sysv.h>
 
 	int yylex(YYSTYPE *yylval, YYLTYPE *yylloc, yyscan_t scanner);
@@ -136,6 +137,7 @@
 %union {
 	char *str;
 	int64_t num;
+	double real;
 	int boolean;
 	struct {
 		char *address;
@@ -146,8 +148,10 @@
 
 %token ERROR_TOKEN
 
-/* Go-style duration value, e.g. 1h30m or 500ms (lexer-validated) */
+/* PostgreSQL GUC-style time value with a unit, e.g. 500ms or 1h */
 %token <num> DURATION
+/* float value, e.g. 1.5 */
+%token <real> REAL
 
 %token <str> IDENT
 %token <str> STRING
@@ -2878,26 +2882,101 @@ size_value:
 	;
 
 /*
- * time_value — a value for a time-valued option.
+ * time_value — a value for a time-valued option, in PostgreSQL GUC style
+ * (see guc.c parse_int and the duration.h header comment).
  *
- * A bare NUMBER keeps its literal value in `bare` (it may be negative);
- * the grammar action scales it with the per-rule bare unit via
- * od_cfg_set_time_*_ms(), so old option names keep their historic units.
- * A DURATION token is a Go-style duration (1h30m, 500ms, ...) already
- * parsed by the lexer into microseconds in `us`.
+ * A bare NUMBER/REAL keeps its literal value; the grammar action scales it
+ * with the per-rule bare unit via od_cfg_set_time_*_ms(), so every option
+ * keeps its historic base unit for unitless values.  A DURATION token
+ * ("500ms") or a number+unit pair with whitespace ("30 min") carries an
+ * explicit unit and is already converted to milliseconds by
+ * od_duration_parse_ms().
  */
 time_value:
 	NUMBER
 		{
-			$$.is_duration = 0;
+			$$.has_unit = 0;
+			$$.is_real = 0;
 			$$.bare = $1;
-			$$.us = 0;
+			$$.real = 0;
+			$$.ms = 0;
+		}
+	| REAL
+		{
+			$$.has_unit = 0;
+			$$.is_real = 1;
+			$$.bare = 0;
+			$$.real = $1;
+			$$.ms = 0;
 		}
 	| DURATION
 		{
-			$$.is_duration = 1;
+			$$.has_unit = 1;
+			$$.is_real = 0;
 			$$.bare = 0;
-			$$.us = (uint64_t)$1;
+			$$.real = 0;
+			$$.ms = $1;
+		}
+	| NUMBER IDENT
+		{
+			char buf[64];
+
+			snprintf(buf, sizeof(buf), "%lld %s",
+				 (long long)$1, $2);
+
+			const char *hint = NULL;
+			if (!od_duration_parse_ms(buf, &$$.ms, &hint)) {
+				if (hint != NULL) {
+					od_cfg_diag_error_with_hint(
+						ctx->diags, @1, hint,
+						"invalid duration value '%s'",
+						buf);
+				} else {
+					od_cfg_diag_error(
+						ctx->diags, @1,
+						"invalid duration value '%s'",
+						buf);
+				}
+				od_free($2);
+				$2 = NULL;
+				YYERROR;
+			}
+
+			$$.has_unit = 1;
+			$$.is_real = 0;
+			$$.bare = 0;
+			$$.real = 0;
+			od_free($2);
+		}
+	| REAL IDENT
+		{
+			char buf[64];
+
+			snprintf(buf, sizeof(buf), "%.17g %s", $1, $2);
+
+			const char *hint = NULL;
+			if (!od_duration_parse_ms(buf, &$$.ms, &hint)) {
+				if (hint != NULL) {
+					od_cfg_diag_error_with_hint(
+						ctx->diags, @1, hint,
+						"invalid duration value '%s'",
+						buf);
+				} else {
+					od_cfg_diag_error(
+						ctx->diags, @1,
+						"invalid duration value '%s'",
+						buf);
+				}
+				od_free($2);
+				$2 = NULL;
+				YYERROR;
+			}
+
+			$$.has_unit = 1;
+			$$.is_real = 0;
+			$$.bare = 0;
+			$$.real = 0;
+			od_free($2);
 		}
 	;
 
