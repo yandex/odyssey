@@ -490,6 +490,15 @@ top_item:
 							@1,
 							"log_config");
 		}
+	| POOL string_value
+		{
+			od_cfg_set_string(ctx->diags,
+							&ctx->model->global.default_pool,
+							$2,
+							@1,
+							"pool");
+			$2 = NULL;
+		}
 	| LOG_SESSION bool_value
 		{
 			od_cfg_set_bool(ctx->diags,
