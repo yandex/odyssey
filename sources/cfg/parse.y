@@ -73,9 +73,26 @@
 	#include <cfg/model.h>
 	#include <cfg/reader.h>
 	#include <cfg/keywords.h>
+	#include <misc.h>
 	#include <sysv.h>
 
 	int yylex(YYSTYPE *yylval, YYLTYPE *yylloc, yyscan_t scanner);
+
+	static int od_cfg_bool_from_str(od_cfg_diag_list_t *diags,
+					od_cfg_location_t loc,
+					const char *value)
+	{
+		bool v = false;
+
+		if (!parse_bool(value, &v)) {
+			od_cfg_diag_error(diags, loc,
+					  "invalid boolean value '%s'",
+					  value);
+			return -1;
+		}
+
+		return v ? 1 : 0;
+	}
 
 	static void yyerror(YYLTYPE *loc,
 						yyscan_t scanner,
@@ -2866,6 +2883,39 @@ shared_pool_item:
 bool_value:
 	  YES { $$ = 1; }
 	| NO  { $$ = 0; }
+	| NUMBER
+		{
+			if ($1 != 0 && $1 != 1) {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "invalid boolean value %lld: expected 0 or 1",
+						  (long long)$1);
+				YYERROR;
+			}
+
+			$$ = (int)$1;
+		}
+	| STRING
+		{
+			int v = od_cfg_bool_from_str(ctx->diags, @1, $1);
+			od_free($1);
+			$1 = NULL;
+			if (v < 0) {
+				YYERROR;
+			}
+
+			$$ = v;
+		}
+	| IDENT
+		{
+			int v = od_cfg_bool_from_str(ctx->diags, @1, $1);
+			od_free($1);
+			$1 = NULL;
+			if (v < 0) {
+				YYERROR;
+			}
+
+			$$ = v;
+		}
 	;
 
 string_value:

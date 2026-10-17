@@ -473,6 +473,7 @@ set(od_test_src
     tests/odyssey/test_pstmt.c
     tests/odyssey/test_clients_map.c
     tests/odyssey/test_duration_parse.c
+    tests/odyssey/test_misc.c
     tests/odyssey/test_thread_pool.c
     tests/odyssey/test_linear_alloc.c
     tests/odyssey/test_scram.c
