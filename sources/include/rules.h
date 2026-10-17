@@ -204,6 +204,8 @@ struct od_rule {
 	int auto_route_ro_on_standby;
 	int server_drop_on_oom;
 	uint64_t server_lifetime_us;
+	/* TCP keepalive settings: keepalive and interval in seconds,
+	 * usr timeout (TCP_USER_TIMEOUT) in milliseconds */
 	int keepalive;
 	int keepalive_keep_interval;
 	int keepalive_probes;

@@ -294,7 +294,7 @@ static void od_cron(void *arg)
 		/* create server connections if pool size is less than min_pool_size */
 		od_cron_keep_min_pool_sizes(cron);
 
-		/* update statistics */
+		/* update statistics; the loop ticks roughly once per second */
 		if (++stats_tick >= instance->config.stats_interval) {
 			od_cron_stat(cron);
 			stats_tick = 0;

@@ -1055,10 +1055,10 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	od_assert(route != NULL);
 
 	uint64_t now_ms = machine_time_ms();
-	if (route->rule->pool->timeout <= 0) {
+	if (route->rule->pool->timeout_ms == 0) {
 		end_time_ms = UINT64_MAX;
 	} else {
-		end_time_ms = now_ms + (uint64_t)route->rule->pool->timeout;
+		end_time_ms = now_ms + route->rule->pool->timeout_ms;
 	}
 
 	int internal = route->rule->pool->routing == OD_RULE_POOL_INTERNAL;

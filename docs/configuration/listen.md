@@ -189,7 +189,7 @@ Only takes effect when `client_max` is set in the global section. See also
 `reserved_clients 2`
 
 ## **client_login_timeout**
-*integer*
+*duration*
 
 Prevent client stall during routing for more that client_login_timeout milliseconds.
 Defaults to 15000.

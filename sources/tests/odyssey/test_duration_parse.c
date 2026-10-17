@@ -9,244 +9,174 @@
 #include <duration.h>
 #include <tests/odyssey_test.h>
 
-/*
- * Helpers — call the pure string API directly, no od_parser_t needed.
- * parse_ms / parse_s assert that parsing succeeds and return microseconds.
- * try_parse_ms returns false when parsing fails (used for error-path tests).
- */
-static uint64_t parse_ms(const char *input)
-{
-	uint64_t us = 0;
-	test(od_duration_parse_ms(input, strlen(input), &us) > 0);
-	return us;
-}
-
-static uint64_t parse_s(const char *input)
-{
-	uint64_t us = 0;
-	test(od_duration_parse_s(input, strlen(input), &us) > 0);
-	return us;
-}
-
-static bool try_parse_ms(const char *input, uint64_t *out_us)
-{
-	return od_duration_parse_ms(input, strlen(input), out_us) > 0;
-}
-
-static void test_suffix_ns(void)
-{
-	test(parse_ms("2000000ns") == 2000ULL);
-}
-
-static void test_suffix_us(void)
-{
-	test(parse_ms("5000us") == 5000ULL);
-}
-
-static void test_suffix_ms(void)
-{
-	test(parse_ms("500ms") == 500000ULL);
-}
-
-static void test_suffix_s(void)
-{
-	test(parse_ms("30s") == 30000000ULL);
-}
-
-static void test_suffix_m(void)
-{
-	test(parse_ms("1m") == 60000000ULL);
-}
-
-static void test_suffix_h(void)
-{
-	test(parse_ms("2h") == 7200000000ULL);
-}
-
-static void test_suffix_d(void)
-{
-	test(parse_ms("1d") == 86400000000ULL);
-}
-
-static void test_compound_1h30m(void)
-{
-	test(parse_ms("1h30m") == 5400000000ULL);
-}
-
-static void test_compound_1m30s(void)
-{
-	test(parse_ms("1m30s") == 90000000ULL);
-}
-
-static void test_compound_2d3h(void)
-{
-	test(parse_ms("2d3h") == 183600000000ULL);
-}
-
-static void test_compound_1d2h3m4s(void)
-{
-	uint64_t expected = 1ULL * 24 * 60 * 60 * 1000000 +
-			    2ULL * 60 * 60 * 1000000 + 3ULL * 60 * 1000000 +
-			    4ULL * 1000000;
-	test(parse_ms("1d2h3m4s") == expected);
-}
-
-static void test_compound_1m500ms(void)
-{
-	test(parse_ms("1m500ms") == 60500000ULL);
-}
+#include <string.h>
 
 /*
- * Backward compatibility: bare number with no suffix.
- *
- * These tests document that existing config files continue to work exactly
- * as they did before duration parsing was added.  Each test names the
- * affected field and shows the stored-value math so a reviewer can verify
- * the conversion without reading config_reader.c.
+ * The duration parser is ported from PostgreSQL guc.c (parse_int +
+ * convert_to_base_unit), so these tests document PostgreSQL GUC semantics:
+ * a single optional unit ("us", "ms", "s", "min", "h", "d"), case
+ * sensitivity, floats, 0x-hexadecimal numbers, whitespace between the
+ * number and the unit, rint() rounding to the base unit, and rejection of
+ * compound values.
  */
-static void test_compat_ms_field_bare_number(void)
+
+static int64_t parse_ms(const char *input)
 {
-	/*
-	 * Fields like pool_timeout store milliseconds as int.
-	 * Old config: pool_timeout 5000
-	 * parse_ms("5000") -> 5 000 000 us; stored: (int)(us / 1000) = 5000 ms
-	 */
-	uint64_t us = parse_ms("5000");
-	test(us == 5000000ULL);
-	test((int)(us / 1000ULL) == 5000);
+	int64_t ms = 0;
+	const char *hint = NULL;
+
+	test(od_duration_parse_ms(input, &ms, &hint));
+	return ms;
 }
 
-static void test_compat_s_field_bare_number_u64(void)
+static bool try_parse_ms(const char *input, int64_t *out_ms, const char **hint)
 {
-	/*
-	 * Fields like pool_client_idle_timeout store microseconds as uint64_t.
-	 * Old config: pool_client_idle_timeout 30
-	 * parse_s("30") -> 30 000 000 us; stored directly as uint64_t
-	 */
-	uint64_t us = parse_s("30");
-	test(us == 30000000ULL);
+	return od_duration_parse_ms(input, out_ms, hint);
 }
 
-static void test_compat_s_field_bare_number_int(void)
+/* one number, one unit — every unit of the PostgreSQL time table */
+static void test_units(void)
 {
-	/*
-	 * Fields like catchup_timeout store seconds as int.
-	 * Old config: catchup_timeout 10
-	 * parse_s("10") -> 10 000 000 us; stored: (int)(us / 1 000 000) = 10 s
-	 */
-	uint64_t us = parse_s("10");
-	test(us == 10000000ULL);
-	test((int)(us / 1000000ULL) == 10);
+	test(parse_ms("500") == 500); /* bare = base unit (ms) */
+	test(parse_ms("500ms") == 500);
+	test(parse_ms("30s") == 30000);
+	test(parse_ms("1min") == 60000);
+	test(parse_ms("2h") == 7200000);
+	test(parse_ms("1d") == 86400000);
 }
 
-static void test_no_suffix_zero(void)
+static void test_units_whitespace(void)
 {
-	test(parse_ms("0") == 0ULL);
-	test(parse_s("0") == 0ULL);
+	/* PostgreSQL allows whitespace between the number and the unit */
+	test(parse_ms("30 min") == 1800000);
+	test(parse_ms("5 s") == 5000);
+	test(parse_ms("1h") == 3600000);
+	test(parse_ms("30 min ") == 1800000); /* trailing whitespace */
 }
 
-/* Explicit suffix must win over the field's default unit. */
-static void test_suffix_overrides_default(void)
+/* units are compared with strcmp, exactly like PostgreSQL */
+static void test_case_sensitive(void)
 {
-	test(parse_s("30s") == 30000000ULL);
-	test(parse_s("2m") == 120000000ULL);
-	test(parse_s("1h30m") == 5400000000ULL);
+	int64_t ms;
+	const char *hint;
+
+	test(!try_parse_ms("1S", &ms, &hint));
+	test(!try_parse_ms("500MS", &ms, &hint));
+	test(!try_parse_ms("90MIN", &ms, &hint));
+	test(!try_parse_ms("1H", &ms, &hint));
+	test(!try_parse_ms("5m", &ms, &hint)); /* "m" is not a PG time unit */
+	test(!try_parse_ms("5D", &ms, &hint));
 }
 
-static void test_case_insensitive(void)
+/* compound values are not supported by PostgreSQL */
+static void test_compound_rejected(void)
 {
-	test(parse_ms("1S") == 1000000ULL);
-	test(parse_ms("1M") == 60000000ULL);
-	test(parse_ms("1H") == 3600000000ULL);
-	test(parse_ms("1D") == 86400000000ULL);
-	test(parse_ms("500MS") == 500000ULL);
+	int64_t ms;
+	const char *hint = NULL;
+
+	test(!try_parse_ms("1h30m", &ms, &hint));
+	test(hint != NULL); /* invalid unit hint is set */
+	test(!try_parse_ms("1m30s", &ms, &hint));
+	test(!try_parse_ms("1d2h3m4s", &ms, &hint));
+	test(!try_parse_ms("5mins", &ms, &hint)); /* garbage after the unit */
+	test(!try_parse_ms("5s3", &ms, &hint));
+	test(!try_parse_ms("5s x", &ms, &hint));
 }
 
-static void test_zero_with_suffix(void)
+/* PostgreSQL's parse_int() re-parses as float for '.'/'e' */
+static void test_floats(void)
 {
-	test(parse_ms("0s") == 0ULL);
-	test(parse_ms("0m") == 0ULL);
-	test(parse_ms("0d") == 0ULL);
+	test(parse_ms("1.5s") == 1500);
+	test(parse_ms("0.5s") == 500);
+	test(parse_ms(".5s") == 500);
+	test(parse_ms("1.h") == 3600000);
+	test(parse_ms("1.5") == 2); /* bare float, rint(1.5 ms) */
+	test(parse_ms("2.5") == 2); /* half-to-even */
+	test(parse_ms("1.5 h") == 5400000);
 }
 
-static void test_one_week(void)
+/* PostgreSQL's parse_int() uses strtol(..., 0), we support 0x (no octal) */
+static void test_hex(void)
 {
-	test(parse_ms("7d") == 604800000000ULL);
+	test(parse_ms("0x10s") == 16000);
+	test(parse_ms("0x10") == 16);
+	test(parse_ms("-0x2min") == -120000);
+}
+
+static void test_signs(void)
+{
+	test(parse_ms("+5s") == 5000);
+	test(parse_ms("-5s") == -5000);
+	test(parse_ms("-1") == -1);
 }
 
 /*
- * Nanoseconds are truncated to microseconds via integer division.
- * Values below 1000 ns round to 0 us.
+ * Rounding to the base unit: rint(), half-to-even, exactly like
+ * PostgreSQL rounds a GUC value.
  */
-static void test_ns_truncation(void)
+static void test_rint_rounding(void)
 {
-	test(parse_ms("1ns") == 0ULL);
-	test(parse_ms("999ns") == 0ULL);
-	test(parse_ms("1000ns") == 1ULL);
+	test(parse_ms("1500us") == 2);
+	test(parse_ms("500us") == 0);
+	test(parse_ms("500.5us") == 1);
+	test(parse_ms("0.5ms") == 0);
+	test(parse_ms("1.5ms") == 2);
 }
 
-/*
- * od_duration_parse skips leading whitespace and includes it in the
- * returned consumed count.
- */
 static void test_leading_whitespace(void)
 {
-	test(parse_ms("  30s") == 30000000ULL);
-	test(parse_ms(" 1h30m") == 5400000000ULL);
+	test(parse_ms("  30s") == 30000);
+	test(parse_ms("\t1min") == 60000);
 }
 
-/*
- * The parser must reject any input that does not start with a digit.
- */
-static void test_invalid_returns_false(void)
+/* strtod fallback for values like "5e3", same as PostgreSQL */
+static void test_exponent(void)
 {
-	uint64_t us;
+	test(parse_ms("5e3") == 5000); /* 5e3 base units (ms) */
+	test(parse_ms("1e3s") == 1000000);
+}
 
-	/* alphabetic string — not a number at all */
-	test(!try_parse_ms("notanumber", &us));
+static void test_invalid_rejected(void)
+{
+	int64_t ms;
+	const char *hint;
 
-	/* suffix with no leading number */
-	test(!try_parse_ms("ms", &us));
-	test(!try_parse_ms("s", &us));
-	test(!try_parse_ms("h", &us));
+	/* no digits at all */
+	test(!try_parse_ms("", &ms, &hint));
+	test(!try_parse_ms("   ", &ms, &hint));
+	test(!try_parse_ms("ms", &ms, &hint));
+	test(!try_parse_ms("s", &ms, &hint));
+	test(!try_parse_ms("notanumber", &ms, &hint));
 
-	/* empty string */
-	test(!try_parse_ms("", &us));
+	/* unknown unit */
+	test(!try_parse_ms("5x", &ms, &hint));
+	test(hint != NULL);
 
-	/* whitespace only */
-	test(!try_parse_ms("   ", &us));
+	/* overflow */
+	test(!try_parse_ms("99999999999999999999d", &ms, &hint));
+	test(!try_parse_ms("1e30s", &ms, &hint));
+	test(!try_parse_ms("9223372036854775808ms", &ms, &hint));
+}
 
-	/* sign not followed by digits */
-	test(!try_parse_ms("+5s", &us));
+static void test_boundary(void)
+{
+	test(parse_ms("9223372036854775807ms") ==
+	     INT64_MAX); /* exact int64 max */
+	test(parse_ms("-9223372036854775808ms") == INT64_MIN);
 }
 
 void odyssey_test_duration_parse(void)
 {
-	test_suffix_ns();
-	test_suffix_us();
-	test_suffix_ms();
-	test_suffix_s();
-	test_suffix_m();
-	test_suffix_h();
-	test_suffix_d();
-
-	test_compound_1h30m();
-	test_compound_1m30s();
-	test_compound_2d3h();
-	test_compound_1d2h3m4s();
-	test_compound_1m500ms();
-
-	test_compat_ms_field_bare_number();
-	test_compat_s_field_bare_number_u64();
-	test_compat_s_field_bare_number_int();
-	test_no_suffix_zero();
-
-	test_suffix_overrides_default();
-	test_case_insensitive();
-
-	test_zero_with_suffix();
-	test_one_week();
-	test_ns_truncation();
+	test_units();
+	test_units_whitespace();
+	test_case_sensitive();
+	test_compound_rejected();
+	test_floats();
+	test_hex();
+	test_signs();
+	test_rint_rounding();
 	test_leading_whitespace();
-	test_invalid_returns_false();
+	test_exponent();
+	test_invalid_rejected();
+	test_boundary();
 }

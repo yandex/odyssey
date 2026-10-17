@@ -12,6 +12,7 @@
 
 #include <cfg/convert.h>
 #include <od_memory.h>
+#include <duration.h>
 #include <shared_pool.h>
 #include <affinity.h>
 #include <rules.h>
@@ -67,6 +68,40 @@ typedef struct {
 			out = (field).value; \
 		}                            \
 	} while (0)
+
+#define COPY_I64(field, out)                 \
+	do {                                 \
+		if ((field).seen.is_set) {   \
+			out = (field).value; \
+		}                            \
+	} while (0)
+
+/*
+ * Convert a millisecond duration to whole seconds for options whose
+ * runtime granularity is one second (cron ticks, TCP socket options,
+ * replication lag comparisons), rounding half-to-even like PostgreSQL
+ * rounds a GUC value to its base unit.
+ */
+static inline int od_cfg_ms_to_sec(od_cfg_diag_list_t *diags,
+				   od_cfg_location_t location, const char *name,
+				   int64_t ms)
+{
+	int64_t sec = (int64_t)rint((double)ms / 1000.0);
+
+	if (ms > 0 && sec == 0) {
+		od_cfg_diag_warning(
+			diags, location,
+			"%s: %lld ms rounds down to 0 seconds, the option is treated as disabled",
+			name, (long long)ms);
+	} else if (ms > 0 && (ms % 1000) != 0) {
+		od_cfg_diag_warning(
+			diags, location,
+			"%s: %lld ms is not a whole number of seconds, rounding to %lld s",
+			name, (long long)ms, (long long)sec);
+	}
+
+	return (int)sec;
+}
 
 static int parse_tsa(const char *s, od_target_session_attrs_t *out)
 {
@@ -467,31 +502,48 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_BOOL(cfg->log_route_stats_prom, config->log_route_stats_prom);
 
 	COPY_INT(cfg->priority, config->priority);
-	COPY_INT(cfg->graceful_shutdown_timeout_ms,
+	COPY_U64(cfg->graceful_shutdown_timeout_ms,
 		 config->graceful_shutdown_timeout_ms);
 	COPY_INT(cfg->log_queue_depth, config->log_queue_depth);
-	COPY_INT(cfg->stats_interval, config->stats_interval);
+	if (cfg->stats_interval_ms.seen.is_set) {
+		config->stats_interval =
+			od_cfg_ms_to_sec(diags,
+					 cfg->stats_interval_ms.seen.location,
+					 "stats_interval",
+					 (int64_t)cfg->stats_interval_ms.value);
+	}
 	COPY_INT(cfg->client_max, config->client_max);
 	if (config->client_max > 0) {
 		config->client_max_set = 1;
 	}
 	COPY_INT(cfg->client_max_routing, config->client_max_routing);
 	COPY_INT(cfg->accept_rate_limit, config->accept_rate_limit);
-	COPY_INT(cfg->server_login_retry, config->server_login_retry);
+	COPY_U64(cfg->server_login_retry_ms, config->server_login_retry_ms);
 	COPY_INT(cfg->readahead, config->readahead);
-	COPY_INT(cfg->keepalive, config->keepalive);
-	COPY_INT(cfg->keepalive_keep_interval, config->keepalive_keep_interval);
+	if (cfg->keepalive_ms.seen.is_set) {
+		config->keepalive =
+			od_cfg_ms_to_sec(diags, cfg->keepalive_ms.seen.location,
+					 "keepalive",
+					 (int64_t)cfg->keepalive_ms.value);
+	}
+	if (cfg->keepalive_keep_interval_ms.seen.is_set) {
+		config->keepalive_keep_interval = od_cfg_ms_to_sec(
+			diags, cfg->keepalive_keep_interval_ms.seen.location,
+			"keepalive_keep_interval",
+			(int64_t)cfg->keepalive_keep_interval_ms.value);
+	}
 	COPY_INT(cfg->keepalive_probes, config->keepalive_probes);
-	COPY_INT(cfg->keepalive_usr_timeout, config->keepalive_usr_timeout);
+	COPY_I64(cfg->keepalive_usr_timeout_ms,
+		 config->keepalive_usr_timeout_ms);
 	COPY_INT(cfg->max_sigterms_to_die, config->max_sigterms_to_die);
-	COPY_INT(cfg->backend_connect_timeout_ms,
+	COPY_U64(cfg->backend_connect_timeout_ms,
 		 config->backend_connect_timeout_ms);
-	COPY_INT(cfg->cancel_timeout_ms, config->cancel_timeout_ms);
-	COPY_INT(cfg->cancel_queue_timeout_ms, config->cancel_queue_timeout_ms);
+	COPY_U64(cfg->cancel_timeout_ms, config->cancel_timeout_ms);
+	COPY_I64(cfg->cancel_queue_timeout_ms, config->cancel_queue_timeout_ms);
 	COPY_INT(cfg->cancel_max_inflight, config->cancel_max_inflight);
 	COPY_INT(cfg->cancel_rate_limit, config->cancel_rate_limit);
 	COPY_INT(cfg->resolvers, config->resolvers);
-	COPY_INT(cfg->dns_cache_ttl, config->dns_ttl_ms);
+	COPY_INT(cfg->dns_cache_ttl_ms, config->dns_cache_ttl_ms);
 	COPY_INT(cfg->cache_msg_gc_size, config->cache_msg_gc_size);
 	COPY_INT(cfg->cache_msg_gc_count, config->cache_msg_gc_count);
 	COPY_INT(cfg->cache_coroutine, config->cache_coroutine);
@@ -506,11 +558,13 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	}
 	COPY_INT(cfg->system_coroutine_stack_size,
 		 config->system_coroutine_stack_size);
-	COPY_INT(cfg->group_checker_interval, config->group_checker_interval);
+	COPY_U64(cfg->group_checker_interval_ms,
+		 config->group_checker_interval_ms);
 	COPY_INT(cfg->workers, config->workers);
 
-	if (config->keepalive_usr_timeout < 0) {
-		config->keepalive_usr_timeout =
+	if (config->keepalive_usr_timeout_ms < 0) {
+		/* the advice is returned in milliseconds (TCP_USER_TIMEOUT) */
+		config->keepalive_usr_timeout_ms =
 			mm_io_advice_keepalive_usr_timeout(
 				config->keepalive,
 				config->keepalive_keep_interval,
@@ -756,9 +810,9 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	COPY_BOOL(cfg->server_drop_on_backend_plan_error,
 		  rule->server_drop_on_cached_plan_error);
 	COPY_BOOL(cfg->server_drop_on_oom, rule->server_drop_on_oom);
-	if (cfg->server_lifetime.seen.is_set) {
+	if (cfg->server_lifetime_ms.seen.is_set) {
 		rule->server_lifetime_us =
-			cfg->server_lifetime.value * 1000000L;
+			cfg->server_lifetime_ms.value * 1000ULL;
 	}
 
 	/* ignore ldap_pool_* */
@@ -767,8 +821,13 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	COPY_STR(cfg->pool_routing, rule->pool->routing_type, diags);
 	COPY_INT(cfg->min_pool_size, rule->pool->min_size);
 	COPY_INT(cfg->pool_size, rule->pool->size);
-	COPY_INT(cfg->pool_timeout, rule->pool->timeout);
-	COPY_INT(cfg->pool_ttl, rule->pool->ttl);
+	COPY_U64(cfg->pool_timeout_ms, rule->pool->timeout_ms);
+	if (cfg->pool_ttl_ms.seen.is_set) {
+		rule->pool->ttl =
+			od_cfg_ms_to_sec(diags, cfg->pool_ttl_ms.seen.location,
+					 "pool_ttl",
+					 (int64_t)cfg->pool_ttl_ms.value);
+	}
 	COPY_BOOL(cfg->pool_discard, rule->pool->discard);
 	COPY_BOOL(cfg->pool_smart_discard, rule->pool->smart_discard);
 	COPY_STR(cfg->pool_discard_query, rule->pool->discard_query, diags);
@@ -782,26 +841,16 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	COPY_BOOL(cfg->pool_pin_on_listen, rule->pool->pin_on_listen);
 	COPY_BOOL(cfg->pool_attach_check, rule->pool->attach_check);
 	COPY_BOOL(cfg->pool_acquire_fail_fast, rule->pool->acquire_fail_fast);
-	if (cfg->pool_notice_after_waiting_ms.seen.is_set) {
-		if (cfg->pool_notice_after_waiting_ms.value >
-		    (uint64_t)INT_MAX) {
-			od_cfg_diag_error(
-				diags,
-				cfg->pool_notice_after_waiting_ms.seen.location,
-				"pool_notice_after_waiting_ms value is too large");
-			goto error;
-		}
-		rule->pool->notice_after_waiting_ms =
-			(int)cfg->pool_notice_after_waiting_ms.value;
-	}
-	if (cfg->pool_client_idle_timeout.seen.is_set) {
+	COPY_I64(cfg->pool_notice_after_waiting_ms,
+		 rule->pool->notice_after_waiting_ms);
+	if (cfg->pool_client_idle_timeout_ms.seen.is_set) {
 		rule->pool->client_idle_timeout =
-			cfg->pool_client_idle_timeout.value * interval_usec;
+			cfg->pool_client_idle_timeout_ms.value * 1000ULL;
 	}
-	if (cfg->pool_idle_in_transaction_timeout.seen.is_set) {
+	if (cfg->pool_idle_in_transaction_timeout_ms.seen.is_set) {
 		rule->pool->idle_in_transaction_timeout =
-			cfg->pool_idle_in_transaction_timeout.value *
-			interval_usec;
+			cfg->pool_idle_in_transaction_timeout_ms.value *
+			1000ULL;
 	}
 
 	if (cfg->shared_pool.seen.is_set) {
@@ -843,10 +892,23 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	if (cfg->log_query_sampling.seen.is_set) {
 		rule->log_query_sampling_set = 1;
 	}
-	COPY_INT(cfg->keepalive, rule->keepalive);
-	COPY_INT(cfg->keepalive_keep_interval, rule->keepalive_keep_interval);
+	if (cfg->keepalive_ms.seen.is_set) {
+		rule->keepalive =
+			od_cfg_ms_to_sec(diags, cfg->keepalive_ms.seen.location,
+					 "keepalive",
+					 (int64_t)cfg->keepalive_ms.value);
+	}
+	if (cfg->keepalive_keep_interval_ms.seen.is_set) {
+		rule->keepalive_keep_interval = od_cfg_ms_to_sec(
+			diags, cfg->keepalive_keep_interval_ms.seen.location,
+			"keepalive_keep_interval",
+			(int64_t)cfg->keepalive_keep_interval_ms.value);
+	}
 	COPY_INT(cfg->keepalive_probes, rule->keepalive_probes);
-	COPY_INT(cfg->keepalive_usr_timeout, rule->keepalive_usr_timeout);
+	if (cfg->keepalive_usr_timeout_ms.seen.is_set) {
+		rule->keepalive_usr_timeout =
+			(int)cfg->keepalive_usr_timeout_ms.value;
+	}
 #ifdef LDAP_FOUND
 	COPY_STR(cfg->ldap_endpoint_name, rule->ldap_endpoint_name, diags);
 
@@ -951,7 +1013,12 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	}
 #endif
 
-	COPY_INT(cfg->catchup_timeout, rule->catchup_timeout);
+	if (cfg->catchup_timeout_ms.seen.is_set) {
+		rule->catchup_timeout = od_cfg_ms_to_sec(
+			diags, cfg->catchup_timeout_ms.seen.location,
+			"catchup_timeout_ms",
+			(int64_t)cfg->catchup_timeout_ms.value);
+	}
 	if (rule->catchup_timeout != 0) {
 		/* TODO: remove catchup_checks */
 		rule->catchup_checks = 1;
@@ -1099,8 +1166,13 @@ static int convert_listen(convert_ctx_t *ctx, const od_cfg_listen_t *cfg)
 		}
 		listen->balancing_override_set = cfg->balancing.seen.is_set;
 	}
-	COPY_INT(cfg->client_login_timeout, listen->client_login_timeout);
-	COPY_INT(cfg->catchup_timeout, listen->catchup_timeout);
+	COPY_INT(cfg->client_login_timeout_ms, listen->client_login_timeout_ms);
+	if (cfg->catchup_timeout_ms.seen.is_set) {
+		listen->catchup_timeout = od_cfg_ms_to_sec(
+			diags, cfg->catchup_timeout_ms.seen.location,
+			"catchup_timeout_ms",
+			(int64_t)cfg->catchup_timeout_ms.value);
+	}
 	COPY_INT(cfg->reserved_clients, listen->reserved_clients);
 	COPY_INT(cfg->backlog, listen->backlog);
 	COPY_STR(cfg->tls, listen->tls_opts->tls, diags);
@@ -1228,7 +1300,7 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 	COPY_STR(cfg->tls_cert_file, storage->tls_opts->tls_cert_file, diags);
 	COPY_STR(cfg->tls_protocols, storage->tls_opts->tls_protocols, diags);
 	COPY_INT(cfg->server_max_routing, storage->server_max_routing);
-	COPY_INT(cfg->endpoints_status_poll_interval_ms,
+	COPY_U64(cfg->endpoints_status_poll_interval_ms,
 		 storage->endpoints_status_poll_interval_ms);
 
 	if (cfg->host.seen.is_set) {
@@ -1310,8 +1382,15 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 
 		COPY_STR(cfg->watchdog->watchdog_lag_query, watchdog->query,
 			 diags);
-		COPY_INT(cfg->watchdog->watchdog_lag_interval,
-			 watchdog->interval);
+		if (cfg->watchdog->watchdog_lag_interval_ms.seen.is_set) {
+			watchdog->interval = od_cfg_ms_to_sec(
+				diags,
+				cfg->watchdog->watchdog_lag_interval_ms.seen
+					.location,
+				"watchdog_lag_interval_ms",
+				(int64_t)cfg->watchdog->watchdog_lag_interval_ms
+					.value);
+		}
 
 		watchdog->storage_db = rule->storage_db;
 		watchdog->storage_user = rule->storage_user;
@@ -1435,7 +1514,7 @@ static int convert_soft_oom(convert_ctx_t *ctx, const od_cfg_soft_oom_t *cfg)
 	}
 
 	COPY_INT(cfg->limit, soft_oom->limit_bytes);
-	COPY_INT(cfg->check_interval_ms, soft_oom->check_interval_ms);
+	COPY_U64(cfg->check_interval_ms, soft_oom->check_interval_ms);
 
 	soft_oom->enabled = 1;
 

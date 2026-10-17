@@ -200,9 +200,9 @@ static inline void od_system_server(void *arg)
 		 * not, so this rate limit actually rates everything. */
 		if (instance->config.accept_rate_limit != 0) {
 			uint32_t max_wait_ms = UINT32_MAX;
-			if (server->config->client_login_timeout > 0) {
+			if (server->config->client_login_timeout_ms > 0) {
 				max_wait_ms = (uint32_t)server->config
-						      ->client_login_timeout;
+						      ->client_login_timeout_ms;
 			}
 			int rc = od_rate_limiter_waitn(
 				&global->accept_rate_limiter, 1, max_wait_ms);
@@ -251,7 +251,7 @@ static inline void od_system_server(void *arg)
 				client_io, 1, instance->config.keepalive,
 				instance->config.keepalive_keep_interval,
 				instance->config.keepalive_probes,
-				instance->config.keepalive_usr_timeout);
+				(int)instance->config.keepalive_usr_timeout_ms);
 		}
 
 		if (!instance->config.disable_nolinger) {
