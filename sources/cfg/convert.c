@@ -523,7 +523,9 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 
 	if (cfg->promhttp_server_port.seen.is_set) {
 #ifdef PROMHTTP_FOUND
-		if (od_prom_set_port(cfg->promhttp_server_port.value,
+		/* Config checks have no cron and must not change live metrics. */
+		if (global->cron != NULL &&
+		    od_prom_set_port(cfg->promhttp_server_port.value,
 				     global->cron->metrics) != OK_RESPONSE) {
 			od_cfg_diag_error(
 				diags, cfg->promhttp_server_port.seen.location,
@@ -1322,6 +1324,8 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 	return 0;
 
 error:
+	/* A failed conversion must not leave a freed storage in rules. */
+	od_list_unlink(&storage->link);
 	od_rules_storage_unref(storage);
 	return -1;
 }

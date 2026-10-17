@@ -25,6 +25,7 @@ static const od_console_keyword_t keywords[] = {
 	{ "set", KW_SET },
 	{ "drop", KW_DROP },
 	{ "gc", KW_GC },
+	{ "alter", KW_ALTER },
 
 	/* SELECT * FROM <target> (alias for SHOW <target>) */
 	{ "select", KW_SELECT },
@@ -36,6 +37,11 @@ static const od_console_keyword_t keywords[] = {
 	/* set helpers */
 	{ "to", KW_TO },
 	{ "default", KW_DEFAULT },
+
+	/* alter_system helpers */
+	{ "system", KW_SYSTEM },
+	{ "all", KW_ALL },
+	{ "reset", KW_RESET },
 
 	{ NULL, 0 }
 };

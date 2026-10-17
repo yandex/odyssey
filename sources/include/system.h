@@ -53,3 +53,13 @@ void od_system_config_reload(od_system_t *);
 void od_system_free(od_system_t *system);
 
 int od_system_send_msg(od_system_t *system, int msg_type, void *arg);
+
+/*
+ * Applies one ALTER SYSTEM change with od_autoconf_update() and waits for
+ * it. The work runs on a dedicated single-thread pool: file I/O there does
+ * not stall the system thread that accepts connections, the configuration
+ * parser gets a system-size stack, and one thread keeps changes in order.
+ * Returns 0 on success, -1 on error with a message in err.
+ */
+int od_system_alter_system(od_global_t *global, const char *key,
+			   const char *line, char *err, size_t err_size);
