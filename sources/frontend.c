@@ -608,7 +608,8 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 			return OD_EATTACH_TARGET_SESSION_ATTRS_MISMATCH;
 		}
 
-		if (is_deploy && client->rule->maintain_params) {
+		if (is_deploy && client->rule->maintain_params &&
+		    instance->config.maintain_params) {
 			int rc = od_deploy(client, context);
 			if (rc == -1) {
 				od_gerror("deploy", client, client->server,
