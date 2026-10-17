@@ -1581,7 +1581,21 @@ typedef struct {
 	od_server_t *server;
 	od_xplan_t *xp;
 	size_t idx;
+	uint64_t started_at;
 } forward_batch_response_arg_t;
+
+static void record_execute(od_xplan_entry_t *entry, od_client_t *client,
+			   od_server_t *server, uint64_t started_at)
+{
+	if (msg_fe_type(entry->clmsg) != KIWI_FE_EXECUTE) {
+		return;
+	}
+
+	uint64_t query_time = machine_time_us() - started_at;
+	od_stat_query_record(&server->route->stats, query_time);
+	od_debug(&client->global->instance->logger, "main", client, server,
+		 "query time: %" PRIu64 " microseconds", query_time);
+}
 
 static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 {
@@ -1592,6 +1606,10 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 	od_xplan_t *xp = arg->xp;
 	od_xplan_entry_t *entry = mm_vector_get(&xp->entries, arg->idx);
 	arg->idx++;
+
+	/* ErrorResponse also completes the current Execute; skipped entries
+	 * never get a response callback and therefore never get a sample. */
+	record_execute(entry, client, server, arg->started_at);
 
 	od_frontend_status_t status = OD_OK;
 	int apply_delta = 0;
@@ -1615,7 +1633,8 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 
 static od_frontend_status_t
 run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
-		  od_client_t *client, od_server_t *server, uint32_t timeout_ms)
+		  od_client_t *client, od_server_t *server, uint64_t started_at,
+		  uint32_t timeout_ms)
 {
 	od_assert(end > begin);
 
@@ -1649,6 +1668,7 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 	arg.server = server;
 	arg.idx = begin;
 	arg.xp = xp;
+	arg.started_at = started_at;
 
 	while (arg.idx < end && !server->xproto_err) {
 		size_t left = end - arg.idx;
@@ -1705,12 +1725,9 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 }
 
 static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
-					  size_t max_responses,
+					  uint64_t started_at,
 					  uint32_t timeout_ms)
 {
-	/* TODO: use this to check correctness */
-	(void)max_responses;
-
 	od_client_t *client = relay->client;
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
@@ -1730,8 +1747,6 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	 * Deffered BEGIN -> read until RFQ, resend only async messages to client
 	 * no response awaiting from server
 	 */
-
-	od_stat_query_start(&server->stats_state);
 
 	if (!server->xproto_mode) {
 		/* this is first run of xproto buf after last sync */
@@ -1767,11 +1782,17 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		if (forward_begin != -1) {
 			/* need to handle forwards range */
 			status = run_forward_batch(xp, (size_t)forward_begin, i,
-						   client, server, timeout_ms);
+						   client, server, started_at,
+						   timeout_ms);
 			if (status != OD_OK) {
 				return status;
 			}
 			forward_begin = -1;
+			if (server->xproto_err) {
+				/* The preceding batch may have failed while reading
+				 * its responses. Skip this virtual entry as well. */
+				continue;
+			}
 		}
 
 		switch (entry->type) {
@@ -1790,6 +1811,10 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 			server->xproto_err = 1;
 
 			status = run_virtual_error(entry, client, timeout_ms);
+			if (status == OD_OK) {
+				record_execute(entry, client, server,
+					       started_at);
+			}
 			break;
 		case OD_XPLAN_VIRTUAL_PARSE_COMPLETE:
 			status = run_virtual_parse_complete(entry, client,
@@ -1802,6 +1827,10 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		case OD_XPLAN_VIRTUAL_COMMAND_COMPLETE:
 			status = run_virtual_command_complete(entry, client,
 							      timeout_ms);
+			if (status == OD_OK) {
+				record_execute(entry, client, server,
+					       started_at);
+			}
 			break;
 		case OD_XPLAN_FORWARD:
 			/* fallthrough */
@@ -1830,7 +1859,8 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	if (forward_begin != -1) {
 		/* need to handle tail forwards range */
 		status = run_forward_batch(xp, (size_t)forward_begin, count,
-					   client, server, timeout_ms);
+					   client, server, started_at,
+					   timeout_ms);
 	}
 
 	return status;
@@ -1843,16 +1873,18 @@ send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
 
+	/* Every Execute in this plan measures latency from the same send.
+	 * A later Flush/Sync batch gets its own timestamp. Transaction time
+	 * remains open until ReadyForQuery reports an idle backend. */
+	uint64_t started_at = machine_time_us();
+	od_stat_tx_start(&server->stats_state);
+
 	int rc = od_io_writev(&server->io, iovecs, niovecs, timeout_ms, 0);
 	if (rc == -1) {
 		return OD_ESERVER_WRITE;
 	}
 
-	/*
-	 * use niovecs because it shows real number of how much responses we are awaiting
-	 * (some might have been skipped after virtual error response)
-	 */
-	return run_plan_impl(xp, relay, niovecs, timeout_ms);
+	return run_plan_impl(xp, relay, started_at, timeout_ms);
 }
 
 static inline void log_plan_debug(od_instance_t *instance, od_xplan_t *xp,
