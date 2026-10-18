@@ -80,6 +80,7 @@ typedef struct od_cfg_global {
 	od_cfg_bool_field_t enable_host_watcher;
 	od_cfg_bool_field_t log_debug;
 	od_cfg_int_field_t log_debug_sampling;
+	od_cfg_bool_field_t maintain_params;
 	od_cfg_bool_field_t log_to_stdout;
 	od_cfg_bool_field_t log_config;
 	od_cfg_bool_field_t log_session;

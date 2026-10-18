@@ -464,6 +464,14 @@ top_item:
 							@1,
 							"log_debug");
 		}
+	| MAINTAIN_PARAMS bool_value
+		{
+			od_cfg_set_bool(ctx->diags,
+							&ctx->model->global.maintain_params,
+							$2,
+							@1,
+							"maintain_params");
+		}
 	| LOG_DEBUG_SAMPLING int_value
 		{
 			od_cfg_set_int_range_from_i64(ctx->diags,

@@ -1569,6 +1569,10 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
+	if (a->maintain_params_set != b->maintain_params_set) {
+		return 0;
+	}
+
 	/* keepalive */
 	if (a->keepalive != b->keepalive) {
 		return 0;

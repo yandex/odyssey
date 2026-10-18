@@ -104,7 +104,8 @@ megabytes) and is rejected by time-valued options.
 | `cancel_max_inflight`                      | int              | `-1` (2 × workers) | SIGHUP  | Max concurrent in-flight cancel requests; -1 = 2 × workers       |
 | `cancel_rate_limit`                        | int              | `0` (none)  | restart | Max cancels per second; 0 = unlimited                              |
 | `virtual_transaction`                           | int (bool)       | `yes`       | restart  | Enable virtual transaction features    |
-| `dns_cache_ttl`                            | int (ms)         | `30000`     | SIGHUP  | TTL for DNS cache entries; duration suffixes supported |
+| `maintain_params`                          | int (bool)       | `yes`       | restart | Global default of route-level `maintain_params`; routes that set it explicitly override this |
+| `dns_cache_ttl`                            | int (ms)         | `30000`     | SIGHUP  | TTL for DNS cache entries                                         |
 | `cache_msg_gc_size`                        | int (bytes)      | `0`         | SIGHUP  | Max single message buffer size for caching; 0 = caching disabled   |
 | `cache_msg_gc_count`                      | int              | `0`         | SIGHUP  | Message GC cache max count; 0 = unlimited                         |
 | `graceful_die_on_errors`                   | int (bool)       | `no`        | runtime | **Deprecated.** Use SIGUSR2 signal directly instead               |
