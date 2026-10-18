@@ -9,6 +9,7 @@
 #include <odyssey.h>
 
 #include <unistd.h>
+#include <sys/un.h>
 
 #include <machinarium/machinarium.h>
 
@@ -310,6 +311,22 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 				od_error(
 					logger, "config", NULL, NULL,
 					"listen host is not set and no unix_socket_dir is specified");
+				return -1;
+			}
+
+			/*
+			 * unix socket path must fit into sockaddr_un.sun_path
+			 */
+			char sock_path[sizeof(
+				((struct sockaddr_un *)0)->sun_path)];
+			if (od_unix_socket_path(sock_path, sizeof(sock_path),
+						config->unix_socket_dir,
+						listen->port) == -1) {
+				od_error(logger, "config", NULL, NULL,
+					 "unix socket path '%s/.s.PGSQL.%d' is "
+					 "too long (maximum %d characters)",
+					 config->unix_socket_dir, listen->port,
+					 (int)sizeof(sock_path) - 1);
 				return -1;
 			}
 		}

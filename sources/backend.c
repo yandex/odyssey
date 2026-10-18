@@ -664,8 +664,14 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		memset(&saddr_un, 0, sizeof(saddr_un));
 		saddr_un.sun_family = AF_UNIX;
 		saddr = (struct sockaddr *)&saddr_un;
-		od_snprintf(saddr_un.sun_path, sizeof(saddr_un.sun_path), "%s",
-			    address->host);
+		if (strlen(address->host) >= sizeof(saddr_un.sun_path)) {
+			od_error(&instance->logger, context, NULL, server,
+				 "unix socket path '%s' is too long",
+				 address->host);
+			return NOT_OK_RESPONSE;
+		}
+		memcpy(saddr_un.sun_path, address->host,
+		       strlen(address->host) + 1);
 	}
 
 	uint64_t time_resolve = 0;
