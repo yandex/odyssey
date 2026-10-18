@@ -82,6 +82,18 @@ static inline int od_snprintf(char *buf, int size, const char *fmt, ...)
 	return rc;
 }
 
+/* Formats "<unix_socket_dir>/.s.PGSQL.<port>" into buf.
+ * Returns the path length, or -1 if the path does not fit into buf. */
+static inline int od_unix_socket_path(char *buf, size_t size,
+				      const char *unix_socket_dir, int port)
+{
+	int len = snprintf(buf, size, "%s/.s.PGSQL.%d", unix_socket_dir, port);
+	if (od_unlikely(len < 0 || (size_t)len >= size)) {
+		return -1;
+	}
+	return len;
+}
+
 static inline int od_concat_prefer_right(char *out, size_t max,
 					 const char *left, size_t left_len,
 					 const char *right, size_t right_len)
