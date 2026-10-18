@@ -73,7 +73,10 @@ void od_router_free(od_router_t *router)
 		od_system_server_free(server);
 	}
 
-	od_router_foreach(router, od_router_immed_close_cb, NULL);
+	/* Destruction requires exclusive ownership of the router. Avoid its
+	 * coroutine mutex so config errors can clean up before startup. */
+	od_route_pool_foreach(&router->route_pool, od_router_immed_close_cb,
+			      NULL);
 	od_rules_free(&router->rules);
 	od_route_pool_free(&router->route_pool);
 	mm_mutex_destroy(&router->lock);
