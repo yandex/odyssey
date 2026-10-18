@@ -181,8 +181,10 @@ static void od_system_unix_socket_release(od_system_server_t *server)
 }
 
 static int od_system_unix_socket_prepare(od_system_server_t *server,
-					 struct sockaddr_un *addr)
+					 struct sockaddr_un *addr,
+					 bool *lock_held)
 {
+	*lock_held = false;
 	server->unix_socket_path = od_strdup(addr->sun_path);
 	if (server->unix_socket_path == NULL) {
 		errno = ENOMEM;
@@ -198,6 +200,7 @@ static int od_system_unix_socket_prepare(od_system_server_t *server,
 		return -1;
 	}
 	if (flock(server->unix_socket_lock_fd, LOCK_EX | LOCK_NB) == -1) {
+		*lock_held = errno == EWOULDBLOCK || errno == EAGAIN;
 		return -1;
 	}
 
@@ -567,10 +570,20 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 	}
 
 	if (server->addr == NULL) {
-		if (od_system_unix_socket_prepare(server, &saddr_un) == -1) {
-			od_error(&instance->logger, "server", NULL, NULL,
-				 "failed to prepare unix socket '%s': %s",
-				 saddr_un.sun_path, strerror(errno));
+		bool lock_held;
+		if (od_system_unix_socket_prepare(server, &saddr_un,
+						  &lock_held) == -1) {
+			if (lock_held) {
+				od_error(
+					&instance->logger, "server", NULL, NULL,
+					"unix socket '%s' appears to be owned by another odyssey instance (lock held)",
+					saddr_un.sun_path);
+			} else {
+				od_error(
+					&instance->logger, "server", NULL, NULL,
+					"failed to prepare unix socket '%s': %s",
+					saddr_un.sun_path, strerror(errno));
+			}
 			goto error;
 		}
 	}
@@ -1039,6 +1052,12 @@ static inline void od_system(void *arg)
 	/* start listen servers */
 	rc = od_system_listen(system);
 	if (rc == 0) {
+		/* Preserve the listener errors queued before this fatal exit. */
+		od_logger_shutdown(&instance->logger);
+		/* Other threads still exist: leave logger storage alive until exit. */
+		if (instance->logger.async) {
+			machine_wait(instance->logger.machine);
+		}
 		od_fatal(&instance->logger, "system", NULL, NULL,
 			 "failed to bind any listen address, errno=%d (%s)",
 			 mm_errno_get(), strerror(mm_errno_get()));
