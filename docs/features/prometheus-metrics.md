@@ -55,7 +55,7 @@ The Go-based exporter scrapes `SHOW POOLS_EXTENDED;` and `SHOW DATABASES;` and n
 | `odyssey_route_tcp_connections_total` | `user`, `database` | Counter | Client TCP connections opened toward the route. |
 | `odyssey_route_query_duration_seconds` | `user`, `database`, `quantile` | Gauge | Query latency quantiles (available when the `quantiles` rule option is set). |
 | `odyssey_route_transaction_duration_seconds` | `user`, `database`, `quantile` | Gauge | Transaction latency quantiles. |
-| `odyssey_route_client_lifetime_seconds` | `user`, `database`, `quantile` | Gauge | Lifetime quantiles of disconnected clients, from connection accept to disconnect handling. |
+| `odyssey_route_client_lifetime_seconds` | `user`, `database`, `quantile` | Gauge | Lifetime quantiles of disconnected clients, from connection accept to session cleanup. |
 
 Saturation examples:
 
@@ -91,12 +91,14 @@ selects the quantiles returned by `SHOW POOLS_EXTENDED;`; each client rule contr
 whether observations are collected for its route.
 
 `odyssey_route_client_lifetime_seconds` measures elapsed time from accepting a
-connection to handling its disconnect, including startup and idle time. An
-observation is added only when the client disconnects through the session
-disconnect handler and has an assigned route. Exit paths that bypass this
-handler, including failures during initial startup or authentication, are not
-included. Collection does not depend on `log_session` or on having an attached
-backend server.
+connection to the start of session cleanup, including startup and idle time.
+An observation is added once for each client with an assigned route that
+reaches `od_frontend_cleanup`, regardless of the session exit status. This
+includes attach failures, target session attributes mismatches, catchup
+timeouts, and other session errors. Early exits that bypass this function,
+including failures during initial startup or authentication, are not included.
+Collection does not depend on `log_session` or on having an attached backend
+server.
 
 The metric uses the same rotating t-digest windows as query and transaction
 quantiles. It is a gauge, not a cumulative Prometheus histogram: it has no

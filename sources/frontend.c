@@ -2705,9 +2705,6 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	od_server_t *server = client->server;
 	od_route_t *route = client->route;
 	uint64_t working_time_us = machine_time_us() - client->time_accept;
-	if (route != NULL) {
-		od_stat_client_lifetime(&route->stats, working_time_us);
-	}
 	if (instance->config.log_session) {
 		if (route != NULL) {
 			od_log(&instance->logger, context, client, server,
@@ -2758,6 +2755,11 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 	char ra_desc[256];
+
+	if (route != NULL) {
+		od_stat_client_lifetime(
+			&route->stats, machine_time_us() - client->time_accept);
+	}
 
 	if (od_frontend_status_is_err(status)) {
 		od_error_logger_store_err(l, status);

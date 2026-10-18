@@ -824,7 +824,7 @@ Incompatible with session pooling.
 *string*
 
 Compute quantiles of query times, transaction times, and disconnected client
-lifetimes. Client lifetime observations are collected by the session disconnect
+lifetimes. Client lifetime observations are collected by the session cleanup
 handler. See [client lifetime metrics](../features/prometheus-metrics.md#client-lifetime)
 for collection and export details.
 
