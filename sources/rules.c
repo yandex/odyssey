@@ -7,6 +7,8 @@
 
 #include <odyssey.h>
 
+#include <sys/un.h>
+
 #include <machinarium/machinarium.h>
 #include <kiwi/kiwi.h>
 
@@ -2038,10 +2040,18 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 		}
 
 		/* enforce one endpoint with unix address */
-		char buff[1024];
+		char buff[sizeof(((struct sockaddr_un *)0)->sun_path)];
 
-		od_snprintf(buff, sizeof(buff), "%s/.s.PGSQL.%d",
-			    config->unix_socket_dir, storage->port);
+		if (od_unix_socket_path(buff, sizeof(buff),
+					config->unix_socket_dir,
+					storage->port) == -1) {
+			od_error(logger, "rules", NULL, NULL,
+				 "storage '%s': unix socket path "
+				 "'%s/.s.PGSQL.%d' is too long",
+				 storage->name, config->unix_socket_dir,
+				 storage->port);
+			return -1;
+		}
 
 		storage->endpoints =
 			od_malloc(1 * sizeof(od_storage_endpoint_t));
