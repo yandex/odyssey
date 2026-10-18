@@ -107,6 +107,7 @@ typedef struct od_cfg_global {
 	od_cfg_string_field_t log_syslog_facility;
 	od_cfg_string_field_t cpu_affinity;
 	od_cfg_string_field_t hba_file;
+	od_cfg_string_field_t default_pool;
 
 	od_cfg_int_field_t priority;
 	od_cfg_u64_field_t graceful_shutdown_timeout_ms;

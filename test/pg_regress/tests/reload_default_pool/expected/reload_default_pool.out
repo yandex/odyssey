@@ -1,0 +1,36 @@
+-- drop a possible leftover override to survive repeated test runs
+\! rm -f "$PGTEST_CONF.autoconf"
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ session
+(1 row)
+
+-- override exactly one option via autoconf and reload odyssey
+\! echo 'pool "transaction"' > "$PGTEST_CONF.autoconf"
+\! pgrep -x odyssey | xargs -r kill -HUP
+\! sleep 2
+-- the existing connection must survive the reload and keep its rule
+SELECT 42;
+ ?column? 
+----------
+       42
+(1 row)
+
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ session
+(1 row)
+
+-- a new connection must pick up the new default
+\connect
+SHOW odyssey.pooling_mode;
+NOTICE:  processed virtually by odyssey
+ odyssey.pooling_mode 
+----------------------
+ transaction
+(1 row)
+
