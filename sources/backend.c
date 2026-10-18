@@ -57,16 +57,15 @@ static inline int od_backend_terminate(od_server_t *server)
 static void od_backend_disconnect(od_server_t *server, int graceful)
 {
 	od_assert(server != NULL);
-	/* failed to connect to endpoint, so notring to do */
-	if (od_backend_not_connected(server)) {
-		return;
-	}
-	if (graceful && mm_io_connected(server->io.io)) {
-		od_backend_terminate(server);
+	if (!od_backend_not_connected(server)) {
+		if (graceful && mm_io_connected(server->io.io)) {
+			od_backend_terminate(server);
+		}
+
+		od_io_close(&server->io);
 	}
 
-	od_io_close(&server->io);
-
+	/* TLS may already exist even if connect failed before io publication. */
 	if (server->error_connect) {
 		machine_msg_free(server->error_connect);
 		server->error_connect = NULL;
@@ -85,7 +84,7 @@ void od_backend_close_connection(od_server_t *server)
 
 void od_backend_abort_connection(od_server_t *server)
 {
-	/* CancelRequest connections have no startup session to terminate. */
+	/* Close without sending Terminate or waiting on io. */
 	od_backend_disconnect(server, 0);
 }
 
@@ -180,10 +179,18 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 
 static inline void od_backend_reset_for_retry(od_server_t *server)
 {
-	od_backend_close_connection(server);
+	od_route_t *route = server->route;
+	if (route != NULL) {
+		od_route_lock(route);
+	}
+	/* A failed startup needs no Terminate; do not wait on io under the lock. */
+	od_backend_abort_connection(server);
 
 	od_io_free(&server->io);
 	od_io_init(&server->io);
+	if (route != NULL) {
+		od_route_unlock(route);
+	}
 
 	od_scram_state_free(&server->scram_state);
 	od_scram_state_init(&server->scram_state);
@@ -587,21 +594,14 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	}
 
 	int rc;
-	rc = od_io_prepare(&server->io, io);
-	if (rc == -1) {
-		od_error(&instance->logger, context, NULL, server,
-			 "failed to set server io, errno = %d (%s)",
-			 machine_errno(), strerror(machine_errno()));
-		mm_io_close(io);
-		mm_io_free(io);
-		return -1;
-	}
 
 	/* set tls options */
 	int negotiate_tls = od_backend_tls_negotiate(tlsopts, tls_attempt);
 	if (negotiate_tls) {
 		server->tls = od_tls_backend(tlsopts);
 		if (server->tls == NULL) {
+			mm_io_close(io);
+			mm_io_free(io);
 			return -1;
 		}
 	}
@@ -652,6 +652,8 @@ int od_backend_connect_to(od_server_t *server, char *context,
 				od_error(&instance->logger, context, NULL,
 					 server, "failed to resolve %s:%d",
 					 address->host, address->port);
+				mm_io_close(io);
+				mm_io_free(io);
 				return NOT_OK_RESPONSE;
 			}
 			od_assert(ai != NULL);
@@ -683,7 +685,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	if (ai != NULL) {
 		for (mm_addrinfo_t *cur = ai; cur != NULL; cur = cur->ai_next) {
 			saddr = cur->ai_addr;
-			rc = mm_io_connect(server->io.io, saddr,
+			rc = mm_io_connect(io, saddr,
 					   (uint32_t)instance->config
 						   .backend_connect_timeout_ms);
 			if (rc == 0) {
@@ -713,7 +715,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		mm_freeaddrinfo(ai);
 	} else {
 		rc = mm_io_connect(
-			server->io.io, saddr,
+			io, saddr,
 			(uint32_t)instance->config.backend_connect_timeout_ms);
 	}
 
@@ -731,7 +733,27 @@ int od_backend_connect_to(od_server_t *server, char *context,
 				 saddr_un.sun_path, machine_errno(),
 				 strerror(machine_errno()));
 		}
+		mm_io_close(io);
+		mm_io_free(io);
 		return NOT_OK_RESPONSE;
+	}
+
+	/* publish server io after successful connect (stable fd), under
+	 * route lock: console readers traverse the pool under the same lock */
+	if (server->route != NULL) {
+		od_route_lock(server->route);
+	}
+	rc = od_io_prepare(&server->io, io);
+	if (server->route != NULL) {
+		od_route_unlock(server->route);
+	}
+	if (rc == -1) {
+		od_error(&instance->logger, context, NULL, server,
+			 "failed to set server io, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+		mm_io_close(io);
+		mm_io_free(io);
+		return -1;
 	}
 
 	/* do tls handshake */
