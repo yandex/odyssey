@@ -131,23 +131,30 @@ pg_database_encoding_max_length(void)
 	return 4;
 }
 
+/*
+ * as in PostgreSQL, the result is NUL-terminated: callers use strlen()
+ * to find its length
+ */
 void
 pg_unicode_to_server(char32_t c, unsigned char *buf)
 {
 	if (c < 0x80)
 	{
 		buf[0] = (unsigned char) c;
+		buf[1] = '\0';
 	}
 	else if (c < 0x800)
 	{
 		buf[0] = 0xC0 | ((c >> 6) & 0x1F);
 		buf[1] = 0x80 | (c & 0x3F);
+		buf[2] = '\0';
 	}
 	else if (c < 0x10000)
 	{
 		buf[0] = 0xE0 | ((c >> 12) & 0x0F);
 		buf[1] = 0x80 | ((c >> 6) & 0x3F);
 		buf[2] = 0x80 | (c & 0x3F);
+		buf[3] = '\0';
 	}
 	else
 	{
@@ -155,6 +162,7 @@ pg_unicode_to_server(char32_t c, unsigned char *buf)
 		buf[1] = 0x80 | ((c >> 12) & 0x3F);
 		buf[2] = 0x80 | ((c >> 6) & 0x3F);
 		buf[3] = 0x80 | (c & 0x3F);
+		buf[4] = '\0';
 	}
 }
 
