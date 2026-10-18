@@ -173,6 +173,20 @@ searching socket files.
 
 `unix_socket_dir "/tmp"`
 
+Each Unix listener holds a lock on `.s.PGSQL.<port>.odyssey.lock` in this
+directory while it owns the socket. The lock file remains after shutdown;
+its presence does not indicate that Odyssey is running. Do not remove it
+while a listener is running, since another process could acquire a lock
+on a newly created file at the same path.
+
+On Linux, Odyssey removes an existing socket on startup only if a
+connection attempt returns `ECONNREFUSED`. Active sockets, symbolic links,
+and other files are left in place. On other platforms, existing sockets
+are preserved because a live listener can also return `ECONNREFUSED`;
+leftover sockets must be removed after confirming that their process has
+stopped. On shutdown, Odyssey removes the socket only if its device and
+inode still match those recorded after binding.
+
 ## **unix\_socket\_mode**
 *string*
 
