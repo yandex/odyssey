@@ -149,8 +149,8 @@ static void test_reserved_names(void)
 		"EXPLAIN EXECUTE odyssey_pstmt_2",
 		"CREATE TABLE t AS EXECUTE odyssey_pstmt_2",
 		"EXPLAIN ANALYZE CREATE TABLE t AS EXECUTE odyssey_pstmt_2",
-		"EXPLAIN (ANALYZE) CREATE TEMP TABLE t AS "
-		"EXECUTE U&\"odyssey\\005fpstmt_2\"",
+		("EXPLAIN (ANALYZE) CREATE TEMP TABLE t AS "
+		 "EXECUTE U&\"odyssey\\005fpstmt_2\""),
 		"SELECT 1; EXECUTE odyssey_pstmt_9; SELECT 2",
 		/* unicode escapes in identifiers */
 		"EXECUTE U&\"odyssey\\005fpstmt_7\"",
@@ -163,8 +163,8 @@ static void test_reserved_names(void)
 		/* quoted names are case-sensitive, this one is not odyssey's */
 		"EXECUTE \"ODYSSEY_PSTMT_7\"",
 		"SELECT 'odyssey_pstmt_1'",
-		"SELECT name FROM pg_prepared_statements "
-		"WHERE name LIKE 'odyssey_pstmt_%'",
+		("SELECT name FROM pg_prepared_statements "
+		 "WHERE name LIKE 'odyssey_pstmt_%'"),
 		"PREPARE odyssey_pstm AS SELECT 1",
 		"EXECUTE my_odyssey_pstmt_1",
 	};
