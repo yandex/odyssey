@@ -203,7 +203,7 @@ static inline int od_console_show_help(machine_msg_t *stream)
 	char *message =
 		"\n"
 		"Console usage\n"
-		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS|HOST_UTILIZATION\n"
+		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|TIME_QUANTILES|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS|HOST_UTILIZATION\n"
 		"\tSHOW LISTS|INSTANCE|ERRORS|ERRORS_PER_ROUTE|VERSION|VERSION_EXTENDED|LISTEN|STORAGES\n"
 		"\tSHOW CONFIG|RULES|IS_PAUSED|GLOBAL_PREPARED_STATEMENTS\n"
 		"\tKILL_CLIENT <client_id>\n"
@@ -1080,6 +1080,151 @@ static inline int od_console_show_pools(od_client_t *client,
 			if (rc == NOT_OK_RESPONSE) {
 				goto error;
 			}
+		}
+		rc = od_console_show_quantiles(stream, offset, quantiles_count,
+					       quantiles, transactions_hgram,
+					       queries_hgram,
+					       client_lifetime_hgram);
+		if (rc == NOT_OK_RESPONSE) {
+			goto error;
+		}
+	}
+	td_safe_free(transactions_hgram);
+	td_safe_free(queries_hgram);
+	td_safe_free(client_lifetime_hgram);
+	return kiwi_be_write_complete(stream, "SHOW", 5);
+error:
+	td_safe_free(transactions_hgram);
+	td_safe_free(queries_hgram);
+	td_safe_free(client_lifetime_hgram);
+	return NOT_OK_RESPONSE;
+}
+
+static inline int od_console_show_time_quantiles_merge_cb(od_route_t *route,
+							  void **argv)
+{
+	td_histogram_t *common_transactions_hgram = argv[0];
+	td_histogram_t *common_queries_hgram = argv[1];
+	td_histogram_t *common_client_lifetime_hgram = argv[2];
+
+	td_histogram_t *transactions_hgram = NULL;
+	td_histogram_t *queries_hgram = NULL;
+	td_histogram_t *client_lifetime_hgram = NULL;
+	td_histogram_t *freeze_hgram = NULL;
+
+	od_route_lock(route);
+	transactions_hgram = td_new(QUANTILES_COMPRESSION);
+	queries_hgram = td_new(QUANTILES_COMPRESSION);
+	client_lifetime_hgram = td_new(QUANTILES_COMPRESSION);
+	freeze_hgram = td_new(QUANTILES_COMPRESSION);
+	if (transactions_hgram == NULL || queries_hgram == NULL ||
+	    client_lifetime_hgram == NULL || freeze_hgram == NULL) {
+		goto error;
+	}
+	if (route->stats.enable_quantiles) {
+		for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
+			td_copy(freeze_hgram,
+				route->stats.transaction_hgram[i]);
+			td_merge(transactions_hgram, freeze_hgram);
+			td_copy(freeze_hgram, route->stats.query_hgram[i]);
+			td_merge(queries_hgram, freeze_hgram);
+			td_copy(freeze_hgram,
+				route->stats.client_lifetime_hgram[i]);
+			td_merge(client_lifetime_hgram, freeze_hgram);
+		}
+		td_merge(common_transactions_hgram, transactions_hgram);
+		td_merge(common_queries_hgram, queries_hgram);
+		td_merge(common_client_lifetime_hgram, client_lifetime_hgram);
+	}
+	td_safe_free(transactions_hgram);
+	td_safe_free(queries_hgram);
+	td_safe_free(freeze_hgram);
+	td_safe_free(client_lifetime_hgram);
+	od_route_unlock(route);
+	return 0;
+error:
+	td_safe_free(transactions_hgram);
+	td_safe_free(queries_hgram);
+	td_safe_free(freeze_hgram);
+	td_safe_free(client_lifetime_hgram);
+	od_route_unlock(route);
+	return NOT_OK_RESPONSE;
+}
+
+static inline int od_console_show_time_quantiles(od_client_t *client,
+						 od_tuple_table_slot_t *tts)
+{
+	machine_msg_t *desc = tts->row_description;
+	machine_msg_t *stream = tts->data_rows;
+	od_assert(stream);
+	od_assert(desc);
+	int rc;
+	od_router_t *router = client->global->router;
+	od_route_t *route = client->route;
+	double *quantiles = route->rule->quantiles;
+	int quantiles_count = route->rule->quantiles_count;
+
+	int offset;
+	machine_msg_t *msg;
+	msg = kiwi_be_write_row_description(desc, &offset);
+	if (msg == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	for (int i = 0; i < quantiles_count; i++) {
+		char caption[KIWI_MAX_VAR_SIZE];
+		int caption_len;
+		caption_len = od_snprintf(caption, sizeof(caption),
+					  "query_%.6g", quantiles[i]);
+		rc = kiwi_be_write_row_description_add(msg, 0, caption,
+						       caption_len, 0, 0,
+						       PG_INT4OID, PG_INT4_LEN,
+						       0, 0);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+		caption_len = od_snprintf(caption, sizeof(caption),
+					  "transaction_%.6g", quantiles[i]);
+		rc = kiwi_be_write_row_description_add(msg, 0, caption,
+						       caption_len, 0, 0,
+						       PG_INT4OID, PG_INT4_LEN,
+						       0, 0);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+		caption_len = od_snprintf(caption, sizeof(caption),
+					  "client_lifetime_%.6g", quantiles[i]);
+		rc = kiwi_be_write_row_description_add(msg, 0, caption,
+						       caption_len, 0, 0,
+						       PG_INT8OID, PG_INT8_LEN,
+						       0, 0);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	td_histogram_t *transactions_hgram;
+	td_histogram_t *queries_hgram;
+	td_histogram_t *client_lifetime_hgram;
+	transactions_hgram = td_new(QUANTILES_COMPRESSION);
+	queries_hgram = td_new(QUANTILES_COMPRESSION);
+	client_lifetime_hgram = td_new(QUANTILES_COMPRESSION);
+	if (transactions_hgram == NULL || queries_hgram == NULL ||
+	    client_lifetime_hgram == NULL) {
+		goto error;
+	}
+	void *argv[] = { transactions_hgram, queries_hgram,
+			 client_lifetime_hgram };
+	rc = od_router_foreach(router, od_console_show_time_quantiles_merge_cb,
+			       argv);
+	if (rc == NOT_OK_RESPONSE) {
+		goto error;
+	}
+	{
+		int offset;
+		msg = kiwi_be_write_data_row(stream, &offset);
+		if (msg == NULL) {
+			goto error;
 		}
 		rc = od_console_show_quantiles(stream, offset, quantiles_count,
 					       quantiles, transactions_hgram,
@@ -2334,6 +2479,7 @@ typedef enum {
 	OD_SHOW_HELP,
 	OD_SHOW_POOLS,
 	OD_SHOW_POOLS_EXTENDED,
+	OD_SHOW_TIME_QUANTILES,
 	OD_SHOW_DATABASES,
 	OD_SHOW_SERVERS,
 	OD_SHOW_SERVER_PREP_STMTS,
@@ -2363,6 +2509,7 @@ static od_show_target_id_t od_console_show_target_lookup(const char *name)
 		{ "help", OD_SHOW_HELP },
 		{ "pools", OD_SHOW_POOLS },
 		{ "pools_extended", OD_SHOW_POOLS_EXTENDED },
+		{ "time_quantiles", OD_SHOW_TIME_QUANTILES },
 		{ "databases", OD_SHOW_DATABASES },
 		{ "servers", OD_SHOW_SERVERS },
 		{ "server_prep_stmts", OD_SHOW_SERVER_PREP_STMTS },
@@ -2409,6 +2556,8 @@ static inline int od_console_show(od_client_t *client,
 		return od_console_show_pools(client, tts, false);
 	case OD_SHOW_POOLS_EXTENDED:
 		return od_console_show_pools(client, tts, true);
+	case OD_SHOW_TIME_QUANTILES:
+		return od_console_show_time_quantiles(client, tts);
 	case OD_SHOW_DATABASES:
 		return od_console_show_databases(client, tts);
 	case OD_SHOW_SERVERS:
