@@ -379,10 +379,13 @@ static void test_portal_client_hashmap(void)
 
 	test(od_client_add_portal(client, "portal_0", p0) == 0);
 	test(od_client_get_portal(client, "portal_0") == p0);
+	test(od_client_record_bind(client, "portal_0", 1, 40) == 0);
+	test(od_client_get_portal(client, "portal_0") == p0);
 
 	/* re-binding the same portal replaces the pstmt */
 	test(od_client_add_portal(client, "portal_0", p1) == 0);
 	test(od_client_get_portal(client, "portal_0") == p1);
+	test(od_client_take_bind_time(client, "portal_0", 2) == 0);
 
 	test(od_client_add_portal(client, "portal_1", p0) == 0);
 	test(od_client_get_portal(client, "portal_1") == p0);
@@ -694,6 +697,39 @@ static void test_pstmt_server_sieve_eviction(void)
 	od_global_pstmts_map_free(global);
 }
 
+static void test_portal_bind_time(void)
+{
+	od_client_t *client = od_client_allocate();
+	test(client != NULL);
+
+	/* Works without reserve_prepared_statement or a prepared-statement map. */
+	test(od_client_take_bind_time(client, "missing", 1) == 0);
+	test(od_client_record_bind(client, "p1", 1, 30) == 0);
+	test(od_client_record_bind(client, "p2", 1, 50) == 0);
+	test(od_client_take_bind_time(client, "p1", 2) == 30);
+	test(od_client_take_bind_time(client, "p1", 3) == 0);
+	test(od_client_take_bind_time(client, "p2", 2) == 50);
+
+	/* A shared batch already includes Bind; consume it without adding it. */
+	test(od_client_record_bind(client, "p1", 4, 70) == 0);
+	test(od_client_take_bind_time(client, "p1", 4) == 0);
+	test(od_client_take_bind_time(client, "p1", 5) == 0);
+
+	/* Rebinding the unnamed portal replaces the previous contribution. */
+	test(od_client_record_bind(client, "", 6, 80) == 0);
+	test(od_client_record_bind(client, "", 7, 20) == 0);
+	test(od_client_take_bind_time(client, "", 8) == 20);
+
+	/* Close Portal and transaction end discard unconsumed Bind time. */
+	test(od_client_record_bind(client, "p1", 9, 100) == 0);
+	test(od_client_remove_portal(client, "p1") == 0);
+	test(od_client_take_bind_time(client, "p1", 10) == 0);
+	test(od_client_record_bind(client, "p2", 9, 110) == 0);
+	od_client_portals_clear(client);
+	test(od_client_take_bind_time(client, "p2", 10) == 0);
+	od_client_free(client);
+}
+
 static void test_impl(void *a)
 {
 	(void)a;
@@ -706,6 +742,7 @@ static void test_impl(void *a)
 
 	test_pstmt_client_hashmap();
 	test_portal_client_hashmap();
+	test_portal_bind_time();
 	test_pstmt_server_hashmap();
 	test_pstmt_server_sieve_eviction();
 }

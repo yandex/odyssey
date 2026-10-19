@@ -94,7 +94,10 @@ configured quantile.
 Query counters and duration quantiles count each completed `Execute` in the
 extended protocol, including failed executions and `PortalSuspended` responses.
 Duration is measured from sending its batch to receiving its terminating
-response; it includes queueing behind earlier operations and backend response
+response. The first Execute of a portal also includes its successful Bind
+latency if Bind was sent in an earlier batch, excluding the client pause
+between batches. Bind and Execute in the same batch share one interval.
+Durations include queueing behind earlier operations and backend response
 buffering. A later `Sync` adds no query sample. Simple-protocol `Query` messages
 are measured until `ReadyForQuery`. See [quantiles](../configuration/rules.md#quantiles)
 for the complete accounting rules.

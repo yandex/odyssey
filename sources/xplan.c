@@ -1327,7 +1327,10 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 		od_client_remove_pstmt(client, delta->client_pstmt);
 		break;
 	case OD_XPLAN_DELTA_ADD_PORTAL:
-		od_client_add_portal(client, delta->portal_name, delta->pstmt);
+		if (od_client_add_portal(client, delta->portal_name,
+					 delta->pstmt) == -1) {
+			return OD_EOOM;
+		}
 		break;
 	case OD_XPLAN_DELTA_REMOVE_PORTAL:
 		od_client_remove_portal(client, delta->portal_name);
@@ -1589,13 +1592,59 @@ static void record_execute(od_xplan_entry_t *entry, od_client_t *client,
 	}
 
 	uint64_t query_time = machine_time_us() - started_at;
+	char *portal_name;
+	uint32_t portal_name_len;
+	if (kiwi_be_read_execute(machine_msg_data(entry->clmsg),
+				 machine_msg_size(entry->clmsg), &portal_name,
+				 &portal_name_len) == 0) {
+		query_time += od_client_take_bind_time(client, portal_name,
+						       client->relay.batch_id);
+	}
 	od_stat_query_record(&server->route->stats, query_time);
 	od_debug(&client->global->instance->logger, "main", client, server,
 		 "query time: %" PRIu64 " microseconds", query_time);
 }
 
-static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
+static od_frontend_status_t track_portal_response(od_xplan_entry_t *entry,
+						  od_client_t *client,
+						  uint64_t started_at,
+						  uint64_t completed_at)
 {
+	char *data = machine_msg_data(entry->clmsg);
+	uint32_t size = machine_msg_size(entry->clmsg);
+	char *portal_name;
+	uint32_t portal_len;
+	if (msg_fe_type(entry->clmsg) == KIWI_FE_BIND) {
+		char *statement_name;
+		uint32_t statement_len;
+		if (kiwi_be_read_bind_names(data, size, &portal_name,
+					    &portal_len, &statement_name,
+					    &statement_len) != 0) {
+			return OD_ECLIENT_PROTOCOL_ERROR;
+		}
+		if (od_client_record_bind(client, portal_name,
+					  client->relay.batch_id,
+					  completed_at - started_at) == -1) {
+			return OD_EOOM;
+		}
+	} else if (msg_fe_type(entry->clmsg) == KIWI_FE_CLOSE) {
+		kiwi_fe_close_type_t type;
+		if (kiwi_be_read_close(data, size, &portal_name, &portal_len,
+				       &type) != 0) {
+			return OD_ECLIENT_PROTOCOL_ERROR;
+		}
+		/* plan_simple has no portal deltas when reservation is disabled. */
+		if (type == KIWI_FE_CLOSE_PORTAL) {
+			od_client_remove_portal(client, portal_name);
+		}
+	}
+	return OD_OK;
+}
+
+static od_frontend_status_t
+forward_apply_delta_cb(kiwi_be_type_t type, char *data, size_t size, void *a)
+{
+	uint64_t completed_at = machine_time_us();
 	forward_batch_response_arg_t *arg = a;
 	od_client_t *client = arg->client;
 	od_server_t *server = arg->server;
@@ -1603,6 +1652,28 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 	od_xplan_t *xp = arg->xp;
 	od_xplan_entry_t *entry = mm_vector_get(&xp->entries, arg->idx);
 	arg->idx++;
+
+	if (type == KIWI_BE_ERROR_RESPONSE &&
+	    msg_fe_type(entry->clmsg) == KIWI_FE_EXECUTE) {
+		kiwi_fe_error_t error;
+		/* Transaction end or savepoint rollback may destroy a portal before
+		 * ReadyForQuery clears our map. Distinguish Execute's own missing-
+		 * portal check from errors (including 34000) raised inside a query.
+		 * Backends that omit the source routine retain RFQ-based cleanup. */
+		if (kiwi_fe_read_error(data, size, &error) == 0 &&
+		    error.code != NULL && error.routine != NULL &&
+		    strcmp(error.code, KIWI_INVALID_CURSOR_NAME) == 0 &&
+		    strcmp(error.routine, "exec_execute_message") == 0) {
+			char *portal_name;
+			uint32_t portal_len;
+			if (kiwi_be_read_execute(machine_msg_data(entry->clmsg),
+						 machine_msg_size(entry->clmsg),
+						 &portal_name,
+						 &portal_len) == 0) {
+				od_client_remove_portal(client, portal_name);
+			}
+		}
+	}
 
 	/* ErrorResponse also completes the current Execute; skipped entries
 	 * never get a response callback and therefore never get a sample. */
@@ -1614,6 +1685,10 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 	if (!server->xproto_err) {
 		status = delta_apply(&entry->delta, client, server);
 		apply_delta = 1;
+		if (status == OD_OK) {
+			status = track_portal_response(
+				entry, client, arg->started_at, completed_at);
+		}
 	}
 
 	if (od_logger_debug_enabled(&instance->logger, client, server)) {
@@ -1874,6 +1949,7 @@ send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
 	 * A later Flush/Sync batch gets its own timestamp. Transaction time
 	 * remains open until ReadyForQuery reports an idle backend. */
 	uint64_t started_at = machine_time_us();
+	++relay->batch_id;
 	od_stat_tx_start(&server->stats_state);
 
 	int rc = od_io_writev(&server->io, iovecs, niovecs, timeout_ms, 0);

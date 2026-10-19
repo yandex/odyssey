@@ -831,11 +831,24 @@ batch to its terminating response (`CommandComplete`, `EmptyQueryResponse`,
 `PortalSuspended`, or `ErrorResponse`). All `Execute` messages in a batch share
 the same start time, so samples include waiting for earlier operations and
 backend response buffering. Each batch sent on `Flush` or `Sync` gets a new
-start time. Locally handled `Execute` messages also contribute a sample.
+start time.
 
-`Parse`, `Bind`, `Describe`, `Close`, `Flush`, and `Sync` do not contribute query
-samples. An `Execute` skipped after an earlier error is not counted. In the
-simple protocol, a `Query` message is still measured until `ReadyForQuery`.
+For the first completed `Execute` of a portal, the sample also includes the
+latency of its successful `Bind` if it was sent in an earlier batch. Bind
+latency runs from sending that batch to receiving `BindComplete`; the client
+pause between the Bind and Execute batches is excluded. If Bind and Execute
+share a batch, their common interval is counted only once. The saved Bind
+latency is consumed once, including when Execute fails or returns
+`PortalSuspended`; subsequent Executes of that portal measure only their own
+batch latency. Closing or replacing the portal, or ending its transaction,
+discards any unconsumed Bind latency. Locally handled `Execute` messages also
+contribute a sample.
+
+`Parse`, `Bind`, `Describe`, `Close`, `Flush`, and `Sync` do not contribute
+separate query samples. Bind errors and portals that are never executed do
+not contribute samples. An `Execute` skipped after an earlier error is not
+counted. In the simple protocol, a `Query` message is still measured until
+`ReadyForQuery`.
 Transaction samples continue to span until `ReadyForQuery` reports that the
 transaction has ended, including client pauses inside the transaction.
 

@@ -24,6 +24,7 @@ extern void kiwi_test_enquote(void);
 extern void kiwi_test_pgoptions(void);
 extern void kiwi_test_be_read_startup_options(void);
 extern void kiwi_test_fe_read_auth(void);
+extern void kiwi_test_fe_read_error(void);
 extern void kiwi_test_be_read_query(void);
 
 /* MACHINARIUM */
@@ -157,6 +158,7 @@ int main(int argc, char *argv[])
 	odyssey_test(kiwi_test_pgoptions);
 	odyssey_test(kiwi_test_be_read_startup_options);
 	odyssey_test(kiwi_test_fe_read_auth);
+	odyssey_test(kiwi_test_fe_read_error);
 	odyssey_test(kiwi_test_be_read_query);
 	odyssey_test(machinarium_test_init);
 	odyssey_test(machinarium_test_create0);

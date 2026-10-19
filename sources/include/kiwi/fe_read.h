@@ -14,6 +14,7 @@ struct kiwi_fe_error {
 	char *message;
 	char *detail;
 	char *hint;
+	char *routine;
 };
 
 KIWI_API static inline int kiwi_fe_read_ready(char *data, uint32_t size,
@@ -232,6 +233,14 @@ KIWI_API static inline int kiwi_fe_read_error(char *data, uint32_t size,
 		/* hint */
 		case 'H':
 			error->hint = pos;
+			rc = kiwi_readsz(&pos, &pos_size);
+			if (kiwi_unlikely(rc == -1)) {
+				return -1;
+			}
+			break;
+		/* source routine */
+		case 'R':
+			error->routine = pos;
 			rc = kiwi_readsz(&pos, &pos_size);
 			if (kiwi_unlikely(rc == -1)) {
 				return -1;

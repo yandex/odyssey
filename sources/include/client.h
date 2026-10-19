@@ -62,7 +62,7 @@ struct od_client {
 	/* desc preparet statements ids */
 	mm_hashmap_t *prep_stmt_ids;
 
-	/* portal name -> *od_pstmt_t (extended protocol portals tracking) */
+	/* Portal name -> statement reference and pending Bind timing. */
 	mm_hashmap_t *portals;
 
 	/* passwd from config rule */

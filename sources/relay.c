@@ -180,6 +180,7 @@ void od_relay_init(od_relay_t *relay, od_client_t *client)
 	xbuf_init(&relay->xbuf);
 	od_xplan_init(&relay->xplan);
 	relay->client = client;
+	relay->batch_id = 0;
 
 	relay->copy_additional = NULL;
 }

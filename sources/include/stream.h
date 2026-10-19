@@ -31,6 +31,8 @@ od_frontend_status_t od_stream_server_sync(char *ctx, od_server_t *server,
 					   uint32_t timeout_ms);
 
 typedef od_frontend_status_t (*od_stream_on_responce_cb)(kiwi_be_type_t type,
+							 char *data,
+							 size_t size,
 							 void *arg);
 
 od_frontend_status_t

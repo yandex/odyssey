@@ -323,7 +323,7 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 
 		if (stream->on_response != NULL) {
 			od_frontend_status_t st = stream->on_response(
-				type, stream->on_reponse_arg);
+				type, data, size, stream->on_reponse_arg);
 
 			if (st != OD_OK) {
 				return st;

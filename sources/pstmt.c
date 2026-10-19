@@ -195,47 +195,62 @@ void od_client_pstmts_clear(od_client_t *client)
 
 /*
  * client portal hash map
- * "portal_name" -> od_pstmt_t*
+ * "portal_name" -> od_client_portal_t
  *
  * portals are created by Bind (destination portal name) and destroyed by
  * Close Portal, transaction end, or DISCARD ALL / DEALLOCATE ALL.
  *
- * the value is a non-owning pointer into the global pstmt map. the pointer
- * is stable because the map holds its own reference while the entry exists
- * (entries are removed only when the last external reference is dropped,
- * see od_pstmt_unref).
+ * Each portal owns a pstmt reference when statement reservation is enabled.
+ * Otherwise only Bind timing is tracked, and pstmt is NULL.
  */
+
+typedef struct {
+	od_pstmt_t *pstmt;
+	uint64_t bind_batch_id;
+	uint64_t bind_time;
+} od_client_portal_t;
+
+static void client_portal_destroy(void *value)
+{
+	od_client_portal_t *portal = value;
+	if (portal->pstmt != NULL) {
+		od_pstmt_unref(portal->pstmt);
+	}
+}
 
 mm_hashmap_t *od_client_portal_hashmap_create(void)
 {
-	return mm_hashmap_create(
-		50 /* XXX: big enough? */,
-		0 /* nlocks = 0, map is client-private */,
-		sizeof(char *) /* key size */,
-		sizeof(od_pstmt_t *) /* value size */,
-		str_ptr_cmp /* key cmp */, xxh_str_ptr /* key hash */,
-		str_ptr_dtor /* key dtor */,
-		NULL /* no need to free the pointer from global table */,
-		str_ptr_copy /* key copy */);
+	return mm_hashmap_create(50 /* XXX: big enough? */,
+				 0 /* nlocks = 0, map is client-private */,
+				 sizeof(char *) /* key size */,
+				 sizeof(od_client_portal_t) /* value size */,
+				 str_ptr_cmp /* key cmp */,
+				 xxh_str_ptr /* key hash */,
+				 str_ptr_dtor /* key dtor */,
+				 client_portal_destroy /* value dtor */,
+				 str_ptr_copy /* key copy */);
 }
 
 void od_client_portal_hashmap_free(mm_hashmap_t *hm)
 {
-	mm_hashmap_foreach(hm, unref_pstmt_entry, NULL);
-
 	mm_hashmap_free(hm);
 }
 
 od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name)
 {
+	if (client->portals == NULL) {
+		return NULL;
+	}
+
 	mm_hashmap_keylock_t klock;
 	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
 				     0 /* do not create */);
 	(void)rc;
 
 	if (klock.found) {
-		od_pstmt_t *ps = *(od_pstmt_t **)mm_hashmap_kvp_val(
-			client->portals, klock.kvp);
+		od_client_portal_t *portal =
+			mm_hashmap_kvp_val(client->portals, klock.kvp);
+		od_pstmt_t *ps = portal->pstmt;
 		mm_hashmap_unlock_key(client->portals, &klock);
 		return ps;
 	}
@@ -247,7 +262,6 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 			 od_pstmt_t *pstmt)
 {
 	mm_hashmap_keylock_t klock;
-	od_pstmt_t *to_unref = NULL;
 
 	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
 				     MM_HASHMAP_CREATE /* do create */);
@@ -261,35 +275,29 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 	 * the server will enforce that - we just store the mapping here
 	 */
 
-	void *val = mm_hashmap_kvp_val(client->portals, klock.kvp);
-	to_unref = *(od_pstmt_t **)(val);
-	memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
 	od_pstmt_ref(pstmt);
+	od_client_portal_t *portal =
+		mm_hashmap_kvp_val(client->portals, klock.kvp);
+	client_portal_destroy(portal);
+	*portal = (od_client_portal_t){ .pstmt = pstmt };
 	mm_hashmap_unlock_key(client->portals, &klock);
-
-	if (to_unref != NULL) {
-		od_pstmt_unref(to_unref);
-	}
 
 	return 0;
 }
 
 int od_client_remove_portal(od_client_t *client, const char *portal_name)
 {
+	if (client->portals == NULL) {
+		return 0;
+	}
+
 	mm_hashmap_keylock_t klock;
 	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
 				     0 /* do not create */);
 	(void)rc;
 
 	if (klock.kvp != NULL) {
-		od_pstmt_t *pstmt = *(od_pstmt_t **)mm_hashmap_kvp_val(
-			client->portals, klock.kvp);
-
 		mm_hashmap_remove(client->portals, &klock);
-
-		if (pstmt != NULL) {
-			od_pstmt_unref(pstmt);
-		}
 	}
 
 	return 0;
@@ -297,9 +305,53 @@ int od_client_remove_portal(od_client_t *client, const char *portal_name)
 
 void od_client_portals_clear(od_client_t *client)
 {
-	mm_hashmap_foreach(client->portals, unref_pstmt_entry, NULL);
+	if (client->portals != NULL) {
+		mm_hashmap_clear(client->portals);
+	}
+}
 
-	mm_hashmap_clear(client->portals);
+int od_client_record_bind(od_client_t *client, const char *portal_name,
+			  uint64_t batch_id, uint64_t duration)
+{
+	/* Also track Bind when reserve_prepared_statement is disabled. */
+	if (client->portals == NULL) {
+		client->portals = od_client_portal_hashmap_create();
+		if (client->portals == NULL) {
+			return -1;
+		}
+	}
+	mm_hashmap_keylock_t klock;
+	if (mm_hashmap_lock_key(client->portals, &klock, &portal_name,
+				MM_HASHMAP_CREATE) == -1) {
+		return -1;
+	}
+	od_client_portal_t *portal =
+		mm_hashmap_kvp_val(client->portals, klock.kvp);
+	portal->bind_batch_id = batch_id;
+	portal->bind_time = duration;
+	mm_hashmap_unlock_key(client->portals, &klock);
+	return 0;
+}
+
+uint64_t od_client_take_bind_time(od_client_t *client, const char *portal_name,
+				  uint64_t batch_id)
+{
+	if (client->portals == NULL) {
+		return 0;
+	}
+	mm_hashmap_keylock_t klock;
+	mm_hashmap_lock_key(client->portals, &klock, &portal_name, 0);
+	if (!klock.found) {
+		return 0;
+	}
+	od_client_portal_t *portal =
+		mm_hashmap_kvp_val(client->portals, klock.kvp);
+	/* The current batch's latency already includes its Bind interval. */
+	uint64_t duration =
+		portal->bind_batch_id == batch_id ? 0 : portal->bind_time;
+	portal->bind_time = 0;
+	mm_hashmap_unlock_key(client->portals, &klock);
+	return duration;
 }
 
 /*

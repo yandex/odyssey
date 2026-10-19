@@ -36,6 +36,8 @@ struct od_relay {
 	od_client_t *client;
 	od_relay_xbuf_t xbuf;
 	od_xplan_t xplan;
+	/* Distinguish writes even when their timestamps have the same microsecond. */
+	uint64_t batch_id;
 
 	/* additional message to handle in copy stream */
 	machine_msg_t *copy_additional;
