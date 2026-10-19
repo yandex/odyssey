@@ -103,6 +103,8 @@ do_test simple 6432 tuser
 
 do_test broken_conn 6432 tuser
 
+do_test pstmt 6432 tuser
+
 do_test stack_guard 6432 suser
 
 do_test balancer 6432 postgres

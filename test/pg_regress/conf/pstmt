@@ -1,0 +1,38 @@
+include "/home/postgres/regress/conf/_base"
+
+log_config yes
+
+storage "postgres_server" {
+	type "remote"
+	host "localhost:5432"
+	endpoints_status_poll_interval 5000
+}
+
+database "postgres" {
+	# several backends; tests move the client between them by
+	# terminating its current backend
+	user "tuser" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 4
+		pool_timeout 0
+		pool_reserve_prepared_statement yes
+		client_fwd_error yes
+		client_show_id no
+	}
+
+	# a single backend: every client of the route uses the same one
+	user "tuser_one" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 1
+		pool_timeout 0
+		pool_reserve_prepared_statement yes
+		client_fwd_error yes
+		client_show_id no
+	}
+}
