@@ -1,0 +1,17 @@
+-- isolation-style test for SHOW GLOBAL_PREPARED_STATEMENTS:
+-- two background clients allocate the same prepared statement via
+-- extended protocol Parse and hold their connections open, then the
+-- console reports the statement with a refcount covering both clients
+
+-- wait for leftovers of previous runs to disappear
+\! for i in `seq 1 60`; do psql -h 127.0.0.1 -p ${PGTEST_PORT} -U ${PGTEST_USER} -d console -tA -c "SHOW GLOBAL_PREPARED_STATEMENTS" | grep -q . || break; sleep 0.2; done
+
+\! printf '%s\n' 'SELECT 1::int + $1::int' '\parse ptest' 'SELECT pg_sleep(10);' > /tmp/od_gpa_client.sql
+\! nohup psql -h 127.0.0.1 -p ${PGTEST_PORT} -U ${PGTEST_USER} -d postgres -f /tmp/od_gpa_client.sql >/dev/null 2>&1 &
+\! nohup psql -h 127.0.0.1 -p ${PGTEST_PORT} -U ${PGTEST_USER} -d postgres -f /tmp/od_gpa_client.sql >/dev/null 2>&1 &
+
+-- wait until both clients are accounted: client+server refs per client plus the map entry
+\! for i in `seq 1 100`; do psql -h 127.0.0.1 -p ${PGTEST_PORT} -U ${PGTEST_USER} -d console -tA -c "SHOW GLOBAL_PREPARED_STATEMENTS" | grep -q '|5' && break; sleep 0.2; done
+
+\connect console
+SHOW GLOBAL_PREPARED_STATEMENTS;

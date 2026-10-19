@@ -96,6 +96,8 @@ do_test default_pool 6432 postgres
 
 do_test default_pool_session 6432 postgres
 
+do_test show_global_prepared_statements 6432 postgres
+
 do_test reload_default_pool 6432 postgres
 
 do_test simple 6432 suser
