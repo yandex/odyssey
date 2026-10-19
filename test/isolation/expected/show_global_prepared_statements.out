@@ -1,0 +1,8 @@
+starting permutation
+step s1_parse:
+step s2_parse:
+step show:
+      name       |       definition        | refcount 
+-----------------+-------------------------+----------
+ odyssey_pstmt_0 | SELECT 1::int + $1::int | 4
+(1 row)
