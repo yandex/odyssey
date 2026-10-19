@@ -46,8 +46,8 @@ A special `user default` is used when no user is matched.
 | pool                              | string (session/transaction/statement) | — (not set)   | runtime (new connections) | Required: connection pooling mode. Must be explicitly configured.                                                                                                          |
 | pool_size                         | integer                                | 0             | runtime (new connections) | Maximum connections in pool; 0 = unlimited.                                                                                                                                |
 | min_pool_size                     | integer                                | 0             | runtime (new connections) | Minimum connections to maintain in pool.                                                                                                                                   |
-| pool_timeout                      | integer (ms)                           | 0             | runtime (new connections) | Maximum wait time for acquiring connection from pool.                                                                                                                      |
-| pool_ttl                          | integer (sec)                          | 0             | runtime (new connections) | Time-to-live for idle server connections.                                                                                                                                  |
+| pool_timeout                      | duration (ms)                          | 0             | runtime (new connections) | Maximum wait time for acquiring connection from pool.                                                                                                                      |
+| pool_ttl                          | duration (sec)                         | 0             | runtime (new connections) | Time-to-live for idle server connections.                                                                                                                                  |
 | pool_discard                      | boolean                                | yes (1)       | runtime (new connections) | Execute DISCARD ALL when returning connections to pool.                                                                                                                    |
 | pool_smart_discard                | boolean                                | no (0)        | runtime (new connections) | Use custom discard query instead of DISCARD ALL when enabled.                                                                                                              |
 | pool_discard_query               | string                                 | — (not set)   | runtime (new connections) | Custom discard query; if includes DEALLOCATE ALL, prepared statements are disallowed.                                                                                      |
@@ -56,22 +56,22 @@ A special `user default` is used when no user is matched.
 | client_fwd_error                  | boolean                                | no (0)        | runtime (new connections) | Forward backend connection errors to client during connection establishment.                                                                                               |
 | application_name_add_host         | boolean                                | no (0)        | runtime (new connections) | Append client hostname to application_name parameter.                                                                                                                      |
 | reserve_session_server_connection | boolean                                | yes (1)       | runtime (new connections) | Immediately establish backend connection when client connects.                                                                                                             |
-| server_lifetime                   | integer (sec)                          | 3600          | runtime (new connections) | Maximum lifetime for backend connections (1 hour default).                                                                                                                 |
+| server_lifetime                   | duration (sec)                         | 3600          | runtime (new connections) | Maximum lifetime for backend connections (1 hour default).                                                 |
 | server_drop_on_cached_plan_error  | boolean(yes/no)                        | no          | runtime (new connections) | Do drop server connection on ERROR 0A000 cached plan must not change result type |
 | server_drop_on_oom                | boolean (yes/no)                       | yes (1)       | runtime (new connections) | Drop the client and server connections when the server process reports OOM.                                                |
-| pool_client_idle_timeout          | integer (sec)                        | 0             | runtime (new connections) | Timeout for idle client connections; only applies to session pooling mode.                                                                                                 |
-| pool_idle_in_transaction_timeout  | integer (sec)                          | 0             | runtime (new connections) | Timeout for idle clients with open transactions; session pooling only.                                                                                                     |
+| pool_client_idle_timeout          | duration (sec)                       | 0             | runtime (new connections) | Timeout for idle client connections; only applies to session pooling mode.                                                                                                 |
+| pool_idle_in_transaction_timeout    | duration (sec)                         | 0             | runtime (new connections) | Timeout for idle clients with open transactions; session pooling only.                                                                                                     |
 | pool_reserve_prepared_statement   | boolean                                | yes (0)       | runtime (new connections) | Enable prepared statement support; incompatible with session pooling and certain discard modes.                                                                            |
 | server_pstmt_cache_size           | integer                                | 0             | runtime (new connections) | Per-server limit of reserved prepared statements; evicts statements not recently used (SIEVE policy) on server reset; 0 = unlimited. Only meaningful with prepared statement support enabled. |
 | pool_pin_on_listen          | boolean                        | no (0)             | runtime (new connections) | Enable pinning client to server after LISTEN execution                                                                                    |
 | log_debug                         | boolean                                | no (0)        | runtime (new connections) | Enable debug logging for this route.                                                                                                                                       |
 | log_debug_sampling (per-route)    | integer (0..100)                       | — (global)    | runtime (new connections) | Percentage of client connections with debug logging for this route; overrides global `log_debug_sampling`.                                                                |
-| group_checker_interval            | integer (ms)                           | 7000 (global) | runtime (global)          | Global setting: interval for checking group membership changes (7 seconds default).                                                                                        |
+| group_checker_interval            | duration (ms)                          | 7000 (global) | runtime (global)          | Global setting: interval for checking group membership changes (7 seconds default).                                                                                        |
 | maintain_params                   | boolean                                | yes (1)       | runtime (new connections) | Maintain client connection parameters across backend connections for compatibility.                                                                                        |
 | target_session_attrs              | string enum                            | — (not set)   | runtime (new connections) | Target session attributes for connection routing; defaults to undefined behavior.                                                                                          |
 | auto_route_ro_on_standby          | boolean                                | no (0)        | runtime (new connections) | Reserved for automatic routing of read-only queries to standby replicas; see the section below.                                                                            |
 | quantiles                         | string (comma-separated)               | — (not set)   | runtime (new connections) | Comma-separated list of quantile values for statistics collection; disabled when not set.                                                                                  |
-| catchup_timeout                   | integer (sec)                          | 0             | runtime (new connections) | Timeout for replica catchup operations; 0 = no timeout.                                                                                                                    |
+| catchup_timeout                   | duration (sec)                         | 0             | runtime (new connections) | Timeout for replica catchup operations; 0 = no timeout.                                                                                                                    |
 | catchup_checks                    | integer                                | 0             | runtime (new connections) | **Deprecated.** Accepted but ignored.                                                                                                                                      |
 | role                              | string (admin/client)                  | — (not set)   | runtime (new connections) | Route role. `"admin"` grants access to the admin console.                                                                                                                  |
 | client_show_id                    | boolean                                | no (0)        | runtime (new connections) | Include Odyssey client ID in log messages for this route.                                                                                                                  |
@@ -620,7 +620,7 @@ Set `server_drop_on_oom no` to keep the previous behavior.
 
 ## **pool\_client\_idle\_timeout**
 
-*integer*
+*duration*
 
 Client pool idle timeout.
 
@@ -628,13 +628,13 @@ Drop stale client connections after this many seconds of idleness when not in a 
 
 Set to zero to disable.
 
-`pool_client_idle_timeout 0`
+`pool_client_idle_timeout 30`
 
 ---
 
 ## **pool\_idle\_in\_transaction\_timeout**
 
-*integer*
+*duration*
 
 Client pool idle in transaction timeout.
 
@@ -642,7 +642,7 @@ Drop client connections in a transaction after this many seconds of idleness.
 
 Set to zero to disable.
 
-`pool_idle_in_transaction_timeout 0`
+`pool_idle_in_transaction_timeout 15`
 
 ---
 
@@ -823,7 +823,10 @@ Incompatible with session pooling.
 
 *string*
 
-Compute quantiles of query and transaction times
+Compute quantiles of query times, transaction times, and disconnected client
+lifetimes. Client lifetime observations are collected by the session cleanup
+handler. See [client lifetime metrics](../features/prometheus-metrics.md#client-lifetime)
+for collection and export details.
 
 `quantiles "0.99,0.95,0.5"`
 
@@ -831,9 +834,10 @@ Compute quantiles of query and transaction times
 
 ## **catchup_timeout**
 
-*integer*
+*duration*
 
 Specify maximum replication lag in seconds for the user
+(one-second granularity, sub-second durations are rounded up).
 See [catchup-timeout.md](../features/catchup-timeout.md) for more details
 
 `catchup_timeout 10`

@@ -125,7 +125,7 @@ Allowed TLS protocol versions.
 `tls_protocols "tlsv1.2"`
 
 ## **endpoints_status_poll_interval**
-*integer*
+*duration*
 
 If target_session_attrs is set (from listen or query), Odyssey will check every endpoint attrs
 not more often than endpoints_status_poll_interval milliseconds within one conn
@@ -273,7 +273,7 @@ watchdog {
     # repl_mon (https://github.com/man-brain/repl_mon) writes this value
     # from the primary once per second; read it back on the replica:
     watchdog_lag_query "SELECT TRUNC(EXTRACT(EPOCH FROM ts))::int FROM repl_mon LIMIT 1"
-    watchdog_lag_interval 10
+    watchdog_lag_interval_ms 10s
 }
 ```
 

@@ -130,7 +130,7 @@ void od_client_free(od_client_t *client)
 uint32_t od_client_login_timeout(const od_client_t *client)
 {
 	if (client->source != NULL) {
-		return (uint32_t)client->source->config->client_login_timeout;
+		return (uint32_t)client->source->config->client_login_timeout_ms;
 	}
 
 	/* TODO: do not use infinite timeout */

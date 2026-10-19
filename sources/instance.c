@@ -384,6 +384,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	od_extension_t *extensions = NULL;
 	od_system_t *system = NULL;
 	od_global_t *global = NULL;
+	bool router_initialized = false;
 
 	extensions = od_extensions_create();
 	if (extensions == NULL) {
@@ -398,6 +399,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	}
 
 	od_router_init(&router, NULL /* will set global later */);
+	router_initialized = true;
 
 	if (od_cron_init(&cron) != 0) {
 		od_error(&instance->logger, "config", NULL, NULL,
@@ -565,7 +567,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	machinarium_set_coroutine_cache_size(instance->config.cache_coroutine);
 	machinarium_set_msg_cache_gc_size(instance->config.cache_msg_gc_size);
 	machinarium_set_msg_cache_gc_count(instance->config.cache_msg_gc_count);
-	machinarium_set_dns_ttl_ms(instance->config.dns_ttl_ms);
+	machinarium_set_dns_ttl_ms(instance->config.dns_cache_ttl_ms);
 	rc = machinarium_init();
 	if (rc == -1) {
 		od_error(&instance->logger, "init", NULL, NULL,
@@ -613,12 +615,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	return rc;
 
 error:
-	/*
-	TODO: proper cleanup
-	od_router_free(&router);
+	if (router_initialized) {
+		od_router_free(&router);
+	}
 	od_extension_free(&instance->logger, extensions);
 	od_system_free(system);
-	*/
+	/* TODO: clean up the remaining startup resources and started machines. */
 	return NOT_OK_RESPONSE;
 }
 

@@ -9,6 +9,7 @@
 #include <odyssey.h>
 
 #include <unistd.h>
+#include <sys/un.h>
 
 #include <machinarium/machinarium.h>
 
@@ -27,6 +28,7 @@ void od_config_init(od_config_t *config)
 	config->sequential_routing = 0;
 	config->log_debug = 0;
 	config->log_debug_sampling = 100;
+	config->maintain_params = 1;
 	config->log_to_stdout = 1;
 	config->log_config = 0;
 	config->log_session = 1;
@@ -65,7 +67,7 @@ void od_config_init(od_config_t *config)
 	config->keepalive = 15;
 	config->keepalive_keep_interval = 5;
 	config->keepalive_probes = 3;
-	config->keepalive_usr_timeout = 0; /* use sys default */
+	config->keepalive_usr_timeout_ms = 0; /* use sys default */
 
 	config->cpu_affinity = NULL;
 	// od_affinity_config_init(&config->cpu_affinity);
@@ -76,7 +78,7 @@ void od_config_init(od_config_t *config)
 	config->client_max = 0;
 	config->client_max_routing = 0;
 	config->accept_rate_limit = 0;
-	config->server_login_retry = 1;
+	config->server_login_retry_ms = 1;
 	config->cache_coroutine = 1024;
 	config->cache_msg_gc_size = 0;
 	config->cache_msg_gc_count = 1024;
@@ -84,7 +86,7 @@ void od_config_init(od_config_t *config)
 	config->system_coroutine_stack_size = 32;
 	config->hba_file = NULL;
 	config->max_sigterms_to_die = 3;
-	config->group_checker_interval = 7000; /* 7 seconds */
+	config->group_checker_interval_ms = 7000; /* 7 seconds */
 	od_list_init(&config->listen);
 
 	config->backend_connect_timeout_ms = 30U * 1000U; /* 30 seconds */
@@ -115,13 +117,14 @@ void od_config_init(od_config_t *config)
 
 	config->smart_search_path_enquoting = 0;
 
-	config->dns_ttl_ms = 30 * 1000;
+	config->dns_cache_ttl_ms = 30 * 1000;
 }
 
 void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 {
 	current_config->log_debug = new_config->log_debug;
 	current_config->log_debug_sampling = new_config->log_debug_sampling;
+	current_config->maintain_params = new_config->maintain_params;
 	current_config->log_config = new_config->log_config;
 	current_config->log_session = new_config->log_session;
 	current_config->log_query = new_config->log_query;
@@ -133,7 +136,8 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->max_sigterms_to_die = new_config->max_sigterms_to_die;
 	current_config->client_max_routing = new_config->client_max_routing;
 	current_config->accept_rate_limit = new_config->accept_rate_limit;
-	current_config->server_login_retry = new_config->server_login_retry;
+	current_config->server_login_retry_ms =
+		new_config->server_login_retry_ms;
 	current_config->backend_connect_timeout_ms =
 		new_config->backend_connect_timeout_ms;
 	current_config->cancel_timeout_ms = new_config->cancel_timeout_ms;
@@ -148,8 +152,8 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->keepalive_keep_interval =
 		new_config->keepalive_keep_interval;
 	current_config->keepalive_probes = new_config->keepalive_probes;
-	current_config->keepalive_usr_timeout =
-		new_config->keepalive_usr_timeout;
+	current_config->keepalive_usr_timeout_ms =
+		new_config->keepalive_usr_timeout_ms;
 	current_config->graceful_shutdown_timeout_ms =
 		new_config->graceful_shutdown_timeout_ms;
 }
@@ -225,7 +229,7 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 
 	listen->port = 6432;
 	listen->backlog = 128;
-	listen->client_login_timeout = 15000;
+	listen->client_login_timeout_ms = 15000;
 	listen->reserved_clients = -1; /* disabled */
 	listen->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 	listen->auto_route_ro_on_standby = 0;
@@ -313,6 +317,22 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 				od_error(
 					logger, "config", NULL, NULL,
 					"listen host is not set and no unix_socket_dir is specified");
+				return -1;
+			}
+
+			/*
+			 * unix socket path must fit into sockaddr_un.sun_path
+			 */
+			char sock_path[sizeof(
+				((struct sockaddr_un *)0)->sun_path)];
+			if (od_unix_socket_path(sock_path, sizeof(sock_path),
+						config->unix_socket_dir,
+						listen->port) == -1) {
+				od_error(logger, "config", NULL, NULL,
+					 "unix socket path '%s/.s.PGSQL.%d' is "
+					 "too long (maximum %d characters)",
+					 config->unix_socket_dir, listen->port,
+					 (int)sizeof(sock_path) - 1);
 				return -1;
 			}
 		}
@@ -435,6 +455,8 @@ static const od_config_field_t od_config_fields[] = {
 	  1 },
 	{ "log_debug_sampling", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, log_debug_sampling), 1 },
+	{ "maintain_params", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, maintain_params), 0 },
 	{ "log_config", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, log_config),
 	  1 },
 	{ "log_session", OD_CONFIG_FIELD_BOOL,
@@ -477,7 +499,7 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, external_auth_socket_path), 0 },
 	{ "graceful_die_on_errors", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, graceful_die_on_errors), 0 },
-	{ "graceful_shutdown_timeout_ms", OD_CONFIG_FIELD_INT,
+	{ "graceful_shutdown_timeout_ms", OD_CONFIG_FIELD_U64,
 	  offsetof(od_config_t, graceful_shutdown_timeout_ms), 1 },
 	{ "enable_online_restart", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, enable_online_restart_feature), 0 },
@@ -494,8 +516,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, keepalive_keep_interval), 1 },
 	{ "keepalive_probes", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, keepalive_probes), 1 },
-	{ "keepalive_usr_timeout", OD_CONFIG_FIELD_INT,
-	  offsetof(od_config_t, keepalive_usr_timeout), 1 },
+	{ "keepalive_usr_timeout", OD_CONFIG_FIELD_I64,
+	  offsetof(od_config_t, keepalive_usr_timeout_ms), 1 },
 	{ "workers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, workers), 0 },
 	{ "resolvers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, resolvers),
 	  0 },
@@ -505,8 +527,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, client_max_routing), 1 },
 	{ "accept_rate_limit", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, accept_rate_limit), 1 },
-	{ "server_login_retry", OD_CONFIG_FIELD_INT,
-	  offsetof(od_config_t, server_login_retry), 1 },
+	{ "server_login_retry", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, server_login_retry_ms), 1 },
 	{ "cache_coroutine", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, cache_coroutine), 0 },
 	{ "cache_msg_gc_size", OD_CONFIG_FIELD_INT,
@@ -518,16 +540,16 @@ static const od_config_field_t od_config_fields[] = {
 	{ "system_coroutine_stack_size", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, system_coroutine_stack_size), 0 },
 	{ "dns_cache_ttl", OD_CONFIG_FIELD_INT,
-	  offsetof(od_config_t, dns_ttl_ms), 0 },
+	  offsetof(od_config_t, dns_cache_ttl_ms), 0 },
 	{ "hba_file", OD_CONFIG_FIELD_STRING, offsetof(od_config_t, hba_file),
 	  0 },
-	{ "group_checker_interval", OD_CONFIG_FIELD_INT,
-	  offsetof(od_config_t, group_checker_interval), 0 },
-	{ "backend_connect_timeout_ms", OD_CONFIG_FIELD_INT,
+	{ "group_checker_interval", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, group_checker_interval_ms), 0 },
+	{ "backend_connect_timeout_ms", OD_CONFIG_FIELD_U64,
 	  offsetof(od_config_t, backend_connect_timeout_ms), 1 },
-	{ "cancel_timeout_ms", OD_CONFIG_FIELD_INT,
+	{ "cancel_timeout_ms", OD_CONFIG_FIELD_U64,
 	  offsetof(od_config_t, cancel_timeout_ms), 1 },
-	{ "cancel_queue_timeout_ms", OD_CONFIG_FIELD_INT,
+	{ "cancel_queue_timeout_ms", OD_CONFIG_FIELD_I64,
 	  offsetof(od_config_t, cancel_queue_timeout_ms), 0 },
 	{ "cancel_max_inflight", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, cancel_max_inflight), 0 },
@@ -570,6 +592,12 @@ void od_config_field_value(od_config_t *config, const od_config_field_t *field,
 	switch (field->type) {
 	case OD_CONFIG_FIELD_INT:
 		od_snprintf(buf, size, "%d", *(int *)at);
+		break;
+	case OD_CONFIG_FIELD_I64:
+		od_snprintf(buf, size, "%" PRId64, *(int64_t *)at);
+		break;
+	case OD_CONFIG_FIELD_U64:
+		od_snprintf(buf, size, "%" PRIu64, *(uint64_t *)at);
 		break;
 	case OD_CONFIG_FIELD_BOOL:
 		od_snprintf(buf, size, "%s", *(int *)at ? "yes" : "no");
@@ -654,6 +682,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       od_config_yes_no(config->log_debug));
 	od_log(logger, "config", NULL, NULL, "log_debug_sampling      %d",
 	       config->log_debug_sampling);
+	od_log(logger, "config", NULL, NULL, "maintain_params         %s",
+	       od_config_yes_no(config->maintain_params));
 	od_log(logger, "config", NULL, NULL, "log_config              %s",
 	       od_config_yes_no(config->log_config));
 	od_log(logger, "config", NULL, NULL, "log_session             %s",
@@ -684,16 +714,16 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->keepalive_keep_interval);
 	od_log(logger, "config", NULL, NULL, "keepalive_probes        %d",
 	       config->keepalive_probes);
-	od_log(logger, "config", NULL, NULL, "keepalive_usr_timeout   %d",
-	       config->keepalive_usr_timeout);
+	od_log(logger, "config", NULL, NULL, "keepalive_usr_timeout   %" PRId64,
+	       config->keepalive_usr_timeout_ms);
 	if (config->client_max_set) {
 		od_log(logger, "config", NULL, NULL,
 		       "client_max              %d", config->client_max);
 	}
 	od_log(logger, "config", NULL, NULL, "client_max_routing      %d",
 	       config->client_max_routing);
-	od_log(logger, "config", NULL, NULL, "server_login_retry      %d",
-	       config->server_login_retry);
+	od_log(logger, "config", NULL, NULL, "server_login_retry      %" PRIu64,
+	       config->server_login_retry_ms);
 	od_log(logger, "config", NULL, NULL, "cache_msg_gc_size       %d",
 	       config->cache_msg_gc_size);
 	od_log(logger, "config", NULL, NULL, "cache_msg_gc_count      %d",
@@ -708,20 +738,22 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->workers);
 	od_log(logger, "config", NULL, NULL, "resolvers               %d",
 	       config->resolvers);
-	od_log(logger, "config", NULL, NULL, "backend_connect_timeout_ms %u",
+	od_log(logger, "config", NULL, NULL,
+	       "backend_connect_timeout_ms %" PRIu64,
 	       config->backend_connect_timeout_ms);
-	od_log(logger, "config", NULL, NULL, "cancel_timeout_ms         %u",
-	       config->cancel_timeout_ms);
-	od_log(logger, "config", NULL, NULL, "cancel_queue_timeout_ms   %u",
+	od_log(logger, "config", NULL, NULL,
+	       "cancel_timeout_ms         %" PRIu64, config->cancel_timeout_ms);
+	od_log(logger, "config", NULL, NULL,
+	       "cancel_queue_timeout_ms   %" PRId64,
 	       config->cancel_queue_timeout_ms);
 	od_log(logger, "config", NULL, NULL, "cancel_max_inflight       %d",
 	       config->cancel_max_inflight);
 	od_log(logger, "config", NULL, NULL, "cancel_rate_limit         %d",
 	       config->cancel_rate_limit);
 	od_log(logger, "config", NULL, NULL, "dns_ttl_ms              %d",
-	       config->dns_ttl_ms);
-	od_log(logger, "config", NULL, NULL, "group_checker_interval  %d",
-	       config->group_checker_interval);
+	       config->dns_cache_ttl_ms);
+	od_log(logger, "config", NULL, NULL, "group_checker_interval  %" PRIu64,
+	       config->group_checker_interval_ms);
 	od_log(logger, "config", NULL, NULL, "max_sigterms_to_die     %d",
 	       config->max_sigterms_to_die);
 	od_log(logger, "config", NULL, NULL, "virtual_processing      %s",
@@ -802,7 +834,7 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       listen->backlog);
 		od_log(logger, "config", NULL, NULL,
 		       "  client_login_timeout %d",
-		       listen->client_login_timeout);
+		       listen->client_login_timeout_ms);
 		od_log(logger, "config", NULL, NULL, "  reserved_clients %d",
 		       listen->reserved_clients);
 		od_log(logger, "config", NULL, NULL,

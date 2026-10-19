@@ -105,12 +105,14 @@ Set to 0 to disable (no lag check). See [catchup-timeout](../features/catchup-ti
 
 `catchup_timeout 10`
 
-## **compression** *(deprecated)*
-
+## **compression**
 *yes|no*
 
-**Deprecated.** Accepted for backwards compatibility but ignored — a
-deprecation warning is emitted.
+Support of libpq streaming compression for client connections on this
+listen endpoint. Odyssey will negotiate the compression algorithm
+(zstd or zlib) with the client. Disabled by default.
+
+`compression no`
 
 ## **target_session_attrs**
 *string*
@@ -189,7 +191,7 @@ Only takes effect when `client_max` is set in the global section. See also
 `reserved_clients 2`
 
 ## **client_login_timeout**
-*integer*
+*duration*
 
 Prevent client stall during routing for more that client_login_timeout milliseconds.
 Defaults to 15000.

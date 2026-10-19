@@ -68,7 +68,7 @@ int od_rule_pool_compare(od_rule_pool_t *a, od_rule_pool_t *b)
 	}
 
 	/* timeout */
-	if (a->timeout != b->timeout) {
+	if (a->timeout_ms != b->timeout_ms) {
 		return 0;
 	}
 

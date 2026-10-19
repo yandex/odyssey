@@ -29,6 +29,9 @@ COPY . ./
 ARG odyssey_cc
 ENV CC=${odyssey_cc}
 
+ARG odyssey_cmake_extra=""
+ENV ODYSSEY_CMAKE_EXTRA=${odyssey_cmake_extra}
+
 RUN make clean
 RUN make ${build_type}
 

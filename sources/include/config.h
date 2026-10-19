@@ -29,7 +29,7 @@ struct od_config_listen {
 
 	int backlog;
 
-	int client_login_timeout;
+	int client_login_timeout_ms;
 	int compression;
 
 	od_list_t link;
@@ -92,6 +92,7 @@ struct od_config {
 	int log_to_stdout;
 	int log_debug;
 	int log_debug_sampling;
+	int maintain_params;
 	int log_config;
 	int log_session;
 	int log_query;
@@ -107,6 +108,7 @@ struct od_config {
 	char *log_syslog_ident;
 	char *log_syslog_facility;
 	/*         */
+	/* statistics interval in seconds */
 	int stats_interval;
 	/* system related settings */
 	char *pid_file;
@@ -117,7 +119,7 @@ struct od_config {
 	/* sigusr2 etc */
 	/* TODO: delete this option - online restart is always enabled now */
 	int graceful_die_on_errors;
-	int graceful_shutdown_timeout_ms;
+	uint64_t graceful_shutdown_timeout_ms;
 	/* TODO: delete this option - online restart is always enabled now */
 	int enable_online_restart_feature;
 	od_config_conn_drop_options_t conn_drop_options;
@@ -127,11 +129,12 @@ struct od_config {
 	int nodelay;
 	int disable_nolinger;
 
-	/* TCP KEEPALIVE related settings */
+	/* TCP KEEPALIVE related settings (keepalive and interval in seconds,
+	 * usr timeout = TCP_USER_TIMEOUT in milliseconds) */
 	int keepalive;
 	int keepalive_keep_interval;
 	int keepalive_probes;
-	int keepalive_usr_timeout;
+	int64_t keepalive_usr_timeout_ms;
 	/*                                */
 	int workers;
 	int resolvers;
@@ -140,7 +143,7 @@ struct od_config {
 	int client_max;
 	int client_max_routing;
 	int accept_rate_limit;
-	int server_login_retry;
+	uint64_t server_login_retry_ms;
 	int reserve_session_server_connection;
 	/*  */
 	int cache_coroutine;
@@ -148,15 +151,15 @@ struct od_config {
 	int cache_msg_gc_count;
 	int coroutine_stack_size;
 	int system_coroutine_stack_size;
-	int dns_ttl_ms;
+	int dns_cache_ttl_ms;
 	char *hba_file;
-	/* Soft interval between group checks */
-	int group_checker_interval;
+	/* Soft interval between group checks (milliseconds) */
+	uint64_t group_checker_interval_ms;
 	od_list_t listen;
 
-	int backend_connect_timeout_ms;
-	int cancel_timeout_ms;
-	int cancel_queue_timeout_ms;
+	uint64_t backend_connect_timeout_ms;
+	uint64_t cancel_timeout_ms;
+	int64_t cancel_queue_timeout_ms;
 	int cancel_max_inflight;
 	int cancel_rate_limit;
 
@@ -191,6 +194,8 @@ struct od_config {
 
 typedef enum {
 	OD_CONFIG_FIELD_INT,
+	OD_CONFIG_FIELD_I64,
+	OD_CONFIG_FIELD_U64,
 	OD_CONFIG_FIELD_BOOL,
 	OD_CONFIG_FIELD_STRING,
 	OD_CONFIG_FIELD_STRING_INLINE,

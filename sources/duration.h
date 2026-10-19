@@ -4,52 +4,43 @@
  * Odyssey.
  *
  * Scalable PostgreSQL connection pooler.
+ *
+ * Duration values are parsed with the code ported from PostgreSQL
+ * (src/backend/utils/misc/guc.c: parse_int() + convert_to_base_unit() and
+ * the unit conversion tables), so configuration time values accept exactly
+ * the PostgreSQL GUC syntax:
+ *
+ *     <number>[<unit>]
+ *
+ *   number  optional +/- sign, then decimal digits, 0x-prefixed
+ *           hexadecimal digits, or a decimal float (1.5, .5, 1e3)
+ *   unit    one of (case-sensitive, like PostgreSQL):
+ *             us, ms, s, min, h, d
+ *
+ * Compound values ("1h30m") are not accepted — PostgreSQL does not
+ * support them either.  Whitespace between the number and the unit is
+ * allowed ("30 min"), trailing whitespace after the unit is allowed,
+ * trailing garbage is rejected.  The numeric part may be a float, the
+ * result is rounded half-to-even (rint) to whole milliseconds, exactly
+ * like PostgreSQL rounds a GUC value to its base unit.
  */
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 /*
- * od_duration_parse --
+ * Parse a PostgreSQL-style duration into whole milliseconds.
  *
- * Parse a Go-style duration string from a raw byte buffer.
- * No dependency on od_parser_t — this is a pure string function.
+ * The base unit is milliseconds (GUC_UNIT_MS), so a bare number means
+ * milliseconds; values with an explicit unit are converted to
+ * milliseconds.  Per-option historic units for bare numbers are applied
+ * by the configuration grammar, not here.
  *
- * Recognised suffixes (case-insensitive):
- *   d   days          (86400 s)
- *   h   hours         (3600 s)
- *   m   minutes       (60 s)
- *   s   seconds
- *   ms  milliseconds
- *   us  microseconds
- *   ns  nanoseconds   (truncated to microseconds)
+ * `value` must be NUL-terminated.
  *
- * Compound expressions like "1h30m" or "1d2h3m4s" are supported.
- *
- * If a component carries no recognised suffix, the bare number is multiplied
- * by default_unit_us (in microseconds) for backward compatibility:
- *   default_unit_us = 1000      — bare number means milliseconds
- *   default_unit_us = 1000000  — bare number means seconds
- *
- * Leading whitespace is consumed and included in the returned count.
- *
- * Returns: number of bytes consumed (>= 1) on success,
- *          -1 if the input does not start with a digit (after whitespace).
- * On success *out_us holds the total duration in microseconds.
+ * Returns true on success.  On failure *hintmsg (if requested) points to
+ * a static hint string in the PostgreSQL GUC style, or is NULL.
  */
-int od_duration_parse(const char *str, size_t len, int64_t default_unit_us,
-		      uint64_t *out_us);
-
-/* Bare number = milliseconds; result in microseconds. */
-static inline int od_duration_parse_ms(const char *str, size_t len,
-				       uint64_t *out_us)
-{
-	return od_duration_parse(str, len, 1000LL, out_us);
-}
-
-/* Bare number = seconds; result in microseconds. */
-static inline int od_duration_parse_s(const char *str, size_t len,
-				      uint64_t *out_us)
-{
-	return od_duration_parse(str, len, 1000000LL, out_us);
-}
+bool od_duration_parse_ms(const char *value, int64_t *out_ms,
+			  const char **hintmsg);

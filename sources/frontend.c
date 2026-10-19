@@ -178,7 +178,7 @@ static int read_and_parse_startup(od_client_t *client, int *parse_rc)
 	od_instance_t *instance = client->global->instance;
 
 	machine_msg_t *msg = od_read_startup(
-		&client->io, client->source->config->client_login_timeout);
+		&client->io, client->source->config->client_login_timeout_ms);
 	if (msg == NULL) {
 		if (parse_rc) {
 			*parse_rc = KIWI_STARTUP_READ_LEN_ERROR;
@@ -604,15 +604,17 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 				* waiting for a idle server connection for pool_timeout ms
 				*/
 				wait_for_idle =
-					route->rule->pool->timeout > 0 &&
+					route->rule->pool->timeout_ms > 0 &&
 					od_frontend_error_is_too_many_connections(
 						client);
 				if (wait_for_idle) {
 					od_router_close(router, client);
-					if (instance->config.server_login_retry) {
+					if (instance->config
+						    .server_login_retry_ms) {
 						machine_sleep(
-							instance->config
-								.server_login_retry);
+							(uint32_t)instance
+								->config
+								.server_login_retry_ms);
 					}
 					continue;
 				}
@@ -807,11 +809,14 @@ attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 	for (size_t i = 0; i < count; ++i) {
 		od_storage_endpoint_t *endpoint = endpoints[i];
 
-		char addr[256];
-		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
+		if (od_logger_debug_enabled(&instance->logger, client, NULL)) {
+			char addr[256];
+			od_address_to_str(&endpoint->address, addr,
+					  sizeof(addr) - 1);
 
-		od_debug(&instance->logger, context, client, NULL,
-			 "trying to attach to %s...", addr);
+			od_debug(&instance->logger, context, client, NULL,
+				 "trying to attach to %s...", addr);
+		}
 
 		/*
 		 * if client is attached now - previous attach failed
@@ -836,9 +841,15 @@ attach_to_first(od_client_t *client, char *context, kiwi_params_t *route_params,
 			return status;
 		}
 
-		od_debug(&instance->logger, context, client, NULL,
-			 "attach to %s failed with status: %s", addr,
-			 od_frontend_status_to_str(status));
+		if (od_logger_debug_enabled(&instance->logger, client, NULL)) {
+			char addr[256];
+			od_address_to_str(&endpoint->address, addr,
+					  sizeof(addr) - 1);
+
+			od_debug(&instance->logger, context, client, NULL,
+				 "attach to %s failed with status: %s", addr,
+				 od_frontend_status_to_str(status));
+		}
 	}
 
 	return status;
@@ -3125,7 +3136,6 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	od_server_t *server = client->server;
 	od_route_t *route = client->route;
 	uint64_t working_time_us = machine_time_us() - client->time_accept;
-
 	if (instance->config.log_session) {
 		if (route != NULL) {
 			od_log(&instance->logger, context, client, server,
@@ -3176,6 +3186,11 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	od_route_t *route = client->route;
 	od_server_t *server = client->server;
 	char ra_desc[256];
+
+	if (route != NULL) {
+		od_stat_client_lifetime(
+			&route->stats, machine_time_us() - client->time_accept);
+	}
 
 	if (od_frontend_status_is_err(status)) {
 		od_error_logger_store_err(l, status);

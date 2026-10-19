@@ -106,6 +106,7 @@ static int read_file(const char *path, char **out, size_t *out_size,
 #define MERGE_BOOL(d, s, f) MERGE_PLAIN_FLD(d, s, f)
 #define MERGE_INT(d, s, f) MERGE_PLAIN_FLD(d, s, f)
 #define MERGE_U64(d, s, f) MERGE_PLAIN_FLD(d, s, f)
+#define MERGE_I64(d, s, f) MERGE_PLAIN_FLD(d, s, f)
 
 #define MERGE_STR(d, s, f)                                    \
 	do {                                                  \
@@ -131,6 +132,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_BOOL(dst, src, enable_host_watcher);
 	MERGE_BOOL(dst, src, log_debug);
 	MERGE_INT(dst, src, log_debug_sampling);
+	MERGE_BOOL(dst, src, maintain_params);
 	MERGE_BOOL(dst, src, log_to_stdout);
 	MERGE_BOOL(dst, src, log_config);
 	MERGE_BOOL(dst, src, log_session);
@@ -159,40 +161,42 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_STR(dst, src, log_syslog_facility);
 	MERGE_STR(dst, src, cpu_affinity);
 	MERGE_STR(dst, src, hba_file);
+	MERGE_STR(dst, src, default_pool);
 
 	MERGE_INT(dst, src, priority);
-	MERGE_INT(dst, src, graceful_shutdown_timeout_ms);
+	MERGE_U64(dst, src, graceful_shutdown_timeout_ms);
 	MERGE_INT(dst, src, log_queue_depth);
-	MERGE_INT(dst, src, stats_interval);
+	MERGE_U64(dst, src, stats_interval_ms);
 	MERGE_INT(dst, src, client_max);
 	MERGE_INT(dst, src, client_max_routing);
 	MERGE_INT(dst, src, accept_rate_limit);
-	MERGE_INT(dst, src, server_login_retry);
+	MERGE_U64(dst, src, server_login_retry_ms);
 	MERGE_INT(dst, src, readahead);
-	MERGE_INT(dst, src, keepalive);
-	MERGE_INT(dst, src, keepalive_keep_interval);
+	MERGE_U64(dst, src, keepalive_ms);
+	MERGE_U64(dst, src, keepalive_keep_interval_ms);
 	MERGE_INT(dst, src, keepalive_probes);
-	MERGE_INT(dst, src, keepalive_usr_timeout);
+	MERGE_I64(dst, src, keepalive_usr_timeout_ms);
 	MERGE_INT(dst, src, max_sigterms_to_die);
-	MERGE_INT(dst, src, backend_connect_timeout_ms);
-	MERGE_INT(dst, src, cancel_timeout_ms);
-	MERGE_INT(dst, src, cancel_queue_timeout_ms);
+	MERGE_U64(dst, src, backend_connect_timeout_ms);
+	MERGE_U64(dst, src, cancel_timeout_ms);
+	MERGE_I64(dst, src, cancel_queue_timeout_ms);
 	MERGE_INT(dst, src, cancel_max_inflight);
 	MERGE_INT(dst, src, resolvers);
-	MERGE_INT(dst, src, dns_cache_ttl);
+	MERGE_U64(dst, src, dns_cache_ttl_ms);
 	MERGE_INT(dst, src, cache_msg_gc_size);
 	MERGE_INT(dst, src, cache_msg_gc_count);
 	MERGE_INT(dst, src, cache_coroutine);
 	MERGE_INT(dst, src, coroutine_stack_size);
 	MERGE_INT(dst, src, system_coroutine_stack_size);
 	MERGE_INT(dst, src, promhttp_server_port);
-	MERGE_INT(dst, src, group_checker_interval);
+	MERGE_U64(dst, src, group_checker_interval_ms);
 	MERGE_INT(dst, src, workers);
 
 #undef MERGE_PLAIN_FLD
 #undef MERGE_BOOL
 #undef MERGE_INT
 #undef MERGE_U64
+#undef MERGE_I64
 #undef MERGE_STR
 }
 

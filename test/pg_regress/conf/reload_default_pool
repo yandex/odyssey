@@ -1,0 +1,20 @@
+include "/home/postgres/regress/conf/_base"
+
+log_config yes
+
+storage "postgres_server" {
+	type "remote"
+	host "localhost:5432"
+	endpoints_status_poll_interval 5000
+}
+
+pool "session"
+
+database "postgres" {
+	user "postgres" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool_size 32
+	}
+}

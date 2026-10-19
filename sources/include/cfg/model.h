@@ -33,9 +33,31 @@ typedef struct {
 } od_cfg_int_field_t;
 
 typedef struct {
+	int64_t value;
+	od_cfg_seen_t seen;
+} od_cfg_i64_field_t;
+
+typedef struct {
 	uint64_t value;
 	od_cfg_seen_t seen;
 } od_cfg_u64_field_t;
+
+/*
+ * Value of a configuration option that accepts either a bare number or a
+ * PostgreSQL GUC-style duration ("500ms", "30 min", "1.5h" — see
+ * duration.h).  For a bare value the grammar action records the literal
+ * (possibly negative) number; the actual scaling to milliseconds happens
+ * in od_cfg_set_time_*_ms() using the per-rule bare_unit_ms factor, so
+ * every option keeps its historic base unit for unitless values.  Values
+ * with an explicit unit arrive already converted to milliseconds.
+ */
+typedef struct {
+	int has_unit; /* explicit unit given, `ms` is valid */
+	int is_real; /* bare value is a float (`real`), not `bare` */
+	int64_t bare;
+	double real;
+	int64_t ms;
+} od_cfg_time_value_t;
 
 typedef struct {
 	char *value;
@@ -58,6 +80,7 @@ typedef struct od_cfg_global {
 	od_cfg_bool_field_t enable_host_watcher;
 	od_cfg_bool_field_t log_debug;
 	od_cfg_int_field_t log_debug_sampling;
+	od_cfg_bool_field_t maintain_params;
 	od_cfg_bool_field_t log_to_stdout;
 	od_cfg_bool_field_t log_config;
 	od_cfg_bool_field_t log_session;
@@ -86,35 +109,36 @@ typedef struct od_cfg_global {
 	od_cfg_string_field_t log_syslog_facility;
 	od_cfg_string_field_t cpu_affinity;
 	od_cfg_string_field_t hba_file;
+	od_cfg_string_field_t default_pool;
 
 	od_cfg_int_field_t priority;
-	od_cfg_int_field_t graceful_shutdown_timeout_ms;
+	od_cfg_u64_field_t graceful_shutdown_timeout_ms;
 	od_cfg_int_field_t log_queue_depth;
-	od_cfg_int_field_t stats_interval;
+	od_cfg_u64_field_t stats_interval_ms;
 	od_cfg_int_field_t client_max;
 	od_cfg_int_field_t client_max_routing;
 	od_cfg_int_field_t accept_rate_limit;
-	od_cfg_int_field_t server_login_retry;
+	od_cfg_u64_field_t server_login_retry_ms;
 	od_cfg_int_field_t readahead;
-	od_cfg_int_field_t keepalive;
-	od_cfg_int_field_t keepalive_keep_interval;
+	od_cfg_u64_field_t keepalive_ms;
+	od_cfg_u64_field_t keepalive_keep_interval_ms;
 	od_cfg_int_field_t keepalive_probes;
-	od_cfg_int_field_t keepalive_usr_timeout;
+	od_cfg_i64_field_t keepalive_usr_timeout_ms;
 	od_cfg_int_field_t max_sigterms_to_die;
-	od_cfg_int_field_t backend_connect_timeout_ms;
-	od_cfg_int_field_t cancel_timeout_ms;
-	od_cfg_int_field_t cancel_queue_timeout_ms;
+	od_cfg_u64_field_t backend_connect_timeout_ms;
+	od_cfg_u64_field_t cancel_timeout_ms;
+	od_cfg_i64_field_t cancel_queue_timeout_ms;
 	od_cfg_int_field_t cancel_max_inflight;
 	od_cfg_int_field_t cancel_rate_limit;
 	od_cfg_int_field_t resolvers;
-	od_cfg_int_field_t dns_cache_ttl;
+	od_cfg_u64_field_t dns_cache_ttl_ms;
 	od_cfg_int_field_t cache_msg_gc_size;
 	od_cfg_int_field_t cache_msg_gc_count;
 	od_cfg_int_field_t cache_coroutine;
 	od_cfg_int_field_t coroutine_stack_size;
 	od_cfg_int_field_t system_coroutine_stack_size;
 	od_cfg_int_field_t promhttp_server_port;
-	od_cfg_int_field_t group_checker_interval;
+	od_cfg_u64_field_t group_checker_interval_ms;
 	od_cfg_int_field_t workers;
 
 } od_cfg_global_t;
@@ -149,7 +173,8 @@ typedef struct od_cfg_listen {
 	od_cfg_bool_field_t auto_route_ro_on_standby;
 	od_cfg_balancing_t balancing;
 
-	od_cfg_int_field_t client_login_timeout;
+	od_cfg_u64_field_t client_login_timeout_ms;
+	od_cfg_bool_field_t compression;
 	od_cfg_int_field_t backlog;
 
 	od_cfg_string_field_t tls;
@@ -158,7 +183,7 @@ typedef struct od_cfg_listen {
 	od_cfg_string_field_t tls_cert_file;
 	od_cfg_string_field_t tls_protocols;
 
-	od_cfg_int_field_t catchup_timeout;
+	od_cfg_u64_field_t catchup_timeout_ms;
 
 	od_cfg_int_field_t reserved_clients;
 
@@ -190,7 +215,7 @@ typedef struct od_cfg_storage {
 	od_cfg_string_field_t tls_protocols;
 
 	od_cfg_int_field_t server_max_routing;
-	od_cfg_int_field_t endpoints_status_poll_interval_ms;
+	od_cfg_u64_field_t endpoints_status_poll_interval_ms;
 
 	od_cfg_balancing_t balancing;
 
@@ -206,7 +231,7 @@ typedef struct od_cfg_conn_drop_options {
 
 	od_cfg_bool_field_t drop_enabled;
 	od_cfg_int_field_t rate;
-	od_cfg_int_field_t interval_ms;
+	od_cfg_u64_field_t interval_ms;
 } od_cfg_conn_drop_options_t;
 
 typedef struct od_cfg_shared_pool {
@@ -232,7 +257,7 @@ typedef struct od_cfg_soft_oom {
 
 	od_cfg_u64_field_t limit;
 	od_cfg_string_field_t process;
-	od_cfg_int_field_t check_interval_ms;
+	od_cfg_u64_field_t check_interval_ms;
 
 	od_cfg_soft_oom_drop_t drop;
 } od_cfg_soft_oom_t;
@@ -365,7 +390,7 @@ struct od_cfg_route {
 	od_cfg_bool_field_t application_name_add_host;
 	od_cfg_bool_field_t server_drop_on_backend_plan_error;
 	od_cfg_bool_field_t server_drop_on_oom;
-	od_cfg_u64_field_t server_lifetime;
+	od_cfg_u64_field_t server_lifetime_ms;
 	od_cfg_int_field_t ldap_pool_size;
 	od_cfg_int_field_t ldap_pool_timeout;
 	od_cfg_int_field_t ldap_pool_ttl;
@@ -374,8 +399,8 @@ struct od_cfg_route {
 	od_cfg_string_field_t pool_routing;
 	od_cfg_int_field_t min_pool_size;
 	od_cfg_int_field_t pool_size;
-	od_cfg_int_field_t pool_timeout;
-	od_cfg_int_field_t pool_ttl;
+	od_cfg_u64_field_t pool_timeout_ms;
+	od_cfg_u64_field_t pool_ttl_ms;
 	od_cfg_bool_field_t pool_discard;
 	od_cfg_bool_field_t pool_smart_discard;
 	od_cfg_string_field_t pool_discard_query;
@@ -387,9 +412,9 @@ struct od_cfg_route {
 	od_cfg_bool_field_t pool_pin_on_listen;
 	od_cfg_bool_field_t pool_attach_check;
 	od_cfg_bool_field_t pool_acquire_fail_fast;
-	od_cfg_u64_field_t pool_notice_after_waiting_ms;
-	od_cfg_u64_field_t pool_client_idle_timeout;
-	od_cfg_u64_field_t pool_idle_in_transaction_timeout;
+	od_cfg_i64_field_t pool_notice_after_waiting_ms;
+	od_cfg_u64_field_t pool_client_idle_timeout_ms;
+	od_cfg_u64_field_t pool_idle_in_transaction_timeout_ms;
 	od_cfg_string_field_t shared_pool;
 	od_cfg_string_field_t storage;
 	od_cfg_string_field_t storage_database;
@@ -407,18 +432,18 @@ struct od_cfg_route {
 	size_t ldap_storage_credentials_capacity;
 
 	od_cfg_string_field_t watchdog_lag_query;
-	od_cfg_int_field_t watchdog_lag_interval;
-	od_cfg_int_field_t catchup_timeout;
+	od_cfg_u64_field_t watchdog_lag_interval_ms;
+	od_cfg_u64_field_t catchup_timeout_ms;
 	od_cfg_string_kvp_list_t pgoptions;
 	od_cfg_string_kvp_list_t backend_startup_options;
 	od_cfg_string_field_t group_query;
 	od_cfg_string_field_t group_query_user;
 	od_cfg_string_field_t group_query_db;
 
-	od_cfg_int_field_t keepalive;
-	od_cfg_int_field_t keepalive_keep_interval;
+	od_cfg_u64_field_t keepalive_ms;
+	od_cfg_u64_field_t keepalive_keep_interval_ms;
 	od_cfg_int_field_t keepalive_probes;
-	od_cfg_int_field_t keepalive_usr_timeout;
+	od_cfg_i64_field_t keepalive_usr_timeout_ms;
 };
 
 od_cfg_ldap_storage_credentials_t *
@@ -540,7 +565,28 @@ int od_cfg_set_int_range_from_i64(od_cfg_diag_list_t *diags,
 int od_cfg_set_u64(od_cfg_diag_list_t *diags, od_cfg_u64_field_t *field,
 		   uint64_t value, od_cfg_location_t location,
 		   const char *field_name);
+/*
+ * Set a time-valued option, storing the result as whole milliseconds.
+ *
+ * A value with an explicit PostgreSQL-style unit ("500ms", "30 min") is
+ * already converted by od_duration_parse_ms().  A bare value is scaled by
+ * bare_unit_ms — the historic base unit of the option — and fractional
+ * values are rounded half-to-even with rint(), like PostgreSQL rounds a
+ * GUC value to its base unit.
+ *
+ * min_ms/max_ms bound the resulting millisecond value (both inclusive).
+ * Negative values are rejected for u64 fields and accepted for i64 fields
+ * (options like keepalive_usr_timeout use them as markers).
+ */
+int od_cfg_set_time_u64_ms(od_cfg_diag_list_t *diags, od_cfg_u64_field_t *field,
+			   const od_cfg_time_value_t *value,
+			   int64_t bare_unit_ms, int64_t min_ms, int64_t max_ms,
+			   od_cfg_location_t location, const char *field_name);
 
+int od_cfg_set_time_i64_ms(od_cfg_diag_list_t *diags, od_cfg_i64_field_t *field,
+			   const od_cfg_time_value_t *value,
+			   int64_t bare_unit_ms, int64_t min_ms, int64_t max_ms,
+			   od_cfg_location_t location, const char *field_name);
 int od_cfg_set_string(od_cfg_diag_list_t *diags, od_cfg_string_field_t *field,
 		      char *value, od_cfg_location_t location,
 		      const char *field_name);

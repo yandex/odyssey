@@ -48,6 +48,8 @@ struct od_server {
 	uint64_t sync_reply;
 	int msg_broken;
 
+	/* how long the server stays idle, in seconds;
+	 * advanced by the cron loop once per second */
 	int idle_time;
 
 	kiwi_key_t key;
