@@ -3195,7 +3195,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	if (od_frontend_status_is_err(status)) {
 		od_error_logger_store_err(l, status);
 
-		if (route->extra_logging_enabled &&
+		if (route != NULL && route->extra_logging_enabled &&
 		    !od_route_is_dynamic(route)) {
 			od_error_logger_store_err(route->err_logger, status);
 		}
@@ -3301,7 +3301,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 
 	case OD_ESERVER_CONNECT:
 		/* server attached to client and connection failed */
-		if (server->error_connect && route->rule->client_fwd_error) {
+		if (server->error_connect && route != NULL &&
+		    route->rule->client_fwd_error) {
 			/* forward server error to client */
 			od_frontend_error_fwd(client);
 		} else {

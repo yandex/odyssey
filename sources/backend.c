@@ -670,6 +670,8 @@ int od_backend_connect_to(od_server_t *server, char *context,
 			od_error(&instance->logger, context, NULL, server,
 				 "unix socket path '%s' is too long",
 				 address->host);
+			mm_io_close(io);
+			mm_io_free(io);
 			return NOT_OK_RESPONSE;
 		}
 		memcpy(saddr_un.sun_path, address->host,
