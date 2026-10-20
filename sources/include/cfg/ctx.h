@@ -35,8 +35,6 @@ typedef struct od_cfg_parse_ctx {
 	od_cfg_storage_t *current_storage;
 	od_cfg_balancing_t *current_balancing;
 	od_cfg_balancing_method_t *current_balancing_method;
-	od_cfg_soft_oom_t *current_soft_oom;
-	od_cfg_soft_oom_drop_t *current_soft_oom_drop;
 	od_cfg_ldap_endpoint_t *current_ldap_endpoint;
 	od_cfg_database_t *current_database;
 	od_cfg_route_t *current_user;

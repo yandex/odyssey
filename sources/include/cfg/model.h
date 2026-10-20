@@ -244,17 +244,11 @@ typedef struct od_cfg_shared_pool {
 } od_cfg_shared_pool_t;
 
 typedef struct od_cfg_soft_oom_drop {
-	od_cfg_seen_t seen;
-	od_cfg_location_t location;
-
 	od_cfg_string_field_t signal;
 	od_cfg_int_field_t max_rate;
 } od_cfg_soft_oom_drop_t;
 
 typedef struct od_cfg_soft_oom {
-	od_cfg_seen_t seen;
-	od_cfg_location_t location;
-
 	od_cfg_u64_field_t limit;
 	od_cfg_string_field_t process;
 	od_cfg_u64_field_t check_interval_ms;

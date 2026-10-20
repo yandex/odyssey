@@ -17,36 +17,28 @@ that Odyssey console will still works when your host is in OOM state.
 
 ## Configuration
 
-First of all you will need describe memory limitations in `soft-oom`
-section at the root of [configuration](../configuration/overview.md):
+First of all you will need describe memory limitations with `soft_oom_*`
+options at the root of [configuration](../configuration/overview.md):
 
 ```plaintext
 
 # for specified process
-soft_oom {
-    process 'postgres'
-    limit   750MB
-}
+soft_oom_process "postgres"
+soft_oom_limit 750MB
 
 # for whole system
-soft_oom {
-    limit   750MB
-}
+soft_oom_limit 750MB
 
 # top memory consumers terminating
+soft_oom_limit 750MB
 
-soft_oom {
-    limit 750MB
-
-    drop {
-        signal 'SIGTERM'
-        max_rate 2
-    }
-}
+soft_oom_drop_signal "SIGTERM"
+soft_oom_drop_max_rate 2
 ```
 
 After that, all new connections to `db.user` will be answered by Odyssey
-itself process described in `soft_oom` reached limit by total memory consumption:
+itself when process described in `soft_oom_process` reached limit by
+total memory consumption:
 
 ```bash
 psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=disable' -c 'select 42'
