@@ -903,8 +903,7 @@ static od_target_session_attrs_t attach_effective_tsa(od_client_t *client,
 		return tsa;
 	}
 
-	if (kiwi_vars_get(&client->vars,
-			  KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS) != NULL) {
+	if (client->tsa_hint_set) {
 		return tsa;
 	}
 

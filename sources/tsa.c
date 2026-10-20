@@ -15,6 +15,57 @@
 #include <config.h>
 #include <system.h>
 
+/*
+ * parse the odyssey.target_session_attrs value; the length is checked
+ * first so the comparisons stay bounded. Case-insensitive, like the
+ * SET-processing it replaces
+ */
+static int tsa_value_eq(const char *value, const char *cstr, size_t len)
+{
+	for (size_t i = 0; i < len; ++i) {
+		char c = value[i];
+		if (c >= 'A' && c <= 'Z') {
+			c = (char)(c - 'A' + 'a');
+		}
+		if (c != cstr[i]) {
+			return 0;
+		}
+	}
+	/* the caller only passes matching literal lengths */
+	return cstr[len] == '\0';
+}
+
+od_target_session_attrs_t od_target_session_attrs_parse(const char *value,
+							size_t value_len)
+{
+	switch (value_len) {
+	case 3:
+		if (tsa_value_eq(value, "any", 3)) {
+			return OD_TARGET_SESSION_ATTRS_ANY;
+		}
+		break;
+	case 9:
+		if (tsa_value_eq(value, "read-only", 9)) {
+			return OD_TARGET_SESSION_ATTRS_RO;
+		}
+		break;
+	case 10:
+		if (tsa_value_eq(value, "read-write", 10)) {
+			return OD_TARGET_SESSION_ATTRS_RW;
+		}
+		break;
+	case 14:
+		if (tsa_value_eq(value, "prefer-standby", 14)) {
+			return OD_TARGET_SESSION_ATTRS_PREFER_STANDBY;
+		}
+		break;
+	default:
+		break;
+	}
+
+	return OD_TARGET_SESSION_ATTRS_UNDEF;
+}
+
 od_target_session_attrs_t od_tsa_get_effective(od_client_t *client)
 {
 	od_route_t *route = client->route;
@@ -35,23 +86,21 @@ od_target_session_attrs_t od_tsa_get_effective(od_client_t *client)
 		effective_tsa = default_tsa;
 	}
 
-	kiwi_var_t *hint_var = kiwi_vars_get(
-		&client->vars, KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS);
-
-	/* XXX: TODO refactor kiwi_vars_get to avoid strcmp */
-	if (hint_var != NULL) {
-		if (strncmp(hint_var->value, "read-only",
-			    hint_var->value_len) == 0) {
-			effective_tsa = OD_TARGET_SESSION_ATTRS_RO;
-		} else if (strncmp(hint_var->value, "read-write",
-				   hint_var->value_len) == 0) {
-			effective_tsa = OD_TARGET_SESSION_ATTRS_RW;
-		} else if (strncmp(hint_var->value, "prefer-standby",
-				   hint_var->value_len) == 0) {
-			effective_tsa = OD_TARGET_SESSION_ATTRS_PREFER_STANDBY;
-		} else if (strncmp(hint_var->value, "any",
-				   hint_var->value_len) == 0) {
-			effective_tsa = OD_TARGET_SESSION_ATTRS_ANY;
+	/*
+	 * the SET odyssey.target_session_attrs hint is parsed once, on the
+	 * virtual SET, and kept as an enum on the client
+	 */
+	if (client->tsa_hint_set) {
+		switch (client->tsa_hint) {
+		case OD_TARGET_SESSION_ATTRS_RO:
+		case OD_TARGET_SESSION_ATTRS_RW:
+		case OD_TARGET_SESSION_ATTRS_PREFER_STANDBY:
+		case OD_TARGET_SESSION_ATTRS_ANY:
+			effective_tsa = client->tsa_hint;
+			break;
+		case OD_TARGET_SESSION_ATTRS_UNDEF:
+			/* unrecognized value: keep the listen/rule default */
+			break;
 		}
 	}
 

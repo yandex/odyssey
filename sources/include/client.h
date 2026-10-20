@@ -68,6 +68,14 @@ struct od_client {
 	/* desc preparet statements ids */
 	mm_hashmap_t *prep_stmt_ids;
 
+	/*
+	 * odyssey.target_session_attrs hint: parsed once on the virtual
+	 * SET and kept as an enum, so the attach path does not have to
+	 * re-parse the var value back from the kiwi vars
+	 */
+	od_target_session_attrs_t tsa_hint;
+	int tsa_hint_set;
+
 	/* portal name -> *od_pstmt_t (extended protocol portals tracking) */
 	mm_hashmap_t *portals;
 

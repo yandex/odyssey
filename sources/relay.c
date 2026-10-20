@@ -339,38 +339,28 @@ static od_frontend_status_t process_set_tsa(od_client_t *client,
 	option_value = ctx->s2;
 	option_value_len = strlen(option_value);
 
-	/* for now, very straightforward logic, as there is only one supported param */
-	if (option_value_len == strlen("read-only") &&
-	    strncasecmp(option_value, "read-only", option_value_len) == 0) {
-		kiwi_vars_set(&client->vars,
-			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
-			      "read-only", strlen("read-only"));
-	} else if (option_value_len == strlen("read-write") &&
-		   strncasecmp(option_value, "read-write", option_value_len) ==
-			   0) {
-		kiwi_vars_set(&client->vars,
-			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
-			      "read-write", strlen("read-write"));
-	} else if (option_value_len == strlen("any") &&
-		   strncasecmp(option_value, "any", option_value_len) == 0) {
-		kiwi_vars_set(&client->vars,
-			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS, "any",
-			      strlen("any"));
-	} else if (option_value_len == strlen("prefer-standby") &&
-		   strncasecmp(option_value, "prefer-standby",
-			       option_value_len) == 0) {
-		kiwi_vars_set(&client->vars,
-			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
-			      "prefer-standby", strlen("prefer-standby"));
-	} else {
+	/*
+	 * the value is parsed once here and kept as an enum on the
+	 * client, od_tsa_get_effective() then does not have to re-parse
+	 * the var value back from the kiwi vars
+	 */
+	od_target_session_attrs_t attrs =
+		od_target_session_attrs_parse(option_value,
+					      option_value_len);
+	if (attrs == OD_TARGET_SESSION_ATTRS_UNDEF) {
 		od_debug(&instance->logger, "virtual processing", client,
 			 server, "unsupported tsa hint %.*s",
 			 (int)option_value_len, option_value);
 
-		return reply_reject_guc(client,
-					ODYSSEY_TARGET_SESSION_ATTRS_STR,
+		return reply_reject_guc(client, ODYSSEY_TARGET_SESSION_ATTRS_STR,
 					option_value, option_value_len);
 	}
+
+	kiwi_vars_set(&client->vars, KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
+		      od_target_session_attrs_to_str(attrs),
+		      strlen(od_target_session_attrs_to_str(attrs)));
+	client->tsa_hint = attrs;
+	client->tsa_hint_set = 1;
 
 	od_debug(&instance->logger, "virtual processing", client, server,
 		 "parsed tsa hint %.*s", (int)option_value_len, option_value);

@@ -57,6 +57,8 @@ void od_client_init(od_client_t *client)
 	od_list_init(&client->link);
 
 	client->prep_stmt_ids = NULL;
+	client->tsa_hint = OD_TARGET_SESSION_ATTRS_UNDEF;
+	client->tsa_hint_set = 0;
 	client->portals = NULL;
 	client->last_catchup_lag = 0;
 

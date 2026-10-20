@@ -37,6 +37,14 @@ od_target_session_attrs_to_str(od_target_session_attrs_t tsa)
 
 od_target_session_attrs_t od_tsa_get_effective(od_client_t *client);
 
+/*
+ * parse the odyssey.target_session_attrs value; returns
+ * OD_TARGET_SESSION_ATTRS_UNDEF for anything else, so UNDEF doubles
+ * as "the hint is not set (or unrecognized)"
+ */
+od_target_session_attrs_t od_target_session_attrs_parse(const char *value,
+							size_t value_len);
+
 int od_tsa_match_rw_state(od_target_session_attrs_t attrs, int is_rw);
 
 int od_tsa_auto_route_ro_enabled(od_client_t *client);
