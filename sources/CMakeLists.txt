@@ -486,7 +486,8 @@ set(od_test_src
     tests/odyssey/test_sql_full_parser.c
     tests/odyssey/test_console_parser.c
     tests/odyssey/test_config_field.c
-    tests/odyssey/test_autoconf.c)
+    tests/odyssey/test_autoconf.c
+    tests/odyssey/test_soft_oom.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")
