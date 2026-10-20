@@ -1,58 +1,84 @@
 /*
  * Odyssey.
  *
- * Dedicated workers for the initial TLS negotiation stage.
+ * Scalable PostgreSQL connection pooler.
+ *
+ * tls_workers.c: dedicated machines for offloading client TLS handshakes.
  */
 
 #include <odyssey.h>
+
 #include <stdatomic.h>
+
+#include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
-#include <frontend.h>
-#include <global.h>
-#include <instance.h>
-#include <msg.h>
+#include <machinarium/io.h>
+
+#include <util.h>
+#include <od_memory.h>
 #include <tls_workers.h>
 
 typedef struct {
+	mm_io_t *io;
+	machine_tls_t *tls;
+	uint32_t timeout;
+	uint64_t deadline;
+	int rc;
+	int error;
+} od_tls_handshake_req_t;
+
+typedef struct {
+	int id;
 	int64_t machine;
-	machine_channel_t *channel;
-	/* Reserved at startup, so shutdown does not need an allocation. */
-	machine_msg_t *stop;
+	machine_wait_flag_t *stop;
 } od_tls_worker_t;
 
-static od_tls_worker_t *tls_workers;
-static size_t tls_workers_count;
-static atomic_uint_fast64_t tls_workers_next;
+static od_tls_worker_t *tls_workers = NULL;
+static size_t tls_workers_count = 0;
+static atomic_uint_fast64_t tls_workers_next = 0;
+
+static void od_tls_handshake(void *arg)
+{
+	od_tls_handshake_req_t *req = arg;
+	if (machine_cancelled()) {
+		req->rc = -1;
+		req->error = ECANCELED;
+		return;
+	}
+	if (req->timeout != UINT32_MAX) {
+		mm_clock_reset(&mm_self->loop.clock);
+		uint64_t now = machine_time_ms();
+		if (now >= req->deadline) {
+			req->rc = -1;
+			req->error = ETIMEDOUT;
+			return;
+		}
+		req->timeout = req->deadline - now;
+	}
+
+	req->rc = mm_io_attach(req->io);
+	if (req->rc == 0) {
+		req->rc = mm_io_set_tls(req->io, req->tls, req->timeout);
+		req->error = mm_errno_get();
+		if (mm_io_detach(req->io) == -1) {
+			req->rc = -1;
+			req->error = mm_errno_get();
+			/* Closing also removes the descriptor from this event loop. */
+			mm_io_close(req->io);
+			req->io->attached = 0;
+		}
+	} else {
+		req->error = mm_errno_get();
+	}
+}
 
 static void od_tls_worker_main(void *arg)
 {
 	od_tls_worker_t *worker = arg;
-	for (;;) {
-		machine_msg_t *msg =
-			machine_channel_read(worker->channel, UINT32_MAX);
-		if (msg == NULL) {
-			continue;
-		}
-		if (machine_msg_type(msg) == OD_MSG_SHUTDOWN) {
-			machine_msg_free(msg);
-			/* Active negotiation coroutines finish and transfer their
-			 * clients before this machine exits naturally. */
-			return;
-		}
-		od_client_t *client = *(od_client_t **)machine_msg_data(msg);
-		int64_t id = machine_coroutine_create_named(od_frontend_tls,
-							    msg, "tls startup");
-		if (id == -1) {
-			od_global_t *global = client->global;
-			od_error(&global->instance->logger, "tls", client, NULL,
-				 "failed to create negotiation coroutine");
-			od_frontend_close(client);
-			od_routing_slot_release(global);
-			machine_msg_free(msg);
-		} else {
-			client->coroutine_id = id;
-		}
-	}
+
+	/* One lifetime coroutine per worker; handshakes run on visiting frontend
+	 * stacks. No allocation is needed to signal shutdown. */
+	machine_wait_flag_wait(worker->stop, UINT32_MAX);
 }
 
 int od_tls_workers_init(size_t count)
@@ -60,34 +86,34 @@ int od_tls_workers_init(size_t count)
 	if (count == 0) {
 		return 0;
 	}
-	tls_workers = od_calloc(count, sizeof(*tls_workers));
+
+	tls_workers = od_malloc(sizeof(od_tls_worker_t) * count);
 	if (tls_workers == NULL) {
+		mm_errno_set(ENOMEM);
 		return -1;
 	}
-	atomic_store(&tls_workers_next, 0);
-	for (size_t i = 0; i < count; i++) {
+	memset(tls_workers, 0, sizeof(od_tls_worker_t) * count);
+
+	for (size_t i = 0; i < count; ++i) {
 		od_tls_worker_t *worker = &tls_workers[i];
-		worker->channel = machine_channel_create();
-		worker->stop = machine_msg_create(0);
-		if (worker->channel == NULL || worker->stop == NULL) {
-			if (worker->channel) {
-				machine_channel_free(worker->channel);
-			}
-			machine_msg_free_safe(worker->stop);
+		worker->id = (int)i;
+		worker->stop = machine_wait_flag_create();
+		if (worker->stop == NULL) {
 			goto error;
 		}
-		machine_msg_set_type(worker->stop, OD_MSG_SHUTDOWN);
+
 		char name[32];
-		od_snprintf(name, sizeof(name), "tls: %zu", i);
+		od_snprintf(name, sizeof(name), "tls: %d", worker->id);
 		worker->machine =
 			machine_create(name, od_tls_worker_main, worker);
 		if (worker->machine == -1) {
-			machine_channel_free(worker->channel);
-			machine_msg_free(worker->stop);
+			machine_wait_flag_destroy(worker->stop);
 			goto error;
 		}
+
 		tls_workers_count++;
 	}
+
 	return 0;
 
 error:
@@ -97,15 +123,15 @@ error:
 
 void od_tls_workers_destroy(void)
 {
-	/* Acceptors must have stopped, and regular workers must remain alive. */
-	for (size_t i = 0; i < tls_workers_count; i++) {
-		machine_channel_write(tls_workers[i].channel,
-				      tls_workers[i].stop);
+	for (size_t i = 0; i < tls_workers_count; ++i) {
+		machine_wait_flag_set(tls_workers[i].stop);
 	}
-	for (size_t i = 0; i < tls_workers_count; i++) {
+
+	for (size_t i = 0; i < tls_workers_count; ++i) {
 		machine_wait_nb(tls_workers[i].machine);
-		machine_channel_free(tls_workers[i].channel);
+		machine_wait_flag_destroy(tls_workers[i].stop);
 	}
+
 	od_free(tls_workers);
 	tls_workers = NULL;
 	tls_workers_count = 0;
@@ -116,9 +142,38 @@ int od_tls_workers_enabled(void)
 	return tls_workers_count > 0;
 }
 
-void od_tls_workers_feed(machine_msg_t *msg)
+int od_tls_workers_handshake(mm_io_t *io, machine_tls_t *tls, uint32_t timeout)
 {
-	uint64_t next = atomic_fetch_add(&tls_workers_next, 1);
-	machine_channel_write(tls_workers[next % tls_workers_count].channel,
-			      msg);
+	od_tls_handshake_req_t req;
+	memset(&req, 0, sizeof(req));
+	req.io = io;
+	req.tls = tls;
+	req.timeout = timeout;
+	if (timeout != UINT32_MAX) {
+		mm_clock_reset(&mm_self->loop.clock);
+		req.deadline = machine_time_ms() + timeout;
+	}
+
+	if (mm_io_detach(io) == -1) {
+		return -1;
+	}
+
+	uint64_t n = atomic_fetch_add(&tls_workers_next, 1);
+	od_tls_worker_t *worker = &tls_workers[n % tls_workers_count];
+	if (machine_coroutine_call_on(worker->machine, od_tls_handshake,
+				      &req) == -1) {
+		req.rc = -1;
+		req.error = mm_errno_get();
+	}
+
+	if (io->fd != -1 && mm_io_attach(io) == -1) {
+		return -1;
+	}
+	if (machine_cancelled()) {
+		req.rc = -1;
+		req.error = ECANCELED;
+	}
+
+	mm_errno_set(req.error);
+	return req.rc;
 }

@@ -201,7 +201,8 @@ def check_allow(args, workers):
                 query(sock)
             for sock in slow:
                 closed(sock)
-        # TLS workers must drain in-flight handshakes before normal workers stop.
+        # TLS workers must stay alive while frontend coroutines finish their
+        # in-flight handshakes and return to the draining regular workers.
         with contextlib.ExitStack() as stack:
             pending = [stack.enter_context(od.raw()) for _ in range(32)]
             for sock in pending:

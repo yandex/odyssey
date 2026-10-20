@@ -80,3 +80,20 @@ mm_machine_t *mm_machinemgr_find_by_id(mm_machinemgr_t *mgr, uint64_t id)
 	mm_spinlock_unlock(&mgr->lock);
 	return NULL;
 }
+
+/* Keep a joined machine discoverable until its thread has exited. */
+mm_machine_t *mm_machinemgr_join(mm_machinemgr_t *mgr, uint64_t id)
+{
+	mm_spinlock_lock(&mgr->lock);
+	mm_list_t *i;
+	mm_list_foreach (&mgr->list, i) {
+		mm_machine_t *machine = mm_container_of(i, mm_machine_t, link);
+		if (machine->id == id && !machine->joining) {
+			machine->joining = 1;
+			mm_spinlock_unlock(&mgr->lock);
+			return machine;
+		}
+	}
+	mm_spinlock_unlock(&mgr->lock);
+	return NULL;
+}

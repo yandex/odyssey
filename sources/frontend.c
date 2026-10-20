@@ -321,9 +321,9 @@ static void od_frontend_startup_error(od_client_t *client)
 	atomic_fetch_add(&client->global->cron->startup_errors, 1);
 }
 
-/* On a TLS worker, stop immediately after the handshake. Plain startup and
- * cancel packets are retained for the frontend; no authentication runs here. */
-static int od_frontend_negotiate(od_client_t *client, bool tls_stage)
+/* SSL/GSS negotiation runs on the frontend worker; only the TLS handshake
+ * temporarily executes on a TLS worker, on this same coroutine. */
+static int od_frontend_negotiate(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 	while (!client->startup_received) {
@@ -355,9 +355,6 @@ static int od_frontend_negotiate(od_client_t *client, bool tls_stage)
 
 			client->startup.is_ssl_request = 0;
 			client->startup_ssl_done = true;
-			if (tls_stage) {
-				return 0;
-			}
 			continue;
 		}
 
@@ -388,7 +385,7 @@ error:
 static int od_frontend_startup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-	if (od_frontend_negotiate(client, false) == -1) {
+	if (od_frontend_negotiate(client) == -1) {
 		return -1;
 	}
 	client->startup.is_ssl_request = client->startup_ssl_done;
@@ -3513,31 +3510,6 @@ static int od_frontend_prepare(od_client_t *client)
 		}
 	}
 	return 0;
-}
-
-void od_frontend_tls(void *arg)
-{
-	machine_msg_t *msg = arg;
-	od_client_t *client = *(od_client_t **)machine_msg_data(msg);
-	od_global_t *global = client->global;
-	if (od_frontend_prepare(client) == -1 ||
-	    od_frontend_negotiate(client, true) == -1 ||
-	    od_io_detach(&client->io) == -1) {
-		od_frontend_close(client);
-		od_routing_slot_release(global);
-		machine_msg_free(msg);
-		return;
-	}
-
-	/* Reuse empty buffers on the TLS machine. If a plain client pipelined
-	 * data, transfer its buffer too, preserving every unread byte. */
-	if (od_readahead_unread(&client->io.readahead) == 0) {
-		od_readahead_free(&client->io.readahead);
-		od_readahead_init(&client->io.readahead);
-	}
-
-	/* Reuse the accept message; neither client nor msg is ours after feed. */
-	od_worker_pool_feed(global->worker_pool, msg);
 }
 
 void od_frontend(void *arg)

@@ -448,13 +448,7 @@ static inline void od_system_server(void *arg)
 			od_client_free(client);
 			continue;
 		}
-		if (od_tls_workers_enabled() &&
-		    server->config->tls_opts->tls_mode !=
-			    OD_CONFIG_TLS_DISABLE) {
-			od_tls_workers_feed(msg);
-		} else {
-			od_worker_pool_feed(global->worker_pool, msg);
-		}
+		od_worker_pool_feed(global->worker_pool, msg);
 	}
 
 	mm_eventfd_remove_peer_to(&server->shutdown_efd, server->io);
@@ -1239,20 +1233,21 @@ static inline void od_system(void *arg)
 
 	od_cron_stop(global->cron);
 
-	/* Finish all producers before stopping their consumers: acceptors ->
-	 * TLS negotiation -> regular workers. */
+	/* Stop accepting new clients before draining the regular workers. */
 	od_list_foreach_safe (&router->servers, i, n) {
 		od_system_server_t *server;
 		server = od_container_of(i, od_system_server_t, link);
 		machine_join(server->coro_id);
 	}
-	od_tls_workers_destroy();
 
 	/* stop workers first so client/server coroutines release
 	 * their storage refs — otherwise od_rules_cleanup won't
 	 * reach r==2 and watchdogs won't get set_offline */
 	od_worker_pool_shutdown(worker_pool);
 	od_worker_pool_wait_gracefully_shutdown(worker_pool);
+
+	/* Frontend coroutines may visit TLS machines until workers have drained. */
+	od_tls_workers_destroy();
 
 	machine_wait_nb(system->sighandler_machine);
 

@@ -7,6 +7,7 @@
  */
 
 #include <stdint.h>
+#include <stdatomic.h>
 
 #include <machinarium/context_stack.h>
 #include <machinarium/context.h>
@@ -20,12 +21,23 @@ typedef struct mm_coroutine_cache mm_coroutine_cache_t;
 
 typedef void (*mm_function_t)(void *arg);
 
-typedef enum { MM_CNEW, MM_CREADY, MM_CACTIVE, MM_CFREE } mm_coroutinestate_t;
+typedef enum {
+	MM_CNEW,
+	MM_CREADY,
+	MM_CACTIVE,
+	MM_CFREE,
+	MM_CMIGRATING
+} mm_coroutinestate_t;
 
 struct mm_coroutine {
 	uint64_t id;
 	mm_coroutinestate_t state;
 	int cancel;
+	atomic_int cancel_requested;
+	/* location is protected by the machine manager lock. */
+	struct mm_machine *location;
+	struct mm_machine *destination;
+	int visiting;
 	int errno_;
 	mm_function_t function;
 	void *function_arg;
@@ -37,6 +49,8 @@ struct mm_coroutine {
 	mm_list_t joiners;
 	mm_list_t link_join;
 	mm_list_t link;
+	/* Remains on the creating scheduler while the coroutine is away. */
+	mm_list_t link_owned;
 	char name[MM_COROUTINE_MAX_NAME_LEN + 1];
 #ifdef MM_MEM_PROF
 	uint64_t allocated_bytes;
@@ -54,5 +68,5 @@ const char *mm_coroutine_get_name(mm_coroutine_t *);
 
 static inline int mm_coroutine_is_cancelled(mm_coroutine_t *coroutine)
 {
-	return coroutine->cancel;
+	return coroutine->cancel || atomic_load(&coroutine->cancel_requested);
 }

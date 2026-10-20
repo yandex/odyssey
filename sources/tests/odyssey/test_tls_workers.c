@@ -2,33 +2,43 @@
 #include <sys/socket.h>
 #include <machinarium/machine.h>
 #include <machinarium/io.h>
-#include <tests/odyssey_test.h>
-#include <frontend.h>
-#include <global.h>
-#include <instance.h>
-#include <router.h>
-#include <system.h>
-#include <cron.h>
-#include <extension.h>
-#include <worker_pool.h>
-#include <msg.h>
+#include <machinarium/mm.h>
 #include <tls_workers.h>
+#include <tests/odyssey_test.h>
 
 typedef struct {
-	od_instance_t instance;
-	od_global_t global;
-	od_router_t router;
-	od_system_server_t source;
-	od_config_listen_t listen;
-	od_tls_opts_t opts;
-	od_cron_t cron;
-	od_extension_t extensions;
-	od_worker_pool_t pool;
-	od_worker_t worker;
+	mm_io_t *server;
+	mm_io_t *client;
 	machine_tls_t *tls;
-} tls_test_t;
+	uint32_t timeout;
+	int success;
+	int error;
+	int done;
+	int queued_timeout;
+} tls_worker_test_t;
 
-static mm_io_t *test_io(int fd, int accepted)
+typedef struct {
+	uint64_t machine;
+	atomic_int blocked;
+	atomic_int release;
+} tls_queue_test_t;
+
+static void tls_worker_block(void *arg)
+{
+	tls_queue_test_t *t = arg;
+	atomic_store(&t->blocked, 1);
+	while (!atomic_load(&t->release)) {
+		usleep(1000);
+	}
+}
+
+static void tls_worker_blocker(void *arg)
+{
+	tls_queue_test_t *t = arg;
+	test(machine_coroutine_call_on(t->machine, tls_worker_block, t) == 0);
+}
+
+static mm_io_t *tls_worker_io(int fd, int accepted)
 {
 	test(fcntl(fd, F_SETFL, O_NONBLOCK) == 0);
 	mm_io_t *io = mm_io_create();
@@ -37,235 +47,179 @@ static mm_io_t *test_io(int fd, int accepted)
 	io->accepted = accepted;
 	io->connected = 1;
 	test(mm_io_socket_set(io, fd) == 0);
-	if (!accepted) {
-		test(mm_io_attach(io) == 0);
-	}
+	test(mm_io_attach(io) == 0);
 	return io;
 }
 
-static mm_io_t *submit(tls_test_t *t, bool expired)
+static void tls_worker_server(void *arg)
 {
-	int sockets[2];
-	test(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
-	od_client_t *client = od_client_allocate();
-	test(client != NULL);
-	client->io.io = test_io(sockets[0], 1);
-	client->global = &t->global;
-	client->source = &t->source;
-	client->tls = t->tls;
-	client->time_accept = machine_time_us() - (expired ? 10000000 : 0);
-	od_id_generate(&client->id, "c");
-	atomic_fetch_add(&t->router.clients, 1);
-	atomic_fetch_add(&t->source.clients, 1);
-	test(od_routing_slot_acquire(&t->global, 1000) == 0);
-	machine_msg_t *msg = machine_msg_create(sizeof(client));
-	test(msg != NULL);
-	*(od_client_t **)machine_msg_data(msg) = client;
-	machine_msg_set_type(msg, OD_MSG_CLIENT_NEW);
-	mm_io_t *peer = test_io(sockets[1], 0);
-	od_tls_workers_feed(msg);
-	return peer;
-}
-
-static void request(mm_io_t *peer, uint32_t code, char response)
-{
-	uint32_t words[] = { htonl(8), htonl(code) };
-	machine_msg_t *msg = machine_msg_create(0);
-	test(msg != NULL);
-	test(machine_msg_write(msg, words, sizeof(words)) == 0);
-	test(machine_write(peer, msg, 1000) == 0);
-	msg = machine_read(peer, 1, 1000);
-	test(msg != NULL);
-	test(*(char *)machine_msg_data(msg) == response);
-	machine_msg_free(msg);
-}
-
-static void startup(mm_io_t *peer, bool pipeline)
-{
-	kiwi_fe_arg_t args[] = {
-		{ "user", 5 }, { "u", 2 }, { "database", 9 }, { "d", 2 }
-	};
-	machine_msg_t *msg = kiwi_fe_write_startup_message(NULL, 4, args);
-	test(msg != NULL);
-	if (pipeline) {
+	tls_worker_test_t *t = arg;
+	mm_machine_t *home = mm_self;
+	mm_coroutine_t *coroutine = home->scheduler.current;
+	int rc = od_tls_workers_handshake(t->server, t->tls, t->timeout);
+	test(mm_self == home);
+	test(mm_self->scheduler.current == coroutine);
+	test(t->server->attached);
+	if (t->success) {
+		test(rc == 0);
+		machine_msg_t *msg = machine_msg_create(0);
+		test(msg != NULL);
 		test(machine_msg_write(msg, "hello", 5) == 0);
+		test(machine_write(t->server, msg, 1000) == 0);
+	} else {
+		test(rc == -1);
+		if (t->queued_timeout) {
+			/* Expiry in the incoming queue must skip TLS setup entirely. */
+			test(t->server->tls_ssl == NULL);
+		}
+		if (t->error) {
+			test(machine_errno() == t->error);
+		}
 	}
-	test(machine_write(peer, msg, 1000) == 0);
+	test(mm_io_close(t->server) == 0);
+	mm_io_free(t->server);
+	t->done = 1;
 }
 
-static od_client_t *receive(tls_test_t *t)
+static void tls_worker_client(void *arg)
 {
-	machine_msg_t *msg = machine_channel_read(t->worker.task_channel, 2000);
+	tls_worker_test_t *t = arg;
+	int rc = mm_io_set_tls(t->client, t->tls, 1000);
+	if (rc == -1) {
+		printf("TLS client: %s\n", mm_io_error(t->client));
+	}
+	test(rc == 0);
+	machine_msg_t *msg = machine_read(t->client, 5, 1000);
 	test(msg != NULL);
-	test(machine_msg_type(msg) == OD_MSG_CLIENT_NEW);
-	od_client_t *client = *(od_client_t **)machine_msg_data(msg);
+	test(memcmp(machine_msg_data(msg), "hello", 5) == 0);
 	machine_msg_free(msg);
-	test(!client->io.io->attached);
-	return client;
+	test(mm_io_close(t->client) == 0);
+	mm_io_free(t->client);
 }
 
-static void close_client(tls_test_t *t, od_client_t *client)
+static void tls_worker_tests(void *arg)
 {
-	od_frontend_close(client);
-	od_routing_slot_release(&t->global);
-}
-
-static void close_peer(mm_io_t *peer)
-{
-	test(mm_io_close(peer) == 0);
-	mm_io_free(peer);
-}
-
-static void wait_closed(tls_test_t *t)
-{
-	for (int i = 0; i < 2000 && (atomic_load(&t->router.clients) ||
-				     mm_sem_in_use(&t->global.routing_sem));
-	     i++) {
-		machine_sleep(1);
-	}
-	test(atomic_load(&t->router.clients) == 0);
-	test(atomic_load(&t->source.clients) == 0);
-	test(mm_sem_in_use(&t->global.routing_sem) == 0);
-	test(machine_channel_read(t->worker.task_channel, 0) == NULL);
-}
-
-static void tls_tests(void *arg)
-{
-	tls_test_t *t = arg;
-	t->worker.task_channel = machine_channel_create();
-	test(t->worker.task_channel != NULL);
-	t->tls = machine_tls_create();
-	test(t->tls != NULL);
-	test(machine_tls_set_verify(t->tls, "none") == 0);
-	test(machine_tls_set_ca_file(t->tls, "./machinarium/ca.crt") == 0);
-	test(machine_tls_set_cert_file(t->tls, "./machinarium/server.crt") ==
-	     0);
-	test(machine_tls_set_key_file(t->tls, "./machinarium/server.key") == 0);
+	(void)arg;
 	test(od_tls_workers_init(1) == 0);
-
-	/* A client waiting for a packet must not hold up unrelated handshakes. */
-	mm_io_t *silent = submit(t, false);
-	for (int mode = 0; mode < 4; mode++) {
-		mm_io_t *peer = submit(t, false);
-		if (mode >= 2) {
-			request(peer, NEGOTIATE_GSS_CODE, 'N');
+	tls_queue_test_t queue = { .machine = UINT64_MAX };
+	mm_machinemgr_t *mgr = &machinarium.machine_mgr;
+	mm_spinlock_lock(&mgr->lock);
+	mm_list_t *entry;
+	mm_list_foreach (&mgr->list, entry) {
+		mm_machine_t *machine =
+			mm_container_of(entry, mm_machine_t, link);
+		if (machine->name && strcmp(machine->name, "tls: 0") == 0) {
+			queue.machine = machine->id;
 		}
-		bool ssl = mode % 2;
-		if (ssl) {
-			request(peer, NEGOTIATE_SSL_CODE, 'S');
-			test(mm_io_set_tls(peer, t->tls, 1000) == 0);
-			/* The TLS stage transfers before the encrypted StartupMessage. */
-		} else {
-			startup(peer, true);
-		}
-		od_client_t *client = receive(t);
-		test(client->startup_ssl_done == ssl);
-		test(client->startup_gss_done == (mode >= 2));
-		test(client->startup_received == !ssl);
-		test(mm_io_attach(client->io.io) == 0);
-		char text[5];
-		if (ssl) {
-			test(client->io.readahead.buf == NULL);
-			machine_msg_t *msg = machine_msg_create(0);
-			test(msg != NULL);
-			test(machine_msg_write(msg, "hello", 5) == 0);
-			test(machine_write(peer, msg, 1000) == 0);
-			msg = machine_read(client->io.io, 5, 1000);
-			test(msg != NULL);
-			memcpy(text, machine_msg_data(msg), 5);
-			machine_msg_free(msg);
-		} else {
-			test(client->io.readahead.buf != NULL);
-			test(od_io_read(&client->io, text, 5, 1000) == 0);
-		}
-		test(memcmp(text, "hello", 5) == 0);
-		close_client(t, client);
-		close_peer(peer);
 	}
-	test(atomic_load(&t->router.clients) == 1);
-	close_peer(silent);
-	wait_closed(t);
+	mm_spinlock_unlock(&mgr->lock);
+	test(queue.machine != UINT64_MAX);
+	machine_tls_t *tls = machine_tls_create();
+	test(tls != NULL);
+	test(machine_tls_set_verify(tls, "none") == 0);
+	test(machine_tls_set_ca_file(tls, "./machinarium/ca.crt") == 0);
+	test(machine_tls_set_cert_file(tls, "./machinarium/server.crt") == 0);
+	test(machine_tls_set_key_file(tls, "./machinarium/server.key") == 0);
 
-	/* Preserve negotiation flags across the boundary: a second SSLRequest
-	 * inside TLS must be rejected by the regular frontend. */
-	mm_io_t *peer = submit(t, false);
-	request(peer, NEGOTIATE_SSL_CODE, 'S');
-	test(mm_io_set_tls(peer, t->tls, 1000) == 0);
-	od_client_t *client = receive(t);
-	uint32_t again[] = { htonl(8), htonl(NEGOTIATE_SSL_CODE) };
-	machine_msg_t *msg = machine_msg_create(0);
-	test(msg != NULL);
-	test(machine_msg_write(msg, again, sizeof(again)) == 0);
-	test(machine_write(peer, msg, 1000) == 0);
-	od_frontend(client);
-	close_peer(peer);
-	wait_closed(t);
-
-	/* Queue expiry, EOF during a handshake, and a silent handshake timeout
-	 * release the client counters and routing slot without forwarding it. */
-	peer = submit(t, true);
-	wait_closed(t);
-	close_peer(peer);
-	peer = submit(t, false);
-	request(peer, NEGOTIATE_SSL_CODE, 'S');
-	close_peer(peer);
-	wait_closed(t);
-	t->listen.client_login_timeout_ms = 30;
-	peer = submit(t, false);
-	request(peer, NEGOTIATE_SSL_CODE, 'S');
-	wait_closed(t);
-	close_peer(peer);
-	t->listen.client_login_timeout_ms = 5000;
-
-	/* Shutdown drains both queued messages and active negotiations. */
-	mm_io_t *peers[32];
-	for (int i = 0; i < 32; i++) {
-		peers[i] = submit(t, false);
-		startup(peers[i], false);
+	/* Success, silent peer, cancellation, peer disconnect, queue timeout. */
+	for (int mode = 0; mode < 5; mode++) {
+		int sockets[2];
+		test(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
+		tls_worker_test_t t = {
+			.server = tls_worker_io(sockets[0], 1),
+			.client = tls_worker_io(sockets[1], 0),
+			.tls = tls,
+			.timeout = mode == 1 || mode == 4 ? 20 : 60000,
+			.success = mode == 0,
+			.queued_timeout = mode == 4,
+			.error = mode == 1 || mode == 4 ? ETIMEDOUT :
+				 mode == 2		? ECANCELED :
+							  0
+		};
+		int64_t blocker = -1;
+		if (mode == 4) {
+			blocker = machine_coroutine_create(tls_worker_blocker,
+							   &queue);
+			test(blocker != -1);
+			while (!atomic_load(&queue.blocked)) {
+				machine_sleep(1);
+			}
+		}
+		int64_t server =
+			machine_coroutine_create(tls_worker_server, &t);
+		test(server != -1);
+		if (mode == 0) {
+			int64_t client =
+				machine_coroutine_create(tls_worker_client, &t);
+			test(client != -1);
+			test(machine_join(client) == 0);
+		} else if (mode == 2) {
+			machine_sleep(10);
+			test(machine_cancel(server) == 0);
+		} else if (mode == 3) {
+			test(mm_io_close(t.client) == 0);
+		} else if (mode == 4) {
+			machine_sleep(40);
+			atomic_store(&queue.release, 1);
+			test(machine_join(blocker) == 0);
+		}
+		if (!t.done) {
+			test(machine_join(server) == 0);
+		}
+		test(t.done);
+		if (mode != 0) {
+			if (mode != 3) {
+				test(mm_io_close(t.client) == 0);
+			}
+			mm_io_free(t.client);
+		}
 	}
+
+	/* One TLS machine must interleave many handshakes, including a silent
+	 * client, without creating a coroutine for each handshake on that machine. */
+	tls_worker_test_t concurrent[33] = { 0 };
+	int64_t servers[33], clients[32];
+	for (int i = 0; i < 33; i++) {
+		int sockets[2];
+		test(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
+		concurrent[i] = (tls_worker_test_t){
+			.server = tls_worker_io(sockets[0], 1),
+			.client = tls_worker_io(sockets[1], 0),
+			.tls = tls,
+			.timeout = i == 32 ? 200 : 5000,
+			.success = i != 32,
+			.error = i == 32 ? ETIMEDOUT : 0
+		};
+		servers[i] = machine_coroutine_create(tls_worker_server,
+						      &concurrent[i]);
+		test(servers[i] != -1);
+		if (i < 32) {
+			clients[i] = machine_coroutine_create(tls_worker_client,
+							      &concurrent[i]);
+			test(clients[i] != -1);
+		}
+	}
+	for (int i = 0; i < 33; i++) {
+		if (!concurrent[i].done) {
+			test(machine_join(servers[i]) == 0);
+		}
+		if (i < 32) {
+			int rc = machine_join(clients[i]);
+			test(rc == 0 || machine_errno() == ENOENT);
+		}
+	}
+	test(mm_io_close(concurrent[32].client) == 0);
+	mm_io_free(concurrent[32].client);
+	machine_tls_free(tls);
 	od_tls_workers_destroy();
 	test(!od_tls_workers_enabled());
-	for (int i = 0; i < 32; i++) {
-		client = receive(t);
-		test(client->startup_received);
-		test(client->io.readahead.buf == NULL);
-		close_client(t, client);
-		close_peer(peers[i]);
-	}
-	wait_closed(t);
-	machine_tls_free(t->tls);
-	machine_channel_free(t->worker.task_channel);
 }
 
 void odyssey_test_tls_workers(void)
 {
 	test(machinarium_init() == 0);
-	tls_test_t *t = calloc(1, sizeof(*t));
-	test(t != NULL);
-	od_pid_init(&t->instance.pid);
-	test(od_logger_init(&t->instance.logger, &t->instance.pid) == 0);
-	t->instance.logger.log_stdout = 0;
-	t->instance.config.readahead = 4096;
-	t->instance.config.cache_coroutine = 8;
-	t->global.instance = &t->instance;
-	t->global.router = &t->router;
-	t->global.cron = &t->cron;
-	t->global.worker_pool = &t->pool;
-	t->global.extensions = &t->extensions;
-	mm_sem_init(&t->global.routing_sem, 128);
-	t->pool.pool = &t->worker;
-	t->pool.count = 1;
-	t->source.config = &t->listen;
-	t->listen.tls_opts = &t->opts;
-	t->opts.tls_mode = OD_CONFIG_TLS_ALLOW;
-	t->listen.client_login_timeout_ms = 5000;
-	od_global_set(&t->global);
-	int64_t source = machine_create("handoff test", tls_tests, t);
+	int64_t source = machine_create("tls test", tls_worker_tests, NULL);
 	test(source != -1);
 	test(machine_wait(source) == 0);
-	od_global_set(NULL);
-	mm_sem_destroy(&t->global.routing_sem);
-	od_logger_close(&t->instance.logger);
-	free(t);
 	machinarium_free();
 }

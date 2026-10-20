@@ -398,8 +398,10 @@ connecting TLS clients it can slow down all clients of the worker.
 
 0: By default, handshakes are performed in worker threads.
 
-N: Handshakes are offloaded to N dedicated threads. Each handshake runs
-in its own coroutine, so slow clients do not block each other.
+N: The client's frontend coroutine temporarily moves to one of N dedicated
+threads for the TLS handshake, then returns to its original worker. No separate
+handshake coroutine is created. Handshakes yield while waiting for I/O, so slow
+clients do not block other handshakes.
 
 "auto": TLS workers are taken from `workers` threads, so the total number
 of threads stays the same:
