@@ -942,16 +942,16 @@ static inline int od_console_show_pools(od_client_t *client,
 		char *bytes_rcv = "bytes_received";
 		rc = kiwi_be_write_row_description_add(msg, 0, bytes_rcv,
 						       strlen(bytes_rcv), 0, 0,
-						       23 /* INT4OID */, 4, 0,
-						       0);
+						       PG_INT4OID, PG_INT4_LEN,
+						       0, 0);
 		if (rc == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
 		char *bytes_sent = "bytes_sent";
 		rc = kiwi_be_write_row_description_add(msg, 0, bytes_sent,
 						       strlen(bytes_sent), 0, 0,
-						       23 /* INT4OID */, 4, 0,
-						       0);
+						       PG_INT4OID, PG_INT4_LEN,
+						       0, 0);
 		if (rc == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
@@ -959,8 +959,8 @@ static inline int od_console_show_pools(od_client_t *client,
 		char *tcp_conn_rate = "tcp_conn_count";
 		rc = kiwi_be_write_row_description_add(msg, 0, tcp_conn_rate,
 						       strlen(tcp_conn_rate), 0,
-						       0, 23 /* INT4OID */, 4,
-						       0, 0);
+						       0, PG_INT4OID,
+						       PG_INT4_LEN, 0, 0);
 		if (rc == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
@@ -968,8 +968,8 @@ static inline int od_console_show_pools(od_client_t *client,
 		char *cl_queue = "cl_queue";
 		rc = kiwi_be_write_row_description_add(msg, 0, cl_queue,
 						       strlen(cl_queue), 0, 0,
-						       23 /* INT4OID */, 4, 0,
-						       0);
+						       PG_INT4OID, PG_INT4_LEN,
+						       0, 0);
 		if (rc == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
@@ -980,8 +980,8 @@ static inline int od_console_show_pools(od_client_t *client,
 			caption_len = od_snprintf(caption, sizeof(caption),
 						  "query_%.6g", quantiles[i]);
 			rc = kiwi_be_write_row_description_add(
-				msg, 0, caption, caption_len, 0, 0,
-				23 /* INT4OID */, 4, 0, 0);
+				msg, 0, caption, caption_len, 0, 0, PG_INT4OID,
+				PG_INT4_LEN, 0, 0);
 			if (rc == NOT_OK_RESPONSE) {
 				return NOT_OK_RESPONSE;
 			}
@@ -989,8 +989,8 @@ static inline int od_console_show_pools(od_client_t *client,
 				od_snprintf(caption, sizeof(caption),
 					    "transaction_%.6g", quantiles[i]);
 			rc = kiwi_be_write_row_description_add(
-				msg, 0, caption, caption_len, 0, 0,
-				23 /* INT4OID */, 4, 0, 0);
+				msg, 0, caption, caption_len, 0, 0, PG_INT4OID,
+				PG_INT4_LEN, 0, 0);
 			if (rc == NOT_OK_RESPONSE) {
 				return NOT_OK_RESPONSE;
 			}
@@ -998,8 +998,8 @@ static inline int od_console_show_pools(od_client_t *client,
 						  "client_lifetime_%.6g",
 						  quantiles[i]);
 			rc = kiwi_be_write_row_description_add(
-				msg, 0, caption, caption_len, 0, 0,
-				20 /* INT8OID */, 8, 0, 0);
+				msg, 0, caption, caption_len, 0, 0, PG_INT8OID,
+				PG_INT8_LEN, 0, 0);
 			if (rc == NOT_OK_RESPONSE) {
 				return NOT_OK_RESPONSE;
 			}

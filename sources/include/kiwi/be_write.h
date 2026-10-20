@@ -1,5 +1,7 @@
 #pragma once
 
+#include <pg_cat.h>
+
 #define NULL_MSG_LEN -1
 /*
  * kiwi.
@@ -726,27 +728,27 @@ kiwi_be_write_row_descriptionf(machine_msg_t *msg, char *fmt, ...)
 		case 's':
 			rc = kiwi_be_write_row_description_add(
 				msg, begin_offset, name, name_len, 0, 0,
-				25 /* TEXTOID */, -1, 0, 0);
+				PG_TEXTOID, PG_TEXT_LEN, 0, 0);
 			break;
 		case 'd':
 			rc = kiwi_be_write_row_description_add(
 				msg, begin_offset, name, name_len, 0, 0,
-				23 /* INT4OID */, 4, 0, 0);
+				PG_INT4OID, PG_INT4_LEN, 0, 0);
 			break;
 		case 'l':
 			rc = kiwi_be_write_row_description_add(
 				msg, begin_offset, name, name_len, 0, 0,
-				20 /* INT8OID */, 8, 0, 0);
+				PG_INT8OID, PG_INT8_LEN, 0, 0);
 			break;
 		case 'b':
 			rc = kiwi_be_write_row_description_add(
 				msg, begin_offset, name, name_len, 0, 0,
-				16 /* BOOLOID */, 1, 0, 0);
+				PG_BOOLOID, PG_BOOL_LEN, 0, 0);
 			break;
 		case 'f':
 			rc = kiwi_be_write_row_description_add(
 				msg, begin_offset, name, name_len, 0, 0,
-				700 /* FLOAT4OID */, 4, 0, 0);
+				PG_FLOAT4OID, PG_FLOAT4_LEN, 0, 0);
 			break;
 		}
 		if (rc == -1) {
