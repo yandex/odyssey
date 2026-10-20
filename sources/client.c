@@ -50,6 +50,8 @@ void od_client_init(od_client_t *client)
 	kiwi_vars_init(&client->vars);
 	kiwi_key_init(&client->key);
 
+	client->startup_raw = NULL;
+
 	od_io_init(&client->io);
 
 	kiwi_password_init(&client->password);
@@ -81,6 +83,7 @@ void od_client_init(od_client_t *client)
 
 	/* Init GUCs. */
 	client->backend_pin = false;
+	client->backend_pin_listen = false;
 	client->opportunistic_acquire = false;
 	od_address_init(&client->execute_on_host);
 }
@@ -94,6 +97,9 @@ void od_client_free(od_client_t *client)
 	if (client->rule != NULL) {
 		od_rules_unref(client->rule);
 	}
+
+	kiwi_be_startup_free(&client->startup);
+	kiwi_vars_free(&client->vars);
 
 	od_relay_destroy(&client->relay);
 
@@ -118,6 +124,7 @@ void od_client_free(od_client_t *client)
 	client->scram_key_valid = 0;
 
 	machine_msg_free_safe(client->read_msg);
+	machine_msg_free_safe(client->startup_raw);
 
 	od_address_destroy(&client->execute_on_host);
 
@@ -127,7 +134,7 @@ void od_client_free(od_client_t *client)
 uint32_t od_client_login_timeout(const od_client_t *client)
 {
 	if (client->source != NULL) {
-		return (uint32_t)client->source->config->client_login_timeout;
+		return (uint32_t)client->source->config->client_login_timeout_ms;
 	}
 
 	/* TODO: do not use infinite timeout */

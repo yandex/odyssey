@@ -115,11 +115,13 @@ typedef int od_console_yyltype_t;
 %token KW_SHOW
 %token KW_KILL_CLIENT
 %token KW_RELOAD
+%token KW_LOAD
 %token KW_PAUSE
 %token KW_RESUME
 %token KW_SET
 %token KW_DROP
 %token KW_GC
+%token KW_ALTER
 
 /* SELECT * FROM <target> (alias for SHOW <target>) */
 %token KW_SELECT
@@ -132,13 +134,20 @@ typedef int od_console_yyltype_t;
 /* drop targets */
 %token KW_SERVERS
 
+/* alter_system helpers */
+%token KW_SYSTEM
+%token KW_ALL
+%token KW_RESET
+
 %type <node> stmt
 %type <node> show_stmt
 %type <node> kill_client_stmt
 %type <node> reload_stmt
+%type <node> load_stmt
 %type <node> pause_stmt
 %type <node> resume_stmt
 %type <node> set_stmt
+%type <node> alter_system_stmt
 %type <node> drop_stmt
 %type <node> gc_stmt
 %type <str> set_key
@@ -165,11 +174,13 @@ stmt:
 	  show_stmt
 	| kill_client_stmt
 	| reload_stmt
+	| load_stmt
 	| pause_stmt
 	| resume_stmt
 	| set_stmt
 	| drop_stmt
 	| gc_stmt
+	| alter_system_stmt
 	;
 
 /*
@@ -234,6 +245,17 @@ kill_client_stmt:
 /*
  * RELOAD
  */
+load_stmt:
+	  KW_LOAD col_id
+		{
+			od_console_load_stmt_t *n = ALLOC_NODE(ctx, load,
+				OD_CONSOLE_NODE_TYPE_LOAD_STMT);
+			if (n == NULL) YYABORT;
+			n->name = $2; $2 = NULL;
+			$$ = (od_console_node_t *)n;
+		}
+	;
+
 reload_stmt:
 	  KW_RELOAD
 		{
@@ -333,6 +355,19 @@ set_key:
 set_value:
 	  SCONST   { $$ = $1; $1 = NULL; }
 	| col_id   { $$ = $1; }
+	/*
+	 * ALL is reserved for RESET ALL and cannot be a col_id, but it is
+	 * still a valid value.
+	 */
+	| KW_ALL
+		{
+			$$ = arena_str(ctx, "all", 3);
+			if ($$ == NULL) {
+				od_console_yyerror(NULL, scanner, ctx,
+					       "out of memory");
+				YYABORT;
+			}
+		}
 	| INTEGER
 		{
 			char tmp[24];
@@ -388,6 +423,104 @@ col_id:
 					       "out of memory");
 				YYABORT;
 			}
+		}
+	| KW_SYSTEM
+		{
+			$$ = arena_str(ctx, "system", 6);
+			if ($$ == NULL) {
+				od_console_yyerror(&yylloc, scanner, ctx,
+					       "out of memory");
+				YYABORT;
+			}
+		}
+	| KW_RESET
+		{
+			$$ = arena_str(ctx, "reset", 5);
+			if ($$ == NULL) {
+				od_console_yyerror(&yylloc, scanner, ctx,
+					       "out of memory");
+				YYABORT;
+			}
+		}
+	| KW_ALTER
+		{
+			$$ = arena_str(ctx, "alter", 5);
+			if ($$ == NULL) {
+				od_console_yyerror(&yylloc, scanner, ctx,
+					       "out of memory");
+				YYABORT;
+			}
+		}
+	;
+
+/* ALTER SYSTEM */
+
+alter_system_stmt:
+		KW_ALTER KW_SYSTEM KW_SET col_id '=' KW_DEFAULT
+		{
+			od_console_alter_system_stmt_t *n =
+				ALLOC_NODE(ctx, alter_system,
+					   OD_CONSOLE_NODE_TYPE_ALTER_SYSTEM_STMT);
+			if (n == NULL) YYABORT;
+			n->action = OD_CONSOLE_ALTER_SYSTEM_RESET;
+			n->key   = $4; $4 = NULL;
+			n->value = NULL;
+			$$ = (od_console_node_t *)n;
+		}
+	  | KW_ALTER KW_SYSTEM KW_SET col_id KW_TO KW_DEFAULT
+		{
+			od_console_alter_system_stmt_t *n =
+				ALLOC_NODE(ctx, alter_system,
+					   OD_CONSOLE_NODE_TYPE_ALTER_SYSTEM_STMT);
+			if (n == NULL) YYABORT;
+			n->action = OD_CONSOLE_ALTER_SYSTEM_RESET;
+			n->key   = $4; $4 = NULL;
+			n->value = NULL;
+			$$ = (od_console_node_t *)n;
+		}
+	  | KW_ALTER KW_SYSTEM KW_SET col_id KW_TO set_value
+		{
+			od_console_alter_system_stmt_t *n =
+				ALLOC_NODE(ctx, alter_system,
+					   OD_CONSOLE_NODE_TYPE_ALTER_SYSTEM_STMT);
+			if (n == NULL) YYABORT;
+			n->action = OD_CONSOLE_ALTER_SYSTEM_SET;
+			n->key   = $4; $4 = NULL;
+			n->value = $6; $6 = NULL;
+			$$ = (od_console_node_t *)n;
+		}
+	  | KW_ALTER KW_SYSTEM KW_SET col_id '=' set_value
+		{
+			od_console_alter_system_stmt_t *n =
+				ALLOC_NODE(ctx, alter_system,
+					   OD_CONSOLE_NODE_TYPE_ALTER_SYSTEM_STMT);
+			if (n == NULL) YYABORT;
+			n->action = OD_CONSOLE_ALTER_SYSTEM_SET;
+			n->key   = $4; $4 = NULL;
+			n->value = $6; $6 = NULL;
+			$$ = (od_console_node_t *)n;
+		}
+	  | KW_ALTER KW_SYSTEM KW_RESET col_id
+		{
+			od_console_alter_system_stmt_t *n =
+				ALLOC_NODE(ctx, alter_system,
+					   OD_CONSOLE_NODE_TYPE_ALTER_SYSTEM_STMT);
+			if (n == NULL) YYABORT;
+			n->action = OD_CONSOLE_ALTER_SYSTEM_RESET;
+			n->key   = $4; $4 = NULL;
+			n->value = NULL;
+			$$ = (od_console_node_t *)n;
+		}
+	  | KW_ALTER KW_SYSTEM KW_RESET KW_ALL
+		{
+			od_console_alter_system_stmt_t *n =
+				ALLOC_NODE(ctx, alter_system,
+					   OD_CONSOLE_NODE_TYPE_ALTER_SYSTEM_STMT);
+			if (n == NULL) YYABORT;
+			n->action = OD_CONSOLE_ALTER_SYSTEM_RESET_ALL;
+			n->key   = NULL;
+			n->value = NULL;
+			$$ = (od_console_node_t *)n;
 		}
 	;
 

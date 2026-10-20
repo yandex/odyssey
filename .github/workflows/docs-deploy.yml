@@ -1,0 +1,47 @@
+name: docs-deploy
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/docs-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build-docs
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-python@v7
+      with:
+        python-version: '3.12'
+    - name: Install docs requirements
+      run: pip install mkdocs==1.6.1 mkdocs-material==9.6.23 mkdocs-exclude mkdocs-minify-plugin
+    - name: Build docs
+      run: mkdocs build --strict --site-dir site
+    - name: Upload pages artifact
+      uses: actions/upload-pages-artifact@v5
+      with:
+        path: site
+  deploy:
+    name: deploy-docs
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v5

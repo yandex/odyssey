@@ -7,6 +7,8 @@
 
 #include <odyssey.h>
 
+#include <sys/un.h>
+
 #include <machinarium/machinarium.h>
 #include <kiwi/kiwi.h>
 
@@ -440,7 +442,7 @@ static void do_group_check(void *arg)
 	while (group->online) {
 		rc = machine_wait_flag_wait(
 			group_rule->group_checker_online,
-			instance->config.group_checker_interval);
+			(uint32_t)instance->config.group_checker_interval_ms);
 		if (rc == 0) {
 			od_log(&instance->logger, "group_checker", NULL, NULL,
 			       "done flag is set, exiting from rule group checker for %s.%s",
@@ -649,6 +651,8 @@ void od_rules_rule_free(od_rule_t *rule)
 
 static void od_rules_rule_free_now(od_rule_t *rule)
 {
+	kiwi_vars_free(&rule->vars);
+
 	if (rule->password) {
 		od_free(rule->password);
 	}
@@ -1567,6 +1571,10 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 		return 0;
 	}
 
+	if (a->maintain_params_set != b->maintain_params_set) {
+		return 0;
+	}
+
 	/* keepalive */
 	if (a->keepalive != b->keepalive) {
 		return 0;
@@ -2032,10 +2040,18 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 		}
 
 		/* enforce one endpoint with unix address */
-		char buff[1024];
+		char buff[sizeof(((struct sockaddr_un *)0)->sun_path)];
 
-		od_snprintf(buff, sizeof(buff), "%s/.s.PGSQL.%d",
-			    config->unix_socket_dir, storage->port);
+		if (od_unix_socket_path(buff, sizeof(buff),
+					config->unix_socket_dir,
+					storage->port) == -1) {
+			od_error(logger, "rules", NULL, NULL,
+				 "storage '%s': unix socket path "
+				 "'%s/.s.PGSQL.%d' is too long",
+				 storage->name, config->unix_socket_dir,
+				 storage->port);
+			return -1;
+		}
 
 		storage->endpoints =
 			od_malloc(1 * sizeof(od_storage_endpoint_t));
@@ -2158,7 +2174,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			if (listen->auto_route_ro_on_standby) {
 				od_error(
 					logger, "rules", NULL, NULL,
-					"listen '%s:%d': auto_route_ro_on_standby requires query_parsing mode 'full'",
+					"listen '%s:%d': auto_route_ro_on_standby requires query_parsing_mode 'full'",
 					od_config_listen_host_name(listen),
 					listen->port);
 				return -1;
@@ -2171,7 +2187,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			if (rule->auto_route_ro_on_standby) {
 				od_error(
 					logger, "rules", NULL, NULL,
-					"rule '%s.%s %s': auto_route_ro_on_standby requires query_parsing mode 'full'",
+					"rule '%s.%s %s': auto_route_ro_on_standby requires query_parsing_mode 'full'",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
 				return -1;
@@ -2714,8 +2730,8 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		       "  min pool size                     %d",
 		       rule->pool->min_size);
 		od_log(logger, "rules", NULL, NULL,
-		       "  pool timeout                      %d",
-		       rule->pool->timeout);
+		       "  pool timeout                      %" PRIu64,
+		       rule->pool->timeout_ms);
 		od_log(logger, "rules", NULL, NULL,
 		       "  pool ttl                          %d",
 		       rule->pool->ttl);

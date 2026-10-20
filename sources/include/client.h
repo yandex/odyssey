@@ -58,6 +58,12 @@ struct od_client {
 	kiwi_vars_t vars;
 	kiwi_key_t key;
 
+	/*
+	 * raw bytes of the startup packet, kept only when
+	 * the replication proxy mode is enabled
+	 */
+	machine_msg_t *startup_raw;
+
 	/* do not set this field directly, use od_server_attach_client */
 	od_server_t *server;
 	od_route_t *route;
@@ -84,6 +90,12 @@ struct od_client {
 	/* client-side GUC state. XXX: maybe use embedded struct here */
 	bool backend_pin;
 	bool opportunistic_acquire;
+
+	/*
+	 * only meaningful when backend_pin is set: marks the pin as
+	 * LISTEN-owned; UNLISTEN * drops only such pin
+	 */
+	bool backend_pin_listen;
 	/*
 	 * SET odyssey.execute_on_host - explicit storage host to attach to,
 	 * host == NULL means not set

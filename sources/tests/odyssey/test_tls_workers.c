@@ -210,12 +210,12 @@ static void tls_tests(void *arg)
 	request(peer, NEGOTIATE_SSL_CODE, 'S');
 	close_peer(peer);
 	wait_closed(t);
-	t->listen.client_login_timeout = 30;
+	t->listen.client_login_timeout_ms = 30;
 	peer = submit(t, false);
 	request(peer, NEGOTIATE_SSL_CODE, 'S');
 	wait_closed(t);
 	close_peer(peer);
-	t->listen.client_login_timeout = 5000;
+	t->listen.client_login_timeout_ms = 5000;
 
 	/* Shutdown drains both queued messages and active negotiations. */
 	mm_io_t *peers[32];
@@ -258,7 +258,7 @@ void odyssey_test_tls_workers(void)
 	t->source.config = &t->listen;
 	t->listen.tls_opts = &t->opts;
 	t->opts.tls_mode = OD_CONFIG_TLS_ALLOW;
-	t->listen.client_login_timeout = 5000;
+	t->listen.client_login_timeout_ms = 5000;
 	od_global_set(&t->global);
 	int64_t source = machine_create("handoff test", tls_tests, t);
 	test(source != -1);

@@ -296,35 +296,32 @@ static od_frontend_status_t reply_set_ok(od_client_t *client)
 
 static od_frontend_status_t process_set_generic_bool(od_client_t *client,
 						     const od_query_ctx_t *ctx,
-						     bool *guc_val_ptr)
+						     bool *guc_val_ptr,
+						     bool *origin_to_reset)
 {
 	const char *option_value;
 	size_t option_value_len;
 
-	od_server_t *server;
 	od_instance_t *instance = client->global->instance;
 
-	server = client->server;
 	option_value = ctx->s2;
 	option_value_len = strlen(option_value);
 
-	if (strncasecmp(option_value, "true", option_value_len) == 0 ||
-	    strncasecmp(option_value, "on", option_value_len) == 0 ||
-	    strncasecmp(option_value, "1", option_value_len) == 0) {
-		*guc_val_ptr = 1;
-	} else if (strncasecmp(option_value, "false", option_value_len) == 0 ||
-		   strncasecmp(option_value, "off", option_value_len) == 0 ||
-		   strncasecmp(option_value, "0", option_value_len) == 0) {
-		*guc_val_ptr = 0;
-	} else {
+	bool value;
+	if (!parse_bool_with_len(option_value, option_value_len, &value)) {
 		/* Reject this */
 		return reply_reject_guc(client, ctx->s1, option_value,
 					option_value_len);
 	}
 
-	od_debug(&instance->logger, "virtual processing", client, server,
-		 "processed virtual bool GUC %.*s", (int)option_value_len,
-		 option_value);
+	*guc_val_ptr = value;
+	if (origin_to_reset != NULL) {
+		*origin_to_reset = 0;
+	}
+
+	od_debug(&instance->logger, "virtual processing", client,
+		 client->server, "processed virtual bool GUC %.*s",
+		 (int)option_value_len, option_value);
 
 	return reply_set_ok(client);
 }
@@ -518,15 +515,17 @@ static od_frontend_status_t process_vset(od_client_t *client,
 
 	if (strcmp(ctx->s1, ODYSSEY_PIN_BACKEND) == 0) {
 		if (instance->config.virtual_processing) {
-			return process_set_generic_bool(client, ctx,
-							&client->backend_pin);
+			return process_set_generic_bool(
+				client, ctx, &client->backend_pin,
+				&client->backend_pin_listen);
 		}
 	}
 
 	if (strcmp(ctx->s1, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_set_generic_bool(
-				client, ctx, &client->opportunistic_acquire);
+				client, ctx, &client->opportunistic_acquire,
+				NULL);
 		}
 	}
 
@@ -887,11 +886,13 @@ static inline void process_unlisten(od_client_t *client, od_server_t *server)
 	}
 
 	if (od_query_ctx_has(&client->query_ctx,
-			     OD_QUERY_CTX_IS_UNLISTEN_ALL)) {
+			     OD_QUERY_CTX_IS_UNLISTEN_ALL) &&
+	    client->backend_pin_listen) {
 		od_debug(&instance->logger, "main", client, server,
 			 "UNLISTEN ALL detected, unpin client");
 
 		client->backend_pin = 0;
+		client->backend_pin_listen = 0;
 	}
 }
 
@@ -1039,6 +1040,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		client->pending_begin = 0;
 	}
 
+	uint64_t errors_before = server->error_responses;
+
 	status = od_stream_server_until_rfq("main", server, timeout_ms);
 
 	if (status == OD_COPY_IN_RECEIVED) {
@@ -1051,8 +1054,11 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 						  timeout_ms);
 	}
 
-	if (status == OD_OK) {
-		/* process only after success query completion */
+	if (status == OD_OK && server->error_responses == errors_before) {
+		/*
+		 * process only after successful query completion: a failed
+		 * DISCARD ALL or UNLISTEN * still ends with ReadyForQuery
+		 */
 		process_discard(client, server);
 		process_unlisten(client, server);
 	}

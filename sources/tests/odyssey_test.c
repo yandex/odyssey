@@ -81,6 +81,7 @@ extern void machinarium_test_read_10mb2(void);
 extern void machinarium_test_read_timeout(void);
 extern void machinarium_test_read_cancel(void);
 extern void machinarium_test_read_var(void);
+extern void machinarium_test_read_close(void);
 extern void machinarium_test_hm_hash(void);
 extern void machinarium_test_tls0(void);
 extern void machinarium_test_tls_verify_error(void);
@@ -127,14 +128,19 @@ extern void odyssey_test_hba(void);
 extern void odyssey_test_address_parse(void);
 extern void odyssey_test_address_cmp(void);
 extern void odyssey_test_pstmt(void);
+extern void odyssey_test_clients_map(void);
+extern void odyssey_test_router_free_before_startup(void);
 extern void odyssey_test_affinity(void);
 extern void odyssey_test_duration_parse(void);
+extern void odyssey_test_misc(void);
 extern void odyssey_test_thread_pool(void);
 extern void odyssey_test_linear_alloc(void);
 extern void odyssey_test_scram(void);
 extern void odyssey_test_sql_minimal_parser(void);
 extern void odyssey_test_sql_full_parser(void);
 extern void odyssey_test_console_parser(void);
+extern void odyssey_test_config_field(void);
+extern void odyssey_test_autoconf(void);
 
 extern void machinarium_test_tsan_simple_race_example(void);
 
@@ -215,6 +221,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_read_timeout);
 	odyssey_test(machinarium_test_read_cancel);
 	odyssey_test(machinarium_test_read_var);
+	odyssey_test(machinarium_test_read_close);
 	odyssey_test(machinarium_test_hm_hash);
 	odyssey_test(machinarium_test_tls0);
 	odyssey_test(machinarium_test_tls_verify_error);
@@ -260,14 +267,19 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_address_parse);
 	odyssey_test(odyssey_test_address_cmp);
 	odyssey_test(odyssey_test_pstmt);
+	odyssey_test(odyssey_test_clients_map);
+	odyssey_test(odyssey_test_router_free_before_startup);
 	odyssey_test(odyssey_test_affinity);
 	odyssey_test(odyssey_test_duration_parse);
+	odyssey_test(odyssey_test_misc);
 	odyssey_test(odyssey_test_thread_pool);
 	odyssey_test(odyssey_test_linear_alloc);
 	odyssey_test(odyssey_test_scram);
 	odyssey_test(odyssey_test_sql_minimal_parser);
 	odyssey_test(odyssey_test_sql_full_parser);
 	odyssey_test(odyssey_test_console_parser);
+	odyssey_test(odyssey_test_config_field);
+	odyssey_test(odyssey_test_autoconf);
 
 	odyssey_playground_test(machinarium_test_tsan_simple_race_example);
 

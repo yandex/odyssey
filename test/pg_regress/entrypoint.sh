@@ -31,7 +31,7 @@ do_test() {
     done
     (( it < 50 ))
 
-    PGTEST_PORT="${port}" PGTEST_DIR="${REGRESS_DIR}/tests/${name}" PGTEST_USER="${user}" PGTEST_DB=postgres ${PG_REGRESS} \
+    PGTEST_PORT="${port}" PGTEST_DIR="${REGRESS_DIR}/tests/${name}" PGTEST_USER="${user}" PGTEST_DB=postgres PGTEST_CONF="${REGRESS_DIR}/conf/${name}" ${PG_REGRESS} \
         --debug \
         --host=localhost \
         --port=${port} \
@@ -92,10 +92,18 @@ pg_ctl start -D ${PGDIRREPL4} -l ${PGDIRREPL4}/log.txt
 
 do_test pin_on_listen 6432 postgres
 
+do_test default_pool 6432 postgres
+
+do_test default_pool_session 6432 postgres
+
+do_test reload_default_pool 6432 postgres
+
 do_test simple 6432 suser
 do_test simple 6432 tuser
 
 do_test broken_conn 6432 tuser
+
+do_test pstmt 6432 tuser
 
 do_test stack_guard 6432 suser
 

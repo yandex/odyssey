@@ -74,7 +74,7 @@ int od_address_range_read_prefix(od_address_range_t *address_range,
 		} else {
 			mask = 0;
 		}
-		addr->sin_addr.s_addr = od_bswap32(mask);
+		addr->sin_addr.s_addr = htonl(mask);
 		return 0;
 	} else if (address_range->addr.ss_family == AF_INET6) {
 		if (len > 128) {

@@ -5,6 +5,42 @@ for all Odyssey rules.
 
 ---
 
+## Duration values
+
+Options that accept a time interval (parameters of type *duration*,
+e.g. `stats_interval`, `server_lifetime`, `pool_timeout`,
+`client_login_timeout`, ...) accept values in the PostgreSQL GUC
+syntax — the same format as `statement_timeout` in postgresql.conf:
+
+```plain
+client_login_timeout 15s
+server_lifetime 1h
+pool_timeout 500
+stats_interval 2min
+catchup_timeout 3s
+```
+
+Exactly one optional unit is allowed, and units are case-sensitive,
+like in PostgreSQL: `us`, `ms`, `s`, `min`, `h`, `d`.  Compound values
+(`1h30m`) are not supported.  Whitespace between the number and the
+unit is allowed (`30 min`), as are floating-point numbers (`1.5h`) and
+`0x`-hexadecimal integers (`0x10s`).
+
+The value is rounded half-to-even to whole milliseconds, exactly like
+PostgreSQL rounds a GUC value to its base unit (`1500us` is 2 ms,
+`500us` is 0 ms).  Some options have a one-second runtime granularity
+(TCP keepalive settings, statistics interval, catchup timeout): their
+values are rounded to whole seconds the same way.
+
+Bare numbers keep the historic unit of the option (for example
+`stats_interval 60` means 60 seconds, while `client_login_timeout
+15000` means 15000 milliseconds).  An explicit unit always overrides
+the unit: `catchup_timeout 3s` is 3 seconds.
+
+Note that a bare `m` suffix is not a time unit (minutes are written as
+`min`): a standalone value like `2m` is a size (`512m` means 512
+megabytes) and is rejected by time-valued options.
+
 ## Configuration Parameters Reference
 | Parameter                                  | Type             | Default     | Reload  | Notes                                                 |
 | ------------------------------------------ | ---------------- | ----------- | ------- | ----------------------------------------------------- |
@@ -30,7 +66,7 @@ for all Odyssey rules.
 | `promhttp_server_port`                     | int              | unset       | SIGHUP  | Enable Prometheus endpoint                            |
 | `log_general_stats_prom`                   | int (bool)       | `no`        | SIGHUP  | Prometheus general stats                              |
 | `log_route_stats_prom`                     | int (bool)       | `no`        | SIGHUP  | Prometheus per-route stats                            |
-| `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging                            |
+| `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging; duration suffixes (`60s`, `1m`) are supported |
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
 | `tls_workers`                              | int              | `0`         | restart | Threads for client TLS handshakes; 0 = in worker, "auto" = part of `workers` |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
@@ -38,16 +74,16 @@ for all Odyssey rules.
 | `cache_coroutine`                          | int              | `1024`      | restart | Coroutines cache size                                  |
 | `nodelay`                                  | int (bool)       | `yes`       | SIGHUP  | Enable TCP\_NODELAY                                   |
 | `disable_nolinger`                         | int (bool)       | `yes`       | SIGHUP  | Do no set tcp linger to 0 for client connections                  |
-| `keepalive`                                | int (sec)        | `15`        | SIGHUP  | TCP keepalive; 0 disables                             |
-| `keepalive_keep_interval`                  | int (sec)        | `5`         | SIGHUP  | Interval between probes                               |
+| `keepalive`                                | int (sec)        | `15`        | SIGHUP  | TCP keepalive; 0 disables; duration suffixes supported; one-second granularity |
+| `keepalive_keep_interval`                  | int (sec)        | `5`         | SIGHUP  | Interval between probes; duration suffixes supported |
 | `keepalive_probes`                         | int              | `3`         | SIGHUP  | Probes before killing conn                            |
-| `keepalive_usr_timeout`                    | int (ms)         | `0`         | SIGHUP  | 0 = use system default (`TCP_USER_TIMEOUT`)           |
+| `keepalive_usr_timeout`                    | int (ms)         | `0`         | SIGHUP  | 0 = use system default (`TCP_USER_TIMEOUT`); negative = pick automatically |
 | `backend_connect_timeout_ms`               | int (ms)         | `30000`     | SIGHUP  | Backend connection timeout                            |
 | `coroutine_stack_size`                     | int (pages)      | `16`        | restart | Coroutine stack size (client/worker coroutines); values below 16 are not recommended |
 | `system_coroutine_stack_size`              | int (pages)      | `32`        | restart | Coroutine stack size for internal system coroutines   |
 | `client_max`                               | int              | `0`         | SIGHUP  | Max client connections (0/unset = no global limit); per-listen reserve via `reserved_clients` |
 | `client_max_routing`                       | int              | `0`         | SIGHUP  | 0/unset → auto (typically `64 * workers`)             |
-| `server_login_retry`                       | int              | `1`         | SIGHUP  | Retry delay on "Too many clients"                     |
+| `server_login_retry`                       | int (ms)         | `1`         | SIGHUP  | Retry delay on "Too many clients"; duration suffixes supported |
 | `hba_file`                                 | string           | unset       | SIGHUP  | Path to pg\_hba-like rules                            |
 | `graceful_die_on_errors`                   | int (bool)       | `no`        | runtime | Shutdown on SIGUSR2 (stop accepting new, keep old)    |
 | `graceful_shutdown_timeout_ms`             | int (ms)         | `30000`     | runtime | Graceful shutdown timeout                             |
@@ -69,6 +105,9 @@ for all Odyssey rules.
 | `cancel_max_inflight`                      | int              | `-1` (2 × workers) | SIGHUP  | Max concurrent in-flight cancel requests; -1 = 2 × workers       |
 | `cancel_rate_limit`                        | int              | `0` (none)  | restart | Max cancels per second; 0 = unlimited                              |
 | `virtual_transaction`                           | int (bool)       | `yes`       | restart  | Enable virtual transaction features    |
+| `replication_proxy_phys`                   | int (bool)       | `no`        | SIGHUP  | Forward physical replication connections as is to the first endpoint of the first remote storage, bypassing all Odyssey logic |
+| `replication_proxy_logic`                  | int (bool)       | `no`        | SIGHUP  | Forward logical replication connections as is to the first endpoint of the first remote storage, bypassing all Odyssey logic |
+| `maintain_params`                          | int (bool)       | `yes`       | restart | Global default of route-level `maintain_params`; routes that set it explicitly override this |
 | `dns_cache_ttl`                            | int (ms)         | `30000`     | SIGHUP  | TTL for DNS cache entries                                         |
 | `cache_msg_gc_size`                        | int (bytes)      | `0`         | SIGHUP  | Max single message buffer size for caching; 0 = caching disabled   |
 | `cache_msg_gc_count`                      | int              | `0`         | SIGHUP  | Message GC cache max count; 0 = unlimited                         |
@@ -136,6 +175,20 @@ communications. Specified directory path will be used for
 searching socket files.
 
 `unix_socket_dir "/tmp"`
+
+Each Unix listener holds a lock on `.s.PGSQL.<port>.odyssey.lock` in this
+directory while it owns the socket. The lock file remains after shutdown;
+its presence does not indicate that Odyssey is running. Do not remove it
+while a listener is running, since another process could acquire a lock
+on a newly created file at the same path.
+
+On Linux, Odyssey removes an existing socket on startup only if a
+connection attempt returns `ECONNREFUSED`. Active sockets, symbolic links,
+and other files are left in place. On other platforms, existing sockets
+are preserved because a live listener can also return `ECONNREFUSED`;
+leftover sockets must be removed after confirming that their process has
+stopped. On shutdown, Odyssey removes the socket only if its device and
+inode still match those recorded after binding.
 
 ## **unix\_socket\_mode**
 *string*
@@ -320,7 +373,7 @@ Write information about active routes in Prometheus format in addition to ordina
 
 Set interval in seconds for internal statistics update and log report.
 
-`stats_interval 3`
+`stats_interval 60`
 
 ## **workers**
 *integer*
@@ -407,14 +460,15 @@ Disable setting tcp linger to 0 for new client connections.
 `disable_nolinger yes`
 
 ## **keepalive**
-*integer*
+*duration*
 
-TCP keepalive time. Set to zero, to disable keepalive.
+TCP keepalive time, in seconds. Set to zero, to disable keepalive.
+TCP socket options have a one second granularity, so sub-second durations are rounded up.
 
 `keepalive 15`
 
 ## **keepalive_keep_interval**
-*integer*
+*duration*
 
 The number of seconds between TCP keep-alive probes.
 5 by default.
@@ -430,14 +484,15 @@ TCP keep-alive probes to send before  giving  up  and  killing  the connection i
 `keepalive_probes 5`
 
 ## **keepalive_usr_timeout**
-*integer*
+*duration*
 
 When the value is greater than 0, it specifies the maximum amount of time in milliseconds that transmitted data may remain unacknowledged before TCP will forcibly close the
 corresponding connection.
 
-When the value is negative, the default system user timeout will be used.
+When no value or 0 is provided, the default system user timeout is used.
 
-When no value or 0 is provided `1000 * (keepalive + keepalive_keep_interval * keepalive_probes) - 500` is used.
+When the value is negative, Odyssey picks an appropriate timeout as
+`1000 * (keepalive + keepalive_keep_interval * keepalive_probes) - 500` milliseconds.
 
 `keepalive_usr_timeout 7`
 
@@ -770,6 +825,52 @@ garbage-collection cache. When the cache exceeds this limit, the oldest
 cached messages are freed. Default: 1024.
 
 `cache_msg_gc_count 1000`
+
+## **replication\_proxy\_phys**, **replication\_proxy\_logic**
+*yes|no*
+
+When enabled, all replication connections of the corresponding type
+(startup packets with `replication=true` for
+`replication_proxy_phys`, `replication=database` for
+`replication_proxy_logic`, i.e. physical or logical walsender
+connections) are treated as a full proxy: Odyssey reads the
+startup packet, takes the **first `remote` storage** of the
+configuration, opens a dedicated connection to its **first endpoint**,
+forwards the original startup packet as is and pipes all further bytes
+in both directions — bypassing all of the Odyssey logic.
+
+This means for replication connections Odyssey does **not** perform:
+
+* rule matching (no `database`/`user` rules are involved at all);
+* client authentication (the client is authenticated by the server
+  directly through the proxy, so credentials must be valid on the
+  server side);
+* HBA checks;
+* connection pooling (each replication client gets its own dedicated
+  server connection which is closed when the client disconnects);
+* parameter deploy / maintain, `auth_query`, `catchup_timeout`,
+  `client_max` and other rule-level features;
+* target session attrs, balancing and storage endpoint fallbacks —
+  always the first endpoint of the first remote storage.
+
+Client-server protocol negotiation, TLS to the backend (as configured
+in the storage `tls` options) and compression happen end-to-end between
+the client and the server.
+
+Known limitations:
+
+* `CancelRequest` cannot cancel such a connection: the backend key data
+  returned by the server is not known to Odyssey, so the cancel request
+  will not find the target connection.
+
+Default is `no`.
+
+`replication_proxy_phys yes`
+
+When `replication_proxy_logic` is enabled instead, logical replication
+(`replication=database`) connections are proxied the same way.
+
+`replication_proxy_logic yes`
 
 ## **virtual\_transaction**
 *yes|no*

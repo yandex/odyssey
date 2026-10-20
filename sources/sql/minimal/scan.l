@@ -28,6 +28,15 @@
  * call exit(1) — instead longjmp back to od_sql_minimal_parse(), which
  * returns NULL as a normal parse error.
  */
+/*
+ * scanner memory comes from the arena, which is wiped between parses by
+ * od_linear_alloc_reset, so yyalloc does not zero:
+ *  - yyguts_t and the buffer stack are explicitly memset() by flex itself
+ *  - the yy_scan_bytes copy buffer is fully overwritten with the input
+ *  - yy_scan_buffer assigns every yy_buffer_state field the scanner reads
+ *    (yy_bs_lineno/yy_bs_column are only used by yylineno/yycolumn, which
+ *    this scanner does not use)
+ */
 #define YY_FATAL_ERROR(msg) do { \
 	od_sql_minimal_parse_ctx_t *_ctx = od_sql_minimal_yyget_extra(yyscanner); \
 	if (_ctx && _ctx->fatal_set) { \
@@ -169,7 +178,7 @@ void *
 od_sql_minimal_yyalloc(yy_size_t bytes, yyscan_t yyscanner)
 {
 	od_sql_minimal_parse_ctx_t *ctx = od_sql_minimal_yyget_extra(yyscanner);
-	return od_linear_alloc_alloc(ctx->arena, (size_t)bytes, OD_LINEAR_ALLOC_ZERO);
+	return od_linear_alloc_alloc(ctx->arena, (size_t)bytes, 0);
 }
 
 void *

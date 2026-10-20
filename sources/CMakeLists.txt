@@ -83,6 +83,7 @@ set(od_src
     pool.c
     rules.c
     config.c
+    autoconf.c
     dns.c
     route.c
     router.c
@@ -100,9 +101,11 @@ set(od_src
     cancel.c
     client.c
     console.c
+    injection.c
     deploy.c
     reset.c
     pstmt.c
+    clients_map.c
     frontend.c
     backend.c
     instance.c
@@ -448,6 +451,7 @@ set(od_test_src
     tests/machinarium/test_read_timeout.c
     tests/machinarium/test_read_cancel.c
     tests/machinarium/test_read_var.c
+    tests/machinarium/test_read_close.c
     tests/machinarium/test_ring_buffer.c
     tests/machinarium/test_tls0.c
     tests/machinarium/test_tls_verify_error.c
@@ -472,13 +476,18 @@ set(od_test_src
     tests/odyssey/test_address.c
     tests/odyssey/test_affinity.c
     tests/odyssey/test_pstmt.c
+    tests/odyssey/test_clients_map.c
+    tests/odyssey/test_router_free.c
     tests/odyssey/test_duration_parse.c
+    tests/odyssey/test_misc.c
     tests/odyssey/test_thread_pool.c
     tests/odyssey/test_linear_alloc.c
     tests/odyssey/test_scram.c
     tests/odyssey/test_sql_parser.c
     tests/odyssey/test_sql_full_parser.c
-    tests/odyssey/test_console_parser.c)
+    tests/odyssey/test_console_parser.c
+    tests/odyssey/test_config_field.c
+    tests/odyssey/test_autoconf.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")

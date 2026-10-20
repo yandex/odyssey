@@ -90,7 +90,6 @@ static int read_file(const char *path, char **out, size_t *out_size,
 }
 
 #define OD_CFG_MAX_INCLUDE_DEPTH 16
-#define OD_CFG_AUTOCONF_SUFFIX ".autoconf"
 
 #define MERGE_PLAIN_FLD(d, s, f)                              \
 	do {                                                  \
@@ -106,6 +105,7 @@ static int read_file(const char *path, char **out, size_t *out_size,
 #define MERGE_BOOL(d, s, f) MERGE_PLAIN_FLD(d, s, f)
 #define MERGE_INT(d, s, f) MERGE_PLAIN_FLD(d, s, f)
 #define MERGE_U64(d, s, f) MERGE_PLAIN_FLD(d, s, f)
+#define MERGE_I64(d, s, f) MERGE_PLAIN_FLD(d, s, f)
 
 #define MERGE_STR(d, s, f)                                    \
 	do {                                                  \
@@ -131,6 +131,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_BOOL(dst, src, enable_host_watcher);
 	MERGE_BOOL(dst, src, log_debug);
 	MERGE_INT(dst, src, log_debug_sampling);
+	MERGE_BOOL(dst, src, maintain_params);
 	MERGE_BOOL(dst, src, log_to_stdout);
 	MERGE_BOOL(dst, src, log_config);
 	MERGE_BOOL(dst, src, log_session);
@@ -144,6 +145,8 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_BOOL(dst, src, disable_nolinger);
 	MERGE_BOOL(dst, src, log_general_stats_prom);
 	MERGE_BOOL(dst, src, log_route_stats_prom);
+	MERGE_BOOL(dst, src, replication_proxy_phys);
+	MERGE_BOOL(dst, src, replication_proxy_logic);
 
 	MERGE_STR(dst, src, pid_file);
 	MERGE_STR(dst, src, unix_socket_dir);
@@ -157,34 +160,35 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_STR(dst, src, log_syslog_facility);
 	MERGE_STR(dst, src, cpu_affinity);
 	MERGE_STR(dst, src, hba_file);
+	MERGE_STR(dst, src, default_pool);
 
 	MERGE_INT(dst, src, priority);
-	MERGE_INT(dst, src, graceful_shutdown_timeout_ms);
+	MERGE_U64(dst, src, graceful_shutdown_timeout_ms);
 	MERGE_INT(dst, src, log_queue_depth);
-	MERGE_INT(dst, src, stats_interval);
+	MERGE_U64(dst, src, stats_interval_ms);
 	MERGE_INT(dst, src, client_max);
 	MERGE_INT(dst, src, client_max_routing);
 	MERGE_INT(dst, src, accept_rate_limit);
-	MERGE_INT(dst, src, server_login_retry);
+	MERGE_U64(dst, src, server_login_retry_ms);
 	MERGE_INT(dst, src, readahead);
-	MERGE_INT(dst, src, keepalive);
-	MERGE_INT(dst, src, keepalive_keep_interval);
+	MERGE_U64(dst, src, keepalive_ms);
+	MERGE_U64(dst, src, keepalive_keep_interval_ms);
 	MERGE_INT(dst, src, keepalive_probes);
-	MERGE_INT(dst, src, keepalive_usr_timeout);
+	MERGE_I64(dst, src, keepalive_usr_timeout_ms);
 	MERGE_INT(dst, src, max_sigterms_to_die);
-	MERGE_INT(dst, src, backend_connect_timeout_ms);
-	MERGE_INT(dst, src, cancel_timeout_ms);
-	MERGE_INT(dst, src, cancel_queue_timeout_ms);
+	MERGE_U64(dst, src, backend_connect_timeout_ms);
+	MERGE_U64(dst, src, cancel_timeout_ms);
+	MERGE_I64(dst, src, cancel_queue_timeout_ms);
 	MERGE_INT(dst, src, cancel_max_inflight);
 	MERGE_INT(dst, src, resolvers);
-	MERGE_INT(dst, src, dns_cache_ttl);
+	MERGE_U64(dst, src, dns_cache_ttl_ms);
 	MERGE_INT(dst, src, cache_msg_gc_size);
 	MERGE_INT(dst, src, cache_msg_gc_count);
 	MERGE_INT(dst, src, cache_coroutine);
 	MERGE_INT(dst, src, coroutine_stack_size);
 	MERGE_INT(dst, src, system_coroutine_stack_size);
 	MERGE_INT(dst, src, promhttp_server_port);
-	MERGE_INT(dst, src, group_checker_interval);
+	MERGE_U64(dst, src, group_checker_interval_ms);
 	MERGE_INT(dst, src, workers);
 	MERGE_INT(dst, src, tls_workers);
 
@@ -192,27 +196,14 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 #undef MERGE_BOOL
 #undef MERGE_INT
 #undef MERGE_U64
+#undef MERGE_I64
 #undef MERGE_STR
 }
 
-static int od_cfg_try_autoconf(const char *config_path, od_cfg_model_t *model,
+static int od_cfg_try_autoconf(const char *autoconf_path, od_cfg_model_t *model,
 			       od_cfg_diag_list_t *diags)
 {
-	size_t path_len = strlen(config_path);
-	size_t autoconf_path_len =
-		path_len + strlen(OD_CFG_AUTOCONF_SUFFIX) + 1;
-	char *autoconf_path = od_malloc(autoconf_path_len);
-	if (autoconf_path == NULL) {
-		od_cfg_diag_error(diags, od_cfg_location_empty(config_path),
-				  "out of memory while building autoconf path");
-		return -1;
-	}
-
-	od_snprintf(autoconf_path, autoconf_path_len, "%s%s", config_path,
-		    OD_CFG_AUTOCONF_SUFFIX);
-
 	if (access(autoconf_path, F_OK) != 0) {
-		od_free(autoconf_path);
 		return 0;
 	}
 
@@ -220,8 +211,7 @@ static int od_cfg_try_autoconf(const char *config_path, od_cfg_model_t *model,
 	od_cfg_global_t saved_global = model->global;
 	memset(&model->global, 0, sizeof(model->global));
 
-	int rc = od_cfg_parse_file_depth(autoconf_path, model, diags, 1, 0);
-	od_free(autoconf_path);
+	int rc = od_cfg_parse_autoconf(autoconf_path, model, diags);
 
 	if (rc != 0) {
 		/* autoconf failed */
@@ -296,21 +286,49 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 		return -1;
 	}
 
-	/* validate only at top level, not for each included file */
-	if (depth == 0) {
-		/* include autoconf, override all previous options */
-		rc = od_cfg_try_autoconf(path, model, diags);
-		if (rc != 0) {
-			return -1;
-		}
-		return od_cfg_validate_model(model, diags);
+	return 0;
+}
+
+int od_cfg_parse_file_with_autoconf(const char *path, const char *autoconf_path,
+				    od_cfg_model_t *model,
+				    od_cfg_diag_list_t *diags)
+{
+	if (od_cfg_parse_file_depth(path, model, diags, 0, 1) != 0) {
+		return -1;
 	}
 
-	return 0;
+	char *default_path = NULL;
+	if (autoconf_path == NULL) {
+		if (od_asprintf(&default_path, "%s%s", path,
+				OD_CFG_AUTOCONF_SUFFIX) != OK_RESPONSE) {
+			od_cfg_diag_error(
+				diags, od_cfg_location_empty(path),
+				"out of memory while building autoconf path");
+			return -1;
+		}
+		autoconf_path = default_path;
+	}
+
+	/* include autoconf, override all previous options */
+	int rc = od_cfg_try_autoconf(autoconf_path, model, diags);
+	od_free(default_path);
+	if (rc != 0) {
+		return -1;
+	}
+
+	/* validate only at top level, not for each included file */
+	return od_cfg_validate_model(model, diags);
 }
 
 int od_cfg_parse_file(const char *path, od_cfg_model_t *model,
 		      od_cfg_diag_list_t *diags)
 {
-	return od_cfg_parse_file_depth(path, model, diags, 0, 1);
+	return od_cfg_parse_file_with_autoconf(path, NULL, model, diags);
+}
+
+int od_cfg_parse_autoconf(const char *path, od_cfg_model_t *model,
+			  od_cfg_diag_list_t *diags)
+{
+	/* nested level, includes are forbidden */
+	return od_cfg_parse_file_depth(path, model, diags, 1, 0);
 }

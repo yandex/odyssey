@@ -1,22 +1,20 @@
-# Query parsing section
+# Query parsing options
 
 Query parsing is used to classify incoming queries, for example by
 [auto_route_ro_on_standby](rules.md#auto_route_ro_on_standby) to decide
 whether a query can be safely sent to a standby replica.
 
 ```yml
-query_parsing {
-    mode full
-    max_query_len 10000
-    mem_limit 5MB
-    standby_function_list {
-        "get_user_settings"
-        "get_user_profile"
-    }
+query_parsing_mode full
+query_parsing_max_query_len 10000
+query_parsing_mem_limit 5MB
+query_parsing_standby_function_list {
+    "get_user_settings"
+    "get_user_profile"
 }
 ```
 
-## **mode**
+## **query_parsing_mode**
 
 *disabled|minimal|full*
 
@@ -42,9 +40,9 @@ When `full` is set globally, clients without `auto_route_ro_on_standby`
 `minimal` parser, so the full parser only runs where it is actually
 needed.
 
-`mode full`
+`query_parsing_mode full`
 
-## **max_query_len**
+## **query_parsing_max_query_len**
 
 *integer*
 
@@ -52,9 +50,9 @@ Queries longer than this number of bytes are not parsed.
 
 Default: `10000`
 
-`max_query_len 10000`
+`query_parsing_max_query_len 10000`
 
-## **mem_limit**
+## **query_parsing_mem_limit**
 
 *size*
 
@@ -63,9 +61,9 @@ prefixes.
 
 Default: `5MB`
 
-`mem_limit 5MB`
+`query_parsing_mem_limit 5MB`
 
-## **standby_function_list**
+## **query_parsing_standby_function_list**
 
 *list of strings*
 
@@ -73,7 +71,7 @@ User-defined function names which do not modify the database and
 therefore can be safely executed on a standby replica.
 
 ```yml
-standby_function_list {
+query_parsing_standby_function_list {
     "get_user_settings"
     "get_user_profile"
 }

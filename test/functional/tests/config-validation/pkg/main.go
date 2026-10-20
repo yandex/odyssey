@@ -73,6 +73,7 @@ func runTests() {
 		"rules_empty",
 		"group_rules",
 		"watchdog",
+		"duration",
 	}
 
 	for _, test := range tests {

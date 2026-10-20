@@ -54,19 +54,18 @@ static inline int od_backend_terminate(od_server_t *server)
 	return od_write(&server->io, msg);
 }
 
-void od_backend_close_connection(od_server_t *server)
+static void od_backend_disconnect(od_server_t *server, int graceful)
 {
 	od_assert(server != NULL);
-	/* failed to connect to endpoint, so notring to do */
-	if (od_backend_not_connected(server)) {
-		return;
-	}
-	if (mm_io_connected(server->io.io)) {
-		od_backend_terminate(server);
+	if (!od_backend_not_connected(server)) {
+		if (graceful && mm_io_connected(server->io.io)) {
+			od_backend_terminate(server);
+		}
+
+		od_io_close(&server->io);
 	}
 
-	od_io_close(&server->io);
-
+	/* TLS may already exist even if connect failed before io publication. */
 	if (server->error_connect) {
 		machine_msg_free(server->error_connect);
 		server->error_connect = NULL;
@@ -78,6 +77,17 @@ void od_backend_close_connection(od_server_t *server)
 	}
 }
 
+void od_backend_close_connection(od_server_t *server)
+{
+	od_backend_disconnect(server, 1);
+}
+
+void od_backend_abort_connection(od_server_t *server)
+{
+	/* Close without sending Terminate or waiting on io. */
+	od_backend_disconnect(server, 0);
+}
+
 void od_backend_error(od_server_t *server, char *context, char *data,
 		      uint32_t size)
 {
@@ -85,6 +95,8 @@ void od_backend_error(od_server_t *server, char *context, char *data,
 	od_rule_t *rule = route->rule;
 	od_instance_t *instance = server->global->instance;
 	kiwi_fe_error_t error;
+
+	server->error_responses++;
 
 	int rc;
 	rc = kiwi_fe_read_error(data, size, &error);
@@ -167,15 +179,24 @@ int od_backend_ready(od_server_t *server, char *data, uint32_t size)
 
 static inline void od_backend_reset_for_retry(od_server_t *server)
 {
-	od_backend_close_connection(server);
+	od_route_t *route = server->route;
+	if (route != NULL) {
+		od_route_lock(route);
+	}
+	/* A failed startup needs no Terminate; do not wait on io under the lock. */
+	od_backend_abort_connection(server);
 
 	od_io_free(&server->io);
 	od_io_init(&server->io);
+	if (route != NULL) {
+		od_route_unlock(route);
+	}
 
 	od_scram_state_free(&server->scram_state);
 	od_scram_state_init(&server->scram_state);
 
 	kiwi_key_init(&server->key);
+	kiwi_vars_free(&server->vars);
 	kiwi_vars_init(&server->vars);
 
 	/*
@@ -493,7 +514,13 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			break;
 		}
 		case KIWI_BE_NOTICE_RESPONSE:
-			if (client != NULL) {
+			/*
+			 * internal clients (watchdog, auth_query, group checker)
+			 * have no attached io: there is nobody to forward the
+			 * notice to, and a failed write would break the startup
+			 */
+			if (client != NULL &&
+			    client->type != OD_POOL_CLIENT_INTERNAL) {
 				int rc = od_write(&client->io, msg);
 				if (rc != 0) {
 					od_error(
@@ -559,28 +586,22 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	/* set network options */
 	mm_io_set_nodelay(io, instance->config.nodelay);
 	if (instance->config.keepalive > 0) {
-		mm_io_set_keepalive(io, 1, instance->config.keepalive,
-				    instance->config.keepalive_keep_interval,
-				    instance->config.keepalive_probes,
-				    instance->config.keepalive_usr_timeout);
+		mm_io_set_keepalive(
+			io, 1, instance->config.keepalive,
+			instance->config.keepalive_keep_interval,
+			instance->config.keepalive_probes,
+			(int)instance->config.keepalive_usr_timeout_ms);
 	}
 
 	int rc;
-	rc = od_io_prepare(&server->io, io);
-	if (rc == -1) {
-		od_error(&instance->logger, context, NULL, server,
-			 "failed to set server io, errno = %d (%s)",
-			 machine_errno(), strerror(machine_errno()));
-		mm_io_close(io);
-		mm_io_free(io);
-		return -1;
-	}
 
 	/* set tls options */
 	int negotiate_tls = od_backend_tls_negotiate(tlsopts, tls_attempt);
 	if (negotiate_tls) {
 		server->tls = od_tls_backend(tlsopts);
 		if (server->tls == NULL) {
+			mm_io_close(io);
+			mm_io_free(io);
 			return -1;
 		}
 	}
@@ -631,6 +652,8 @@ int od_backend_connect_to(od_server_t *server, char *context,
 				od_error(&instance->logger, context, NULL,
 					 server, "failed to resolve %s:%d",
 					 address->host, address->port);
+				mm_io_close(io);
+				mm_io_free(io);
 				return NOT_OK_RESPONSE;
 			}
 			od_assert(ai != NULL);
@@ -643,8 +666,16 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		memset(&saddr_un, 0, sizeof(saddr_un));
 		saddr_un.sun_family = AF_UNIX;
 		saddr = (struct sockaddr *)&saddr_un;
-		od_snprintf(saddr_un.sun_path, sizeof(saddr_un.sun_path), "%s",
-			    address->host);
+		if (strlen(address->host) >= sizeof(saddr_un.sun_path)) {
+			od_error(&instance->logger, context, NULL, server,
+				 "unix socket path '%s' is too long",
+				 address->host);
+			mm_io_close(io);
+			mm_io_free(io);
+			return NOT_OK_RESPONSE;
+		}
+		memcpy(saddr_un.sun_path, address->host,
+		       strlen(address->host) + 1);
 	}
 
 	uint64_t time_resolve = 0;
@@ -656,7 +687,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	if (ai != NULL) {
 		for (mm_addrinfo_t *cur = ai; cur != NULL; cur = cur->ai_next) {
 			saddr = cur->ai_addr;
-			rc = mm_io_connect(server->io.io, saddr,
+			rc = mm_io_connect(io, saddr,
 					   (uint32_t)instance->config
 						   .backend_connect_timeout_ms);
 			if (rc == 0) {
@@ -686,7 +717,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		mm_freeaddrinfo(ai);
 	} else {
 		rc = mm_io_connect(
-			server->io.io, saddr,
+			io, saddr,
 			(uint32_t)instance->config.backend_connect_timeout_ms);
 	}
 
@@ -704,7 +735,27 @@ int od_backend_connect_to(od_server_t *server, char *context,
 				 saddr_un.sun_path, machine_errno(),
 				 strerror(machine_errno()));
 		}
+		mm_io_close(io);
+		mm_io_free(io);
 		return NOT_OK_RESPONSE;
+	}
+
+	/* publish server io after successful connect (stable fd), under
+	 * route lock: console readers traverse the pool under the same lock */
+	if (server->route != NULL) {
+		od_route_lock(server->route);
+	}
+	rc = od_io_prepare(&server->io, io);
+	if (server->route != NULL) {
+		od_route_unlock(server->route);
+	}
+	if (rc == -1) {
+		od_error(&instance->logger, context, NULL, server,
+			 "failed to set server io, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+		mm_io_close(io);
+		mm_io_free(io);
+		return -1;
 	}
 
 	/* do tls handshake */
@@ -1053,14 +1104,18 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	 * but there is no that powerful function in mm
 	 * so just do the things older pg did - it will work too
 	 * https://github.com/postgres/postgres/blob/REL_16_0/src/interfaces/libpq/fe-connect.c#L4946-L4960
+	 *
+	 * CancelRequest has no response packet: a clean EOF acknowledges delivery
+	 * A timeout/reset cannot prove PostgreSQL processed the packet
 	 */
-	machine_msg_t *unused =
-		od_read(&server->io, cancel_timeout, OD_READ_BE);
-	if (unused != NULL) {
-		machine_msg_free(unused);
+	machine_msg_t *response =
+		machine_read(server->io.io, 1, cancel_timeout);
+	if (response != NULL) {
+		machine_msg_free(response);
+		return NOT_OK_RESPONSE;
 	}
 
-	return 0;
+	return machine_errno() == 0 ? OK_RESPONSE : NOT_OK_RESPONSE;
 }
 
 int od_backend_update_parameter(od_server_t *server, char *context, char *data,

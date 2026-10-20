@@ -1,0 +1,28 @@
+daemonize no
+workers 1
+resolvers 1
+enable_online_restart no
+locks_dir "@LOCKS_DIR@"
+unix_socket_dir "@SOCKET_DIR@"
+unix_socket_mode "0700"
+log_to_stdout yes
+log_format "%l (%c) %m\n"
+log_session no
+log_stats no
+graceful_shutdown_timeout_ms 5000
+
+listen {
+    port 6432
+}
+
+storage "console" {
+    type "local"
+}
+
+database "console" {
+    user "console" {
+        authentication "none"
+        storage "console"
+        pool "session"
+    }
+}

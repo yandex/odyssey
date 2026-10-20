@@ -88,10 +88,39 @@ set(COMMON_CFLAGS "-pedantic -Wall -Wextra -Werror -Wstrict-aliasing -pthread -g
 
 # enable 128-bit CAS (cmpxchg16b) on x86-64 for lock-free 16-byte atomics.
 # On aarch64 it is available without any flag.
-# The lf-stack uses __sync builtins (not <stdatomic.h>) for 128-bit CAS,
-# which are always inlined by the compiler and never require libatomic.
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
     set(COMMON_CFLAGS "${COMMON_CFLAGS} -mcx16")
+endif()
+
+# The lf-stack uses __sync builtins for 128-bit CAS and must not depend on
+# libatomic. Some targets (e.g. s390x) define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
+# but still emit an unresolvable __sync_val_compare_and_swap_16 call, so check
+# that the builtin actually links. Otherwise lf-stack falls back to a spinlock.
+include(CheckCSourceCompiles)
+set(CMAKE_REQUIRED_FLAGS "${COMMON_CFLAGS}")
+check_c_source_compiles("
+static __int128_t v;
+int main(void)
+{
+	return (int)__sync_val_compare_and_swap(&v, (__int128_t)0, (__int128_t)1);
+}" MM_HAVE_SYNC_CAS_16)
+unset(CMAKE_REQUIRED_FLAGS)
+if(MM_HAVE_SYNC_CAS_16)
+    add_definitions(-DMM_HAVE_SYNC_CAS_16)
+endif()
+
+# WORDS_BIGENDIAN is expected by the code borrowed from postgres
+# (sources/common/md5.c, port/pg_bswap.h)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.20)
+    if(CMAKE_C_BYTE_ORDER STREQUAL "BIG_ENDIAN")
+        set(OD_BIG_ENDIAN TRUE)
+    endif()
+else()
+    include(TestBigEndian)
+    test_big_endian(OD_BIG_ENDIAN)
+endif()
+if(OD_BIG_ENDIAN)
+    add_definitions(-DWORDS_BIGENDIAN)
 endif()
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")

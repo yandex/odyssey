@@ -18,12 +18,18 @@ jobs:
   unit:
     name: unit
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # s390x is built and run under qemu emulation, which is much slower
+    timeout-minutes: ${{ matrix.target-arch == 'linux/s390x' && 90 || 20 }}
     strategy:
       matrix:
         build-type: ['build_release', 'build_dbg', 'build_asan']
         target-arch: ['linux/amd64']
         cc: ['gcc', 'clang']
+        include:
+          # big-endian target without inline 128-bit CAS
+          - build-type: 'build_release'
+            target-arch: 'linux/s390x'
+            cc: 'gcc'
     steps:
     - uses: actions/checkout@v7
       with:
@@ -34,3 +40,18 @@ jobs:
       uses: docker/setup-buildx-action@v4
     - name: Odyssey unit tests
       run: make ci-unittests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_TARGET_PLATFORM=${{ matrix.target-arch }} ODYSSEY_CC=${{ matrix.cc }}
+
+  unit-compression:
+    name: unit (compression)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        submodules: recursive
+    - name: qemu setup
+      uses: docker/setup-qemu-action@v4
+    - name: docker buildx
+      uses: docker/setup-buildx-action@v4
+    - name: Odyssey unit tests with BUILD_COMPRESSION=ON
+      run: make ci-unittests ODYSSEY_CMAKE_EXTRA="-DBUILD_COMPRESSION=ON"

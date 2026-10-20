@@ -16,11 +16,13 @@ typedef enum {
 	OD_CONSOLE_NODE_TYPE_SHOW_STMT,
 	OD_CONSOLE_NODE_TYPE_KILL_CLIENT_STMT,
 	OD_CONSOLE_NODE_TYPE_RELOAD_STMT,
+	OD_CONSOLE_NODE_TYPE_LOAD_STMT,
 	OD_CONSOLE_NODE_TYPE_PAUSE_STMT,
 	OD_CONSOLE_NODE_TYPE_RESUME_STMT,
 	OD_CONSOLE_NODE_TYPE_SET_STMT,
 	OD_CONSOLE_NODE_TYPE_DROP_STMT,
 	OD_CONSOLE_NODE_TYPE_GC_STMT,
+	OD_CONSOLE_NODE_TYPE_ALTER_SYSTEM_STMT,
 } od_console_node_tag_t;
 
 typedef struct od_console_node {
@@ -37,6 +39,11 @@ typedef struct {
 	od_console_node_tag_t type;
 	char *id;
 } od_console_kill_client_stmt_t;
+
+typedef struct {
+	od_console_node_tag_t type;
+	char *name;
+} od_console_load_stmt_t;
 
 typedef struct {
 	od_console_node_tag_t type;
@@ -69,6 +76,19 @@ typedef struct {
 typedef struct {
 	od_console_node_tag_t type;
 } od_console_gc_stmt_t;
+
+typedef enum {
+	OD_CONSOLE_ALTER_SYSTEM_SET = 0,
+	OD_CONSOLE_ALTER_SYSTEM_RESET,
+	OD_CONSOLE_ALTER_SYSTEM_RESET_ALL,
+} od_console_alter_system_action_t;
+
+typedef struct {
+	od_console_node_tag_t type;
+	od_console_alter_system_action_t action;
+	char *key;
+	char *value;
+} od_console_alter_system_stmt_t;
 
 od_console_node_t *od_console_node_alloc(od_linear_alloc_t *al,
 					 od_console_node_tag_t type,

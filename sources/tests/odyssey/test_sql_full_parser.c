@@ -264,6 +264,38 @@ static void expect_string_const(Node *node, const char *sval)
 	test(strcmp(c->val.sval.sval, sval) == 0);
 }
 
+/*
+ * parses with the arena filled with junk, so results that rely on bytes
+ * the parser did not write are detected
+ */
+static Node *parse_first_target_dirty(const char *input)
+{
+	memset(s_arena_buf, 'x', sizeof(s_arena_buf));
+	List *tree = parse_ok(input);
+	RawStmt *rs = linitial(tree);
+	test(IsA(rs->stmt, SelectStmt));
+	SelectStmt *s = (SelectStmt *)rs->stmt;
+	return ((ResTarget *)linitial(s->targetList))->val;
+}
+
+static void test_unicode_escapes(void)
+{
+	expect_column_ref(parse_first_target_dirty("SELECT U&\"a\\0062c\""),
+			  "abc");
+	expect_column_ref(
+		parse_first_target_dirty("SELECT U&\"a!0062c\" UESCAPE '!'"),
+		"abc");
+	expect_column_ref(parse_first_target_dirty("SELECT U&\"a\\+000062c\""),
+			  "abc");
+	expect_string_const(parse_first_target_dirty("SELECT U&'a\\0062c'"),
+			    "abc");
+	expect_string_const(parse_first_target_dirty("SELECT E'a\\u0062c'"),
+			    "abc");
+	/* multibyte result */
+	expect_string_const(parse_first_target_dirty("SELECT E'\\u00e9'"),
+			    "\xc3\xa9");
+}
+
 static void expect_simple_a_expr(Node *node, const char *op)
 {
 	test(node != NULL);
@@ -758,6 +790,7 @@ void odyssey_test_sql_full_parser(void)
 	test_select_comments();
 	test_select_string_escape();
 	test_select_dollar_quote();
+	test_unicode_escapes();
 	test_select_typecast();
 	test_parse_error();
 

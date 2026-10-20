@@ -1,0 +1,20 @@
+-- a DISCARD ALL rejected by the server must not drop
+-- the statements odyssey tracks for the client
+select 42 as v \parse failed_discard_pstmt
+begin;
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+discard all;
+ERROR:  DISCARD ALL cannot run inside a transaction block
+rollback;
+\bind_named failed_discard_pstmt
+\g
+ v  
+----
+ 42
+(1 row)
+
