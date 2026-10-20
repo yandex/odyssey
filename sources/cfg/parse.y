@@ -350,14 +350,13 @@
 %token INCLUDE "include"
 %token AZ_AWARE "az_aware"
 %token VIRTUAL_TRANSACTION "virtual_transaction"
-%token QUERY_PARSING "query_parsing"
-%token STANDBY_FUNCTION_LIST "standby_function_list"
-%token MODE "mode"
+%token QUERY_PARSING_MODE "query_parsing_mode"
+%token QUERY_PARSING_MEM_LIMIT "query_parsing_mem_limit"
+%token QUERY_PARSING_MAX_QUERY_LEN "query_parsing_max_query_len"
+%token QUERY_PARSING_STANDBY_FUNCTION_LIST "query_parsing_standby_function_list"
 %token DISABLED "disabled"
 %token MINIMAL "minimal"
 %token FULL "full"
-%token MEM_LIMIT "mem_limit"
-%token MAX_QUERY_LEN "max_query_len"
 %token RESERVED_CLIENTS "reserved_clients"
 
 %type <boolean> bool_value
@@ -1019,7 +1018,64 @@ top_item:
 	| shared_pool_section
 	| conn_drop_options_section
 	| soft_oom_section
-	| query_parsing_section
+	| QUERY_PARSING_MODE DISABLED
+		{
+			od_cfg_set_query_parsing_mode(ctx->diags,
+										  &ctx->model->query_parsing.mode,
+										  OD_CFG_QUERY_PARSING_MODE_DISABLED,
+										  @1,
+										  "query_parsing_mode");
+		}
+	| QUERY_PARSING_MODE MINIMAL
+		{
+			od_cfg_set_query_parsing_mode(ctx->diags,
+										  &ctx->model->query_parsing.mode,
+										  OD_CFG_QUERY_PARSING_MODE_MINIMAL,
+										  @1,
+										  "query_parsing_mode");
+		}
+	| QUERY_PARSING_MODE FULL
+		{
+			od_cfg_set_query_parsing_mode(ctx->diags,
+										  &ctx->model->query_parsing.mode,
+										  OD_CFG_QUERY_PARSING_MODE_FULL,
+										  @1,
+										  "query_parsing_mode");
+		}
+	| QUERY_PARSING_MEM_LIMIT size_value
+		{
+			if ($2 < 0) {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "query_parsing_mem_limit must be non-negative");
+			} else {
+				od_cfg_set_u64(ctx->diags,
+						   &ctx->model->query_parsing.mem_limit,
+						   $2,
+						   @1,
+						   "query_parsing_mem_limit");
+			}
+		}
+	| QUERY_PARSING_MAX_QUERY_LEN int_value
+		{
+			if ($2 < 0) {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "query_parsing_max_query_len must be non-negative");
+			} else {
+				od_cfg_set_u64(ctx->diags,
+						   &ctx->model->query_parsing.max_query_len,
+						   $2,
+						   @1,
+						   "query_parsing_max_query_len");
+			}
+		}
+	| QUERY_PARSING_STANDBY_FUNCTION_LIST
+		{
+			od_cfg_string_list_begin(ctx->diags,
+						  &ctx->model->query_parsing.standby_function_list,
+						  @1,
+						  "query_parsing_standby_function_list");
+		}
+	  '{' standby_function_list_items '}'
 	| INCLUDE STRING
 		{
 			if (!ctx->allow_include) {
@@ -2604,99 +2660,13 @@ conn_drop_options_section:
 		}
 	;
 
-query_parsing_section:
-	QUERY_PARSING
-		{
-			od_cfg_query_parsing_t *opts = &ctx->model->query_parsing;
-
-			if (opts->seen.is_set) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "query_parsing is redefined");
-				YYERROR;
-			}
-
-			od_cfg_seen_set(&opts->seen, @1);
-
-			ctx->current_query_parsing = opts;
-		}
-		'{' query_parsing_items '}'
-		{
-			ctx->current_query_parsing = NULL;
-		}
-
-query_parsing_items:
-	 %empty
-	| query_parsing_items query_parsing_item
-	;
-
-query_parsing_item:
-	  MODE DISABLED
-		{
-			od_cfg_set_query_parsing_mode(ctx->diags,
-										  &ctx->current_query_parsing->mode,
-										  OD_CFG_QUERY_PARSING_MODE_DISABLED,
-										  @1,
-										  "mode");
-		}
-	| MODE MINIMAL
-		{
-			od_cfg_set_query_parsing_mode(ctx->diags,
-										  &ctx->current_query_parsing->mode,
-										  OD_CFG_QUERY_PARSING_MODE_MINIMAL,
-										  @1,
-										  "mode");
-		}
-	| MODE FULL
-		{
-			od_cfg_set_query_parsing_mode(ctx->diags,
-										  &ctx->current_query_parsing->mode,
-										  OD_CFG_QUERY_PARSING_MODE_FULL,
-										  @1,
-										  "mode");
-		}
-	| MEM_LIMIT size_value
-		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-						  "mem_limit must be non-negative");
-			} else {
-				od_cfg_set_u64(ctx->diags,
-						   &ctx->current_query_parsing->mem_limit,
-						   $2,
-						   @1,
-						   "mem_limit");
-			}
-		}
-	| MAX_QUERY_LEN int_value
-		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-						  "max_query_len must be non-negative");
-			} else {
-				od_cfg_set_u64(ctx->diags,
-						   &ctx->current_query_parsing->max_query_len,
-						   $2,
-						   @1,
-						   "max_query_len");
-			}
-		}
-	| STANDBY_FUNCTION_LIST
-		{
-			od_cfg_string_list_begin(ctx->diags,
-						  &ctx->current_query_parsing->standby_function_list,
-						  @1,
-						  "standby_function_list");
-		}
-	  '{' standby_function_list_items '}'
-	;
-
 standby_function_list_items:
 	  %empty
 	| standby_function_list_items STRING
 		{
 			od_cfg_string_list_append(
 				ctx->diags,
-				&ctx->current_query_parsing->standby_function_list,
+				&ctx->model->query_parsing.standby_function_list,
 				$2);
 			$2 = NULL;
 		}

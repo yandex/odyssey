@@ -144,7 +144,7 @@ Specifying `target_session_attrs` and `auto_route_ro_on_standby` in the same
 section is a configuration error. When set on a listen endpoint, it overrides
 the value from the matched database/user rule.
 
-Requires [query_parsing](query-parsing.md) `mode full` in the global config,
+Requires [query_parsing_mode](query-parsing.md#query_parsing_mode) `full` in the global config,
 otherwise the configuration is rejected.
 
 `auto_route_ro_on_standby yes`

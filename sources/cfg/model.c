@@ -1000,7 +1000,6 @@ void od_cfg_model_free(od_cfg_model_t *model)
 	od_cfg_u64_field_free(&model->query_parsing.mem_limit);
 	od_cfg_u64_field_free(&model->query_parsing.max_query_len);
 	od_cfg_string_list_free(&model->query_parsing.standby_function_list);
-	od_cfg_seen_free(&model->query_parsing.seen);
 
 	for (size_t i = 0; i < model->databases_count; ++i) {
 		od_cfg_database_free(model->databases[i]);

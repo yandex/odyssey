@@ -1599,10 +1599,6 @@ static int parse_standby_function_list(convert_ctx_t *ctx,
 static int convert_query_parsing(convert_ctx_t *ctx,
 				 const od_cfg_query_parsing_t *cfg)
 {
-	if (!cfg->seen.is_set) {
-		return 0;
-	}
-
 	od_config_t *config = ctx->config;
 	od_config_query_parsing_t *qp = &config->query_parsing;
 
