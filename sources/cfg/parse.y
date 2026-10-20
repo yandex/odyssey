@@ -262,13 +262,11 @@
 %token CACHE_CHUNK "cache_chunk"
 %token PACKET_READ_SIZE "packet_read_size"
 %token PACKET_WRITE_QUEUE "packet_write_queue"
-%token SOFT_OOM "soft_oom"
-%token LIMIT "limit"
-%token PROCESS "process"
-%token CHECK_INTERVAL_MS "check_interval_ms"
-%token DROP "drop"
-%token SIGNAL "signal"
-%token MAX_RATE "max_rate"
+%token SOFT_OOM_LIMIT "soft_oom_limit"
+%token SOFT_OOM_PROCESS "soft_oom_process"
+%token SOFT_OOM_CHECK_INTERVAL_MS "soft_oom_check_interval_ms"
+%token SOFT_OOM_DROP_SIGNAL "soft_oom_drop_signal"
+%token SOFT_OOM_DROP_MAX_RATE "soft_oom_drop_max_rate"
 %token LDAP_ENDPOINT "ldap_endpoint"
 %token LDAP_SERVER "ldapserver"
 %token LDAP_PORT "ldapport"
@@ -1017,7 +1015,54 @@ top_item:
 	| ldap_endpoint_section
 	| shared_pool_section
 	| conn_drop_options_section
-	| soft_oom_section
+	| SOFT_OOM_LIMIT size_value
+		{
+			if ($2 < 0) {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "soft_oom_limit must be non-negative");
+			} else {
+				od_cfg_set_u64(ctx->diags,
+							&ctx->model->soft_oom.limit,
+							(uint64_t) $2,
+							@1,
+							"soft_oom_limit");
+			}
+		}
+	| SOFT_OOM_PROCESS string_value
+		{
+			od_cfg_set_string(ctx->diags,
+							  &ctx->model->soft_oom.process,
+							  $2,
+							  @1,
+							  "soft_oom_process");
+			$2 = NULL;
+		}
+	| SOFT_OOM_CHECK_INTERVAL_MS time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+									&ctx->model->soft_oom.check_interval_ms,
+									&$2, 1, 0, INT_MAX,
+									@1,
+									"soft_oom_check_interval_ms");
+		}
+	| SOFT_OOM_DROP_SIGNAL string_value
+		{
+			od_cfg_set_string(ctx->diags,
+							  &ctx->model->soft_oom.drop.signal,
+							  $2,
+							  @1,
+							  "soft_oom_drop_signal");
+			$2 = NULL;
+		}
+	| SOFT_OOM_DROP_MAX_RATE int_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+									&ctx->model->soft_oom.drop.max_rate,
+									$2,
+									0, INT_MAX,
+									@1,
+									"soft_oom_drop_max_rate");
+		}
 	| QUERY_PARSING_MODE DISABLED
 		{
 			od_cfg_set_query_parsing_mode(ctx->diags,
@@ -2671,116 +2716,6 @@ standby_function_list_items:
 			$2 = NULL;
 		}
 	;
-
-soft_oom_section:
-	SOFT_OOM
-		{
-			od_cfg_soft_oom_t *soom = &ctx->model->soft_oom;
-
-			if (soom->seen.is_set) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "soft_oom is redefined");
-				YYERROR;
-			}
-
-			od_cfg_seen_set(&soom->seen, @1);
-			soom->location = od_cfg_location_copy(@1);
-
-			ctx->current_soft_oom = soom;
-		}
-		'{' soft_oom_items '}'
-		{
-			ctx->current_soft_oom = NULL;
-		}
-	;
-
-soft_oom_items:
-	 %empty
-	| soft_oom_items soft_oom_item
-	;
-
-soft_oom_item:
-	  LIMIT size_value
-		{
-			if ($2 < 0) {
-				 od_cfg_diag_error(ctx->diags, @1,
-						  "limit must be non-negative");
-			} else {
-				od_cfg_set_u64(ctx->diags,
-							&ctx->current_soft_oom->limit,
-							(uint64_t) $2,
-							@1,
-							"limit");
-			}
-		}
-	| PROCESS string_value
-		{
-			od_cfg_set_string(ctx->diags,
-							  &ctx->current_soft_oom->process,
-							  $2,
-							  @1,
-							  "process");
-			$2 = NULL;
-		}
-	| CHECK_INTERVAL_MS time_value
-		{
-			od_cfg_set_time_u64_ms(ctx->diags,
-									&ctx->current_soft_oom->check_interval_ms,
-									&$2, 1, 0, INT_MAX,
-									@1,
-									"check_interval_ms");
-		}
-	| soft_oom_drop
-	;
-
-soft_oom_drop:
-	DROP
-		{
-			od_cfg_soft_oom_drop_t *drop = &ctx->current_soft_oom->drop;
-
-			if (drop->seen.is_set) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "soft_oom.drop is redefined");
-				YYERROR;
-			}
-
-			od_cfg_seen_set(&drop->seen, @1);
-			drop->location = od_cfg_location_copy(@1);
-
-			ctx->current_soft_oom_drop = drop;
-		}
-		'{' soft_oom_drop_items '}'
-		{
-			ctx->current_soft_oom_drop = NULL;
-		}
-	;
-
-soft_oom_drop_items:
-	  %empty
-	| soft_oom_drop_items soft_oom_drop_item
-	;
-
-soft_oom_drop_item:
-	  SIGNAL string_value
-		{
-			od_cfg_set_string(ctx->diags,
-							  &ctx->current_soft_oom_drop->signal,
-							  $2,
-							  @1,
-							  "signal");
-			$2 = NULL;
-		}
-	| MAX_RATE int_value
-		{
-			od_cfg_set_int_range_from_i64(ctx->diags,
-									&ctx->current_soft_oom_drop->max_rate,
-									$2,
-									0, INT_MAX,
-									@1,
-									"max_rate");
-		}
-	;
-
 
 conn_drop_options_keyword:
 	  CONN_DROP_OPTIONS

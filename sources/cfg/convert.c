@@ -1515,14 +1515,8 @@ static int convert_soft_oom(convert_ctx_t *ctx, const od_cfg_soft_oom_t *cfg)
 	od_cfg_diag_list_t *diags = ctx->diags;
 	od_config_soft_oom_t *soft_oom = &config->soft_oom;
 
-	if (!cfg->seen.is_set) {
-		return 0;
-	}
-
 	if (!cfg->limit.seen.is_set) {
-		od_cfg_diag_error(diags, cfg->location,
-				  "limits is not set in soft_oom");
-		goto error;
+		return 0;
 	}
 
 	COPY_INT(cfg->limit, soft_oom->limit_bytes);
@@ -1530,7 +1524,7 @@ static int convert_soft_oom(convert_ctx_t *ctx, const od_cfg_soft_oom_t *cfg)
 
 	soft_oom->enabled = 1;
 
-	if (cfg->drop.seen.is_set) {
+	if (cfg->drop.signal.seen.is_set || cfg->drop.max_rate.seen.is_set) {
 		soft_oom->drop.enabled = 1;
 		COPY_INT(cfg->drop.max_rate, soft_oom->drop.max_rate);
 
