@@ -1632,20 +1632,22 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 			break;
 		}
 
-		machine_msg_t *stream = machine_msg_create(0);
-		if (stream == NULL) {
+		od_tuple_table_slot_t *tts = od_tuple_table_slot_create();
+		if (tts == NULL) {
 			machine_msg_free(msg);
 			return OD_EOOM;
 		}
 
+		machine_msg_t *stream = tts->data_rows;
+
 		int rc;
 		if (type == KIWI_FE_QUERY) {
-			rc = od_console_query(client, stream,
+			rc = od_console_query(client, tts,
 					      machine_msg_data(msg),
 					      machine_msg_size(msg));
 			machine_msg_free(msg);
 			if (rc == -1) {
-				machine_msg_free(stream);
+				od_tuple_table_slot_free(tts);
 				return OD_EOOM;
 			}
 		} else {
@@ -1661,22 +1663,36 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 						 "unsupported request '%s'",
 						 kiwi_fe_type_to_string(type));
 			if (msg == NULL) {
-				machine_msg_free(stream);
+				od_tuple_table_slot_free(tts);
 				return OD_EOOM;
+			}
+		}
+
+		/* write row description first, if any */
+		if (machine_msg_size(tts->row_description) > 0) {
+			rc = od_write(&client->io, tts->row_description);
+			tts->row_description = NULL;
+			if (rc == -1) {
+				od_tuple_table_slot_free(tts);
+				return OD_ECLIENT_WRITE;
 			}
 		}
 
 		/* ready */
 		msg = kiwi_be_write_ready(stream, 'I');
 		if (msg == NULL) {
-			machine_msg_free(stream);
+			od_tuple_table_slot_free(tts);
 			return OD_EOOM;
 		}
 
 		rc = od_write(&client->io, stream);
+		tts->data_rows = NULL;
 		if (rc == -1) {
+			od_tuple_table_slot_free(tts);
 			return OD_ECLIENT_WRITE;
 		}
+
+		od_tuple_table_slot_free(tts);
 	}
 
 	return OD_OK;
