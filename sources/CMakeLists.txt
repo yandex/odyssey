@@ -87,6 +87,7 @@ set(od_src
     route.c
     router.c
     relay.c
+    virtual.c
     global.c
     system.c
     stream.c
