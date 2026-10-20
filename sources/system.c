@@ -149,6 +149,15 @@ fail:
 static void od_system_unix_socket_release(od_system_server_t *server)
 {
 	if (server->unix_socket_owned) {
+		/*
+		 * The path may be replaced between lstat() and unlink(),
+		 * yet only the socket we bound is removed: it is matched
+		 * by dev/ino captured at bind time, and unlink() does
+		 * not follow symlinks. Swapping the path requires write
+		 * access to the socket directory, which alone already
+		 * allows removing the socket, so the residual race grants
+		 * no additional privileges (Coverity TOCTOU is accepted).
+		 */
 		struct stat st;
 		if (lstat(server->unix_socket_path, &st) == 0) {
 			if (S_ISSOCK(st.st_mode) &&
@@ -246,7 +255,14 @@ static int od_system_unix_socket_prepare(od_system_server_t *server,
 		return -1;
 	}
 
-	/* Do not remove a path replaced while checking the listener. */
+	/*
+	 * Do not remove a path replaced while checking the listener: the
+	 * dev/ino comparison against the probed socket narrows the residual
+	 * lstat-to-unlink race window. Swapping the path requires write
+	 * access to the socket directory, which alone already allows
+	 * removing it, so the race grants no additional privileges
+	 * (Coverity TOCTOU is accepted).
+	 */
 	struct stat current;
 	if (lstat(addr->sun_path, &current) == -1) {
 		return errno == ENOENT ? 0 : -1;
@@ -1064,7 +1080,9 @@ static inline void od_system(void *arg)
 		od_logger_shutdown(&instance->logger);
 		/* Other threads still exist: leave logger storage alive until exit. */
 		if (instance->logger.async) {
-			machine_wait(instance->logger.machine);
+			if (machine_wait(instance->logger.machine)) {
+				abort();
+			}
 		}
 		od_fatal(&instance->logger, "system", NULL, NULL,
 			 "failed to bind any listen address, errno=%d (%s)",
