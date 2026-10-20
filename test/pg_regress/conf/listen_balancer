@@ -13,9 +13,7 @@ listen {
 	}
 }
 
-query_parsing {
-	mode full
-}
+query_parsing_mode full
 
 listen {
 	host "*"

@@ -2,10 +2,8 @@ include "/home/postgres/regress/conf/_base"
 
 log_config yes
 
-query_parsing {
-	mode full
-	max_query_len 100000
-}
+query_parsing_mode full
+query_parsing_max_query_len 100000
 
 storage "postgres_server" {
 	type "remote"

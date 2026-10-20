@@ -2174,7 +2174,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			if (listen->auto_route_ro_on_standby) {
 				od_error(
 					logger, "rules", NULL, NULL,
-					"listen '%s:%d': auto_route_ro_on_standby requires query_parsing mode 'full'",
+					"listen '%s:%d': auto_route_ro_on_standby requires query_parsing_mode 'full'",
 					od_config_listen_host_name(listen),
 					listen->port);
 				return -1;
@@ -2187,7 +2187,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			if (rule->auto_route_ro_on_standby) {
 				od_error(
 					logger, "rules", NULL, NULL,
-					"rule '%s.%s %s': auto_route_ro_on_standby requires query_parsing mode 'full'",
+					"rule '%s.%s %s': auto_route_ro_on_standby requires query_parsing_mode 'full'",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
 				return -1;

@@ -766,14 +766,14 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       od_config_yes_no(config->replication_proxy_logic));
 	od_log(logger, "config", NULL, NULL, "smart_search_path_enquoting %s",
 	       od_config_yes_no(config->smart_search_path_enquoting));
-	od_log(logger, "config", NULL, NULL, "query_parsing mode       %s",
+	od_log(logger, "config", NULL, NULL, "query_parsing_mode      %s",
 	       od_config_query_parsing_mode_to_str(config->query_parsing.mode));
-	od_log(logger, "config", NULL, NULL, "query_parsing max_query_len %zu",
+	od_log(logger, "config", NULL, NULL, "query_parsing_max_query_len %zu",
 	       config->query_parsing.max_query_len);
-	od_log(logger, "config", NULL, NULL, "query_parsing mem_limit  %zu",
+	od_log(logger, "config", NULL, NULL, "query_parsing_mem_limit %zu",
 	       config->query_parsing.mem_limit_bytes);
 	od_log(logger, "config", NULL, NULL,
-	       "query_parsing standby_function_list extra functions %zu",
+	       "query_parsing_standby_function_list extra functions %zu",
 	       config->query_parsing.standby_function_names_count);
 	if (config->availability_zone[0]) {
 		od_log(logger, "config", NULL, NULL,
