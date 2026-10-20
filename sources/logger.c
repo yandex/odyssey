@@ -20,6 +20,7 @@
 #endif
 
 #include <machinarium/machinarium.h>
+#include <machinarium/file.h>
 #include <machinarium/channel_limit.h>
 
 #include <logger.h>
@@ -305,7 +306,7 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 
 int od_logger_open(od_logger_t *logger, const char *path)
 {
-	int fd = open(path, O_RDWR | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
+	int fd = mm_file_open(path, O_RDWR | O_CREAT | O_APPEND, 0644);
 	if (fd == -1) {
 		return -1;
 	}
@@ -365,7 +366,7 @@ void od_logger_close(od_logger_t *logger)
 	atomic_store(&logger->fd, -1);
 	atomic_store(&logger->batching, 0);
 	if (fd != -1) {
-		close(fd);
+		mm_file_close(fd);
 	}
 }
 
@@ -876,7 +877,7 @@ static void do_reopen_logfile(od_logger_t *logger)
 	int old = atomic_load(&logger->fd);
 	int rc = od_logger_open(logger, path);
 	if (rc == 0) {
-		close(old);
+		mm_file_close(old);
 
 		od_log(logger, "logger", NULL, NULL, "log reopened");
 	} else {

@@ -6,7 +6,9 @@
 
 #include <odyssey.h>
 
+#include <machinarium/file.h>
 #include <machinarium/machinarium.h>
+#include <machinarium/memory.h>
 
 #include <status.h>
 #include <types.h>
@@ -23,69 +25,17 @@
 static int read_file(const char *path, char **out, size_t *out_size,
 		     od_cfg_diag_list_t *diags)
 {
-	FILE *file = fopen(path, "rb");
-	if (file == NULL) {
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(path, &buf, &size) != 0) {
 		od_cfg_diag_error(diags, od_cfg_location_empty(path),
-				  "failed to open config file '%s': %s", path,
+				  "failed to read config file '%s': %s", path,
 				  strerror(errno));
 		return NOT_OK_RESPONSE;
 	}
-
-	if (fseek(file, 0, SEEK_END) != 0) {
-		od_cfg_diag_error(diags, od_cfg_location_empty(path),
-				  "failed to seek config file '%s': %s", path,
-				  strerror(errno));
-		fclose(file);
-		return NOT_OK_RESPONSE;
-	}
-
-	long file_size = ftell(file);
-	if (file_size < 0) {
-		od_cfg_diag_error(diags, od_cfg_location_empty(path),
-				  "failed to tell config file '%s': %s", path,
-				  strerror(errno));
-		fclose(file);
-		return NOT_OK_RESPONSE;
-	}
-
-	if (fseek(file, 0, SEEK_SET) != 0) {
-		od_cfg_diag_error(diags, od_cfg_location_empty(path),
-				  "failed to seek config file '%s': %s", path,
-				  strerror(errno));
-		fclose(file);
-		return NOT_OK_RESPONSE;
-	}
-
-	char *buf = od_malloc((size_t)file_size + 1);
-	if (buf == NULL) {
-		od_cfg_diag_error(
-			diags, od_cfg_location_empty(path),
-			"out of memory while reading config file '%s'", path);
-		fclose(file);
-		return NOT_OK_RESPONSE;
-	}
-
-	size_t read_size = fread(buf, 1, (size_t)file_size, file);
-	if (read_size != (size_t)file_size) {
-		od_cfg_diag_error(diags, od_cfg_location_empty(path),
-				  "failed to read config file '%s'", path);
-		od_free(buf);
-		fclose(file);
-		return NOT_OK_RESPONSE;
-	}
-
-	if (fclose(file) != 0) {
-		od_cfg_diag_error(diags, od_cfg_location_empty(path),
-				  "failed to close config file '%s': %s", path,
-				  strerror(errno));
-		od_free(buf);
-		return NOT_OK_RESPONSE;
-	}
-
-	buf[file_size] = 0;
 
 	*out = buf;
-	*out_size = (size_t)file_size;
+	*out_size = size;
 	return OK_RESPONSE;
 }
 
@@ -259,7 +209,7 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 		od_cfg_diag_error(diags, od_cfg_location_empty(path),
 				  "failed to initialize config scanner");
 		od_cfg_parse_ctx_free(&ctx);
-		od_free(buf);
+		mm_free(buf);
 		return -1;
 	}
 
@@ -269,7 +219,7 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 				  "failed to create config scanner buffer");
 		yylex_destroy(scanner);
 		od_cfg_parse_ctx_free(&ctx);
-		od_free(buf);
+		mm_free(buf);
 		return -1;
 	}
 
@@ -279,7 +229,7 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 	yylex_destroy(scanner);
 
 	od_cfg_parse_ctx_free(&ctx);
-	od_free(buf);
+	mm_free(buf);
 
 	if (parse_rc != 0 || od_cfg_diag_has_errors(diags)) {
 		return -1;

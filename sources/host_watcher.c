@@ -3,8 +3,12 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <machinarium/file.h>
+#include <machinarium/memory.h>
+
 #include <host_watcher.h>
 #include <logger.h>
+#include <util.h>
 
 #define PROC_MEMINFO_PATH "/proc/meminfo"
 #define PROC_STAT_PATH "/proc/stat"
@@ -46,32 +50,33 @@ static inline int get_cpu_stat(od_cpu_stat_t *out)
 {
 	/* https://www.kernel.org/doc/html/latest/filesystems/proc.html#miscellaneous-kernel-statistics-in-proc-stat */
 
-	FILE *fp = fopen(PROC_STAT_PATH, "re");
-	if (!fp) {
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(PROC_STAT_PATH, &buf, &size) != 0) {
 		hw_error("can't open '%s': %s", PROC_STAT_PATH,
 			 strerror(errno));
 		return -1;
 	}
 
-	static OD_THREAD_LOCAL char cpu_stat_buffer[4096 + 1];
-
-	if (fgets(cpu_stat_buffer, sizeof(cpu_stat_buffer), fp) == NULL) {
-		hw_error("can't read '%s': %s", PROC_STAT_PATH,
-			 strerror(errno));
+	char *cursor = buf;
+	char *cpu_stat_line = od_next_line(&cursor);
+	if (cpu_stat_line == NULL) {
+		hw_error("can't read '%s'", PROC_STAT_PATH);
+		mm_free(buf);
 		return -1;
 	}
-
-	fclose(fp);
 
 	uint64_t usertime, nicetime, systemtime, idletime;
 	uint64_t io_wait = 0, irq = 0, soft_irq = 0, steal = 0, guest = 0,
 		 guestnice = 0;
 
-	sscanf(cpu_stat_buffer,
+	sscanf(cpu_stat_line,
 	       "cpu  %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
 	       " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
 	       &usertime, &nicetime, &systemtime, &idletime, &io_wait, &irq,
 	       &soft_irq, &steal, &guest, &guestnice);
+
+	mm_free(buf);
 
 	usertime -= guest;
 	nicetime -= guestnice;
@@ -92,17 +97,19 @@ static inline int get_memory_stat(od_mem_stat_t *out)
 {
 	/* https://www.kernel.org/doc/html/latest/filesystems/proc.html#meminfo */
 
-	FILE *fp = fopen(PROC_MEMINFO_PATH, "re");
-	if (!fp) {
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(PROC_MEMINFO_PATH, &buf, &size) != 0) {
 		hw_error("can't open '%s': %s", PROC_MEMINFO_PATH,
 			 strerror(errno));
 		return -1;
 	}
 
-	char line[256];
 	int64_t mem_available = 0, mem_total = 0;
 
-	while (fgets(line, sizeof(line), fp)) {
+	char *cursor = buf;
+	char *line;
+	while ((line = od_next_line(&cursor)) != NULL) {
 		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
 			   &mem_available) == 1) {
 			continue;
@@ -113,14 +120,7 @@ static inline int get_memory_stat(od_mem_stat_t *out)
 		}
 	}
 
-	if (ferror(fp)) {
-		hw_error("can't read '%s': %s", PROC_MEMINFO_PATH,
-			 strerror(errno));
-		fclose(fp);
-		return -1;
-	}
-
-	fclose(fp);
+	mm_free(buf);
 
 	out->total = mem_total;
 	out->available = mem_available;
