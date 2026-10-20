@@ -44,9 +44,6 @@ void od_client_init(od_client_t *client)
 	client->logical_rep = false;
 
 	kiwi_be_startup_init(&client->startup);
-	client->startup_received = false;
-	client->startup_ssl_done = false;
-	client->startup_gss_done = false;
 	kiwi_vars_init(&client->vars);
 	kiwi_key_init(&client->key);
 

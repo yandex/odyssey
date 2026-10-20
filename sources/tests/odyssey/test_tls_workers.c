@@ -97,6 +97,49 @@ static void tls_worker_client(void *arg)
 	mm_io_free(t->client);
 }
 
+static void tls_worker_concurrent(machine_tls_t *tls, size_t count)
+{
+	test(od_tls_workers_init(count) == 0);
+
+	/* Slow peers must not block other handshakes in either pool size. */
+	tls_worker_test_t concurrent[33] = { 0 };
+	int64_t servers[33], clients[32];
+	for (int i = 0; i < 33; i++) {
+		int sockets[2];
+		test(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
+		concurrent[i] = (tls_worker_test_t){
+			.server = tls_worker_io(sockets[0], 1),
+			.client = tls_worker_io(sockets[1], 0),
+			.tls = tls,
+			.timeout = i == 32 ? 200 : 5000,
+			.success = i != 32,
+			.error = i == 32 ? ETIMEDOUT : 0
+		};
+		servers[i] = machine_coroutine_create(tls_worker_server,
+						      &concurrent[i]);
+		test(servers[i] != -1);
+		if (i < 32) {
+			clients[i] = machine_coroutine_create(tls_worker_client,
+							      &concurrent[i]);
+			test(clients[i] != -1);
+		}
+	}
+	for (int i = 0; i < 33; i++) {
+		if (!concurrent[i].done) {
+			test(machine_join(servers[i]) == 0);
+		}
+		if (i < 32) {
+			int rc = machine_join(clients[i]);
+			test(rc == 0 || machine_errno() == ENOENT);
+		}
+	}
+	test(mm_io_close(concurrent[32].client) == 0);
+	mm_io_free(concurrent[32].client);
+
+	od_tls_workers_destroy();
+	test(!od_tls_workers_enabled());
+}
+
 static void tls_worker_tests(void *arg)
 {
 	(void)arg;
@@ -175,44 +218,12 @@ static void tls_worker_tests(void *arg)
 		}
 	}
 
-	/* One TLS machine must interleave many handshakes, including a silent
-	 * client, without creating a coroutine for each handshake on that machine. */
-	tls_worker_test_t concurrent[33] = { 0 };
-	int64_t servers[33], clients[32];
-	for (int i = 0; i < 33; i++) {
-		int sockets[2];
-		test(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
-		concurrent[i] = (tls_worker_test_t){
-			.server = tls_worker_io(sockets[0], 1),
-			.client = tls_worker_io(sockets[1], 0),
-			.tls = tls,
-			.timeout = i == 32 ? 200 : 5000,
-			.success = i != 32,
-			.error = i == 32 ? ETIMEDOUT : 0
-		};
-		servers[i] = machine_coroutine_create(tls_worker_server,
-						      &concurrent[i]);
-		test(servers[i] != -1);
-		if (i < 32) {
-			clients[i] = machine_coroutine_create(tls_worker_client,
-							      &concurrent[i]);
-			test(clients[i] != -1);
-		}
-	}
-	for (int i = 0; i < 33; i++) {
-		if (!concurrent[i].done) {
-			test(machine_join(servers[i]) == 0);
-		}
-		if (i < 32) {
-			int rc = machine_join(clients[i]);
-			test(rc == 0 || machine_errno() == ENOENT);
-		}
-	}
-	test(mm_io_close(concurrent[32].client) == 0);
-	mm_io_free(concurrent[32].client);
-	machine_tls_free(tls);
 	od_tls_workers_destroy();
 	test(!od_tls_workers_enabled());
+
+	tls_worker_concurrent(tls, 1);
+	tls_worker_concurrent(tls, 3);
+	machine_tls_free(tls);
 }
 
 void odyssey_test_tls_workers(void)

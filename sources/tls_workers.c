@@ -27,13 +27,8 @@ typedef struct {
 	int error;
 } od_tls_handshake_req_t;
 
-typedef struct {
-	int id;
-	int64_t machine;
-	machine_wait_flag_t *stop;
-} od_tls_worker_t;
-
-static od_tls_worker_t *tls_workers = NULL;
+static int64_t *tls_workers = NULL;
+static machine_wait_flag_t *tls_workers_stop = NULL;
 static size_t tls_workers_count = 0;
 static atomic_uint_fast64_t tls_workers_next = 0;
 
@@ -74,11 +69,9 @@ static void od_tls_handshake(void *arg)
 
 static void od_tls_worker_main(void *arg)
 {
-	od_tls_worker_t *worker = arg;
-
 	/* One lifetime coroutine per worker; handshakes run on visiting frontend
 	 * stacks. No allocation is needed to signal shutdown. */
-	machine_wait_flag_wait(worker->stop, UINT32_MAX);
+	machine_wait_flag_wait(arg, UINT32_MAX);
 }
 
 int od_tls_workers_init(size_t count)
@@ -87,27 +80,23 @@ int od_tls_workers_init(size_t count)
 		return 0;
 	}
 
-	tls_workers = od_malloc(sizeof(od_tls_worker_t) * count);
+	tls_workers = od_malloc(sizeof(*tls_workers) * count);
 	if (tls_workers == NULL) {
 		mm_errno_set(ENOMEM);
 		return -1;
 	}
-	memset(tls_workers, 0, sizeof(od_tls_worker_t) * count);
+	tls_workers_stop = machine_wait_flag_create();
+	if (tls_workers_stop == NULL) {
+		mm_errno_set(ENOMEM);
+		goto error;
+	}
 
 	for (size_t i = 0; i < count; ++i) {
-		od_tls_worker_t *worker = &tls_workers[i];
-		worker->id = (int)i;
-		worker->stop = machine_wait_flag_create();
-		if (worker->stop == NULL) {
-			goto error;
-		}
-
 		char name[32];
-		od_snprintf(name, sizeof(name), "tls: %d", worker->id);
-		worker->machine =
-			machine_create(name, od_tls_worker_main, worker);
-		if (worker->machine == -1) {
-			machine_wait_flag_destroy(worker->stop);
+		od_snprintf(name, sizeof(name), "tls: %zu", i);
+		tls_workers[i] = machine_create(name, od_tls_worker_main,
+						tls_workers_stop);
+		if (tls_workers[i] == -1) {
 			goto error;
 		}
 
@@ -123,13 +112,14 @@ error:
 
 void od_tls_workers_destroy(void)
 {
-	for (size_t i = 0; i < tls_workers_count; ++i) {
-		machine_wait_flag_set(tls_workers[i].stop);
-	}
+	if (tls_workers_stop != NULL) {
+		machine_wait_flag_set(tls_workers_stop);
 
-	for (size_t i = 0; i < tls_workers_count; ++i) {
-		machine_wait_nb(tls_workers[i].machine);
-		machine_wait_flag_destroy(tls_workers[i].stop);
+		for (size_t i = 0; i < tls_workers_count; ++i) {
+			machine_wait_nb(tls_workers[i]);
+		}
+		machine_wait_flag_destroy(tls_workers_stop);
+		tls_workers_stop = NULL;
 	}
 
 	od_free(tls_workers);
@@ -159,9 +149,8 @@ int od_tls_workers_handshake(mm_io_t *io, machine_tls_t *tls, uint32_t timeout)
 	}
 
 	uint64_t n = atomic_fetch_add(&tls_workers_next, 1);
-	od_tls_worker_t *worker = &tls_workers[n % tls_workers_count];
-	if (machine_coroutine_call_on(worker->machine, od_tls_handshake,
-				      &req) == -1) {
+	int64_t worker = tls_workers[n % tls_workers_count];
+	if (machine_coroutine_call_on(worker, od_tls_handshake, &req) == -1) {
 		req.rc = -1;
 		req.error = mm_errno_get();
 	}

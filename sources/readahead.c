@@ -23,10 +23,9 @@
  * Each machinarium thread (worker, od_system, etc.) gets its own cache
  * instance, eliminating spinlock contention on the hot read/return path.
  *
- * Empty negotiation buffers stay on the TLS worker. A buffer with pipelined
- * data can travel with its client to a regular worker. Buffers have no cache
- * backpointer; the receiving thread returns them to its own cache. A cached
- * buffer, or the cache itself, is never accessed by another thread.
+ * Client buffers are allocated and returned on their frontend
+ * worker. TLS handshakes temporarily visit a TLS worker without accessing
+ * readahead, so the buffer and its cache stay on the original worker.
  */
 
 static OD_THREAD_LOCAL mm_virtual_rbuf_cache_t *tls_vrb_cache = NULL;

@@ -692,8 +692,9 @@ int od_config_field_format(const od_config_field_t *field, const char *value,
 
 	switch (field->type) {
 	case OD_CONFIG_FIELD_INT:
-		/* workers "auto" means half of the CPUs, see cfg/parse.y */
-		if (strcmp(field->key, "workers") == 0 &&
+		/* Both worker count options accept "auto". */
+		if ((strcmp(field->key, "workers") == 0 ||
+		     strcmp(field->key, "tls_workers") == 0) &&
 		    strcmp(value, "auto") == 0) {
 			n = snprintf(buf, size, "%s \"auto\"", field->key);
 			break;

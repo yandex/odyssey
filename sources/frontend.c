@@ -326,7 +326,10 @@ static void od_frontend_startup_error(od_client_t *client)
 static int od_frontend_negotiate(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-	while (!client->startup_received) {
+	bool ssl_done = false;
+	bool gss_done = false;
+
+	while (1) {
 		int rc;
 		int parse_rc;
 
@@ -341,12 +344,10 @@ static int od_frontend_negotiate(od_client_t *client)
 		if (!client->startup.unsupported_request &&
 		    !client->startup.is_ssl_request) {
 			/* that was real startup/cancel packet - its ok */
-			client->startup_received = true;
 			break;
 		}
 
-		if (client->startup.is_ssl_request &&
-		    !client->startup_ssl_done) {
+		if (client->startup.is_ssl_request && !ssl_done) {
 			if (od_tls_frontend_accept(client, &instance->logger,
 						   client->source->config,
 						   client->tls) == -1) {
@@ -354,17 +355,16 @@ static int od_frontend_negotiate(od_client_t *client)
 			}
 
 			client->startup.is_ssl_request = 0;
-			client->startup_ssl_done = true;
+			ssl_done = true;
 			continue;
 		}
 
-		if (client->startup.unsupported_request &&
-		    !client->startup_gss_done) {
+		if (client->startup.unsupported_request && !gss_done) {
 			if (reject_unsupported_request(client) == -1) {
 				return -1;
 			}
 
-			client->startup_gss_done = true;
+			gss_done = true;
 			continue;
 		}
 
@@ -375,6 +375,7 @@ static int od_frontend_negotiate(od_client_t *client)
 		goto error;
 	}
 
+	client->startup.is_ssl_request = ssl_done;
 	return 0;
 
 error:
@@ -388,8 +389,6 @@ static int od_frontend_startup(od_client_t *client)
 	if (od_frontend_negotiate(client) == -1) {
 		return -1;
 	}
-	client->startup.is_ssl_request = client->startup_ssl_done;
-
 	if (client->startup.is_cancel) {
 		/* no need to proceed any further */
 		return 0;
@@ -415,7 +414,7 @@ static int od_frontend_startup(od_client_t *client)
 
 	if (client->source->config->tls_opts->tls_mode >=
 		    OD_CONFIG_TLS_REQUIRE &&
-	    !client->startup_ssl_done) {
+	    !client->startup.is_ssl_request) {
 		od_log(&instance->logger, "tls", client, NULL,
 		       "required, closing");
 		od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
@@ -3488,8 +3487,7 @@ static inline void cancel_finished(od_global_t *global, od_instance_t *instance)
 static int od_frontend_prepare(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-	if (client->io.readahead.buf == NULL &&
-	    od_readahead_prepare(&client->io.readahead) == -1) {
+	if (od_readahead_prepare(&client->io.readahead) == -1) {
 		od_error(&instance->logger, "startup", client, NULL,
 			 "failed to allocate readahead buffer");
 		return -1;
@@ -3500,14 +3498,12 @@ static int od_frontend_prepare(od_client_t *client)
 		return -1;
 	}
 
-	if (client->peer[0] == 0) {
-		od_getpeername(client->io.io, client->peer,
-			       OD_CLIENT_MAX_PEERLEN, 1, 1);
+	od_getpeername(client->io.io, client->peer, OD_CLIENT_MAX_PEERLEN, 1,
+		       1);
 
-		if (instance->config.log_session) {
-			od_log(&instance->logger, "startup", client, NULL,
-			       "new client connection %s", client->peer);
-		}
+	if (instance->config.log_session) {
+		od_log(&instance->logger, "startup", client, NULL,
+		       "new client connection %s", client->peer);
 	}
 	return 0;
 }

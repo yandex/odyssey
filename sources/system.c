@@ -406,8 +406,8 @@ static inline void od_system_server(void *arg)
 		}
 		od_id_generate(&client->id, "c");
 		/*
-		 * Allocate readahead on the worker that first handles the client
-		 * (TLS negotiation or regular frontend), using its local cache.
+		 * Defer readahead allocation to the frontend worker so it uses
+		 * that worker's local cache.
 		 */
 		client->io.io = client_io;
 		client->rule = NULL;
