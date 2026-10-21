@@ -81,6 +81,7 @@ set(od_src
     logger.c
     od_assert.c
     pool.c
+    port.c
     rules.c
     config.c
     autoconf.c

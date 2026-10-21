@@ -156,6 +156,9 @@ struct od_rule {
 	char *password;
 	int password_len;
 
+	/* path to .pgpass file containing passwords */
+	char *password_pgpass;
+
 	od_rule_storage_t *storage;
 	char *storage_name;
 	char *storage_db;

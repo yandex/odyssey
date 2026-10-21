@@ -792,6 +792,7 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	if (rule->password != NULL) {
 		rule->password_len = strlen(rule->password);
 	}
+	COPY_STR(cfg->password_pgpass, rule->password_pgpass, diags);
 
 	if (cfg->role.seen.is_set) {
 		if (strcmp(cfg->role.value, "admin") == 0) {

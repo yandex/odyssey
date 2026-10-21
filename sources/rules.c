@@ -25,6 +25,7 @@
 #include <global.h>
 #include <instance.h>
 #include <util.h>
+#include <port.h>
 #include <attach.h>
 
 const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
@@ -655,6 +656,9 @@ static void od_rules_rule_free_now(od_rule_t *rule)
 
 	if (rule->password) {
 		od_free(rule->password);
+	}
+	if (rule->password_pgpass) {
+		od_free(rule->password_pgpass);
 	}
 	if (rule->auth) {
 		od_free(rule->auth);
@@ -2261,6 +2265,34 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
 				rule->user_role = OD_RULE_ROLE_STAT;
+			}
+		}
+
+		/* resolve password from pgpass file if requested */
+		if (rule->password_pgpass != NULL) {
+			const char *errmsg = NULL;
+			char *pgpass_password = passwordFromFile(
+				NULL, NULL, rule->db_name, rule->user_name,
+				rule->password_pgpass, &errmsg);
+			if (errmsg != NULL) {
+				od_error(logger, "rules", NULL, NULL,
+					 "rule '%s.%s %s': %s", rule->db_name,
+					 rule->user_name,
+					 rule->address_range.string_value,
+					 errmsg);
+				return -1;
+			}
+			if (pgpass_password != NULL) {
+				od_free(rule->password);
+				rule->password = pgpass_password;
+				rule->password_len = strlen(rule->password);
+			} else {
+				od_log(logger, "rules", NULL, NULL,
+				       "rule '%s.%s %s': no password for user "
+				       "found in pgpass file '%s'",
+				       rule->db_name, rule->user_name,
+				       rule->address_range.string_value,
+				       rule->password_pgpass);
 			}
 		}
 

@@ -27,3 +27,7 @@ sources/sql/full/list.c
 sources/sql/full/makefuncs.c
 sources/sql/full/pg_compat.c
 sources/include/pg_compat.h
+
+# ported from ../postgres/src/interfaces/libpq/fe-connect.c
+sources/port.c
+sources/include/port.h
