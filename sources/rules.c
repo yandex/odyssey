@@ -10,7 +10,6 @@
 #include <sys/un.h>
 
 #include <machinarium/machinarium.h>
-#include <machinarium/file.h>
 #include <kiwi/kiwi.h>
 
 #include <types.h>
@@ -26,6 +25,7 @@
 #include <global.h>
 #include <instance.h>
 #include <util.h>
+#include <port.h>
 #include <attach.h>
 
 const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
@@ -2090,151 +2090,6 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 	return 0;
 }
 
-/*
- * Port of libpq's pwdfMatchesString() from fe-connect.c.
- *
- * Returns a pointer to the next token or NULL if the current
- * token doesn't match.
- */
-static char *od_pgpass_matches_field(char *buf, const char *token)
-{
-	char *tbuf;
-	const char *ttok;
-	bool bslash = false;
-
-	if (buf == NULL || token == NULL)
-		return NULL;
-	tbuf = buf;
-	ttok = token;
-	if (tbuf[0] == '*' && tbuf[1] == ':')
-		return tbuf + 2;
-	while (*tbuf != 0)
-	{
-		if (*tbuf == '\\' && !bslash)
-		{
-			tbuf++;
-			bslash = true;
-		}
-		if (*tbuf == ':' && *ttok == 0 && !bslash)
-			return tbuf + 1;
-		bslash = false;
-		if (*ttok == 0)
-			return NULL;
-		if (*tbuf == *ttok)
-		{
-			tbuf++;
-			ttok++;
-		}
-		else
-			return NULL;
-	}
-	return NULL;
-}
-
-/*
- * Advance past one escaped field of the pgpass line, returning a pointer
- * to the character right after the unescaped ':' separator, or NULL if
- * the line ends before the separator.
- */
-static char *od_pgpass_skip_field(char *buf)
-{
-	char *tbuf = buf;
-	bool bslash = false;
-
-	while (*tbuf != 0)
-	{
-		if (*tbuf == '\\' && !bslash)
-		{
-			tbuf++;
-			bslash = true;
-		}
-		if (*tbuf == ':' && !bslash)
-			return tbuf + 1;
-		bslash = false;
-		if (*tbuf == 0)
-			return NULL;
-		tbuf++;
-	}
-	return NULL;
-}
-
-int od_pgpass_lookup(od_rule_t *rule, char **password_out)
-{
-	assert(rule->password_pgpass != NULL);
-	assert(password_out != NULL);
-
-	*password_out = NULL;
-
-	if (rule->db_name == NULL || rule->db_name[0] == '\0')
-		return 0;
-	if (rule->user_name == NULL || rule->user_name[0] == '\0')
-		return 0;
-
-	char *buf;
-	size_t size;
-	if (mm_file_read_all(rule->password_pgpass, &buf, &size) != 0) {
-		return -1;
-	}
-
-	char *cursor = buf;
-	char *line;
-	while ((line = od_next_line(&cursor)) != NULL) {
-		/* ignore comments */
-		if (line[0] == '#') {
-			continue;
-		}
-
-		/* strip trailing carriage return, keep newline handling to od_next_line */
-		size_t line_len = strlen(line);
-		while (line_len > 0 && line[line_len - 1] == '\r') {
-			line_len--;
-		}
-		line[line_len] = '\0';
-
-		/* skip empty lines */
-		if (line_len == 0) {
-			continue;
-		}
-
-		/*
-		 * Skip hostname and port fields; only database name and
-		 * user name are matched (libpq also matches host and port,
-		 * but odyssey rules do not map 1:1 to pgpass entries here).
-		 */
-		char *t = line;
-		if ((t = od_pgpass_skip_field(t)) == NULL)
-			continue;
-		if ((t = od_pgpass_skip_field(t)) == NULL)
-			continue;
-		if ((t = od_pgpass_matches_field(t, rule->db_name)) == NULL)
-			continue;
-		if ((t = od_pgpass_matches_field(t, rule->user_name)) == NULL)
-			continue;
-
-		/* Found a match. */
-		char *ret = od_strdup(t);
-		if (ret == NULL) {
-			break;
-		}
-
-		/* De-escape password. */
-		char *p1;
-		char *p2;
-		for (p1 = p2 = ret; *p1 != ':' && *p1 != '\0'; ++p1, ++p2) {
-			if (*p1 == '\\' && p1[1] != '\0')
-				++p1;
-			*p2 = *p1;
-		}
-		*p2 = '\0';
-
-		*password_out = ret;
-		break;
-	}
-
-	mm_free(buf);
-	return 0;
-}
-
 int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		      od_logger_t *logger)
 {
@@ -2415,15 +2270,29 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 
 		/* resolve password from pgpass file if requested */
 		if (rule->password_pgpass != NULL) {
-			char *pgpass_password = NULL;
-			int rc = od_pgpass_lookup(rule, &pgpass_password);
-			if (rc == -1) {
+			const char *errmsg = NULL;
+			char *pgpass_password = passwordFromFile(
+				NULL, NULL, rule->db_name, rule->user_name,
+				rule->password_pgpass, &errmsg);
+			if (errmsg != NULL) {
+				od_error(logger, "rules", NULL, NULL,
+					 "rule '%s.%s %s': %s", rule->db_name,
+					 rule->user_name,
+					 rule->address_range.string_value,
+					 errmsg);
 				return -1;
 			}
-			if (rc == 0 && pgpass_password != NULL) {
+			if (pgpass_password != NULL) {
 				od_free(rule->password);
 				rule->password = pgpass_password;
 				rule->password_len = strlen(rule->password);
+			} else {
+				od_log(logger, "rules", NULL, NULL,
+				       "rule '%s.%s %s': no password for user "
+				       "found in pgpass file '%s'",
+				       rule->db_name, rule->user_name,
+				       rule->address_range.string_value,
+				       rule->password_pgpass);
 			}
 		}
 
