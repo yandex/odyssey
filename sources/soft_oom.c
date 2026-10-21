@@ -114,7 +114,8 @@ static inline int od_soft_oom_is_target_process(const char *target_comm,
 	if (strstr(comm, target_comm) != NULL) {
 		*result = 1;
 		strstrip_right(comm);
-		strcpy(pid_comm, comm);
+		strncpy(pid_comm, comm, 32 - 1);
+		pid_comm[32 - 1] = '\0';
 	}
 
 	mm_free(buf);
