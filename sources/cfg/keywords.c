@@ -156,6 +156,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "auth_query_user", AUTH_QUERY_USER },
 	{ "password_passthrough", PASSWORD_PASSTHROUGH },
 	{ "password", PASSWORD },
+	{ "password_pgpass", PASSWORD_PGPASS },
 	{ "role", ROLE },
 	{ "client_fwd_error", CLIENT_FWD_ERROR },
 	{ "client_show_id", CLIENT_SHOW_ID },

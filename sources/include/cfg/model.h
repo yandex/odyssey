@@ -380,6 +380,7 @@ struct od_cfg_route {
 	od_cfg_string_field_t auth_query_user;
 	od_cfg_bool_field_t password_passthrough;
 	od_cfg_string_field_t password;
+	od_cfg_string_field_t password_pgpass;
 	od_cfg_string_field_t role;
 	od_cfg_int_field_t client_max;
 	od_cfg_bool_field_t client_fwd_error;

@@ -303,6 +303,7 @@
 %token AUTH_QUERY_USER "auth_query_user"
 %token PASSWORD_PASSTHROUGH "password_passthrough"
 %token PASSWORD "password"
+%token PASSWORD_PGPASS "password_pgpass"
 %token ROLE "role"
 %token CLIENT_FWD_ERROR "client_fwd_error"
 %token CLIENT_SHOW_ID "client_show_id"
@@ -1522,6 +1523,16 @@ route_item:
 							  $2,
 							  @1,
 							  "password");
+			$2 = NULL;
+		}
+	| PASSWORD_PGPASS string_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_string(ctx->diags,
+							  &ur->password_pgpass,
+							  $2,
+							  @1,
+							  "password_pgpass");
 			$2 = NULL;
 		}
 	| ROLE string_value

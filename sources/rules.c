@@ -656,6 +656,9 @@ static void od_rules_rule_free_now(od_rule_t *rule)
 	if (rule->password) {
 		od_free(rule->password);
 	}
+	if (rule->password_pgpass) {
+		od_free(rule->password_pgpass);
+	}
 	if (rule->auth) {
 		od_free(rule->auth);
 	}
@@ -2086,6 +2089,112 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 	return 0;
 }
 
+static char *od_pgpass_unescape_field(const char *src, size_t len)
+{
+	char *dst = od_malloc(len + 1);
+	if (dst == NULL) {
+		return NULL;
+	}
+	size_t j = 0;
+	for (size_t i = 0; i < len; i++) {
+		if (src[i] == '\\' && i + 1 < len) {
+			i++;
+		}
+		dst[j++] = src[i];
+	}
+	dst[j] = '\0';
+	return dst;
+}
+
+static int od_pgpass_field_match(const char *pattern, const char *value)
+{
+	if (pattern == NULL) {
+		return 0;
+	}
+	if (strcmp(pattern, "*") == 0) {
+		return 1;
+	}
+	if (value == NULL) {
+		return strcmp(pattern, "") == 0;
+	}
+	return strcmp(pattern, value) == 0;
+}
+
+int od_pgpass_lookup(od_rule_t *rule, char **password_out)
+{
+	assert(rule->password_pgpass != NULL);
+	assert(password_out != NULL);
+
+	*password_out = NULL;
+
+	FILE *file = fopen(rule->password_pgpass, "r");
+	if (file == NULL) {
+		return -1;
+	}
+
+	char *line = NULL;
+	size_t line_capacity = 0;
+	ssize_t line_len;
+
+	while ((line_len = getline(&line, &line_capacity, file)) > 0) {
+		/* strip trailing newline */
+		while (line_len > 0 && (line[line_len - 1] == '\n' ||
+					line[line_len - 1] == '\r')) {
+			line_len--;
+		}
+
+		/* skip empty lines */
+		if (line_len == 0) {
+			continue;
+		}
+
+		/* count colons to check if we have at least 4 (5 fields) */
+		int colon_count = 0;
+		for (ssize_t i = 0; i < line_len; i++) {
+			if (line[i] == ':' && (i == 0 || line[i - 1] != '\\')) {
+				colon_count++;
+			}
+		}
+		if (colon_count != 4) {
+			continue;
+		}
+
+		/* split into 5 fields */
+		char *fields[5] = { NULL, NULL, NULL, NULL, NULL };
+		char *cursor = line;
+		char *end = line + line_len;
+		for (int f = 0; f < 4; f++) {
+			char *sep = cursor;
+			while (sep < end && *sep != ':') {
+				sep++;
+			}
+			fields[f] =
+				od_pgpass_unescape_field(cursor, sep - cursor);
+			cursor = (sep < end) ? sep + 1 : sep;
+		}
+		fields[4] = od_pgpass_unescape_field(cursor, end - cursor);
+
+		if (od_pgpass_field_match(fields[2], rule->db_name) &&
+		    od_pgpass_field_match(fields[3], rule->user_name)) {
+			*password_out = od_strdup(fields[4]);
+		}
+
+		for (int f = 0; f < 5; f++) {
+			if (fields[f] != NULL) {
+				od_free(fields[f]);
+			}
+		}
+
+		if (*password_out != NULL) {
+			break;
+		}
+	}
+
+	free(line);
+	fclose(file);
+	return 0;
+}
+
 int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		      od_logger_t *logger)
 {
@@ -2261,6 +2370,20 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
 				rule->user_role = OD_RULE_ROLE_STAT;
+			}
+		}
+
+		/* resolve password from pgpass file if requested */
+		if (rule->password_pgpass != NULL) {
+			char *pgpass_password = NULL;
+			int rc = od_pgpass_lookup(rule, &pgpass_password);
+			if (rc == -1) {
+				return -1;
+			}
+			if (rc == 0 && pgpass_password != NULL) {
+				od_free(rule->password);
+				rule->password = pgpass_password;
+				rule->password_len = strlen(rule->password);
 			}
 		}
 
