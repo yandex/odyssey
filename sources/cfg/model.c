@@ -503,6 +503,17 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 		    &model->global.group_checker_interval_ms);
 	dump_int(file, "workers", 0, &model->global.workers);
 
+	dump_uint64(file, "auth_query_cache_ttl_ms", 0,
+		    &model->global.auth_query_cache_ttl_ms);
+	dump_uint64(file, "auth_query_cache_ttl_jitter_ms", 0,
+		    &model->global.auth_query_cache_ttl_jitter_ms);
+	dump_uint64(file, "auth_query_cache_error_retry_ms", 0,
+		    &model->global.auth_query_cache_error_retry_ms);
+	dump_bool(file, "auth_query_cache_stale_on_error", 0,
+		  &model->global.auth_query_cache_stale_on_error);
+	dump_uint64(file, "auth_query_timeout_ms", 0,
+		    &model->global.auth_query_timeout_ms);
+
 	for (size_t i = 0; i < model->listens_count; ++i) {
 		dump_listen(file, model->listens[i]);
 	}
@@ -963,6 +974,12 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_int_field_free(&g->promhttp_server_port);
 	od_cfg_u64_field_free(&g->group_checker_interval_ms);
 	od_cfg_int_field_free(&g->workers);
+
+	od_cfg_u64_field_free(&g->auth_query_cache_ttl_ms);
+	od_cfg_u64_field_free(&g->auth_query_cache_ttl_jitter_ms);
+	od_cfg_u64_field_free(&g->auth_query_cache_error_retry_ms);
+	od_cfg_bool_field_free(&g->auth_query_cache_stale_on_error);
+	od_cfg_u64_field_free(&g->auth_query_timeout_ms);
 
 	memset(g, 0, sizeof(*g));
 }

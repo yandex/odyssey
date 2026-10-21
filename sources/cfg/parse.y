@@ -227,6 +227,11 @@
 %token SYSTEM_COROUTINE_STACK_SIZE "system_coroutine_stack_size"
 %token PROMHTTP_SERVER_PORT "promhttp_server_port"
 %token GROUP_CHECKER_INTERVAL "group_checker_interval"
+%token AUTH_QUERY_CACHE_TTL "auth_query_cache_ttl"
+%token AUTH_QUERY_CACHE_TTL_JITTER "auth_query_cache_ttl_jitter"
+%token AUTH_QUERY_CACHE_ERROR_RETRY "auth_query_cache_error_retry"
+%token AUTH_QUERY_CACHE_STALE_ON_ERROR "auth_query_cache_stale_on_error"
+%token AUTH_QUERY_TIMEOUT "auth_query_timeout"
 %token SHARED_POOL "shared_pool"
 %token POOL_SIZE "pool_size"
 %token CONN_DROP_OPTIONS "conn_drop_options"
@@ -950,6 +955,46 @@ top_item:
 						&$2, 1, 0, INT_MAX,
 						@1,
 						"group_checker_interval");
+		}
+	| AUTH_QUERY_CACHE_TTL time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.auth_query_cache_ttl_ms,
+						&$2, 1, 0, INT64_MAX,
+						@1,
+						"auth_query_cache_ttl");
+		}
+	| AUTH_QUERY_CACHE_TTL_JITTER time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.auth_query_cache_ttl_jitter_ms,
+						&$2, 1, 0, INT64_MAX,
+						@1,
+						"auth_query_cache_ttl_jitter");
+		}
+	| AUTH_QUERY_CACHE_ERROR_RETRY time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.auth_query_cache_error_retry_ms,
+						&$2, 1, 0, INT64_MAX,
+						@1,
+						"auth_query_cache_error_retry");
+		}
+	| AUTH_QUERY_CACHE_STALE_ON_ERROR bool_value
+		{
+			od_cfg_set_bool(ctx->diags,
+						&ctx->model->global.auth_query_cache_stale_on_error,
+						$2,
+						@1,
+						"auth_query_cache_stale_on_error");
+		}
+	| AUTH_QUERY_TIMEOUT time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.auth_query_timeout_ms,
+						&$2, 1, 1, INT_MAX,
+						@1,
+						"auth_query_timeout");
 		}
 	| WORKERS int_value
 		{
