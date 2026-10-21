@@ -6,6 +6,7 @@
 
 #include <types.h>
 #include <instance.h>
+#include <pgbouncer_convert.h>
 #include <rules.h>
 
 extern void od_usage(od_instance_t *instance, char *path);
@@ -22,6 +23,7 @@ typedef struct {
 	int console;
 	int log_stdout;
 	int test;
+	int convert_pgbouncer;
 } od_arguments_t;
 
 typedef enum {
@@ -30,6 +32,7 @@ typedef enum {
 	OD_OPT_VERBOSE,
 	OD_OPT_LOG_STDOUT,
 	OD_OPT_TEST,
+	OD_OPT_CONVERT_PGBOUNCER,
 	OD_OPT_VERSION,
 	OD_OPT_USAGE,
 } od_cli_options;
@@ -42,6 +45,7 @@ static struct option long_opts[] = {
 	{ "console", no_argument, NULL, OD_OPT_CONSOLE },
 	{ "log_to_stdout", no_argument, NULL, OD_OPT_LOG_STDOUT },
 	{ "test", no_argument, NULL, OD_OPT_TEST },
+	{ "convert-pgbouncer", no_argument, NULL, OD_OPT_CONVERT_PGBOUNCER },
 	{ "version", no_argument, NULL, OD_OPT_VERSION },
 	{ "help", no_argument, NULL, 'h' },
 	{ "usage", no_argument, NULL, OD_OPT_USAGE },
@@ -76,7 +80,8 @@ static inline void od_parse_args(int argc, char **argv, od_arguments_t *args)
 			exit(0);
 		case OD_OPT_USAGE:
 			printf("Usage: %s [-?V] [--console] [--log_to_stdout] "
-			       "[--silent] [--test] [--verbose] [--help] "
+			       "[--silent] [--test] [--convert-pgbouncer] "
+			       "[--verbose] [--help] "
 			       "[--usage] [--version] /path/to/odyssey.conf\n",
 			       argv[0]);
 			exit(0);
@@ -88,6 +93,9 @@ static inline void od_parse_args(int argc, char **argv, od_arguments_t *args)
 			break;
 		case OD_OPT_TEST:
 			args->test = 1;
+			break;
+		case OD_OPT_CONVERT_PGBOUNCER:
+			args->convert_pgbouncer = 1;
 			break;
 		case '?':
 			if (optopt == 0 && optind > 0 &&
@@ -119,6 +127,18 @@ static inline void od_parse_args(int argc, char **argv, od_arguments_t *args)
 	}
 
 	instance->config_file = od_strdup(argv[optind]);
+	if (args->convert_pgbouncer) {
+		if (args->test || args->console || args->verbose ||
+		    args->silent || args->log_stdout) {
+			fprintf(stderr,
+				"--convert-pgbouncer cannot be combined with startup options\n");
+			exit(1);
+		}
+		exit(od_pgbouncer_convert(instance->config_file, stdout,
+					  stderr) == 0 ?
+			     0 :
+			     1);
+	}
 
 	if (args->test == 1) {
 		exit(od_config_testing(instance));

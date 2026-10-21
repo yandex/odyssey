@@ -124,6 +124,8 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Quick start: quick-start.md
+  - Migration:
+    - From PgBouncer: migration/from-pgbouncer.md
   - Configuration:
     - Overview: configuration/overview.md
     - Global parameters: configuration/global.md

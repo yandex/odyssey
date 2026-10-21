@@ -289,6 +289,7 @@ static inline od_retcode_t od_args_init(od_arguments_t *args,
 	args->verbose = 0;
 	args->console = 0;
 	args->test = 0;
+	args->convert_pgbouncer = 0;
 	args->instance = instance;
 	return OK_RESPONSE;
 }
