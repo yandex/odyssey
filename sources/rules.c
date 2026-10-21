@@ -10,6 +10,7 @@
 #include <sys/un.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/file.h>
 #include <kiwi/kiwi.h>
 
 #include <types.h>
@@ -2169,24 +2170,23 @@ int od_pgpass_lookup(od_rule_t *rule, char **password_out)
 	if (rule->user_name == NULL || rule->user_name[0] == '\0')
 		return 0;
 
-	FILE *file = fopen(rule->password_pgpass, "r");
-	if (file == NULL) {
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(rule->password_pgpass, &buf, &size) != 0) {
 		return -1;
 	}
 
-	char *line = NULL;
-	size_t line_capacity = 0;
-	ssize_t line_len;
-
-	while ((line_len = getline(&line, &line_capacity, file)) > 0) {
+	char *cursor = buf;
+	char *line;
+	while ((line = od_next_line(&cursor)) != NULL) {
 		/* ignore comments */
 		if (line[0] == '#') {
 			continue;
 		}
 
-		/* strip trailing newline and carriage return */
-		while (line_len > 0 && (line[line_len - 1] == '\n' ||
-					line[line_len - 1] == '\r')) {
+		/* strip trailing carriage return, keep newline handling to od_next_line */
+		size_t line_len = strlen(line);
+		while (line_len > 0 && line[line_len - 1] == '\r') {
 			line_len--;
 		}
 		line[line_len] = '\0';
@@ -2231,8 +2231,7 @@ int od_pgpass_lookup(od_rule_t *rule, char **password_out)
 		break;
 	}
 
-	free(line);
-	fclose(file);
+	mm_free(buf);
 	return 0;
 }
 
