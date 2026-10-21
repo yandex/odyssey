@@ -127,15 +127,22 @@ static inline void od_worker(void *arg)
 	}
 
 	while (run) {
-		uint32_t task_wait_timout_ms = 10 * 1000;
-
 		machine_msg_t *msg;
-		/* Inverse priorities of cliend routing to decrease chances of timeout */
+		/*
+		 * Prefer newer clients: their connection timeouts are less likely
+		 * to have expired while waiting in the queue.
+		 */
 		msg = machine_channel_read_back(worker->task_channel,
-						task_wait_timout_ms);
+						UINT32_MAX);
 		if (msg == NULL) {
-			/* no tasks within timeout, this is not an error */
-			continue;
+			int error = machine_errno();
+			if (error != ECANCELED) {
+				od_error(
+					&instance->logger, "worker", NULL, NULL,
+					"worker[%d]: failed to read task channel: %s (%d)",
+					worker->id, strerror(error), error);
+			}
+			break;
 		}
 
 		od_msg_t msg_type;
