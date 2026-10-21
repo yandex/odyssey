@@ -43,6 +43,8 @@ The converter reads `[pgbouncer]` and `[databases]` with explicit TCP
 addresses, and the quoted `"user" "password"` entries in `auth_file`.
 It creates an Odyssey route for each database and listed user. For example:
 
+`pgbouncer.ini`:
+
 ```ini
 [pgbouncer]
 listen_addr = 127.0.0.1
@@ -56,13 +58,50 @@ default_pool_size = 20
 app = host=127.0.0.1 port=5432 dbname=app
 ```
 
+`userlist.txt`:
+
 ```text
 "alice" "md500000000000000000000000000000000"
 ```
 
-This produces a route with `database "app"`, `user "alice"`,
-`authentication "md5"`, `pool "transaction"`, and `pool_size 20`, plus
-a remote storage pointing to `127.0.0.1:5432`.
+The resulting `odyssey.conf`:
+
+```conf
+# Generated from PgBouncer. Review credentials and limits before use.
+# This file contains auth_file secrets; restrict its permissions.
+log_format "%p %t %l [%i %s] (%c) %m\n"
+unix_socket_dir "/tmp"
+unix_socket_mode "0777"
+client_max 100
+
+listen {
+    host "127.0.0.1"
+    port 6432
+}
+
+listen {
+    port 6432
+}
+
+storage "pgb_1" {
+    type "remote"
+    host "127.0.0.1"
+    port 5432
+    tls "prefer"
+}
+
+database "app" {
+    user "alice" {
+        authentication "md5"
+        password "md500000000000000000000000000000000"
+        storage "pgb_1"
+        storage_db "app"
+        pool "transaction"
+        pool_size 20
+        min_pool_size 0
+    }
+}
+```
 
 | PgBouncer | Odyssey |
 | --- | --- |
