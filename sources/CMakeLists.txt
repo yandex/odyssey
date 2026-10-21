@@ -61,6 +61,7 @@ set(od_src
     machinarium/dns.c
     machinarium/wait_list.c
     machinarium/wait_flag.c
+    machinarium/thread_pool.c
     machinarium/wait_group.c
     machinarium/zpq_stream.c
     machinarium/compression.c
@@ -144,7 +145,6 @@ set(od_src
     mdb_iamproxy.c
     external_auth.c
     group.c
-    thread_pool.c
     xplan.c
     common/base64.c
     common/saslprep.c
