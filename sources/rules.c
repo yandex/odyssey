@@ -2089,35 +2089,72 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 	return 0;
 }
 
-static char *od_pgpass_unescape_field(const char *src, size_t len)
+/*
+ * Port of libpq's pwdfMatchesString() from fe-connect.c.
+ *
+ * Returns a pointer to the next token or NULL if the current
+ * token doesn't match.
+ */
+static char *od_pgpass_matches_field(char *buf, const char *token)
 {
-	char *dst = od_malloc(len + 1);
-	if (dst == NULL) {
+	char *tbuf;
+	const char *ttok;
+	bool bslash = false;
+
+	if (buf == NULL || token == NULL)
 		return NULL;
-	}
-	size_t j = 0;
-	for (size_t i = 0; i < len; i++) {
-		if (src[i] == '\\' && i + 1 < len) {
-			i++;
+	tbuf = buf;
+	ttok = token;
+	if (tbuf[0] == '*' && tbuf[1] == ':')
+		return tbuf + 2;
+	while (*tbuf != 0)
+	{
+		if (*tbuf == '\\' && !bslash)
+		{
+			tbuf++;
+			bslash = true;
 		}
-		dst[j++] = src[i];
+		if (*tbuf == ':' && *ttok == 0 && !bslash)
+			return tbuf + 1;
+		bslash = false;
+		if (*ttok == 0)
+			return NULL;
+		if (*tbuf == *ttok)
+		{
+			tbuf++;
+			ttok++;
+		}
+		else
+			return NULL;
 	}
-	dst[j] = '\0';
-	return dst;
+	return NULL;
 }
 
-static int od_pgpass_field_match(const char *pattern, const char *value)
+/*
+ * Advance past one escaped field of the pgpass line, returning a pointer
+ * to the character right after the unescaped ':' separator, or NULL if
+ * the line ends before the separator.
+ */
+static char *od_pgpass_skip_field(char *buf)
 {
-	if (pattern == NULL) {
-		return 0;
+	char *tbuf = buf;
+	bool bslash = false;
+
+	while (*tbuf != 0)
+	{
+		if (*tbuf == '\\' && !bslash)
+		{
+			tbuf++;
+			bslash = true;
+		}
+		if (*tbuf == ':' && !bslash)
+			return tbuf + 1;
+		bslash = false;
+		if (*tbuf == 0)
+			return NULL;
+		tbuf++;
 	}
-	if (strcmp(pattern, "*") == 0) {
-		return 1;
-	}
-	if (value == NULL) {
-		return strcmp(pattern, "") == 0;
-	}
-	return strcmp(pattern, value) == 0;
+	return NULL;
 }
 
 int od_pgpass_lookup(od_rule_t *rule, char **password_out)
@@ -2126,6 +2163,11 @@ int od_pgpass_lookup(od_rule_t *rule, char **password_out)
 	assert(password_out != NULL);
 
 	*password_out = NULL;
+
+	if (rule->db_name == NULL || rule->db_name[0] == '\0')
+		return 0;
+	if (rule->user_name == NULL || rule->user_name[0] == '\0')
+		return 0;
 
 	FILE *file = fopen(rule->password_pgpass, "r");
 	if (file == NULL) {
@@ -2137,57 +2179,56 @@ int od_pgpass_lookup(od_rule_t *rule, char **password_out)
 	ssize_t line_len;
 
 	while ((line_len = getline(&line, &line_capacity, file)) > 0) {
-		/* strip trailing newline */
+		/* ignore comments */
+		if (line[0] == '#') {
+			continue;
+		}
+
+		/* strip trailing newline and carriage return */
 		while (line_len > 0 && (line[line_len - 1] == '\n' ||
 					line[line_len - 1] == '\r')) {
 			line_len--;
 		}
+		line[line_len] = '\0';
 
 		/* skip empty lines */
 		if (line_len == 0) {
 			continue;
 		}
 
-		/* count colons to check if we have at least 4 (5 fields) */
-		int colon_count = 0;
-		for (ssize_t i = 0; i < line_len; i++) {
-			if (line[i] == ':' && (i == 0 || line[i - 1] != '\\')) {
-				colon_count++;
-			}
-		}
-		if (colon_count != 4) {
+		/*
+		 * Skip hostname and port fields; only database name and
+		 * user name are matched (libpq also matches host and port,
+		 * but odyssey rules do not map 1:1 to pgpass entries here).
+		 */
+		char *t = line;
+		if ((t = od_pgpass_skip_field(t)) == NULL)
 			continue;
-		}
+		if ((t = od_pgpass_skip_field(t)) == NULL)
+			continue;
+		if ((t = od_pgpass_matches_field(t, rule->db_name)) == NULL)
+			continue;
+		if ((t = od_pgpass_matches_field(t, rule->user_name)) == NULL)
+			continue;
 
-		/* split into 5 fields */
-		char *fields[5] = { NULL, NULL, NULL, NULL, NULL };
-		char *cursor = line;
-		char *end = line + line_len;
-		for (int f = 0; f < 4; f++) {
-			char *sep = cursor;
-			while (sep < end && *sep != ':') {
-				sep++;
-			}
-			fields[f] =
-				od_pgpass_unescape_field(cursor, sep - cursor);
-			cursor = (sep < end) ? sep + 1 : sep;
-		}
-		fields[4] = od_pgpass_unescape_field(cursor, end - cursor);
-
-		if (od_pgpass_field_match(fields[2], rule->db_name) &&
-		    od_pgpass_field_match(fields[3], rule->user_name)) {
-			*password_out = od_strdup(fields[4]);
-		}
-
-		for (int f = 0; f < 5; f++) {
-			if (fields[f] != NULL) {
-				od_free(fields[f]);
-			}
-		}
-
-		if (*password_out != NULL) {
+		/* Found a match. */
+		char *ret = od_strdup(t);
+		if (ret == NULL) {
 			break;
 		}
+
+		/* De-escape password. */
+		char *p1;
+		char *p2;
+		for (p1 = p2 = ret; *p1 != ':' && *p1 != '\0'; ++p1, ++p2) {
+			if (*p1 == '\\' && p1[1] != '\0')
+				++p1;
+			*p2 = *p1;
+		}
+		*p2 = '\0';
+
+		*password_out = ret;
+		break;
 	}
 
 	free(line);
