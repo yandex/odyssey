@@ -16,7 +16,7 @@
 #include <instance.h>
 #include <global.h>
 #include <frontend.h>
-#include <thread_pool.h>
+#include <machinarium/thread_pool.h>
 
 static od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
 {
@@ -333,16 +333,16 @@ od_ldap_storage_credentials_find(od_list_t *ldap_storage_creds_list, char *name)
 	return NULL;
 }
 
-static od_thread_pool_t workers;
+static mm_thread_pool_t workers;
 
 int od_ldap_workers_init(size_t count)
 {
-	return od_thread_pool_init(&workers, "ldap", count, 100);
+	return mm_thread_pool_init(&workers, "ldap", count, 100);
 }
 
 void od_ldap_workers_destroy(void)
 {
-	od_thread_pool_destroy(&workers);
+	mm_thread_pool_destroy(&workers);
 }
 
 static int is_username_valid(od_client_t *client, const char *name)
@@ -660,7 +660,7 @@ int od_auth_ldap(od_client_t *client, kiwi_password_t *cl_password)
 	arg.client = client;
 	arg.password = cl_password;
 
-	od_future_t *future = od_thread_pool_submit(&workers, do_ldap_auth,
+	mm_future_t *future = mm_thread_pool_submit(&workers, do_ldap_auth,
 						    &arg, NULL, NULL, 0);
 	if (future == NULL) {
 		int err = mm_errno_get();
@@ -670,17 +670,17 @@ int od_auth_ldap(od_client_t *client, kiwi_password_t *cl_password)
 		return NOT_OK_RESPONSE;
 	}
 
-	if (od_thread_pool_wait(future, UINT32_MAX)) {
+	if (mm_thread_pool_wait(future, UINT32_MAX)) {
 		int err = mm_errno_get();
 		od_error(&instance->logger, "auth_ldap", client, NULL,
 			 "ldap auth wait error, errno=%d (%s)", err,
 			 strerror(err));
-		od_future_unref(future);
+		mm_future_unref(future);
 
 		return NOT_OK_RESPONSE;
 	}
 
-	od_future_unref(future);
+	mm_future_unref(future);
 
 	if (arg.rc != LDAP_SUCCESS && rule->client_fwd_error) {
 		od_ldap_error_report_client(client, arg.rc);
@@ -720,7 +720,7 @@ int od_auth_ldap_resolve_storage_credentials(od_client_t *client,
 	arg.client = client;
 	arg.rule = rule;
 
-	od_future_t *future = od_thread_pool_submit(
+	mm_future_t *future = mm_thread_pool_submit(
 		&workers, do_resolve_storage_credentials, &arg, NULL, NULL, 0);
 	if (future == NULL) {
 		int err = mm_errno_get();
@@ -730,17 +730,17 @@ int od_auth_ldap_resolve_storage_credentials(od_client_t *client,
 		return NOT_OK_RESPONSE;
 	}
 
-	if (od_thread_pool_wait(future, UINT32_MAX)) {
+	if (mm_thread_pool_wait(future, UINT32_MAX)) {
 		int err = mm_errno_get();
 		od_error(&instance->logger, "auth_ldap", client, NULL,
 			 "ldap auth wait error, errno=%d (%s)", err,
 			 strerror(err));
-		od_future_unref(future);
+		mm_future_unref(future);
 
 		return NOT_OK_RESPONSE;
 	}
 
-	od_future_unref(future);
+	mm_future_unref(future);
 
 	if (arg.rc != LDAP_SUCCESS && rule->client_fwd_error) {
 		od_ldap_error_report_client(client, arg.rc);
