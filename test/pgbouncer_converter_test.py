@@ -53,6 +53,8 @@ app = host=localhost port=5433 dbname=realapp pool_size=7
             '"alice" "md500000000000000000000000000000000"\n',
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stderr, "")
+        self.assertNotIn("# WARNING:", result.stdout)
         for fragment in (
             'host "127.0.0.1"',
             "port 6433",
@@ -108,7 +110,7 @@ auth_file = userlist.txt
         self.assertIn('database "foo-bar"', result.stdout)
         self.assertNotIn('database "\\"foo-bar\\""', result.stdout)
 
-    def test_unsupported_option_fails_without_partial_config(self):
+    def test_unsupported_option_warns_and_outputs_config(self):
         result = self.convert(
             """[pgbouncer]
 listen_addr = 127.0.0.1
@@ -120,11 +122,16 @@ app = host=localhost
 """,
             '"alice" "unused"\n',
         )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('database "app"', result.stdout)
+        self.assertIn("# WARNING:", result.stdout)
+        self.assertIn("WARNING:", result.stderr)
+        self.assertIn("auth_query", result.stdout)
         self.assertIn("auth_query", result.stderr)
+        self.assertNotIn("select secret", result.stderr)
+        self.assertNotIn("select secret", result.stdout)
 
-    def test_statement_pooling_is_rejected(self):
+    def test_statement_pooling_warns_and_blocks_routes(self):
         result = self.convert(
             """[pgbouncer]
 listen_addr = 127.0.0.1
@@ -136,14 +143,16 @@ app = host=localhost
 """,
             '"alice" "unused"\n',
         )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('authentication "block"', result.stdout)
+        self.assertIn('pool "session"', result.stdout)
         self.assertIn("statement", result.stderr)
 
-    def test_missing_auth_file_is_rejected(self):
+    def test_missing_auth_file_warns_and_outputs_blocked_placeholder(self):
         result = self.convert("[pgbouncer]\nlisten_addr = 127.0.0.1\nauth_type = md5\n[databases]\napp = host=localhost\n")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("user default", result.stdout)
+        self.assertIn('authentication "block"', result.stdout)
         self.assertIn("auth_file", result.stderr)
 
     def test_relative_auth_file_uses_process_working_directory(self):
@@ -212,7 +221,7 @@ app = host=localhost user=service password='pa''ss'
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('storage_password "pa\'ss"', result.stdout)
 
-    def test_scram_secret_is_rejected_without_partial_output(self):
+    def test_scram_secret_warns_and_blocks_only_affected_user(self):
         result = self.convert(
             """[pgbouncer]
 listen_addr = 127.0.0.1
@@ -221,11 +230,13 @@ auth_file = userlist.txt
 [databases]
 app = host=localhost
 """,
-            '"alice" "SCRAM-SHA-256$4096:salt$key:key"\n',
+            '"alice" "SCRAM-SHA-256$4096:salt$key:key"\n"bob" "secret"\n',
         )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('user "alice" {\n        authentication "block"', result.stdout)
+        self.assertIn('user "bob" {\n        authentication "md5"', result.stdout)
         self.assertIn("SCRAM", result.stderr)
+        self.assertNotIn("$4096", result.stderr)
 
     def test_invalid_md5_secret_is_rejected(self):
         result = self.convert(
@@ -256,22 +267,24 @@ app = host=localhost
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('password "a\\"b\\c"', result.stdout)
 
-    def test_forced_user_with_multiple_clients_is_rejected(self):
+    def test_forced_user_with_multiple_clients_warns_and_blocks_database(self):
         result = self.convert(
             """[pgbouncer]
 listen_addr = 127.0.0.1
 auth_type = md5
 auth_file = userlist.txt
 [databases]
-app = host=localhost user=service password=secret
+app = host=localhost user=service password=secret min_pool_size=2
 """,
             '"alice" "first"\n"bob" "second"\n',
         )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.count('authentication "block"'), 2)
+        self.assertEqual(result.stdout.count('min_pool_size 0'), 2)
+        self.assertNotIn('min_pool_size 2', result.stdout)
         self.assertIn("forced user", result.stderr)
 
-    def test_abstract_unix_backend_is_rejected(self):
+    def test_abstract_unix_backend_warns_and_outputs_blocked_placeholder(self):
         result = self.convert(
             """[pgbouncer]
 listen_addr = 127.0.0.1
@@ -282,9 +295,129 @@ app = host=@postgres
 """,
             '"alice" "unused"\n',
         )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('authentication "block"', result.stdout)
+        self.assertIn('type "local"', result.stdout)
+        self.assertNotIn('host "@postgres"', result.stdout)
+        self.assertIn("TCP host", result.stderr)
+
+    def test_unknown_sections_and_database_options_do_not_stop_conversion(self):
+        result = self.convert(
+            """[pgbouncer]
+listen_addr=127.0.0.1
+auth_file=userlist.txt
+[users]
+alice=pool_size=5
+[databases]
+app=host=localhost connect_query='select secret' pool_size=7
+""",
+            '"alice" "secret"\n',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('database "app"', result.stdout)
+        self.assertIn("pool_size 7", result.stdout)
+        self.assertIn('authentication "block"', result.stdout)
+        self.assertIn("unsupported section: users", result.stderr)
+        self.assertIn("connect_query", result.stderr)
+        self.assertNotIn("select secret", result.stdout + result.stderr)
+
+    def test_unsupported_auth_type_without_users_outputs_blocked_config(self):
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_type=hba\n"
+            "[databases]\napp=host=localhost\n"
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('authentication "block"', result.stdout)
+        self.assertNotIn('authentication "none"', result.stdout)
+        self.assertIn("unsupported auth_type", result.stderr)
+
+    def test_malformed_input_still_fails_without_output(self):
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_file=userlist.txt\n"
+            "[databases]\napp=host='unterminated\n",
+            '"alice" "secret"\n',
+        )
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(result.stdout, "")
-        self.assertIn("TCP host", result.stderr)
+        self.assertIn("unterminated quote", result.stderr)
+
+    def test_duplicate_options_still_fail_without_output(self):
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1\nlisten_addr=localhost\n"
+            "[databases]\napp=host=localhost\n"
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("duplicate", result.stderr)
+
+    def test_wildcard_and_database_pool_mode_warn_without_blocking_other_database(self):
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_file=userlist.txt\n"
+            "[databases]\n*=host=localhost pool_mode=statement\n"
+            "app=host=localhost pool_size=7\n",
+            '"alice" "secret"\n',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("database default", result.stdout)
+        self.assertIn('authentication "block"', result.stdout)
+        self.assertIn('database "app" {\n    user "alice" {\n        authentication "md5"', result.stdout)
+        self.assertIn("wildcard", result.stderr)
+        self.assertIn("pool_mode", result.stderr)
+
+    def test_unsupported_listen_addresses_use_blocked_loopback_placeholder(self):
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1,::1\nauth_file=userlist.txt\n"
+            "[databases]\napp=host=localhost\n",
+            '"alice" "secret"\n',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('host "127.0.0.1"', result.stdout)
+        self.assertIn('authentication "block"', result.stdout)
+        self.assertIn("listen_addr", result.stderr)
+
+    def test_read_error_still_fails_without_output(self):
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_file=missing.txt\n"
+            "[databases]\napp=host=localhost\n"
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("cannot open auth_file", result.stderr)
+
+    def test_include_only_databases_leave_blocked_placeholder(self):
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_file=userlist.txt\n"
+            "%include databases.ini\n",
+            '"alice" "secret"\n',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("%include", result.stderr)
+        self.assertIn("no databases were converted", result.stderr)
+        self.assertIn("database default", result.stdout)
+        self.assertIn('authentication "block"', result.stdout)
+
+    def test_skipped_include_blocks_routes_with_unknown_settings(self):
+        result = self.convert(
+            "%include auth.ini\n[pgbouncer]\nlisten_addr=127.0.0.1\n"
+            "auth_file=userlist.txt\n[databases]\napp=host=localhost\n",
+            '"alice" "secret"\n',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('authentication "block"', result.stdout)
+        self.assertIn("%include", result.stderr)
+
+    def test_skipped_connect_query_blocks_affected_database(self):
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_file=userlist.txt\n"
+            "[databases]\nrestricted=host=localhost connect_query='SET ROLE restricted'\n"
+            "app=host=localhost\n",
+            '"alice" "secret"\n',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('database "restricted" {\n    user "alice" {\n        authentication "block"', result.stdout)
+        self.assertIn('database "app" {\n    user "alice" {\n        authentication "md5"', result.stdout)
+        self.assertIn("connect_query", result.stderr)
+        self.assertNotIn("SET ROLE", result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,22 @@
 # Migrating from PgBouncer
 
-Odyssey can convert a supported subset of `pgbouncer.ini` into an Odyssey
-configuration. Run the converter on a copy of your PgBouncer configuration,
-review the result, and test it before moving application traffic.
+Odyssey converts supported settings from `pgbouncer.ini` and warns about
+settings that need manual migration. Run the converter on a copy of your
+PgBouncer configuration, then review and test the result before moving
+application traffic.
+
+Odyssey combines multicore pooling with backend routing in a single process.
+Its worker threads share backend connection pools and handle TLS processing,
+so deployments that run
+[multiple PgBouncer processes](https://www.pgbouncer.org/config.html#so_reuseport)
+to use more cores can become simpler to operate.
+[Per-route rules](../configuration/rules.md) give you control over individual workloads,
+while [backend balancing](../features/balancing.md) and
+[target session attributes](../features/tsa.md) select appropriate PostgreSQL
+backends. [Online restart](../features/online-restart.md) lets you upgrade the
+binary while the old instance drains existing connections, and
+[Prometheus metrics](../features/prometheus-metrics.md) make queues, pool
+saturation, and connection errors visible.
 
 ```bash
 umask 077
@@ -10,20 +24,24 @@ odyssey --convert-pgbouncer /etc/pgbouncer/pgbouncer.ini > odyssey.conf
 odyssey --test odyssey.conf
 ```
 
-The command writes only the generated configuration to standard output. For
-input errors it reports the problem to standard error and exits without
-writing a partial configuration. The generated file contains passwords from
-PgBouncer's `auth_file`; keep its permissions restricted. A relative
-`auth_file` path is resolved from the converter's working directory, as it is
-by PgBouncer. Run the converter from the same directory used by the PgBouncer
-service, or use an absolute path in a copy of the input configuration.
+The command writes the configuration to standard output. It adds
+`# WARNING:` comments for settings that need manual migration and prints the
+same warnings to standard error. Warnings do not change the exit status of
+0; read them before using the result. Invalid syntax, duplicate supported
+settings, invalid numeric values, and file read errors cause a nonzero exit
+status and no configuration output.
+
+The generated file contains passwords from PgBouncer's `auth_file`. Keep its
+permissions restricted. As in PgBouncer, a relative `auth_file` path is
+resolved from the process's working directory. Run the converter from the
+PgBouncer service's working directory, or use an absolute path in your copy
+of the input configuration.
 
 ## What is converted
 
-The converter accepts `[pgbouncer]` and `[databases]` with explicit TCP
-addresses, plus the quoted `"user" "password"` entries in `auth_file`.
-Each listed user gets an explicit Odyssey route for each database. For
-example:
+The converter reads `[pgbouncer]` and `[databases]` with explicit TCP
+addresses, and the quoted `"user" "password"` entries in `auth_file`.
+It creates an Odyssey route for each database and listed user. For example:
 
 ```ini
 [pgbouncer]
@@ -42,9 +60,9 @@ app = host=127.0.0.1 port=5432 dbname=app
 "alice" "md500000000000000000000000000000000"
 ```
 
-The generated route contains `database "app"`, `user "alice"`,
-`authentication "md5"`, `pool "transaction"`, and `pool_size 20`.
-It also creates a remote storage pointing to `127.0.0.1:5432`.
+This produces a route with `database "app"`, `user "alice"`,
+`authentication "md5"`, `pool "transaction"`, and `pool_size 20`, plus
+a remote storage pointing to `127.0.0.1:5432`.
 
 | PgBouncer | Odyssey |
 | --- | --- |
@@ -61,41 +79,55 @@ It also creates a remote storage pointing to `127.0.0.1:5432`.
 | `auth_type=md5` and `auth_file` | Named routes with `authentication "md5"` and `password` |
 | `auth_type=trust` and `auth_file` | Named routes with `authentication "none"`; the listed password remains available for backend login |
 
-PgBouncer's defaults for client limit, Unix socket, pool mode, pool size,
-listen port, backend port, and backend TLS are used when those settings are
-absent. An explicit, single `listen_addr`,
-`auth_file`, and TCP `host` for every database are required. Database
-`pool_mode` and `pool_size` take precedence over global values.
+For omitted settings, the converter uses PgBouncer's defaults for the client
+limit, Unix socket, pool mode and size, listen and backend ports, and backend
+TLS. To convert all routes, specify one `listen_addr`, an `auth_file`, and a
+TCP `host` for every database. Database `pool_mode` and `pool_size` override
+the global values.
 
-When `unix_socket_dir` is absent, the converter assumes `/tmp` and mode
-`0777`, the defaults in PgBouncer's upstream documentation. A packaged
-PgBouncer build may use another socket directory. Check the generated socket
-path and permissions, particularly when migrating `auth_type=trust`; set
-`unix_socket_dir` explicitly in the source copy if needed.
+If `unix_socket_dir` is absent, the converter uses `/tmp` and mode `0777`,
+the defaults in PgBouncer's upstream documentation. Your PgBouncer package
+may use another socket directory. Check the generated path and permissions,
+especially for `auth_type=trust`. Set `unix_socket_dir` in the source copy
+if needed.
 
-The converter rejects settings outside this table, other sections such as
-`[users]`, database wildcards, multiple hosts, Unix-socket backends, and
-statement pooling. A database with a forced `user=` and more than one client
-user is rejected, because that would split PgBouncer's single backend pool
-into several Odyssey pools. It also rejects SCRAM secrets in `auth_file`:
-those need a manual review of both client and backend authentication. Errors name the
-unsupported setting so it can be migrated manually. The converter does not
-silently replace unsupported behavior with a weaker setting.
+The converter skips settings outside this table, other sections such as
+`[users]`, and `%include` directives, with a warning for each. Expand included
+files before conversion. Skipping an include blocks all routes because its
+settings are unknown. Skipping a `[users]` section also blocks all routes
+because its pool overrides have not been converted. Warnings about skipped
+options give the key and its location, but omit the value, which may contain
+credentials.
+
+When a route cannot be converted, the converter writes it with
+`authentication "block"` so you can finish it by hand. This applies to
+unsupported authentication or TLS settings, SCRAM secrets, statement pooling,
+database wildcards, and backend addresses without a single TCP host. Skipping
+`connect_query` blocks the affected database: the query may set the backend
+role or required session state. A forced `user=` with multiple client users
+also blocks the database, since separate Odyssey pools would change the
+connection limit of PgBouncer's single backend pool. Blocked routes use
+`min_pool_size 0` to prevent backend preallocation.
+
+Missing credentials leave a blocked `user default` placeholder. Unsupported
+backend addresses leave a local storage placeholder; replace it with a remote
+storage before enabling the route. An unsupported or missing `listen_addr`
+leaves a loopback placeholder and blocks all routes.
 
 ## Check authentication and pooling
 
-For `auth_type=md5`, PgBouncer accepts both clear-text and MD5 secrets in
-`auth_file`. Odyssey can use either for client MD5 authentication. A stored
-MD5 secret can be reused for backend MD5 authentication when the database
-user is the same, but it cannot authenticate to a PostgreSQL server that
-requires SCRAM. If the PgBouncer database entry forces another backend user,
-the converter requires its `password=` value and writes it as
-`storage_password`. Check the PostgreSQL authentication method and test a
-real connection for every migrated route. Rotate any secret that was exposed
-during migration.
+With `auth_type=md5`, PgBouncer accepts clear-text passwords and MD5 secrets
+in `auth_file`. Odyssey can use either for client MD5 authentication. A stored
+MD5 secret also works for backend MD5 authentication if the database user is
+the same. It cannot authenticate to a PostgreSQL server that requires SCRAM.
+For a database entry that forces another backend user, the converter writes
+`password=` as `storage_password`. If that password is missing, it blocks the
+route and prints a warning. Check PostgreSQL's authentication method and test
+a real connection for every migrated route. Rotate any secret exposed during
+migration.
 
-`auth_type=trust` deliberately produces routes with no client password
-check, restricted to names in `auth_file`. Review the listen address and
+`auth_type=trust` produces routes with no client password check, restricted
+to names in `auth_file`. Review the listen address and
 network controls before starting Odyssey. For other PgBouncer authentication
 modes, configure [Odyssey authentication](../configuration/rules.md) by hand.
 
@@ -106,23 +138,17 @@ its behavior under transaction pooling before cutover. See
 
 ## Cut over
 
-1. Convert to a file with restricted permissions and run `odyssey --test`.
+1. Convert to a file with restricted permissions, resolve its warnings, and
+   run `odyssey --test`.
 2. Review each route's backend address, database, user, password, pool size,
-   and authentication method. Manually migrate rejected settings such as
+   and authentication method. Manually migrate warned settings such as
    TLS, `auth_query`, admin access, and reset behavior.
-3. Start Odyssey on a separate address or port. Test application login,
-   representative transactions, prepared statements, and backend failover.
-4. Compare active connections and latency under the expected load, then
-   point clients to Odyssey. Keep the PgBouncer configuration available for
-   rollback until the new path has been observed in production.
-
-Odyssey's [per-route rules](../configuration/rules.md) let you set pooling
-and authentication for each database/user pair. It also offers
-[backend balancing](../features/balancing.md),
-[Prometheus metrics](../features/prometheus-metrics.md), and
-[online restart](../features/online-restart.md). These are useful reasons to
-evaluate it after the basic migration; enable each feature separately once
-the equivalent PgBouncer behavior is verified.
+3. Start Odyssey on a separate address or port. Test application login and
+   representative transactions, including prepared statements. Check backend
+   failover too.
+4. Compare active connections and latency under the expected load before
+   pointing clients to Odyssey. Keep the PgBouncer configuration for rollback
+   while you observe Odyssey in production.
 
 PgBouncer's [configuration reference](https://www.pgbouncer.org/config.html)
 describes the source syntax and authentication behavior used by this guide.

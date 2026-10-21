@@ -1,4 +1,4 @@
-/* Convert the deliberately small, lossless subset of pgbouncer.ini. */
+/* Convert supported pgbouncer.ini settings and mark gaps for manual review. */
 
 #include <ctype.h>
 #include <errno.h>
@@ -19,11 +19,14 @@ typedef struct {
 	char *pool_size;
 	char *pool_mode;
 	char *min_pool_size;
+	int blocked;
+	int storage_blocked;
 } od_pgb_database_t;
 
 typedef struct {
 	char *name;
 	char *password;
+	int blocked;
 } od_pgb_user_t;
 
 typedef struct {
@@ -43,6 +46,9 @@ typedef struct {
 	size_t database_count;
 	od_pgb_user_t *users;
 	size_t user_count;
+	char **warnings;
+	size_t warning_count;
+	int blocked;
 } od_pgb_config_t;
 
 static char *od_pgb_trim(char *s)
@@ -77,6 +83,46 @@ static int od_pgb_set(char **target, const char *value)
 	return *target == NULL ? -1 : 0;
 }
 
+static int od_pgb_warn(od_pgb_config_t *config, FILE *err, const char *path,
+		       size_t line, const char *message, const char *value)
+{
+	int len = snprintf(NULL, 0, "WARNING: %s:%zu: %s: %s", path, line,
+			   message, value);
+	if (len < 0) {
+		return -1;
+	}
+	char *warning = malloc((size_t)len + 1);
+	if (warning == NULL) {
+		return -1;
+	}
+	snprintf(warning, (size_t)len + 1, "WARNING: %s:%zu: %s: %s", path,
+		 line, message, value);
+	/* Warnings are also emitted as single-line configuration comments. */
+	for (char *p = warning; *p; p++) {
+		if (*p == '\n' || *p == '\r') {
+			*p = ' ';
+		}
+	}
+	char **next = realloc(config->warnings,
+			      (config->warning_count + 1) * sizeof(*next));
+	if (next == NULL) {
+		free(warning);
+		return -1;
+	}
+	config->warnings = next;
+	config->warnings[config->warning_count++] = warning;
+	fprintf(err, "%s\n", warning);
+	return 0;
+}
+
+static int od_pgb_security_option(const char *key)
+{
+	return strncmp(key, "auth_", 5) == 0 ||
+	       strncmp(key, "client_tls_", 11) == 0 ||
+	       strncmp(key, "server_tls_", 11) == 0 ||
+	       strcmp(key, "connect_query") == 0;
+}
+
 static int od_pgb_global(od_pgb_config_t *config, const char *key,
 			 const char *value)
 {
@@ -102,7 +148,7 @@ static int od_pgb_global(od_pgb_config_t *config, const char *key,
 			return od_pgb_set(fields[i].field, value);
 		}
 	}
-	return -1;
+	return 1;
 }
 
 static int od_pgb_database_option(od_pgb_database_t *db, const char *key,
@@ -126,11 +172,12 @@ static int od_pgb_database_option(od_pgb_database_t *db, const char *key,
 			return od_pgb_set(fields[i].field, value);
 		}
 	}
-	return -1;
+	return 1;
 }
 
-static int od_pgb_parse_connstr(od_pgb_database_t *db, char *input, FILE *err,
-				const char *path, size_t line)
+static int od_pgb_parse_connstr(od_pgb_config_t *config, od_pgb_database_t *db,
+				char *input, FILE *err, const char *path,
+				size_t line)
 {
 	char *p = input;
 	while (*p) {
@@ -190,11 +237,26 @@ static int od_pgb_parse_connstr(od_pgb_database_t *db, char *input, FILE *err,
 				*p++ = '\0';
 			}
 		}
-		if (od_pgb_database_option(db, key, value) != 0) {
+		int rc = od_pgb_database_option(db, key, value);
+		if (rc < 0) {
 			return od_pgb_error(
 				err, path, line,
-				"unsupported or duplicate database option",
+				"duplicate database option or out of memory",
 				key);
+		}
+		if (rc > 0) {
+			int security = od_pgb_security_option(key);
+			if (security) {
+				db->blocked = 1;
+			}
+			if (od_pgb_warn(
+				    config, err, path, line,
+				    security ?
+					    "unsupported database security option; routes blocked" :
+					    "unsupported database option",
+				    key) != 0) {
+				return -1;
+			}
 		}
 	}
 	return 0;
@@ -218,6 +280,17 @@ static int od_pgb_read_ini(od_pgb_config_t *config, const char *path, FILE *err)
 		if (!*s || *s == '#' || *s == ';') {
 			continue;
 		}
+		if (strncmp(s, "%include", 8) == 0 &&
+		    isspace((unsigned char)s[8])) {
+			config->blocked = 1;
+			if (od_pgb_warn(
+				    config, err, path, number,
+				    "unsupported include directive; expand manually, routes blocked",
+				    "%include") != 0) {
+				goto done;
+			}
+			continue;
+		}
 		if (*s == '[') {
 			char *close = strchr(s, ']');
 			if (close == NULL || *od_pgb_trim(close + 1)) {
@@ -228,12 +301,22 @@ static int od_pgb_read_ini(od_pgb_config_t *config, const char *path, FILE *err)
 			*close = '\0';
 			section = strcmp(s + 1, "pgbouncer") == 0 ? 1 :
 				  strcmp(s + 1, "databases") == 0 ? 2 :
-								    0;
-			if (section == 0) {
-				od_pgb_error(err, path, number,
-					     "unsupported section", s + 1);
-				goto done;
+								    -1;
+			if (section == -1) {
+				const char *name = s + 1;
+				if (strcmp(name, "users") == 0) {
+					config->blocked = 1;
+					name = "users (routes blocked)";
+				}
+				if (od_pgb_warn(config, err, path, number,
+						"unsupported section",
+						name) != 0) {
+					goto done;
+				}
 			}
+			continue;
+		}
+		if (section == -1) {
 			continue;
 		}
 		char *equals = strchr(s, '=');
@@ -276,11 +359,27 @@ static int od_pgb_read_ini(od_pgb_config_t *config, const char *path, FILE *err)
 			goto done;
 		}
 		if (section == 1) {
-			if (od_pgb_global(config, key, value) != 0) {
-				od_pgb_error(err, path, number,
-					     "unsupported or duplicate option",
-					     key);
+			int result = od_pgb_global(config, key, value);
+			if (result < 0) {
+				od_pgb_error(
+					err, path, number,
+					"duplicate option or out of memory",
+					key);
 				goto done;
+			}
+			if (result > 0) {
+				int security = od_pgb_security_option(key);
+				if (security) {
+					config->blocked = 1;
+				}
+				if (od_pgb_warn(
+					    config, err, path, number,
+					    security ?
+						    "unsupported security option; routes blocked" :
+						    "unsupported option",
+					    key) != 0) {
+					goto done;
+				}
 			}
 		} else {
 			for (size_t i = 0; i < config->database_count; i++) {
@@ -303,7 +402,7 @@ static int od_pgb_read_ini(od_pgb_config_t *config, const char *path, FILE *err)
 			memset(db, 0, sizeof(*db));
 			db->name = strdup(key);
 			if (db->name == NULL ||
-			    od_pgb_parse_connstr(db, value, err, path,
+			    od_pgb_parse_connstr(config, db, value, err, path,
 						 number) != 0) {
 				goto done;
 			}
@@ -391,11 +490,12 @@ static int od_pgb_read_users(od_pgb_config_t *config, const char *path,
 				goto done;
 			}
 		}
-		if (strncmp(password, "SCRAM-SHA-256$", 14) == 0) {
-			od_pgb_error(
-				err, path, number,
-				"SCRAM secrets need manual backend auth review",
-				name);
+		int blocked = strncmp(password, "SCRAM-SHA-256$", 14) == 0;
+		if (blocked &&
+		    od_pgb_warn(
+			    config, err, path, number,
+			    "SCRAM secret needs manual backend auth review; user blocked",
+			    name) != 0) {
 			free(name);
 			free(password);
 			goto done;
@@ -423,7 +523,7 @@ static int od_pgb_read_users(od_pgb_config_t *config, const char *path,
 		}
 		config->users = next;
 		config->users[config->user_count++] =
-			(od_pgb_user_t){ name, password };
+			(od_pgb_user_t){ name, password, blocked };
 	}
 	if (ferror(in)) {
 		od_pgb_error(err, path, number, "read failed", strerror(errno));
@@ -459,18 +559,51 @@ static int od_pgb_uint(const char *value, long min, long max)
 static int od_pgb_validate(od_pgb_config_t *config, const char *path, FILE *err)
 {
 	if (config->database_count == 0) {
-		return od_pgb_error(err, path, 0, "no databases",
-				    "[databases]");
+		if (!config->warning_count) {
+			return od_pgb_error(err, path, 0, "no databases",
+					    "[databases]");
+		}
+		if (od_pgb_warn(
+			    config, err, path, 0,
+			    "no databases were converted; default route blocked",
+			    "[databases]") != 0) {
+			return -1;
+		}
+		config->databases = calloc(1, sizeof(*config->databases));
+		if (config->databases == NULL) {
+			return -1;
+		}
+		config->database_count = 1;
+		config->databases[0].name = strdup("*");
+		if (config->databases[0].name == NULL) {
+			return -1;
+		}
+		config->databases[0].blocked = 1;
+		config->databases[0].storage_blocked = 1;
 	}
 	if (config->listen_addr == NULL || !*config->listen_addr ||
 	    strchr(config->listen_addr, ',') != NULL) {
-		return od_pgb_error(err, path, 0,
-				    "one explicit listen_addr is required",
-				    "listen_addr");
+		if (od_pgb_warn(
+			    config, err, path, 0,
+			    "one explicit listen_addr is required; using loopback placeholder, routes blocked",
+			    "listen_addr") != 0) {
+			return -1;
+		}
+		config->blocked = 1;
+		free(config->listen_addr);
+		config->listen_addr = strdup("127.0.0.1");
+		if (config->listen_addr == NULL) {
+			return -1;
+		}
 	}
 	if (config->auth_file == NULL || !*config->auth_file) {
-		return od_pgb_error(err, path, 0, "auth_file is required",
-				    "auth_file");
+		if (od_pgb_warn(
+			    config, err, path, 0,
+			    "no auth_file; user credentials must be configured manually, routes blocked",
+			    "auth_file") != 0) {
+			return -1;
+		}
+		config->blocked = 1;
 	}
 	if (config->auth_type == NULL) {
 		config->auth_type = strdup("md5");
@@ -480,13 +613,24 @@ static int od_pgb_validate(od_pgb_config_t *config, const char *path, FILE *err)
 	}
 	if (strcmp(config->auth_type, "md5") != 0 &&
 	    strcmp(config->auth_type, "trust") != 0) {
-		return od_pgb_error(err, path, 0, "unsupported auth_type",
-				    config->auth_type);
+		if (od_pgb_warn(config, err, path, 0,
+				"unsupported auth_type; routes blocked",
+				config->auth_type) != 0) {
+			return -1;
+		}
+		config->blocked = 1;
 	}
 	const char *mode = config->pool_mode ? config->pool_mode : "session";
 	if (strcmp(mode, "session") != 0 && strcmp(mode, "transaction") != 0) {
-		return od_pgb_error(err, path, 0, "unsupported pool_mode",
-				    mode);
+		if (od_pgb_warn(
+			    config, err, path, 0,
+			    "unsupported pool_mode; using session placeholder, routes blocked",
+			    mode) != 0) {
+			return -1;
+		}
+		config->blocked = 1;
+		free(config->pool_mode);
+		config->pool_mode = NULL;
 	}
 	if ((config->listen_port &&
 	     od_pgb_uint(config->listen_port, 1, 65535)) ||
@@ -510,13 +654,27 @@ static int od_pgb_validate(od_pgb_config_t *config, const char *path, FILE *err)
 	}
 	for (size_t i = 0; i < config->database_count; i++) {
 		od_pgb_database_t *db = &config->databases[i];
-		if (!*db->name || strcmp(db->name, "*") == 0 ||
-		    db->host == NULL || !*db->host ||
-		    strchr(db->host, ',') != NULL || db->host[0] == '/' ||
-		    db->host[0] == '@') {
-			return od_pgb_error(err, path, 0,
-					    "database needs one TCP host",
-					    db->name);
+		if (strcmp(db->name, "*") == 0 && !db->storage_blocked) {
+			if (od_pgb_warn(
+				    config, err, path, 0,
+				    "database wildcard needs manual routing; default route blocked",
+				    db->name) != 0) {
+				return -1;
+			}
+			db->blocked = 1;
+		}
+		if (!db->storage_blocked &&
+		    (db->host == NULL || !*db->host ||
+		     strchr(db->host, ',') != NULL || db->host[0] == '/' ||
+		     db->host[0] == '@')) {
+			if (od_pgb_warn(
+				    config, err, path, 0,
+				    "database needs one TCP host; using local placeholder, routes blocked",
+				    db->name) != 0) {
+				return -1;
+			}
+			db->blocked = 1;
+			db->storage_blocked = 1;
 		}
 		if (db->port && od_pgb_uint(db->port, 1, 65535)) {
 			return od_pgb_error(err, path, 0, "invalid port",
@@ -533,19 +691,33 @@ static int od_pgb_validate(od_pgb_config_t *config, const char *path, FILE *err)
 		}
 		if (db->pool_mode && strcmp(db->pool_mode, "session") != 0 &&
 		    strcmp(db->pool_mode, "transaction") != 0) {
-			return od_pgb_error(err, path, 0,
-					    "unsupported pool_mode",
-					    db->pool_mode);
+			if (od_pgb_warn(
+				    config, err, path, 0,
+				    "unsupported database pool_mode; routes blocked",
+				    db->name) != 0) {
+				return -1;
+			}
+			db->blocked = 1;
+			free(db->pool_mode);
+			db->pool_mode = NULL;
 		}
 		if (db->password && !db->user) {
-			return od_pgb_error(err, path, 0,
-					    "password requires forced user",
-					    db->name);
+			if (od_pgb_warn(
+				    config, err, path, 0,
+				    "password requires forced user; routes blocked",
+				    db->name) != 0) {
+				return -1;
+			}
+			db->blocked = 1;
 		}
 		if (db->user && !db->password) {
-			return od_pgb_error(err, path, 0,
-					    "forced user requires password",
-					    db->name);
+			if (od_pgb_warn(
+				    config, err, path, 0,
+				    "forced user requires password; routes blocked",
+				    db->name) != 0) {
+				return -1;
+			}
+			db->blocked = 1;
 		}
 	}
 	return 0;
@@ -583,9 +755,16 @@ static void od_pgb_print_string(FILE *out, const char *key, const char *value,
 static void od_pgb_emit(const od_pgb_config_t *config, FILE *out)
 {
 	fputs("# Generated from PgBouncer. Review credentials and limits before use.\n"
-	      "# This file contains auth_file secrets; restrict its permissions.\n"
-	      "log_format \"%p %t %l [%i %s] (%c) %m\\n\"\n",
+	      "# This file contains auth_file secrets; restrict its permissions.\n",
 	      out);
+	if (config->warning_count) {
+		fputs("# Resolve these warnings before cutover. Unconvertible routes use authentication block.\n",
+		      out);
+	}
+	for (size_t i = 0; i < config->warning_count; i++) {
+		fprintf(out, "# %s\n", config->warnings[i]);
+	}
+	fputs("log_format \"%p %t %l [%i %s] (%c) %m\\n\"\n", out);
 	od_pgb_print_string(out, "pid_file", config->pidfile, 0);
 	od_pgb_print_string(out, "log_file", config->logfile, 0);
 	int unix_socket_enabled = config->unix_socket_dir == NULL ||
@@ -617,40 +796,63 @@ static void od_pgb_emit(const od_pgb_config_t *config, FILE *out)
 		fputs("\nstorage ", out);
 		fputc('"', out);
 		fprintf(out, "pgb_%zu", i + 1);
-		fputs("\" {\n    type \"remote\"\n", out);
-		od_pgb_print_string(out, "host", db->host, 4);
-		fprintf(out, "    port %s\n    tls \"prefer\"\n}\n",
-			db->port ? db->port : "5432");
+		if (db->storage_blocked) {
+			fputs("\" {\n    type \"local\"\n}\n", out);
+		} else {
+			fputs("\" {\n    type \"remote\"\n", out);
+			od_pgb_print_string(out, "host", db->host, 4);
+			fprintf(out, "    port %s\n    tls \"prefer\"\n}\n",
+				db->port ? db->port : "5432");
+		}
 		fputs("\ndatabase ", out);
-		od_pgb_print_quoted(out, db->name);
+		if (strcmp(db->name, "*") == 0) {
+			fputs("default", out);
+		} else {
+			od_pgb_print_quoted(out, db->name);
+		}
 		fputs(" {\n", out);
-		for (size_t j = 0; j < config->user_count; j++) {
-			const od_pgb_user_t *user = &config->users[j];
+		size_t users = config->user_count ? config->user_count : 1;
+		for (size_t j = 0; j < users; j++) {
+			const od_pgb_user_t *user =
+				config->user_count ? &config->users[j] : NULL;
 			fputs("    user ", out);
-			od_pgb_print_quoted(out, user->name);
+			if (user) {
+				od_pgb_print_quoted(out, user->name);
+			} else {
+				fputs("default", out);
+			}
 			fputs(" {\n", out);
+			int blocked = config->blocked || db->blocked ||
+				      user == NULL || user->blocked;
 			od_pgb_print_string(out, "authentication",
+					    blocked ? "block" :
 					    strcmp(config->auth_type,
 						   "trust") == 0 ?
-						    "none" :
-						    "md5",
+						      "none" :
+						      "md5",
 					    8);
-			od_pgb_print_string(out, "password", user->password, 8);
+			if (user) {
+				od_pgb_print_string(out, "password",
+						    user->password, 8);
+			}
 			fputs("        storage ", out);
 			fprintf(out, "\"pgb_%zu\"\n", i + 1);
-			od_pgb_print_string(out, "storage_db",
-					    db->dbname ? db->dbname : db->name,
-					    8);
+			if (strcmp(db->name, "*") != 0) {
+				od_pgb_print_string(
+					out, "storage_db",
+					db->dbname ? db->dbname : db->name, 8);
+			}
 			od_pgb_print_string(out, "storage_user", db->user, 8);
 			od_pgb_print_string(out, "storage_password",
 					    db->password, 8);
-			od_pgb_print_string(out, "pool",
-					    db->pool_mode ?
-						    db->pool_mode :
-						    (config->pool_mode ?
-							     config->pool_mode :
-							     "session"),
-					    8);
+			od_pgb_print_string(
+				out, "pool",
+				db->storage_blocked ? "session" :
+				db->pool_mode	    ? db->pool_mode :
+						      (config->pool_mode ?
+							       config->pool_mode :
+							       "session"),
+				8);
 			fprintf(out, "        pool_size %s\n",
 				db->pool_size ?
 					db->pool_size :
@@ -658,11 +860,12 @@ static void od_pgb_emit(const od_pgb_config_t *config, FILE *out)
 						 config->default_pool_size :
 						 "20"));
 			fprintf(out, "        min_pool_size %s\n",
+				blocked ? "0" :
 				db->min_pool_size ?
-					db->min_pool_size :
-					(config->min_pool_size ?
-						 config->min_pool_size :
-						 "0"));
+					  db->min_pool_size :
+					  (config->min_pool_size ?
+						   config->min_pool_size :
+						   "0"));
 			fputs("    }\n", out);
 		}
 		fputs("}\n", out);
@@ -701,6 +904,10 @@ static void od_pgb_free(od_pgb_config_t *config)
 		free(config->users[i].password);
 	}
 	free(config->users);
+	for (size_t i = 0; i < config->warning_count; i++) {
+		free(config->warnings[i]);
+	}
+	free(config->warnings);
 }
 
 int od_pgbouncer_convert(const char *path, FILE *out, FILE *err)
@@ -711,17 +918,22 @@ int od_pgbouncer_convert(const char *path, FILE *out, FILE *err)
 	    od_pgb_validate(&config, path, err) != 0) {
 		goto done;
 	}
-	rc = od_pgb_read_users(&config, config.auth_file, err);
-	if (rc != 0) {
-		goto done;
+	if (config.auth_file && *config.auth_file) {
+		rc = od_pgb_read_users(&config, config.auth_file, err);
+		if (rc != 0) {
+			goto done;
+		}
 	}
 	for (size_t i = 0; i < config.database_count; i++) {
 		if (config.databases[i].user && config.user_count > 1) {
-			rc = od_pgb_error(
-				err, path, 0,
-				"forced user with multiple client users would change pool size",
+			rc = od_pgb_warn(
+				&config, err, path, 0,
+				"forced user with multiple client users would change pool size; routes blocked",
 				config.databases[i].name);
-			goto done;
+			if (rc != 0) {
+				goto done;
+			}
+			config.databases[i].blocked = 1;
 		}
 	}
 	od_pgb_emit(&config, out);
