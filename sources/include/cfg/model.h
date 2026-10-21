@@ -141,6 +141,12 @@ typedef struct od_cfg_global {
 	od_cfg_u64_field_t group_checker_interval_ms;
 	od_cfg_int_field_t workers;
 
+	od_cfg_u64_field_t auth_query_cache_ttl_ms;
+	od_cfg_u64_field_t auth_query_cache_ttl_jitter_ms;
+	od_cfg_u64_field_t auth_query_cache_error_retry_ms;
+	od_cfg_bool_field_t auth_query_cache_stale_on_error;
+	od_cfg_u64_field_t auth_query_timeout_ms;
+
 } od_cfg_global_t;
 
 typedef struct od_cfg_listen_storage {

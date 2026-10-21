@@ -87,6 +87,12 @@ void od_config_init(od_config_t *config)
 	config->hba_file = NULL;
 	config->max_sigterms_to_die = 3;
 	config->group_checker_interval_ms = 7000; /* 7 seconds */
+
+	config->auth_query_cache_ttl_ms = 10 * 1000; /* 10 seconds */
+	config->auth_query_cache_ttl_jitter_ms = 5 * 1000; /* up to 5 seconds */
+	config->auth_query_cache_error_retry_ms = 1000; /* 1 second */
+	config->auth_query_cache_stale_on_error = 1;
+	config->auth_query_timeout_ms = 500; /* 500 ms */
 	od_list_init(&config->listen);
 
 	config->backend_connect_timeout_ms = 30U * 1000U; /* 30 seconds */
@@ -156,6 +162,16 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 		new_config->keepalive_usr_timeout_ms;
 	current_config->graceful_shutdown_timeout_ms =
 		new_config->graceful_shutdown_timeout_ms;
+	current_config->auth_query_cache_ttl_ms =
+		new_config->auth_query_cache_ttl_ms;
+	current_config->auth_query_cache_ttl_jitter_ms =
+		new_config->auth_query_cache_ttl_jitter_ms;
+	current_config->auth_query_cache_error_retry_ms =
+		new_config->auth_query_cache_error_retry_ms;
+	current_config->auth_query_cache_stale_on_error =
+		new_config->auth_query_cache_stale_on_error;
+	current_config->auth_query_timeout_ms =
+		new_config->auth_query_timeout_ms;
 }
 
 static void od_config_listen_free(od_config_listen_t *);
@@ -545,6 +561,16 @@ static const od_config_field_t od_config_fields[] = {
 	  0 },
 	{ "group_checker_interval", OD_CONFIG_FIELD_U64,
 	  offsetof(od_config_t, group_checker_interval_ms), 0 },
+	{ "auth_query_cache_ttl", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, auth_query_cache_ttl_ms), 1 },
+	{ "auth_query_cache_ttl_jitter", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, auth_query_cache_ttl_jitter_ms), 1 },
+	{ "auth_query_cache_error_retry", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, auth_query_cache_error_retry_ms), 1 },
+	{ "auth_query_cache_stale_on_error", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, auth_query_cache_stale_on_error), 1 },
+	{ "auth_query_timeout", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, auth_query_timeout_ms), 1 },
 	{ "backend_connect_timeout_ms", OD_CONFIG_FIELD_U64,
 	  offsetof(od_config_t, backend_connect_timeout_ms), 1 },
 	{ "cancel_timeout_ms", OD_CONFIG_FIELD_U64,
@@ -883,6 +909,21 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->dns_cache_ttl_ms);
 	od_log(logger, "config", NULL, NULL, "group_checker_interval  %" PRIu64,
 	       config->group_checker_interval_ms);
+	od_log(logger, "config", NULL, NULL,
+	       "auth_query_cache_ttl            %" PRIu64,
+	       config->auth_query_cache_ttl_ms);
+	od_log(logger, "config", NULL, NULL,
+	       "auth_query_cache_ttl_jitter     %" PRIu64,
+	       config->auth_query_cache_ttl_jitter_ms);
+	od_log(logger, "config", NULL, NULL,
+	       "auth_query_cache_error_retry    %" PRIu64,
+	       config->auth_query_cache_error_retry_ms);
+	od_log(logger, "config", NULL, NULL,
+	       "auth_query_cache_stale_on_error %s",
+	       od_config_yes_no(config->auth_query_cache_stale_on_error));
+	od_log(logger, "config", NULL, NULL,
+	       "auth_query_timeout              %" PRIu64,
+	       config->auth_query_timeout_ms);
 	od_log(logger, "config", NULL, NULL, "max_sigterms_to_die     %d",
 	       config->max_sigterms_to_die);
 	od_log(logger, "config", NULL, NULL, "virtual_processing      %s",

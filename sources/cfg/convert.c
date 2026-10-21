@@ -565,6 +565,15 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 		 config->group_checker_interval_ms);
 	COPY_INT(cfg->workers, config->workers);
 
+	COPY_U64(cfg->auth_query_cache_ttl_ms, config->auth_query_cache_ttl_ms);
+	COPY_U64(cfg->auth_query_cache_ttl_jitter_ms,
+		 config->auth_query_cache_ttl_jitter_ms);
+	COPY_U64(cfg->auth_query_cache_error_retry_ms,
+		 config->auth_query_cache_error_retry_ms);
+	COPY_BOOL(cfg->auth_query_cache_stale_on_error,
+		  config->auth_query_cache_stale_on_error);
+	COPY_U64(cfg->auth_query_timeout_ms, config->auth_query_timeout_ms);
+
 	if (config->keepalive_usr_timeout_ms < 0) {
 		/* the advice is returned in milliseconds (TCP_USER_TIMEOUT) */
 		config->keepalive_usr_timeout_ms =

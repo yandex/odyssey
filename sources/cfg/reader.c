@@ -191,6 +191,12 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_U64(dst, src, group_checker_interval_ms);
 	MERGE_INT(dst, src, workers);
 
+	MERGE_U64(dst, src, auth_query_cache_ttl_ms);
+	MERGE_U64(dst, src, auth_query_cache_ttl_jitter_ms);
+	MERGE_U64(dst, src, auth_query_cache_error_retry_ms);
+	MERGE_BOOL(dst, src, auth_query_cache_stale_on_error);
+	MERGE_U64(dst, src, auth_query_timeout_ms);
+
 #undef MERGE_PLAIN_FLD
 #undef MERGE_BOOL
 #undef MERGE_INT
