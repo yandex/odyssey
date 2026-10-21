@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <machinarium/machinarium.h>
+#include <machinarium/file.h>
 
 #include <systemd_notify.h>
 
@@ -27,7 +27,7 @@ int od_daemonize(void)
 	}
 	setsid();
 	int fd;
-	fd = open("/dev/null", O_RDWR);
+	fd = mm_file_open("/dev/null", O_RDWR, 0);
 	if (fd < 0) {
 		return -1;
 	}
@@ -35,7 +35,7 @@ int od_daemonize(void)
 	dup2(fd, 1);
 	dup2(fd, 2);
 	if (fd > 2) {
-		close(fd);
+		mm_file_close(fd);
 	}
 	return 0;
 }

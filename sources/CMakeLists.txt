@@ -26,6 +26,7 @@ set(od_src
     machinarium/loop.c
     machinarium/clock.c
     machinarium/socket.c
+    machinarium/file.c
     machinarium/stat.c
     machinarium/context_stack.c
     machinarium/context.c
