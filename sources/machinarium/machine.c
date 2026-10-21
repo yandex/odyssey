@@ -27,7 +27,8 @@ static int mm_idle_cb(mm_idle_t *handle)
 {
 	(void)handle;
 	mm_scheduler_run(&mm_self->scheduler);
-	return mm_scheduler_online(&mm_self->scheduler);
+	return mm_scheduler_online(&mm_self->scheduler) ||
+	       atomic_load(&mm_self->visits);
 }
 
 static inline void machine_instance_free(mm_machine_t *machine)
@@ -87,10 +88,8 @@ static void *machine_main(void *arg)
 	(void)id;
 
 	/* run main loop */
-	atomic_store(&machine->online, 1);
 	for (;;) {
-		if (!(mm_scheduler_online(&machine->scheduler) &&
-		      atomic_load(&machine->online))) {
+		if (!mm_machine_running(machine)) {
 			break;
 		}
 		mm_loop_step(&machine->loop);
@@ -125,7 +124,13 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 	if (machine == NULL) {
 		return -1;
 	}
-	atomic_init(&machine->online, 0);
+	atomic_init(&machine->online, 1);
+	atomic_init(&machine->visits, 0);
+	atomic_init(&machine->cancel_pending, 0);
+	atomic_init(&machine->incoming_pending, 0);
+	machine->accepting = 1;
+	machine->joining = 0;
+	mm_list_init(&machine->incoming);
 	machine->id = 0;
 	machine->main = function;
 	machine->main_arg = arg;
@@ -215,13 +220,13 @@ MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 MACHINE_API int machine_wait(uint64_t machine_id)
 {
 	mm_machine_t *machine;
-	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
-					     machine_id);
+	machine = mm_machinemgr_join(&machinarium.machine_mgr, machine_id);
 	if (machine == NULL) {
 		return -1;
 	}
 	int rc;
 	rc = mm_thread_join(&machine->thread);
+	mm_machinemgr_delete(&machinarium.machine_mgr, machine);
 	if (machine->name) {
 		mm_free(machine->name);
 	}
@@ -234,14 +239,14 @@ MACHINE_API int machine_wait(uint64_t machine_id)
 int machine_wait_nb(uint64_t machine_id)
 {
 	mm_machine_t *machine;
-	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
-					     machine_id);
+	machine = mm_machinemgr_join(&machinarium.machine_mgr, machine_id);
 	if (machine == NULL) {
 		return -1;
 	}
 	int rc;
 	rc = mm_wait_flag_wait(machine->join_flag, UINT32_MAX);
 	mm_thread_join(&machine->thread);
+	mm_machinemgr_delete(&machinarium.machine_mgr, machine);
 	if (machine->name) {
 		mm_free(machine->name);
 	}
@@ -253,14 +258,23 @@ int machine_wait_nb(uint64_t machine_id)
 
 MACHINE_API int machine_stop(uint64_t machine_id)
 {
-	mm_machine_t *machine;
-	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
-					     machine_id);
-	if (machine == NULL) {
-		return -1;
+	mm_machinemgr_t *mgr = &machinarium.machine_mgr;
+	mm_spinlock_lock(&mgr->lock);
+	mm_list_t *i;
+	mm_list_foreach (&mgr->list, i) {
+		mm_machine_t *machine = mm_container_of(i, mm_machine_t, link);
+		if (machine->id == machine_id) {
+			int was_online = atomic_exchange(&machine->online, 0);
+			if (was_online && machine->accepting) {
+				mm_eventmgr_wakeup(mm_eventmgr_wakeup_fd(
+					&machine->event_mgr));
+			}
+			mm_spinlock_unlock(&mgr->lock);
+			return 0;
+		}
 	}
-	atomic_store(&machine->online, 0);
-	return 0;
+	mm_spinlock_unlock(&mgr->lock);
+	return -1;
 }
 
 MACHINE_API int machine_active(void)
@@ -392,7 +406,17 @@ MACHINE_API int machine_cancel(uint64_t coroutine_id)
 		mm_errno_set(ENOENT);
 		return -1;
 	}
-	mm_coroutine_cancel(coroutine);
+	/* call_ptr and scheduler lists may only be touched on the executing
+	 * thread. The manager lock serializes cancellation with a handoff. */
+	mm_spinlock_lock(&machinarium.machine_mgr.lock);
+	atomic_store(&coroutine->cancel_requested, 1);
+	mm_machine_t *location = coroutine->location;
+	if (location == mm_self) {
+		mm_coroutine_cancel(coroutine);
+	} else if (!atomic_exchange(&location->cancel_pending, 1)) {
+		mm_eventmgr_wakeup(mm_eventmgr_wakeup_fd(&location->event_mgr));
+	}
+	mm_spinlock_unlock(&machinarium.machine_mgr.lock);
 	return 0;
 }
 
@@ -416,7 +440,7 @@ MACHINE_API int machine_cancelled(void)
 	if (coroutine == NULL) {
 		return -1;
 	}
-	return coroutine->cancel > 0;
+	return mm_coroutine_is_cancelled(coroutine);
 }
 
 MACHINE_API int machine_timedout(void)

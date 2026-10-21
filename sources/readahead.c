@@ -23,9 +23,9 @@
  * Each machinarium thread (worker, od_system, etc.) gets its own cache
  * instance, eliminating spinlock contention on the hot read/return path.
  *
- * Because od_readahead_prepare() is now only called from worker threads
- * (for both client and server io), every buffer is obtained from and
- * returned to the same per-thread cache — no cross-thread ownership transfer.
+ * Client buffers are allocated and returned on their frontend
+ * worker. TLS handshakes temporarily visit a TLS worker without accessing
+ * readahead, so the buffer and its cache stay on the original worker.
  */
 
 static OD_THREAD_LOCAL mm_virtual_rbuf_cache_t *tls_vrb_cache = NULL;

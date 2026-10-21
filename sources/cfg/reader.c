@@ -140,6 +140,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_INT(dst, src, promhttp_server_port);
 	MERGE_U64(dst, src, group_checker_interval_ms);
 	MERGE_INT(dst, src, workers);
+	MERGE_INT(dst, src, tls_workers);
 
 	MERGE_U64(dst, src, auth_query_cache_ttl_ms);
 	MERGE_U64(dst, src, auth_query_cache_ttl_jitter_ms);

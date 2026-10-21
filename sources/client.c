@@ -7,6 +7,7 @@
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/machine.h>
 #include <kiwi/kiwi.h>
 
 #include <status.h>
@@ -135,4 +136,16 @@ uint32_t od_client_login_timeout(const od_client_t *client)
 
 	/* TODO: do not use infinite timeout */
 	return UINT32_MAX;
+}
+
+uint32_t od_client_startup_timeout(const od_client_t *client)
+{
+	uint32_t timeout = od_client_login_timeout(client);
+	if (timeout == UINT32_MAX || client->time_accept == 0) {
+		return timeout;
+	}
+	/* Include both worker queues and protocol negotiation in the budget. */
+	mm_clock_reset(&mm_self->loop.clock);
+	uint64_t elapsed = (machine_time_us() - client->time_accept) / 1000;
+	return elapsed >= timeout ? 0 : timeout - elapsed;
 }

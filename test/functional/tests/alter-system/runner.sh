@@ -84,6 +84,8 @@ expect_error 'alter system set nope = 1' \
 	'unrecognized configuration parameter "nope"'
 expect_error 'alter system set workers = abc' \
 	'invalid value for parameter "workers"'
+expect_error "alter system set tls_workers = 'AUTO'" \
+	'invalid value for parameter "tls_workers"'
 expect_error 'alter system reset nope' \
 	'unrecognized configuration parameter "nope"'
 expect_error 'alter system set graceful_die_on_errors = yes' \
@@ -126,8 +128,16 @@ grep -qF 'parameter "workers" cannot be changed without restarting odyssey' \
 	fail "expected a restart NOTICE for workers"
 }
 expect_line 'workers 4'
+console "alter system set tls_workers = 'auto'" 2>/tmp/alter_system.notice
+grep -qF 'parameter "tls_workers" cannot be changed without restarting odyssey' \
+	/tmp/alter_system.notice || {
+	cat /tmp/alter_system.notice >&2
+	fail "expected a restart NOTICE for tls_workers"
+}
+expect_line 'tls_workers "auto"'
 console 'reload'
 expect_value workers 2
+expect_value tls_workers 0
 
 ody-stop
 
@@ -136,7 +146,8 @@ ody-stop
 sleep 1
 
 expect_value log_debug no
-expect_value workers 4
+expect_value workers 3
+expect_value tls_workers 1
 [ ! -e "$AUTOCONF.tmp" ] || fail "temporary file $AUTOCONF.tmp left behind"
 
 # 8. Concurrent writers must not overwrite each other's changes.

@@ -47,24 +47,6 @@ void mm_machinemgr_delete(mm_machinemgr_t *mgr, mm_machine_t *machine)
 	mm_spinlock_unlock(&mgr->lock);
 }
 
-mm_machine_t *mm_machinemgr_delete_by_id(mm_machinemgr_t *mgr, uint64_t id)
-{
-	mm_spinlock_lock(&mgr->lock);
-	mm_list_t *i;
-	mm_list_foreach (&mgr->list, i) {
-		mm_machine_t *machine;
-		machine = mm_container_of(i, mm_machine_t, link);
-		if (machine->id == id) {
-			mm_list_unlink(&machine->link);
-			mgr->count--;
-			mm_spinlock_unlock(&mgr->lock);
-			return machine;
-		}
-	}
-	mm_spinlock_unlock(&mgr->lock);
-	return NULL;
-}
-
 mm_machine_t *mm_machinemgr_find_by_id(mm_machinemgr_t *mgr, uint64_t id)
 {
 	mm_spinlock_lock(&mgr->lock);
@@ -73,6 +55,23 @@ mm_machine_t *mm_machinemgr_find_by_id(mm_machinemgr_t *mgr, uint64_t id)
 		mm_machine_t *machine;
 		machine = mm_container_of(i, mm_machine_t, link);
 		if (machine->id == id) {
+			mm_spinlock_unlock(&mgr->lock);
+			return machine;
+		}
+	}
+	mm_spinlock_unlock(&mgr->lock);
+	return NULL;
+}
+
+/* Keep a joined machine discoverable until its thread has exited. */
+mm_machine_t *mm_machinemgr_join(mm_machinemgr_t *mgr, uint64_t id)
+{
+	mm_spinlock_lock(&mgr->lock);
+	mm_list_t *i;
+	mm_list_foreach (&mgr->list, i) {
+		mm_machine_t *machine = mm_container_of(i, mm_machine_t, link);
+		if (machine->id == id && !machine->joining) {
+			machine->joining = 1;
 			mm_spinlock_unlock(&mgr->lock);
 			return machine;
 		}

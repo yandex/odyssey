@@ -502,6 +502,12 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 	dump_uint64(file, "group_checker_interval_ms", 0,
 		    &model->global.group_checker_interval_ms);
 	dump_int(file, "workers", 0, &model->global.workers);
+	if (model->global.tls_workers.seen.is_set &&
+	    model->global.tls_workers.value == OD_CFG_TLS_WORKERS_AUTO) {
+		fprintf(file, "tls_workers \"auto\"\n");
+	} else {
+		dump_int(file, "tls_workers", 0, &model->global.tls_workers);
+	}
 
 	dump_uint64(file, "auth_query_cache_ttl_ms", 0,
 		    &model->global.auth_query_cache_ttl_ms);
@@ -974,6 +980,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_int_field_free(&g->promhttp_server_port);
 	od_cfg_u64_field_free(&g->group_checker_interval_ms);
 	od_cfg_int_field_free(&g->workers);
+	od_cfg_int_field_free(&g->tls_workers);
 
 	od_cfg_u64_field_free(&g->auth_query_cache_ttl_ms);
 	od_cfg_u64_field_free(&g->auth_query_cache_ttl_jitter_ms);

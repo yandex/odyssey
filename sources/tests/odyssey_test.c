@@ -27,6 +27,9 @@ extern void kiwi_test_fe_read_auth(void);
 extern void kiwi_test_be_read_query(void);
 
 /* MACHINARIUM */
+extern void machinarium_test_migration(void);
+extern void machinarium_test_migration_cancel(void);
+extern void machinarium_test_migration_lifetime(void);
 extern void machinarium_test_init(void);
 extern void machinarium_test_create0(void);
 extern void machinarium_test_create1(void);
@@ -121,6 +124,7 @@ extern void machinarium_test_mutex_coroutines(void);
 extern void machinarium_test_mutex_timeout(void);
 
 extern void odyssey_test_tdigest(void);
+extern void odyssey_test_tls_workers(void);
 extern void odyssey_test_attribute(void);
 extern void odyssey_test_util(void);
 extern void odyssey_test_hba(void);
@@ -157,11 +161,18 @@ int main(int argc, char *argv[])
 	 */
 	signal(SIGPIPE, SIG_IGN);
 
+	/* Match Odyssey's default stack size. AWS-LC's ML-KEM key generation
+	 * needs more than Machinarium's default of four pages. */
+	machinarium_set_stack_size(16);
+
 	odyssey_test(kiwi_test_enquote);
 	odyssey_test(kiwi_test_pgoptions);
 	odyssey_test(kiwi_test_be_read_startup_options);
 	odyssey_test(kiwi_test_fe_read_auth);
 	odyssey_test(kiwi_test_be_read_query);
+	odyssey_test(machinarium_test_migration);
+	odyssey_test(machinarium_test_migration_cancel);
+	odyssey_test(machinarium_test_migration_lifetime);
 	odyssey_test(machinarium_test_init);
 	odyssey_test(machinarium_test_create0);
 	odyssey_test(machinarium_test_create1);
@@ -255,6 +266,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_eventfd);
 	odyssey_test(machinarium_test_sem);
 	odyssey_test(odyssey_test_tdigest);
+	odyssey_test(odyssey_test_tls_workers);
 	odyssey_test(odyssey_test_attribute);
 	odyssey_test(odyssey_test_util);
 	odyssey_test(odyssey_test_hba);
