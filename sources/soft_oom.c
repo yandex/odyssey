@@ -31,7 +31,7 @@ static inline int od_soft_oom_get_system_memory_consumption(uint64_t *result)
 {
 	char *buf;
 	size_t size;
-	if (mm_file_read_all(PROC_MEMINFO, &buf, &size) != 0) {
+	if (mm_file_read_all_nonblock(PROC_MEMINFO, &buf, &size) != 0) {
 		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
 			  "can't open '%s': %s", PROC_MEMINFO, strerror(errno));
 		return NOT_OK_RESPONSE;
@@ -98,7 +98,7 @@ static inline int od_soft_oom_is_target_process(const char *target_comm,
 
 	char *buf;
 	size_t size;
-	if (mm_file_read_all(comm_path, &buf, &size) != 0) {
+	if (mm_file_read_all_nonblock(comm_path, &buf, &size) != 0) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -131,7 +131,7 @@ static inline int od_soft_oom_accumulate_process_pss(pid_t pid,
 
 	char *buf;
 	size_t size;
-	if (mm_file_read_all(smaps_path, &buf, &size) != 0) {
+	if (mm_file_read_all_nonblock(smaps_path, &buf, &size) != 0) {
 		return NOT_OK_RESPONSE;
 	}
 

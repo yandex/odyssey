@@ -52,7 +52,7 @@ static inline int get_cpu_stat(od_cpu_stat_t *out)
 
 	char *buf;
 	size_t size;
-	if (mm_file_read_all(PROC_STAT_PATH, &buf, &size) != 0) {
+	if (mm_file_read_all_nonblock(PROC_STAT_PATH, &buf, &size) != 0) {
 		hw_error("can't open '%s': %s", PROC_STAT_PATH,
 			 strerror(errno));
 		return -1;
@@ -99,7 +99,7 @@ static inline int get_memory_stat(od_mem_stat_t *out)
 
 	char *buf;
 	size_t size;
-	if (mm_file_read_all(PROC_MEMINFO_PATH, &buf, &size) != 0) {
+	if (mm_file_read_all_nonblock(PROC_MEMINFO_PATH, &buf, &size) != 0) {
 		hw_error("can't open '%s': %s", PROC_MEMINFO_PATH,
 			 strerror(errno));
 		return -1;

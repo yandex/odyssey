@@ -480,6 +480,7 @@ set(od_test_src
     tests/odyssey/test_duration_parse.c
     tests/odyssey/test_misc.c
     tests/odyssey/test_thread_pool.c
+    tests/odyssey/test_file_async.c
     tests/odyssey/test_linear_alloc.c
     tests/odyssey/test_scram.c
     tests/odyssey/test_sql_parser.c

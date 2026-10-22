@@ -263,7 +263,7 @@ static int parse_hba_file(const char *path, od_hba_rules_t *hba_rules,
 {
 	char *buf;
 	size_t buf_size;
-	if (mm_file_read_all(path, &buf, &buf_size) != 0) {
+	if (mm_file_read_all_nonblock(path, &buf, &buf_size) != 0) {
 		od_cfg_diag_error(diags, loc, "can't open hba_file '%s': %s",
 				  path, strerror(errno));
 		return -1;

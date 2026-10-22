@@ -41,3 +41,35 @@ int mm_file_rename(const char *, const char *);
 int mm_file_chmod(const char *, mode_t);
 int mm_file_flock(int, int);
 int mm_file_open_dir(const char *);
+
+/*
+ * Asynchronous file I/O.
+ *
+ * The operations below are wrappers around the synchronous API. When
+ * a machinarium file pool is running, the blocking part is executed
+ * on a pool worker and the calling coroutine is parked until the
+ * result is ready, so other machines keep running. When no pool is
+ * running (e.g. before machinarium_init() or during shutdown), the
+ * call falls back to the plain synchronous implementation.
+ *
+ * Errors:
+ *  - EAGAIN: the pool queue is full (task was not submitted);
+ *  - ECANCELED: the calling machine was cancelled while waiting;
+ *  - otherwise: the errno of the underlying file operation.
+ */
+
+/*
+ * Reads the whole file into a NUL-terminated buffer allocated with
+ * mm_malloc(); the caller must free it with mm_free(). Pseudo-files
+ * with zero st_size (procfs) are supported.
+ */
+int mm_file_read_all_nonblock(const char *, char **, size_t *);
+
+int mm_file_open_nonblock(const char *, int, int);
+int mm_file_open_dir_nonblock(const char *);
+int mm_file_write_all_nonblock(int, const void *, size_t);
+int mm_file_fsync_nonblock(int);
+int mm_file_unlink_nonblock(const char *);
+int mm_file_rename_nonblock(const char *, const char *);
+int mm_file_chmod_nonblock(const char *, mode_t);
+int mm_file_flock_nonblock(int, int);
