@@ -27,7 +27,7 @@ int od_daemonize(void)
 	}
 	setsid();
 	int fd;
-	fd = mm_file_open_plain("/dev/null", O_RDWR, 0);
+	fd = mm_file_open_plain("/dev/null", MM_OPEN_RDWR, 0);
 	if (fd < 0) {
 		return -1;
 	}

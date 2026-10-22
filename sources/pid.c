@@ -40,7 +40,9 @@ int od_pid_create(od_pid_t *pid, char *path)
 	char buffer[32];
 	int size = od_snprintf(buffer, sizeof(buffer), "%d\n", pid->pid);
 	int rc;
-	rc = mm_file_open_plain(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	rc = mm_file_open_plain(path,
+				MM_OPEN_WRONLY | MM_OPEN_CREAT | MM_OPEN_TRUNC,
+				MM_FILE_MODE_WORLD);
 	if (rc == -1) {
 		return -1;
 	}

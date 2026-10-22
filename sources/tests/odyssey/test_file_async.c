@@ -45,7 +45,8 @@ static void test_read_all(void *arg)
 	size_t content_len = strlen(content);
 
 	/* write the file synchronously, we test the read path here */
-	int fd = mm_file_open_plain(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open_plain(tmp_path, MM_OPEN_WRONLY | MM_OPEN_TRUNC,
+				    MM_FILE_MODE_WORLD);
 	test(fd != -1);
 	test(mm_file_write_all_plain(fd, content, content_len) == 0);
 	test(mm_file_close(fd) == 0);
@@ -78,7 +79,8 @@ static void test_open_write_read_cycle(void *arg)
 
 	const char *content = "another file content";
 
-	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, MM_OPEN_WRONLY | MM_OPEN_TRUNC,
+			      MM_FILE_MODE_WORLD);
 	test(fd != -1);
 	test(mm_file_write_all(fd, content, strlen(content)) == 0);
 	test(mm_file_fsync(fd) == 0);
@@ -96,7 +98,8 @@ static void test_write_to_closed_fd(void *arg)
 {
 	(void)arg;
 
-	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, MM_OPEN_WRONLY | MM_OPEN_TRUNC,
+			      MM_FILE_MODE_WORLD);
 	test(fd != -1);
 	test(mm_file_close(fd) == 0);
 
@@ -112,7 +115,8 @@ static void test_rename_unlink(void *arg)
 	mm_snprintf(new_path, sizeof(new_path), "%s.renamed", tmp_path);
 	unlink(new_path);
 
-	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, MM_OPEN_WRONLY | MM_OPEN_TRUNC,
+			      MM_FILE_MODE_WORLD);
 	test(fd != -1);
 	test(mm_file_write_all(fd, "rename me", 9) == 0);
 	test(mm_file_close(fd) == 0);
@@ -138,15 +142,16 @@ static void test_chmod(void *arg)
 {
 	(void)arg;
 
-	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, MM_OPEN_WRONLY | MM_OPEN_TRUNC,
+			      MM_FILE_MODE_WORLD);
 	test(fd != -1);
 	test(mm_file_write_all(fd, "chmod", 5) == 0);
 	test(mm_file_close(fd) == 0);
 
-	test(mm_file_chmod(tmp_path, 0600) == 0);
+	test(mm_file_chmod(tmp_path, MM_FILE_MODE_OWNER) == 0);
 	struct stat st;
 	test(stat(tmp_path, &st) == 0);
-	test((st.st_mode & 0777) == 0600);
+	test((st.st_mode & 0777) == MM_FILE_MODE_OWNER);
 }
 
 static void test_open_dir(void *arg)
@@ -188,7 +193,8 @@ static void test_file_sync_fallback(void *arg)
 
 	const char *content = "sync fallback content";
 
-	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, MM_OPEN_WRONLY | MM_OPEN_TRUNC,
+			      MM_FILE_MODE_WORLD);
 	test(fd != -1);
 	test(mm_file_write_all(fd, content, strlen(content)) == 0);
 	test(mm_file_close(fd) == 0);

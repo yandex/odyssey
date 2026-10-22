@@ -306,7 +306,9 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 
 int od_logger_open(od_logger_t *logger, const char *path)
 {
-	int fd = mm_file_open_plain(path, O_RDWR | O_CREAT | O_APPEND, 0644);
+	int fd = mm_file_open_plain(
+		path, MM_OPEN_RDWR | MM_OPEN_CREAT | MM_OPEN_APPEND,
+		MM_FILE_MODE_WORLD);
 	if (fd == -1) {
 		return -1;
 	}
@@ -763,11 +765,12 @@ static inline void _od_logger_write_batch(od_logger_t *l,
 	int rc;
 	if (fd != -1) {
 		if (batching) {
-			rc = writev(fd, iovecs, n);
+			rc = mm_file_writev(fd, iovecs, n);
 		} else {
 			for (size_t i = 0; i < n; ++i) {
 				struct iovec *vec = &iovecs[i];
-				rc = write(fd, vec->iov_base, vec->iov_len);
+				rc = mm_file_write(fd, vec->iov_base,
+						   vec->iov_len);
 				if (rc <= 0) {
 					break;
 				}
@@ -775,7 +778,7 @@ static inline void _od_logger_write_batch(od_logger_t *l,
 		}
 	}
 	if (l->log_stdout) {
-		rc = writev(STDOUT_FILENO, iovecs, n);
+		rc = mm_file_writev(STDOUT_FILENO, iovecs, n);
 	}
 	if (l->log_syslog) {
 		for (size_t i = 0; i < n; ++i) {
@@ -793,10 +796,10 @@ static inline void _od_logger_write(od_logger_t *l, char *data, int len,
 	int fd = atomic_load(&l->fd);
 	int rc;
 	if (fd != -1) {
-		rc = write(fd, data, len);
+		rc = mm_file_write(fd, data, len);
 	}
 	if (l->log_stdout) {
-		rc = write(STDOUT_FILENO, data, len);
+		rc = mm_file_write(STDOUT_FILENO, data, len);
 	}
 	if (l->log_syslog) {
 		syslog(od_log_syslog_level[lvl], "%.*s", len, data);

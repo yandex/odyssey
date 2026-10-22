@@ -12,7 +12,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <sys/un.h>
-#include <sys/file.h>
 #include <netinet/in.h>
 
 #include <machinarium/machinarium.h>
@@ -209,12 +208,13 @@ static int od_system_unix_socket_prepare(od_system_server_t *server,
 	od_snprintf(lock_path, sizeof(lock_path), "%s.odyssey.lock",
 		    addr->sun_path);
 	server->unix_socket_lock_fd = mm_file_open_plain(
-		lock_path, O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
+		lock_path, MM_OPEN_RDWR | MM_OPEN_CREAT | MM_OPEN_NOFOLLOW,
+		MM_FILE_MODE_OWNER);
 	if (server->unix_socket_lock_fd == -1) {
 		return -1;
 	}
 	if (mm_file_flock_plain(server->unix_socket_lock_fd,
-				LOCK_EX | LOCK_NB) == -1) {
+				MM_LOCK_EX | MM_LOCK_NB) == -1) {
 		*lock_held = errno == EWOULDBLOCK || errno == EAGAIN;
 		return -1;
 	}

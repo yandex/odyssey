@@ -27,6 +27,9 @@ set(od_src
     machinarium/clock.c
     machinarium/socket.c
     machinarium/file.c
+    # plain file primitives per platform, chosen like the epoll/kqueue
+    # poll backends below; all current targets are POSIX
+    machinarium/file_posix.c
     machinarium/stat.c
     machinarium/context_stack.c
     machinarium/context.c
