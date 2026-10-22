@@ -16,6 +16,30 @@ struct kiwi_fe_error {
 	char *hint;
 };
 
+KIWI_API static inline int
+kiwi_fe_read_protocol_negotiation(char *data, uint32_t size,
+				  uint32_t *proto_version)
+{
+	/* We do not request protocol extensions, so no option names are valid. */
+	if (kiwi_unlikely(size != 1 + 3 * sizeof(uint32_t) ||
+			  data[0] != KIWI_BE_NEGOTIATE_PROTOCOL_VERSION)) {
+		return -1;
+	}
+	char *pos = data + 1;
+	uint32_t left = size - 1;
+	uint32_t len, version, unsupported;
+	kiwi_read32(&len, &pos, &left);
+	kiwi_read32(&version, &pos, &left);
+	kiwi_read32(&unsupported, &pos, &left);
+	if (kiwi_unlikely(len != size - 1 || unsupported != 0 ||
+			  version != PG_PROTOCOL_EARLIEST ||
+			  version >= *proto_version)) {
+		return -1;
+	}
+	*proto_version = version;
+	return 0;
+}
+
 KIWI_API static inline int kiwi_fe_read_ready(char *data, uint32_t size,
 					      int *status)
 {

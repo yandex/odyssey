@@ -36,7 +36,7 @@ kiwi_fe_write_startup_message(machine_msg_t *msg, int argc, kiwi_fe_arg_t *argv)
 	/* len */
 	kiwi_write32(&pos, size);
 	/* version */
-	kiwi_write32(&pos, 196608);
+	kiwi_write32(&pos, PG_PROTOCOL_LATEST);
 	/* arguments */
 	for (i = 0; i < argc; i++) {
 		kiwi_write(&pos, argv[i].name, argv[i].len);

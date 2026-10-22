@@ -2,7 +2,7 @@
 
 set -ex
 
-/usr/bin/odyssey /tests/cancel-3.2/cancel.conf
+/usr/bin/odyssey "${1:-/tests/cancel-3.2/cancel.conf}"
 sleep 1
 
 # background load to ensure no one gets wrong cancel
