@@ -452,7 +452,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 		case KIWI_BE_BACKEND_KEY_DATA:
 			rc = kiwi_fe_read_key(machine_msg_data(msg),
 					      machine_msg_size(msg),
-					      &server->key);
+					      &server->key, PG_PROTOCOL(3, 0));
 			machine_msg_free(msg);
 			if (rc == -1) {
 				od_error(
@@ -1086,7 +1086,7 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 
 	/* send cancel request */
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_cancel(NULL, key->key_pid, key->key);
+	msg = kiwi_fe_write_cancel(NULL, key);
 	if (msg == NULL) {
 		return -1;
 	}

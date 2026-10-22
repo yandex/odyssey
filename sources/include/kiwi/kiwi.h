@@ -20,6 +20,7 @@
 
 #include "kiwi/sasl.h"
 #include "kiwi/macro.h"
+#include "kiwi/protocol.h"
 #include "kiwi/header.h"
 #include "kiwi/error_codes.h"
 #include "kiwi/io.h"

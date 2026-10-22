@@ -34,7 +34,8 @@ KIWI_API static inline int kiwi_fe_read_ready(char *data, uint32_t size,
 }
 
 KIWI_API static inline int kiwi_fe_read_key(char *data, uint32_t size,
-					    kiwi_key_t *key)
+					    kiwi_key_t *key,
+					    uint32_t proto_version)
 {
 	kiwi_header_t *header = (kiwi_header_t *)data;
 	uint32_t len;
@@ -43,7 +44,9 @@ KIWI_API static inline int kiwi_fe_read_key(char *data, uint32_t size,
 		return -1;
 	}
 	if (kiwi_unlikely(header->type != KIWI_BE_BACKEND_KEY_DATA ||
-			  len != 8)) {
+			  len < sizeof(uint32_t) + KIWI_CANCEL_KEY_MIN_LEN ||
+			  len > sizeof(uint32_t) + KIWI_CANCEL_KEY_MAX_LEN ||
+			  (proto_version == PG_PROTOCOL(3, 0) && len != 8))) {
 		return -1;
 	}
 	uint32_t pos_size = len;
@@ -52,10 +55,8 @@ KIWI_API static inline int kiwi_fe_read_key(char *data, uint32_t size,
 	if (kiwi_unlikely(rc == -1)) {
 		return -1;
 	}
-	rc = kiwi_read32(&key->key, &pos, &pos_size);
-	if (kiwi_unlikely(rc == -1)) {
-		return -1;
-	}
+	key->key_len = pos_size;
+	memcpy(key->key, pos, pos_size);
 	return 0;
 }
 

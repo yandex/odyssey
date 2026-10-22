@@ -47,12 +47,16 @@ kiwi_fe_write_startup_message(machine_msg_t *msg, int argc, kiwi_fe_arg_t *argv)
 }
 
 KIWI_API static inline machine_msg_t *
-kiwi_fe_write_cancel(machine_msg_t *msg, uint32_t pid, uint32_t key)
+kiwi_fe_write_cancel(machine_msg_t *msg, const kiwi_key_t *key)
 {
+	if (kiwi_unlikely(key->key_len == 0 ||
+			  key->key_len > KIWI_CANCEL_KEY_MAX_LEN)) {
+		return NULL;
+	}
 	int size = sizeof(uint32_t) + /* len */
 		   sizeof(uint32_t) + /* special */
 		   sizeof(uint32_t) + /* pid */
-		   sizeof(uint32_t); /* key */
+		   key->key_len;
 	int offset = 0;
 	if (msg) {
 		offset = machine_msg_size(msg);
@@ -66,11 +70,11 @@ kiwi_fe_write_cancel(machine_msg_t *msg, uint32_t pid, uint32_t key)
 	/* len */
 	kiwi_write32(&pos, size);
 	/* special */
-	kiwi_write32(&pos, 80877102);
+	kiwi_write32(&pos, CANCEL_REQUEST_CODE);
 	/* pid */
-	kiwi_write32(&pos, pid);
+	kiwi_write32(&pos, key->key_pid);
 	/* key */
-	kiwi_write32(&pos, key);
+	kiwi_write(&pos, key->key, key->key_len);
 	return msg;
 }
 
