@@ -375,7 +375,7 @@ static mm_file_result_t *mm_file_run(mm_file_arg_t *arg, const void *buf)
 	}
 
 	mm_future_t *future = mm_thread_pool_submit(
-		pool, mm_file_task, arg, NULL, mm_file_result_free, 0);
+		pool, mm_file_task, arg, mm_free, mm_file_result_free, 0);
 	if (future == NULL) {
 		/* errno is set by submit (EAGAIN or ENOMEM) */
 		mm_free(arg);
