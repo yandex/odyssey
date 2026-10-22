@@ -36,6 +36,8 @@ typedef struct {
 	char *unix_socket_mode;
 	char *auth_type;
 	char *auth_file;
+	char *client_tls_sslmode;
+	char *server_tls_sslmode;
 	char *pool_mode;
 	char *default_pool_size;
 	char *min_pool_size;
@@ -126,6 +128,11 @@ static int od_pgb_security_option(const char *key)
 static int od_pgb_global(od_pgb_config_t *config, const char *key,
 			 const char *value)
 {
+	if ((strcmp(key, "client_tls_sslmode") == 0 ||
+	     strcmp(key, "server_tls_sslmode") == 0) &&
+	    strcmp(value, "disable") != 0) {
+		return 1;
+	}
 	struct {
 		const char *name;
 		char **field;
@@ -136,6 +143,8 @@ static int od_pgb_global(od_pgb_config_t *config, const char *key,
 		{ "unix_socket_mode", &config->unix_socket_mode },
 		{ "auth_type", &config->auth_type },
 		{ "auth_file", &config->auth_file },
+		{ "client_tls_sslmode", &config->client_tls_sslmode },
+		{ "server_tls_sslmode", &config->server_tls_sslmode },
 		{ "pool_mode", &config->pool_mode },
 		{ "default_pool_size", &config->default_pool_size },
 		{ "min_pool_size", &config->min_pool_size },
@@ -766,7 +775,9 @@ static void od_pgb_emit(const od_pgb_config_t *config, FILE *out)
 	}
 	fputs("log_format \"%p %t %l [%i %s] (%c) %m\\n\"\n", out);
 	od_pgb_print_string(out, "pid_file", config->pidfile, 0);
-	od_pgb_print_string(out, "log_file", config->logfile, 0);
+	if (config->logfile && *config->logfile) {
+		od_pgb_print_string(out, "log_file", config->logfile, 0);
+	}
 	int unix_socket_enabled = config->unix_socket_dir == NULL ||
 				  *config->unix_socket_dir != '\0';
 	if (unix_socket_enabled) {
@@ -785,8 +796,10 @@ static void od_pgb_emit(const od_pgb_config_t *config, FILE *out)
 		config->max_client_conn ? config->max_client_conn : "100");
 	fputs("\nlisten {\n", out);
 	od_pgb_print_string(out, "host", config->listen_addr, 4);
-	fprintf(out, "    port %s\n}\n",
+	fprintf(out, "    port %s\n",
 		config->listen_port ? config->listen_port : "6432");
+	od_pgb_print_string(out, "tls", config->client_tls_sslmode, 4);
+	fputs("}\n", out);
 	if (unix_socket_enabled) {
 		fprintf(out, "\nlisten {\n    port %s\n}\n",
 			config->listen_port ? config->listen_port : "6432");
@@ -801,8 +814,14 @@ static void od_pgb_emit(const od_pgb_config_t *config, FILE *out)
 		} else {
 			fputs("\" {\n    type \"remote\"\n", out);
 			od_pgb_print_string(out, "host", db->host, 4);
-			fprintf(out, "    port %s\n    tls \"prefer\"\n}\n",
+			fprintf(out, "    port %s\n",
 				db->port ? db->port : "5432");
+			od_pgb_print_string(out, "tls",
+					    config->server_tls_sslmode ?
+						    config->server_tls_sslmode :
+						    "prefer",
+					    4);
+			fputs("}\n", out);
 		}
 		fputs("\ndatabase ", out);
 		if (strcmp(db->name, "*") == 0) {
@@ -880,6 +899,8 @@ static void od_pgb_free(od_pgb_config_t *config)
 	free(config->unix_socket_mode);
 	free(config->auth_type);
 	free(config->auth_file);
+	free(config->client_tls_sslmode);
+	free(config->server_tls_sslmode);
 	free(config->pool_mode);
 	free(config->default_pool_size);
 	free(config->min_pool_size);

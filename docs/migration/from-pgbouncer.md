@@ -109,6 +109,9 @@ database "app" {
 | `unix_socket_dir`, `unix_socket_mode` | Global socket settings and a Unix socket listener |
 | `max_client_conn` | Global `client_max` |
 | `logfile`, `pidfile` | Global `log_file`, `pid_file` |
+| Empty `logfile` | Omit `log_file`; log to standard output |
+| `client_tls_sslmode=disable` | TCP listener `tls "disable"` |
+| `server_tls_sslmode=disable` | Storage `tls "disable"` |
 | Database `host`, `port` | A remote `storage` per database |
 | Default backend TLS mode `prefer` | Storage `tls "prefer"` |
 | Database `dbname`, `user`, `password` | Route `storage_db`, `storage_user`, `storage_password` |
@@ -123,6 +126,11 @@ limit, Unix socket, pool mode and size, listen and backend ports, and backend
 TLS. To convert all routes, specify one `listen_addr`, an `auth_file`, and a
 TCP `host` for every database. Database `pool_mode` and `pool_size` override
 the global values.
+
+Explicit TLS mode `disable` is supported for both clients and backends.
+Other explicit TLS modes and TLS options still produce warnings and block
+routes for manual migration. If `server_tls_sslmode` is omitted, backend
+TLS defaults to `prefer`.
 
 If `unix_socket_dir` is absent, the converter uses `/tmp` and mode `0777`,
 the defaults in PgBouncer's upstream documentation. Your PgBouncer package

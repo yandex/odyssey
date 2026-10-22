@@ -2,8 +2,10 @@
 
 import os
 import pathlib
+import socket
 import subprocess
 import tempfile
+import time
 import unittest
 
 
@@ -35,6 +37,118 @@ class ConverterTest(unittest.TestCase):
                 )
                 self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
             return result
+
+    def test_empty_logfile_allows_generated_configuration_to_start(self):
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            port = listener.getsockname()[1]
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1\n"
+            f"listen_port={port}\nunix_socket_dir=\n"
+            "auth_file=userlist.txt\nlogfile=\n"
+            "[databases]\napp=host=127.0.0.1\n",
+            '"alice" "secret"\n',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        with tempfile.TemporaryDirectory() as directory:
+            directory = pathlib.Path(directory)
+            config = directory / "odyssey.conf"
+            config.write_text(result.stdout)
+            with (directory / "startup.log").open("w+") as log:
+                process = subprocess.Popen(
+                    [str(ODYSSEY), "--log_to_stdout", str(config)],
+                    stdout=log,
+                    stderr=log,
+                )
+                try:
+                    deadline = time.monotonic() + 5
+                    while True:
+                        log.seek(0)
+                        output = log.read()
+                        self.assertIsNone(process.poll(), output)
+                        try:
+                            with socket.create_connection(("127.0.0.1", port), timeout=0.1):
+                                break
+                        except OSError:
+                            if time.monotonic() >= deadline:
+                                self.fail("Odyssey did not start listening:\n" + output)
+                            time.sleep(0.01)
+                finally:
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+
+    def test_nonempty_logfile_is_preserved(self):
+        result = self.convert(
+            "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_file=userlist.txt\n"
+            "logfile=/tmp/pgbouncer.log\n[databases]\napp=host=localhost\n",
+            '"alice" "secret"\n',
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('log_file "/tmp/pgbouncer.log"', result.stdout)
+
+    def test_disabled_tls_modes_preserve_unblocked_routes(self):
+        for options, backend_mode, disabled_listeners in (
+            ("client_tls_sslmode=disable\n", "prefer", 1),
+            ("server_tls_sslmode=disable\n", "disable", 0),
+            ("client_tls_sslmode=disable\nserver_tls_sslmode=disable\n", "disable", 1),
+        ):
+            with self.subTest(options=options):
+                result = self.convert(
+                    "[pgbouncer]\nlisten_addr=127.0.0.1\nunix_socket_dir=\n"
+                    "auth_file=userlist.txt\n" + options +
+                    "[databases]\napp=host=localhost\n",
+                    '"alice" "secret"\n',
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stderr, "")
+                self.assertIn('authentication "md5"', result.stdout)
+                self.assertNotIn('authentication "block"', result.stdout)
+                listener, storage = result.stdout.split('storage "pgb_1" {', 1)
+                self.assertEqual(listener.count('tls "disable"'), disabled_listeners)
+                self.assertIn(f'tls "{backend_mode}"', storage)
+
+    def test_unsupported_tls_modes_still_block_routes(self):
+        for key in ("client_tls_sslmode", "server_tls_sslmode"):
+            for mode in ("require", "verify-full", "", "invalid"):
+                with self.subTest(key=key, mode=mode):
+                    result = self.convert(
+                        "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_file=userlist.txt\n"
+                        f"{key}={mode}\n[databases]\napp=host=localhost\n",
+                        '"alice" "secret"\n',
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn('authentication "block"', result.stdout)
+                    self.assertIn(key, result.stderr)
+
+    def test_duplicate_disabled_tls_modes_fail_without_output(self):
+        for key in ("client_tls_sslmode", "server_tls_sslmode"):
+            with self.subTest(key=key):
+                result = self.convert(
+                    "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_file=userlist.txt\n"
+                    f"{key}=disable\n{key}=disable\n[databases]\napp=host=localhost\n",
+                    '"alice" "secret"\n',
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("duplicate", result.stderr)
+
+    def test_unsupported_tls_options_block_even_with_disabled_modes(self):
+        for key in ("client_tls_cert_file", "server_tls_cert_file"):
+            with self.subTest(key=key):
+                result = self.convert(
+                    "[pgbouncer]\nlisten_addr=127.0.0.1\nauth_file=userlist.txt\n"
+                    "client_tls_sslmode=disable\nserver_tls_sslmode=disable\n"
+                    f"{key}=/private/certificate.pem\n[databases]\napp=host=localhost\n",
+                    '"alice" "secret"\n',
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('authentication "block"', result.stdout)
+                self.assertIn(key, result.stderr)
+                self.assertNotIn("/private/certificate.pem", result.stdout + result.stderr)
 
     def test_md5_database_and_user_mapping(self):
         result = self.convert(
