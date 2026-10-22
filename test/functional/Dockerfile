@@ -178,6 +178,9 @@ COPY ./test/functional/bin/start-pg /usr/bin/start-pg
 
 COPY ./test/functional/tests /tests
 
+# shared config base, reused by config-errors autoconf tests
+COPY ./test/pg_regress/conf/_base /tests/config-errors/_base
+
 WORKDIR /tests
 
 COPY ./sources/machinarium/gdb/machinarium-gdb.py /gdb.py

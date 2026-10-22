@@ -49,6 +49,13 @@ assert_config_error --test
 # validated by --test just like the base config.
 script_dir=$(cd "$(dirname "$0")" && pwd)
 
+# shared config base: /tests copy inside the functional test image, repo
+# test/pg_regress tree when running the runner locally
+base_conf=/tests/config-errors/_base
+if [ ! -f "$base_conf" ]; then
+    base_conf="$script_dir/../../../pg_regress/conf/_base"
+fi
+
 assert_config_valid() {
     local status
     if timeout 10 "$odyssey_bin" --test "$test_dir/config.conf" >"$test_dir/output.log" 2>&1; then
@@ -71,7 +78,7 @@ assert_config_valid() {
 
 # valid base config without autoconf passes
 rm -f "$test_dir/config.conf.autoconf"
-cp "$script_dir/base.conf" "$test_dir/config.conf"
+cp "$base_conf" "$test_dir/config.conf"
 assert_config_valid
 
 # valid autoconf overriding a global option passes
