@@ -35,6 +35,7 @@
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
 #define ODYSSEY_EXECUTE_ON_HOST_STR "odyssey.execute_on_host"
 #define ODYSSEY_PIN_BACKEND "odyssey.pin_backend"
+#define ODYSSEY_RWR_CONSISTENT "odyssey.rwr_consistent"
 #define ODYSSEY_OPPORTUNISTIC_ACQUIRE "odyssey.opportunistic_acquire"
 #define ODYSSEY_POOLING_MODE "odyssey.pooling_mode"
 #define ODYSSEY_VERSION_STR "odyssey.version"
@@ -466,6 +467,14 @@ static od_frontend_status_t process_vset(od_client_t *client,
 		}
 	}
 
+	if (strcmp(ctx->s1, ODYSSEY_RWR_CONSISTENT) == 0) {
+		if (instance->config.virtual_processing) {
+			return build_set_generic_bool(
+				client, ctx, portal, &client->rwr_consistent,
+				&client->rwr_last_lsn_valid);
+		}
+	}
+
 	if (strcmp(ctx->s1, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
 		if (instance->config.virtual_processing) {
 			return build_set_generic_bool(
@@ -592,6 +601,13 @@ static od_frontend_status_t process_vshow(od_client_t *client,
 		if (instance->config.virtual_processing) {
 			return process_show_bool_guc(client, portal, ctx->s1,
 						     client->backend_pin);
+		}
+	}
+
+	if (strcmp(ctx->s1, ODYSSEY_RWR_CONSISTENT) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_show_bool_guc(client, portal, ctx->s1,
+						     client->rwr_consistent);
 		}
 	}
 

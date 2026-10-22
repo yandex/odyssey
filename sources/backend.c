@@ -25,6 +25,7 @@
 #include <route.h>
 #include <rules.h>
 #include <auth.h>
+#include <storage.h>
 #include <util.h>
 #include <query.h>
 #include <stream.h>
@@ -487,6 +488,15 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 					"startup", client, server,
 					"unexpected parameter for server: '%s', ignored",
 					name);
+			}
+
+			/* cache server major version on the endpoint */
+			if (server->endpoint != NULL &&
+			    name_len == sizeof("server_version") &&
+			    strncmp(name, "server_version", name_len) == 0) {
+				int server_version_major = atoi(value);
+				od_storage_endpoint_set_server_version(
+					server->endpoint, server_version_major);
 			}
 
 			if (route_params) {
