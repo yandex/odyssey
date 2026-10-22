@@ -23,6 +23,7 @@ void mm_tls_init(mm_io_t *);
 void mm_tls_free(mm_io_t *);
 void mm_tls_error_reset(mm_io_t *);
 int mm_tls_handshake(mm_io_t *, uint32_t);
+int mm_tls_shutdown(mm_io_t *, uint32_t);
 int mm_tls_write(mm_io_t *, const char *, int);
 int mm_tls_writev(mm_io_t *, const struct iovec *, int);
 int mm_tls_read_pending(mm_io_t *);

@@ -402,7 +402,7 @@ static inline void od_system_server(void *arg)
 		}
 
 		if (!instance->config.disable_nolinger) {
-			mm_io_set_nolinger(client_io);
+			mm_io_set_nolinger(client_io, 1);
 		}
 
 		/* allocate new client */
