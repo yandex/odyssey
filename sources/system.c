@@ -173,7 +173,8 @@ static void od_system_unix_socket_release(od_system_server_t *server)
 			}
 		} else if (rc == 1 && dev == server->unix_socket_dev &&
 			   ino == server->unix_socket_ino) {
-			if (mm_file_unlink(server->unix_socket_path) == -1 &&
+			if (mm_file_unlink_plain(server->unix_socket_path) ==
+				    -1 &&
 			    errno != ENOENT) {
 				od_gerror("server", NULL, NULL,
 					  "failed to remove unix socket %s: %s",
@@ -207,13 +208,13 @@ static int od_system_unix_socket_prepare(od_system_server_t *server,
 	char lock_path[sizeof(addr->sun_path) + sizeof(".odyssey.lock")];
 	od_snprintf(lock_path, sizeof(lock_path), "%s.odyssey.lock",
 		    addr->sun_path);
-	server->unix_socket_lock_fd =
-		mm_file_open(lock_path, O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
+	server->unix_socket_lock_fd = mm_file_open_plain(
+		lock_path, O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
 	if (server->unix_socket_lock_fd == -1) {
 		return -1;
 	}
-	if (mm_file_flock(server->unix_socket_lock_fd, LOCK_EX | LOCK_NB) ==
-	    -1) {
+	if (mm_file_flock_plain(server->unix_socket_lock_fd,
+				LOCK_EX | LOCK_NB) == -1) {
 		*lock_held = errno == EWOULDBLOCK || errno == EAGAIN;
 		return -1;
 	}
@@ -284,7 +285,7 @@ static int od_system_unix_socket_prepare(od_system_server_t *server,
 		errno = EAGAIN;
 		return -1;
 	}
-	if (mm_file_unlink(addr->sun_path) == -1 && errno != ENOENT) {
+	if (mm_file_unlink_plain(addr->sun_path) == -1 && errno != ENOENT) {
 		return -1;
 	}
 	return 0;
@@ -671,7 +672,8 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "incorrect unix_socket_mode");
 		} else {
-			rc = mm_file_chmod(saddr_un.sun_path, (mode_t)mode);
+			rc = mm_file_chmod_plain(saddr_un.sun_path,
+						 (mode_t)mode);
 			if (rc == -1) {
 				od_error(&instance->logger, "server", NULL,
 					 NULL, "chmod(%s, %ld) failed",

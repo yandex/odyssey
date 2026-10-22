@@ -27,7 +27,7 @@ static int read_file(const char *path, char **out, size_t *out_size,
 {
 	char *buf;
 	size_t size;
-	if (mm_file_read_all_nonblock(path, &buf, &size) != 0) {
+	if (mm_file_read_all(path, &buf, &size) != 0) {
 		od_cfg_diag_error(diags, od_cfg_location_empty(path),
 				  "failed to read config file '%s': %s", path,
 				  strerror(errno));

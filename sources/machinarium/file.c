@@ -21,7 +21,7 @@
 #include <machinarium/mm.h>
 #include <machinarium/thread_pool.h>
 
-int mm_file_open(const char *path, int flags, int mode)
+int mm_file_open_plain(const char *path, int flags, int mode)
 {
 	return open(path, flags | O_CLOEXEC, mode);
 }
@@ -49,7 +49,7 @@ ssize_t mm_file_write(int fd, const void *buf, size_t size)
 	return rc;
 }
 
-int mm_file_write_all(int fd, const void *buf, size_t size)
+int mm_file_write_all_plain(int fd, const void *buf, size_t size)
 {
 	size_t done = 0;
 	while (done < size) {
@@ -65,12 +65,12 @@ int mm_file_write_all(int fd, const void *buf, size_t size)
 	return 0;
 }
 
-int mm_file_read_all(const char *path, char **buf, size_t *size)
+int mm_file_read_all_plain(const char *path, char **buf, size_t *size)
 {
 	*buf = NULL;
 	*size = 0;
 
-	int fd = mm_file_open(path, O_RDONLY, 0);
+	int fd = mm_file_open_plain(path, O_RDONLY, 0);
 	if (fd < 0) {
 		return -1;
 	}
@@ -126,7 +126,7 @@ int mm_file_read_all(const char *path, char **buf, size_t *size)
 	return 0;
 }
 
-int mm_file_fsync(int fd)
+int mm_file_fsync_plain(int fd)
 {
 	return fsync(fd);
 }
@@ -168,27 +168,27 @@ int mm_file_is_socket(const char *path, dev_t *dev, ino_t *ino)
 	return 1;
 }
 
-int mm_file_unlink(const char *path)
+int mm_file_unlink_plain(const char *path)
 {
 	return unlink(path);
 }
 
-int mm_file_rename(const char *oldpath, const char *newpath)
+int mm_file_rename_plain(const char *oldpath, const char *newpath)
 {
 	return rename(oldpath, newpath);
 }
 
-int mm_file_chmod(const char *path, mode_t mode)
+int mm_file_chmod_plain(const char *path, mode_t mode)
 {
 	return chmod(path, mode);
 }
 
-int mm_file_flock(int fd, int operation)
+int mm_file_flock_plain(int fd, int operation)
 {
 	return flock(fd, operation);
 }
 
-int mm_file_open_dir(const char *path)
+int mm_file_open_dir_plain(const char *path)
 {
 	return open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 }
@@ -269,33 +269,34 @@ static void *mm_file_task(void *obj)
 	errno = 0;
 	switch (arg->op) {
 	case MM_FILE_OP_READ_ALL:
-		res->rc = mm_file_read_all(arg->path, &res->buf, &res->size);
+		res->rc = mm_file_read_all_plain(arg->path, &res->buf,
+						 &res->size);
 		break;
 	case MM_FILE_OP_OPEN:
-		res->fd = mm_file_open(arg->path, arg->fd, arg->mode);
+		res->fd = mm_file_open_plain(arg->path, arg->fd, arg->mode);
 		res->rc = res->fd == -1 ? -1 : 0;
 		break;
 	case MM_FILE_OP_OPEN_DIR:
-		res->fd = mm_file_open_dir(arg->path);
+		res->fd = mm_file_open_dir_plain(arg->path);
 		res->rc = res->fd == -1 ? -1 : 0;
 		break;
 	case MM_FILE_OP_WRITE_ALL:
-		res->rc = mm_file_write_all(arg->fd, arg->buf, arg->size);
+		res->rc = mm_file_write_all_plain(arg->fd, arg->buf, arg->size);
 		break;
 	case MM_FILE_OP_FSYNC:
-		res->rc = mm_file_fsync(arg->fd);
+		res->rc = mm_file_fsync_plain(arg->fd);
 		break;
 	case MM_FILE_OP_UNLINK:
-		res->rc = mm_file_unlink(arg->path);
+		res->rc = mm_file_unlink_plain(arg->path);
 		break;
 	case MM_FILE_OP_RENAME:
-		res->rc = mm_file_rename(arg->path, arg->buf);
+		res->rc = mm_file_rename_plain(arg->path, arg->buf);
 		break;
 	case MM_FILE_OP_CHMOD:
-		res->rc = mm_file_chmod(arg->path, arg->mode);
+		res->rc = mm_file_chmod_plain(arg->path, arg->mode);
 		break;
 	case MM_FILE_OP_FLOCK:
-		res->rc = mm_file_flock(arg->fd, arg->mode);
+		res->rc = mm_file_flock_plain(arg->fd, arg->mode);
 		break;
 	default:
 		abort();
@@ -326,35 +327,36 @@ static mm_file_result_t *mm_file_run(mm_file_arg_t *arg, const void *buf)
 		errno = 0;
 		switch (arg->op) {
 		case MM_FILE_OP_READ_ALL:
-			res.rc = mm_file_read_all(arg->path, &res.buf,
-						  &res.size);
+			res.rc = mm_file_read_all_plain(arg->path, &res.buf,
+							&res.size);
 			break;
 		case MM_FILE_OP_OPEN:
-			res.fd = mm_file_open(arg->path, arg->fd, arg->mode);
+			res.fd = mm_file_open_plain(arg->path, arg->fd,
+						    arg->mode);
 			res.rc = res.fd == -1 ? -1 : 0;
 			break;
 		case MM_FILE_OP_OPEN_DIR:
-			res.fd = mm_file_open_dir(arg->path);
+			res.fd = mm_file_open_dir_plain(arg->path);
 			res.rc = res.fd == -1 ? -1 : 0;
 			break;
 		case MM_FILE_OP_WRITE_ALL:
-			res.rc =
-				mm_file_write_all(arg->fd, arg->buf, arg->size);
+			res.rc = mm_file_write_all_plain(arg->fd, arg->buf,
+							 arg->size);
 			break;
 		case MM_FILE_OP_FSYNC:
-			res.rc = mm_file_fsync(arg->fd);
+			res.rc = mm_file_fsync_plain(arg->fd);
 			break;
 		case MM_FILE_OP_UNLINK:
-			res.rc = mm_file_unlink(arg->path);
+			res.rc = mm_file_unlink_plain(arg->path);
 			break;
 		case MM_FILE_OP_RENAME:
-			res.rc = mm_file_rename(arg->path, arg->buf);
+			res.rc = mm_file_rename_plain(arg->path, arg->buf);
 			break;
 		case MM_FILE_OP_CHMOD:
-			res.rc = mm_file_chmod(arg->path, arg->mode);
+			res.rc = mm_file_chmod_plain(arg->path, arg->mode);
 			break;
 		case MM_FILE_OP_FLOCK:
-			res.rc = mm_file_flock(arg->fd, arg->mode);
+			res.rc = mm_file_flock_plain(arg->fd, arg->mode);
 			break;
 		default:
 			abort();
@@ -416,14 +418,14 @@ static mm_file_result_t *mm_file_run(mm_file_arg_t *arg, const void *buf)
 	return copy;
 }
 
-int mm_file_read_all_nonblock(const char *path, char **buf, size_t *size)
+int mm_file_read_all(const char *path, char **buf, size_t *size)
 {
 	*buf = NULL;
 	*size = 0;
 
 	mm_thread_pool_t *pool = machinarium.file_pool;
 	if (pool == NULL) {
-		return mm_file_read_all(path, buf, size);
+		return mm_file_read_all_plain(path, buf, size);
 	}
 
 	size_t path_len = strlen(path);
@@ -453,11 +455,11 @@ int mm_file_read_all_nonblock(const char *path, char **buf, size_t *size)
 	return rc;
 }
 
-int mm_file_open_nonblock(const char *path, int flags, int mode)
+int mm_file_open(const char *path, int flags, int mode)
 {
 	mm_thread_pool_t *pool = machinarium.file_pool;
 	if (pool == NULL) {
-		return mm_file_open(path, flags, mode);
+		return mm_file_open_plain(path, flags, mode);
 	}
 
 	size_t path_len = strlen(path);
@@ -486,11 +488,11 @@ int mm_file_open_nonblock(const char *path, int flags, int mode)
 	return rc == 0 ? fd : -1;
 }
 
-int mm_file_open_dir_nonblock(const char *path)
+int mm_file_open_dir(const char *path)
 {
 	mm_thread_pool_t *pool = machinarium.file_pool;
 	if (pool == NULL) {
-		return mm_file_open_dir(path);
+		return mm_file_open_dir_plain(path);
 	}
 
 	size_t path_len = strlen(path);
@@ -517,7 +519,7 @@ int mm_file_open_dir_nonblock(const char *path)
 	return rc == 0 ? fd : -1;
 }
 
-int mm_file_write_all_nonblock(int fd, const void *buf, size_t size)
+int mm_file_write_all(int fd, const void *buf, size_t size)
 {
 	/*
 	 * The caller owns 'buf' and 'fd' and is blocked until the task
@@ -526,7 +528,7 @@ int mm_file_write_all_nonblock(int fd, const void *buf, size_t size)
 	 */
 	mm_thread_pool_t *pool = machinarium.file_pool;
 	if (pool == NULL) {
-		return mm_file_write_all(fd, buf, size);
+		return mm_file_write_all_plain(fd, buf, size);
 	}
 
 	mm_file_arg_t *arg = mm_malloc(sizeof(mm_file_arg_t));
@@ -552,11 +554,11 @@ int mm_file_write_all_nonblock(int fd, const void *buf, size_t size)
 	return rc;
 }
 
-int mm_file_fsync_nonblock(int fd)
+int mm_file_fsync(int fd)
 {
 	mm_thread_pool_t *pool = machinarium.file_pool;
 	if (pool == NULL) {
-		return mm_file_fsync(fd);
+		return mm_file_fsync_plain(fd);
 	}
 
 	mm_file_arg_t *arg = mm_malloc(sizeof(mm_file_arg_t));
@@ -581,11 +583,11 @@ int mm_file_fsync_nonblock(int fd)
 	return rc;
 }
 
-int mm_file_unlink_nonblock(const char *path)
+int mm_file_unlink(const char *path)
 {
 	mm_thread_pool_t *pool = machinarium.file_pool;
 	if (pool == NULL) {
-		return mm_file_unlink(path);
+		return mm_file_unlink_plain(path);
 	}
 
 	size_t path_len = strlen(path);
@@ -611,11 +613,11 @@ int mm_file_unlink_nonblock(const char *path)
 	return rc;
 }
 
-int mm_file_rename_nonblock(const char *oldpath, const char *newpath)
+int mm_file_rename(const char *oldpath, const char *newpath)
 {
 	mm_thread_pool_t *pool = machinarium.file_pool;
 	if (pool == NULL) {
-		return mm_file_rename(oldpath, newpath);
+		return mm_file_rename_plain(oldpath, newpath);
 	}
 
 	size_t old_len = strlen(oldpath);
@@ -644,11 +646,11 @@ int mm_file_rename_nonblock(const char *oldpath, const char *newpath)
 	return rc;
 }
 
-int mm_file_chmod_nonblock(const char *path, mode_t mode)
+int mm_file_chmod(const char *path, mode_t mode)
 {
 	mm_thread_pool_t *pool = machinarium.file_pool;
 	if (pool == NULL) {
-		return mm_file_chmod(path, mode);
+		return mm_file_chmod_plain(path, mode);
 	}
 
 	size_t path_len = strlen(path);
@@ -675,11 +677,11 @@ int mm_file_chmod_nonblock(const char *path, mode_t mode)
 	return rc;
 }
 
-int mm_file_flock_nonblock(int fd, int operation)
+int mm_file_flock(int fd, int operation)
 {
 	mm_thread_pool_t *pool = machinarium.file_pool;
 	if (pool == NULL) {
-		return mm_file_flock(fd, operation);
+		return mm_file_flock_plain(fd, operation);
 	}
 
 	mm_file_arg_t *arg = mm_malloc(sizeof(mm_file_arg_t));

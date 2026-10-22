@@ -144,7 +144,7 @@ char *passwordFromFile(const char *hostname, const char *port,
 	}
 
 	/* Read the whole file to accommodate any reasonable line length */
-	if (mm_file_read_all_nonblock(pgpassfile, &buf, &size) != 0) {
+	if (mm_file_read_all(pgpassfile, &buf, &size) != 0) {
 		*errmsg = "could not read password file";
 		return NULL;
 	}

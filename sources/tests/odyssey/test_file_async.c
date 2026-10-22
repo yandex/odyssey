@@ -45,14 +45,14 @@ static void test_read_all(void *arg)
 	size_t content_len = strlen(content);
 
 	/* write the file synchronously, we test the read path here */
-	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open_plain(tmp_path, O_WRONLY | O_TRUNC, 0644);
 	test(fd != -1);
-	test(mm_file_write_all(fd, content, content_len) == 0);
+	test(mm_file_write_all_plain(fd, content, content_len) == 0);
 	test(mm_file_close(fd) == 0);
 
 	char *buf;
 	size_t size;
-	test(mm_file_read_all_nonblock(tmp_path, &buf, &size) == 0);
+	test(mm_file_read_all(tmp_path, &buf, &size) == 0);
 	test(size == content_len);
 	test(memcmp(buf, content, content_len) == 0);
 	test(buf[size] == '\0');
@@ -65,8 +65,8 @@ static void test_read_all_missing(void *arg)
 
 	char *buf;
 	size_t size;
-	test(mm_file_read_all_nonblock("/tmp/odyssey_test_file_not_exists",
-				       &buf, &size) == -1);
+	test(mm_file_read_all("/tmp/odyssey_test_file_not_exists", &buf,
+			      &size) == -1);
 	test(errno == ENOENT);
 	test(buf == NULL);
 	test(size == 0);
@@ -78,15 +78,15 @@ static void test_open_write_read_cycle(void *arg)
 
 	const char *content = "another file content";
 
-	int fd = mm_file_open_nonblock(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
 	test(fd != -1);
-	test(mm_file_write_all_nonblock(fd, content, strlen(content)) == 0);
-	test(mm_file_fsync_nonblock(fd) == 0);
+	test(mm_file_write_all(fd, content, strlen(content)) == 0);
+	test(mm_file_fsync(fd) == 0);
 	test(mm_file_close(fd) == 0);
 
 	char *buf;
 	size_t size;
-	test(mm_file_read_all_nonblock(tmp_path, &buf, &size) == 0);
+	test(mm_file_read_all(tmp_path, &buf, &size) == 0);
 	test(size == strlen(content));
 	test(memcmp(buf, content, size) == 0);
 	mm_free(buf);
@@ -96,11 +96,11 @@ static void test_write_to_closed_fd(void *arg)
 {
 	(void)arg;
 
-	int fd = mm_file_open_nonblock(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
 	test(fd != -1);
 	test(mm_file_close(fd) == 0);
 
-	test(mm_file_write_all_nonblock(fd, "data", 4) == -1);
+	test(mm_file_write_all(fd, "data", 4) == -1);
 	test(errno == EBADF);
 }
 
@@ -112,25 +112,25 @@ static void test_rename_unlink(void *arg)
 	mm_snprintf(new_path, sizeof(new_path), "%s.renamed", tmp_path);
 	unlink(new_path);
 
-	int fd = mm_file_open_nonblock(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
 	test(fd != -1);
-	test(mm_file_write_all_nonblock(fd, "rename me", 9) == 0);
+	test(mm_file_write_all(fd, "rename me", 9) == 0);
 	test(mm_file_close(fd) == 0);
 
-	test(mm_file_rename_nonblock(tmp_path, new_path) == 0);
+	test(mm_file_rename(tmp_path, new_path) == 0);
 	/* the original file must be gone */
 	char *buf;
 	size_t size;
-	test(mm_file_read_all_nonblock(tmp_path, &buf, &size) == -1);
+	test(mm_file_read_all(tmp_path, &buf, &size) == -1);
 	test(errno == ENOENT);
 
 	/* and the new one must exist */
-	test(mm_file_read_all_nonblock(new_path, &buf, &size) == 0);
+	test(mm_file_read_all(new_path, &buf, &size) == 0);
 	test(size == 9);
 	mm_free(buf);
 
-	test(mm_file_unlink_nonblock(new_path) == 0);
-	test(mm_file_read_all_nonblock(new_path, &buf, &size) == -1);
+	test(mm_file_unlink(new_path) == 0);
+	test(mm_file_read_all(new_path, &buf, &size) == -1);
 	test(errno == ENOENT);
 }
 
@@ -138,12 +138,12 @@ static void test_chmod(void *arg)
 {
 	(void)arg;
 
-	int fd = mm_file_open_nonblock(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
 	test(fd != -1);
-	test(mm_file_write_all_nonblock(fd, "chmod", 5) == 0);
+	test(mm_file_write_all(fd, "chmod", 5) == 0);
 	test(mm_file_close(fd) == 0);
 
-	test(mm_file_chmod_nonblock(tmp_path, 0600) == 0);
+	test(mm_file_chmod(tmp_path, 0600) == 0);
 	struct stat st;
 	test(stat(tmp_path, &st) == 0);
 	test((st.st_mode & 0777) == 0600);
@@ -153,11 +153,11 @@ static void test_open_dir(void *arg)
 {
 	(void)arg;
 
-	int fd = mm_file_open_dir_nonblock("/tmp");
+	int fd = mm_file_open_dir("/tmp");
 	test(fd != -1);
 	test(mm_file_close(fd) == 0);
 
-	test(mm_file_open_dir_nonblock(tmp_path) == -1);
+	test(mm_file_open_dir(tmp_path) == -1);
 	test(errno == ENOTDIR);
 }
 
@@ -188,14 +188,14 @@ static void test_file_sync_fallback(void *arg)
 
 	const char *content = "sync fallback content";
 
-	int fd = mm_file_open_nonblock(tmp_path, O_WRONLY | O_TRUNC, 0644);
+	int fd = mm_file_open(tmp_path, O_WRONLY | O_TRUNC, 0644);
 	test(fd != -1);
-	test(mm_file_write_all_nonblock(fd, content, strlen(content)) == 0);
+	test(mm_file_write_all(fd, content, strlen(content)) == 0);
 	test(mm_file_close(fd) == 0);
 
 	char *buf;
 	size_t size;
-	test(mm_file_read_all_nonblock(tmp_path, &buf, &size) == 0);
+	test(mm_file_read_all(tmp_path, &buf, &size) == 0);
 	test(size == strlen(content));
 	test(memcmp(buf, content, size) == 0);
 	mm_free(buf);

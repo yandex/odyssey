@@ -117,25 +117,25 @@ MACHINE_API int machinarium_init(void)
 	if (machinarium_file_pool_size > 0) {
 		mm_thread_pool_t *pool = mm_malloc(sizeof(mm_thread_pool_t));
 		if (pool == NULL) {
-			mm_taskmgr_stop(&machinarium.task_mgr);
-			mm_machinemgr_free(&machinarium.machine_mgr);
-			mm_tls_engine_free();
-			return -1;
+			goto error;
 		}
 		int rc = mm_thread_pool_init(
 			pool, "file", (size_t)machinarium_file_pool_size, 1024);
 		if (rc != 0) {
 			mm_free(pool);
-			mm_taskmgr_stop(&machinarium.task_mgr);
-			mm_machinemgr_free(&machinarium.machine_mgr);
-			mm_tls_engine_free();
-			return -1;
+			goto error;
 		}
 		machinarium.file_pool = pool;
 	}
 
 	machinarium_initialized = 1;
 	return 0;
+
+error:
+	mm_taskmgr_stop(&machinarium.task_mgr);
+	mm_machinemgr_free(&machinarium.machine_mgr);
+	mm_tls_engine_free();
+	return -1;
 }
 
 MACHINE_API void machinarium_free(void)

@@ -129,7 +129,7 @@ static int od_autoconf_read(const char *path, char **text, char *err,
 
 	char *buf;
 	size_t size;
-	if (mm_file_read_all_nonblock(path, &buf, &size) != 0) {
+	if (mm_file_read_all(path, &buf, &size) != 0) {
 		if (errno == ENOENT) {
 			*text = mm_strdup("");
 			if (*text == NULL) {
@@ -161,8 +161,7 @@ static int od_autoconf_read(const char *path, char **text, char *err,
 static int od_autoconf_write_file(const char *path, const char *text, char *err,
 				  size_t err_size)
 {
-	int fd =
-		mm_file_open_nonblock(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	int fd = mm_file_open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1) {
 		od_snprintf(err, (int)err_size, "could not create \"%s\": %s",
 			    path, strerror(errno));
@@ -170,13 +169,13 @@ static int od_autoconf_write_file(const char *path, const char *text, char *err,
 	}
 
 	/* the data must be on disk before rename() makes it visible */
-	if (mm_file_write_all_nonblock(fd, text, strlen(text)) != 0) {
+	if (mm_file_write_all(fd, text, strlen(text)) != 0) {
 		od_snprintf(err, (int)err_size, "could not write \"%s\": %s",
 			    path, strerror(errno));
 		mm_file_close(fd);
 		return -1;
 	}
-	if (mm_file_fsync_nonblock(fd) != 0) {
+	if (mm_file_fsync(fd) != 0) {
 		od_snprintf(err, (int)err_size, "could not fsync \"%s\": %s",
 			    path, strerror(errno));
 		mm_file_close(fd);
@@ -202,13 +201,13 @@ static int od_autoconf_fsync_dir(const char *path, char *err, size_t err_size)
 	const char *dir = dirname(copy);
 
 	int rc = -1;
-	int fd = mm_file_open_dir_nonblock(dir);
+	int fd = mm_file_open_dir(dir);
 	if (fd == -1) {
 		od_snprintf(err, (int)err_size, "could not open \"%s\": %s",
 			    dir, strerror(errno));
 		goto cleanup;
 	}
-	if (mm_file_fsync_nonblock(fd) != 0) {
+	if (mm_file_fsync(fd) != 0) {
 		od_snprintf(err, (int)err_size, "could not fsync \"%s\": %s",
 			    dir, strerror(errno));
 		mm_file_close(fd);
@@ -305,7 +304,7 @@ int od_autoconf_update(const char *config_path, const char *key,
 			    "see the odyssey log for details");
 		goto cleanup;
 	}
-	if (mm_file_rename_nonblock(tmp, path) != 0) {
+	if (mm_file_rename(tmp, path) != 0) {
 		od_snprintf(err, (int)err_size,
 			    "could not rename \"%s\" to \"%s\": %s", tmp, path,
 			    strerror(errno));
@@ -320,7 +319,7 @@ int od_autoconf_update(const char *config_path, const char *key,
 
 cleanup:
 	if (tmp_created) {
-		mm_file_unlink_nonblock(tmp);
+		mm_file_unlink(tmp);
 	}
 	od_free(new_text);
 	mm_free(old_text);

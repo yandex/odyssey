@@ -306,7 +306,7 @@ od_retcode_t od_logger_load(od_logger_t *logger)
 
 int od_logger_open(od_logger_t *logger, const char *path)
 {
-	int fd = mm_file_open(path, O_RDWR | O_CREAT | O_APPEND, 0644);
+	int fd = mm_file_open_plain(path, O_RDWR | O_CREAT | O_APPEND, 0644);
 	if (fd == -1) {
 		return -1;
 	}
