@@ -108,6 +108,7 @@ set(od_src
     deploy.c
     reset.c
     pstmt.c
+    sql_pstmt.c
     clients_map.c
     frontend.c
     backend.c
@@ -484,6 +485,8 @@ set(od_test_src
     tests/odyssey/test_scram.c
     tests/odyssey/test_sql_parser.c
     tests/odyssey/test_sql_full_parser.c
+    tests/odyssey/test_sql_pstmt.c
+    tests/odyssey/test_console_parser.c)
     tests/odyssey/test_console_parser.c
     tests/odyssey/test_config_field.c
     tests/odyssey/test_autoconf.c
