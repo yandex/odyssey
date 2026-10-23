@@ -3475,6 +3475,20 @@ static inline void cancel_finished(od_global_t *global, od_instance_t *instance)
 	}
 }
 
+static void od_frontend_cancel_close(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	uint32_t timeout =
+		instance->config.cancel_timeout_ms > 0 ?
+			(uint32_t)instance->config.cancel_timeout_ms :
+			UINT32_MAX;
+	if (mm_tls_shutdown(client->io.io, timeout) == -1) {
+		od_debug(&instance->logger, "cancel", client, NULL,
+			 "TLS shutdown failed: %s", od_io_error(&client->io));
+	}
+	od_frontend_close(client);
+}
+
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
@@ -3519,6 +3533,14 @@ void od_frontend(void *arg)
 			 "cancel request");
 
 		od_routing_slot_release(global);
+		/* libpq's PQcancelPoll requires EOF rather than a TCP reset. */
+		if (mm_io_set_nolinger(client->io.io, 0) == -1) {
+			od_error(&instance->logger, "cancel", client, NULL,
+				 "failed to disable reset on close: %s",
+				 strerror(machine_errno()));
+			od_frontend_close(client);
+			return;
+		}
 
 		uint32_t queue_timeout =
 			instance->config.cancel_queue_timeout_ms >= 0 ?
@@ -3532,7 +3554,7 @@ void od_frontend(void *arg)
 				&instance->logger, "startup", client, NULL,
 				"dropping cancel request due to queue timeout %u ms",
 				queue_timeout);
-			od_frontend_close(client);
+			od_frontend_cancel_close(client);
 			return;
 		}
 
@@ -3540,7 +3562,7 @@ void od_frontend(void *arg)
 
 		cancel_finished(global, instance);
 
-		od_frontend_close(client);
+		od_frontend_cancel_close(client);
 		return;
 	}
 

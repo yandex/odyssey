@@ -109,7 +109,7 @@ int mm_io_fd(mm_io_t *);
 int mm_io_set_nodelay(mm_io_t *, int enable);
 int mm_io_set_keepalive(mm_io_t *, int enable, int delay, int interval,
 			int probes, int usr_timeout);
-int mm_io_set_nolinger(mm_io_t *io);
+int mm_io_set_nolinger(mm_io_t *io, int enable);
 int mm_io_advice_keepalive_usr_timeout(int delay, int interval, int probes);
 int mm_io_set_tls(mm_io_t *, machine_tls_t *, uint32_t);
 int mm_io_set_compression(mm_io_t *, char algorithm);
