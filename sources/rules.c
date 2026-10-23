@@ -1315,6 +1315,11 @@ int od_rules_storage_compare(od_rule_storage_t *a, od_rule_storage_t *b)
 		return 0;
 	}
 
+	/* rwr_wait_timeout_ms */
+	if (a->rwr_wait_timeout_ms != b->rwr_wait_timeout_ms) {
+		return 0;
+	}
+
 	/* endpoints count */
 	if (a->endpoints_count != b->endpoints_count) {
 		return 0;
@@ -2066,6 +2071,7 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 		od_storage_endpoint_t *endpoint = &storage->endpoints[0];
 
 		endpoint->storage = storage;
+		endpoint->rwr_wait_unsupported_logged = 0;
 		od_storage_endpoint_status_init(&endpoint->status);
 		od_address_init(&endpoint->address);
 
@@ -2630,6 +2636,9 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, "storage", NULL, NULL,
 		       "  endpoints_status_poll_interval_ms %d",
 		       storage->endpoints_status_poll_interval_ms);
+		od_log(logger, "storage", NULL, NULL,
+		       "  rwr_wait_timeout_ms %d",
+		       storage->rwr_wait_timeout_ms);
 		for (size_t ep_i = 0; ep_i < storage->endpoints_count; ep_i++) {
 			char ep_str[256];
 			od_address_to_str(&storage->endpoints[ep_i].address,

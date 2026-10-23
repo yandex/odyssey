@@ -1,0 +1,66 @@
+-- read-your-writes: 1 primary (localhost:5432) and 4 replicas
+-- (localhost:5433..5436)
+SET odyssey.rwr_consistent TO 'on';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ on
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT pg_wal_replay_pause();
+NOTICE:  select host tcp://localhost:5434
+ pg_wal_replay_pause 
+---------------------
+ 
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+CREATE TABLE rwr_test (i int);
+NOTICE:  select host tcp://localhost:5432
+INSERT INTO rwr_test (i) VALUES (42);
+NOTICE:  select host tcp://localhost:5432
+-- setting an already enabled mode must preserve the captured LSN
+SET odyssey.rwr_consistent TO 'on';
+NOTICE:  processed virtually by odyssey
+-- resume the paused replica replay in the background: the next SELECT
+-- must block on WAIT FOR LSN until the INSERT is replayed, so it sees
+-- the just-inserted row instead of the pre-INSERT state
+\! ( sleep 3; psql -X -q -h 127.0.0.1 -p 5434 -U postgres -d postgres -c "SELECT pg_wal_replay_resume();" >/dev/null 2>&1 ) &
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT count(*) FROM rwr_test;
+NOTICE:  select host tcp://localhost:5434
+ count 
+-------
+     1
+(1 row)
+
+SELECT i FROM rwr_test;
+NOTICE:  select host tcp://localhost:5434
+ i  
+----
+ 42
+(1 row)
+
+SET odyssey.execute_on_host TO DEFAULT;
+NOTICE:  select host tcp://localhost:5434
+SET odyssey.rwr_consistent TO 'off';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ off
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+DROP TABLE rwr_test;
+NOTICE:  select host tcp://localhost:5432
+SET odyssey.execute_on_host TO DEFAULT;
+NOTICE:  processed virtually by odyssey
