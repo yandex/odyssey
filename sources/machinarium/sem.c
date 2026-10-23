@@ -70,5 +70,7 @@ void mm_sem_post(mm_sem_t *sem)
 		abort();
 	}
 
-	mm_wait_list_notify(&sem->notifier);
+	if (mm_wait_list_maybe_waiters(&sem->notifier)) {
+		mm_wait_list_notify(&sem->notifier);
+	}
 }
