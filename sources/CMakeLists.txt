@@ -379,6 +379,8 @@ set(od_test_src
     tests/kiwi/test_kiwi_pgoptions.c
     tests/kiwi/test_kiwi_fe_read_auth.c
     tests/kiwi/test_kiwi_be_read_query.c
+    tests/kiwi/test_kiwi_protocol.c
+    tests/kiwi/test_kiwi_cancel.c
     tests/machinarium/test_init.c
     tests/machinarium/test_create0.c
     tests/machinarium/test_create1.c

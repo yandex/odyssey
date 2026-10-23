@@ -15,14 +15,13 @@
 static inline mm_hash_t od_global_clients_map_hm_hash(const void *a)
 {
 	const kiwi_key_t *key = a;
-	uint32_t buf[2] = { key->key_pid, key->key };
-	return mm_xxh64_hash(buf, sizeof(buf), 0);
+	return mm_xxh64_hash(key->key, key->key_len, key->key_pid);
 }
 
 static inline int od_global_clients_map_hm_cmp(const void *a, const void *b)
 {
 	const kiwi_key_t *x = a, *y = b;
-	return !(x->key_pid == y->key_pid && x->key == y->key);
+	return !kiwi_key_cmp(x, y);
 }
 
 od_global_clients_map_t *od_global_clients_map_create(size_t nlocks)

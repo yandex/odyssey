@@ -25,6 +25,12 @@ extern void kiwi_test_pgoptions(void);
 extern void kiwi_test_be_read_startup_options(void);
 extern void kiwi_test_fe_read_auth(void);
 extern void kiwi_test_be_read_query(void);
+extern void kiwi_test_protocol_negotiation(void);
+extern void kiwi_test_startup_protocol_version(void);
+extern void kiwi_test_read_protocol_negotiation(void);
+extern void kiwi_test_backend_key_data(void);
+extern void kiwi_test_cancel_request(void);
+extern void kiwi_test_cancel_write(void);
 
 /* MACHINARIUM */
 extern void machinarium_test_init(void);
@@ -163,6 +169,12 @@ int main(int argc, char *argv[])
 	odyssey_test(kiwi_test_be_read_startup_options);
 	odyssey_test(kiwi_test_fe_read_auth);
 	odyssey_test(kiwi_test_be_read_query);
+	odyssey_test(kiwi_test_protocol_negotiation);
+	odyssey_test(kiwi_test_startup_protocol_version);
+	odyssey_test(kiwi_test_read_protocol_negotiation);
+	odyssey_test(kiwi_test_backend_key_data);
+	odyssey_test(kiwi_test_cancel_request);
+	odyssey_test(kiwi_test_cancel_write);
 	odyssey_test(machinarium_test_init);
 	odyssey_test(machinarium_test_create0);
 	odyssey_test(machinarium_test_create1);
