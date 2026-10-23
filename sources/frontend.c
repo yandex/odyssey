@@ -663,6 +663,26 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 			}
 		}
 
+		if (is_deploy &&
+		    client->rule->pool->reserve_prepared_statement) {
+			int rc = od_sql_pstmt_attach(
+				&client->sql_pstmt, &server->sql_pstmt, server,
+				context,
+				instance->config.backend_connect_timeout_ms);
+			if (rc == -1) {
+				od_gerror("deploy", client, server,
+					  "prepared statements deploy failed");
+				return OD_ESERVER_WRITE;
+			}
+			if (rc == 1) {
+				od_log(&instance->logger, context, client,
+				       server,
+				       "server holds unknown prepared statements, close connection and retry attach");
+				od_router_close(router, client);
+				continue;
+			}
+		}
+
 		if (is_deploy && storage->balancing.debug_notice &&
 		    storage->endpoints_count > 1) {
 			od_address_to_str(&client->server->endpoint->address,

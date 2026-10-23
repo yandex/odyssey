@@ -18,6 +18,7 @@
 #include <rules.h>
 #include <list.h>
 #include <pstmt.h>
+#include <sql_pstmt.h>
 #include <scram.h>
 #include <od_ldap.h>
 
@@ -130,6 +131,9 @@ struct od_client {
 	machine_msg_t *read_msg;
 
 	od_query_ctx_t query_ctx;
+
+	/* statements created by SQL PREPARE */
+	od_sql_pstmt_client_t sql_pstmt;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)
