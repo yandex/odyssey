@@ -186,8 +186,7 @@ void od_route_signal_locked(od_route_t *route, od_server_t *server)
 	od_multi_pool_element_t *el = NULL;
 
 	if (server != NULL) {
-		const od_address_t *address = od_server_pool_address(server);
-		el = od_route_get_server_pool_element_locked(route, address);
+		el = server->pool_element;
 	}
 
 	od_multi_pool_t *mpool = od_route_server_pools(route);
