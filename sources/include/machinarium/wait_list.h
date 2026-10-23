@@ -18,9 +18,10 @@
  * Spurious wake-ups are possible.
  */
 
+#include <stdatomic.h>
 #include <stdint.h>
 
-#include <machinarium/sleep_lock.h>
+#include <machinarium/spinlock.h>
 #include <machinarium/event.h>
 #include <machinarium/list.h>
 
@@ -47,7 +48,7 @@ typedef struct mm_sleepy {
 } mm_sleepy_t;
 
 typedef struct {
-	mm_sleeplock_t lock;
+	mm_spinlock_t lock;
 	mm_list_t sleepies;
 	uint64_t sleepy_count;
 
