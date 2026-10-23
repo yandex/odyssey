@@ -465,6 +465,7 @@ set(od_test_src
     tests/machinarium/test_tls_read_var.c
     tests/machinarium/test_tsan_simple_race_example.c
     tests/machinarium/test_vrb.c
+    tests/machinarium/test_mutex_bench.c
     tests/machinarium/test_queue.c
     tests/machinarium/test_heap.c
     tests/machinarium/test_lf_stack.c
