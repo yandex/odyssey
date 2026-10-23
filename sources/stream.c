@@ -308,6 +308,11 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 			break;
 		}
 
+		if (client != NULL) {
+			od_sql_pstmt_query_on_complete(
+				&client->sql_pstmt.query);
+		}
+
 		if (!route->rule->pool->pin_on_listen) {
 			break;
 		}
