@@ -432,6 +432,7 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 		  &model->global.replication_proxy_phys);
 	dump_bool(file, "replication_proxy_logic", 0,
 		  &model->global.replication_proxy_logic);
+	dump_bool(file, "ignore_cancel", 0, &model->global.ignore_cancel);
 	dump_bool(file, "smart_search_path_enquoting", 0,
 		  &model->global.smart_search_path_enquoting);
 	dump_bool(file, "nodelay", 0, &model->global.nodelay);
@@ -928,6 +929,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_bool_field_free(&g->log_route_stats_prom);
 	od_cfg_bool_field_free(&g->replication_proxy_phys);
 	od_cfg_bool_field_free(&g->replication_proxy_logic);
+	od_cfg_bool_field_free(&g->ignore_cancel);
 
 	/* global string fields */
 	od_cfg_string_field_free(&g->pid_file);

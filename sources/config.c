@@ -100,6 +100,7 @@ void od_config_init(od_config_t *config)
 	config->cancel_queue_timeout_ms = -1;
 	config->cancel_max_inflight = -1;
 	config->cancel_rate_limit = 0;
+	config->ignore_cancel = 0;
 	config->virtual_processing = 0;
 	config->replication_proxy_phys = 0;
 	config->replication_proxy_logic = 0;
@@ -147,6 +148,7 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->backend_connect_timeout_ms =
 		new_config->backend_connect_timeout_ms;
 	current_config->cancel_timeout_ms = new_config->cancel_timeout_ms;
+	current_config->ignore_cancel = new_config->ignore_cancel;
 	current_config->smart_search_path_enquoting =
 		new_config->smart_search_path_enquoting;
 	current_config->disable_nolinger = new_config->disable_nolinger;
@@ -579,6 +581,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, cancel_queue_timeout_ms), 0 },
 	{ "cancel_max_inflight", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, cancel_max_inflight), 0 },
+	{ "ignore_cancel", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, ignore_cancel), 1 },
 	{ "virtual_processing", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, virtual_processing), 0 },
 	{ "virtual_transaction", OD_CONFIG_FIELD_BOOL,
@@ -905,6 +909,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->cancel_max_inflight);
 	od_log(logger, "config", NULL, NULL, "cancel_rate_limit         %d",
 	       config->cancel_rate_limit);
+	od_log(logger, "config", NULL, NULL, "ignore_cancel            %s",
+	       od_config_yes_no(config->ignore_cancel));
 	od_log(logger, "config", NULL, NULL, "dns_ttl_ms              %d",
 	       config->dns_cache_ttl_ms);
 	od_log(logger, "config", NULL, NULL, "group_checker_interval  %" PRIu64,

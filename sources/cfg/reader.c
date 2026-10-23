@@ -97,6 +97,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_BOOL(dst, src, log_route_stats_prom);
 	MERGE_BOOL(dst, src, replication_proxy_phys);
 	MERGE_BOOL(dst, src, replication_proxy_logic);
+	MERGE_BOOL(dst, src, ignore_cancel);
 
 	MERGE_STR(dst, src, pid_file);
 	MERGE_STR(dst, src, unix_socket_dir);

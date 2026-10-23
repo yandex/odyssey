@@ -3520,6 +3520,14 @@ void od_frontend(void *arg)
 
 		od_routing_slot_release(global);
 
+		if (instance->config.ignore_cancel) {
+			od_debug(
+				&instance->logger, "startup", client, NULL,
+				"cancel request ignored (ignore_cancel is on)");
+			od_frontend_close(client);
+			return;
+		}
+
 		uint32_t queue_timeout =
 			instance->config.cancel_queue_timeout_ms >= 0 ?
 				(uint32_t)instance->config
