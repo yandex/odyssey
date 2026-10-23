@@ -130,7 +130,9 @@ od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
 					    sizeof(od_sql_pstmt_t *), name_cmp,
 					    name_hash, NULL /* key dtor */,
 					    NULL /* value dtor */,
-					    NULL /* key copy */);
+					    NULL /* key copy */,
+					    0 /* nfree_max: default, capped
+					       * at nbuckets */);
 		if (map->hm == NULL) {
 			return NULL;
 		}
