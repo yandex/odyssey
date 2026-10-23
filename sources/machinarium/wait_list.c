@@ -15,7 +15,7 @@
 static inline void add_sleepy(mm_wait_list_t *wait_list, mm_sleepy_t *sleepy)
 {
 	mm_list_append(&wait_list->sleepies, &sleepy->link);
-	++wait_list->sleepy_count;
+	atomic_fetch_add(&wait_list->sleepy_count, 1);
 }
 
 /* holding wait_list lock */
@@ -24,7 +24,7 @@ static inline void release_sleepy(mm_wait_list_t *wait_list,
 {
 	if (!sleepy->released) {
 		mm_list_unlink(&sleepy->link);
-		--wait_list->sleepy_count;
+		atomic_fetch_sub(&wait_list->sleepy_count, 1);
 		sleepy->released = 1;
 	}
 }
@@ -135,6 +135,23 @@ int mm_wait_list_compare_wait(mm_wait_list_t *wait_list, void *private,
 
 	add_sleepy(wait_list, &this);
 
+	/*
+	 * Re-check the word after enqueueing (futex-style protocol):
+	 * a notify() which checks sleepy_count without holding the lock
+	 * may miss us only if the word has changed already, and in that
+	 * case we must not sleep.
+	 */
+	if (atomic_load(wait_list->word) != expected) {
+		release_sleepy(wait_list, &this);
+
+		mm_spinlock_unlock(&wait_list->lock);
+
+		mm_eventmgr_remove(&mm_self->event_mgr, &this.event);
+
+		mm_errno_set(EAGAIN);
+		return -1;
+	}
+
 	mm_spinlock_unlock(&wait_list->lock);
 
 	int status = wait_sleepy(wait_list, &this, timeout_ms);
@@ -159,7 +176,7 @@ void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
 {
 	mm_spinlock_lock(&wait_list->lock);
 
-	if (wait_list->sleepy_count == 0ULL) {
+	if (atomic_load(&wait_list->sleepy_count) == 0ULL) {
 		mm_spinlock_unlock(&wait_list->lock);
 		return NULL;
 	}
@@ -197,7 +214,7 @@ int mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 
 	mm_spinlock_lock(&wait_list->lock);
 
-	uint64_t count = wait_list->sleepy_count;
+	uint64_t count = atomic_load(&wait_list->sleepy_count);
 
 	int *event_mgr_fds = mm_malloc(sizeof(int) * count);
 	if (event_mgr_fds == NULL) {
