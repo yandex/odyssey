@@ -17,6 +17,9 @@
 #include <util.h>
 #include <worker.h>
 
+/* max plan entries sent without a heap-allocated iovec array */
+#define OD_XPLAN_IOVEC_INLINE_MAX 32
+
 static inline kiwi_be_type_t msg_be_type(machine_msg_t *msg)
 {
 	kiwi_be_type_t type = *(uint8_t *)machine_msg_data(msg);
@@ -1940,10 +1943,16 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 	size_t count = mm_vector_size(&xp->entries);
 	od_assert(count > 0);
 
-	size_t niovecs = count;
-	struct iovec *iovecs = od_malloc(sizeof(struct iovec) * niovecs);
-	if (iovecs == NULL) {
-		return OD_EOOM;
+	/* most plans are small: avoid a heap round-trip per flush */
+	struct iovec stack_iovecs[OD_XPLAN_IOVEC_INLINE_MAX];
+	struct iovec *iovecs;
+	if (count <= OD_XPLAN_IOVEC_INLINE_MAX) {
+		iovecs = stack_iovecs;
+	} else {
+		iovecs = od_malloc(sizeof(struct iovec) * count);
+		if (iovecs == NULL) {
+			return OD_EOOM;
+		}
 	}
 
 	size_t written = prepare_send_iovecs(xp, iovecs);
@@ -1957,7 +1966,9 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 	od_frontend_status_t status =
 		send_buf_and_run_plan(xp, relay, iovecs, written, timeout_ms);
 
-	od_free(iovecs);
+	if (iovecs != stack_iovecs) {
+		od_free(iovecs);
+	}
 
 	return status;
 }
