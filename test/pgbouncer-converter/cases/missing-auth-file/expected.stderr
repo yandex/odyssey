@@ -1,0 +1,1 @@
+WARNING: pgbouncer.ini:0: no auth_file; user credentials must be configured manually, routes blocked: auth_file
