@@ -29,6 +29,7 @@
 #include <query.h>
 #include <stream.h>
 #include <tls.h>
+#include <wait_event.h>
 
 #define TTT_SESSION_OWNS_TEMP_RELS_STR "ttt.owns_session_objs"
 
@@ -647,7 +648,9 @@ int od_backend_connect_to(od_server_t *server, char *context,
 			char rport[16];
 			od_snprintf(rport, sizeof(rport), "%d", address->port);
 
+			od_wait_event_start(OD_WAIT_CONNECT_TCP);
 			rc = mm_getaddrinfo(address->host, rport, NULL, &ai, 0);
+			od_wait_event_end(OD_WAIT_CONNECT_TCP);
 			if (rc != 0) {
 				od_error(&instance->logger, context, NULL,
 					 server, "failed to resolve %s:%d",
@@ -687,9 +690,11 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	if (ai != NULL) {
 		for (mm_addrinfo_t *cur = ai; cur != NULL; cur = cur->ai_next) {
 			saddr = cur->ai_addr;
+			od_wait_event_start(OD_WAIT_CONNECT_TCP);
 			rc = mm_io_connect(io, saddr,
 					   (uint32_t)instance->config
 						   .backend_connect_timeout_ms);
+			od_wait_event_end(OD_WAIT_CONNECT_TCP);
 			if (rc == 0) {
 				break;
 			}
@@ -716,9 +721,11 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		}
 		mm_freeaddrinfo(ai);
 	} else {
+		od_wait_event_start(OD_WAIT_CONNECT_TCP);
 		rc = mm_io_connect(
 			io, saddr,
 			(uint32_t)instance->config.backend_connect_timeout_ms);
+		od_wait_event_end(OD_WAIT_CONNECT_TCP);
 	}
 
 	if (rc == NOT_OK_RESPONSE) {
@@ -760,7 +767,9 @@ int od_backend_connect_to(od_server_t *server, char *context,
 
 	/* do tls handshake */
 	if (negotiate_tls) {
+		od_wait_event_start(OD_WAIT_CONNECT_TLS);
 		rc = od_tls_backend_connect(server, &instance->logger, tlsopts);
+		od_wait_event_end(OD_WAIT_CONNECT_TLS);
 		if (rc == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}

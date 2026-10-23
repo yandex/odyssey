@@ -12,6 +12,7 @@
 #include <machinarium/io.h>
 
 #include <readahead.h>
+#include <wait_event.h>
 
 typedef struct od_io od_io_t;
 
@@ -180,8 +181,8 @@ typedef enum {
 	OD_READ_BE,
 } od_read_msg_type_t;
 
-static inline machine_msg_t *od_read(od_io_t *io, uint32_t time_ms,
-				     od_read_msg_type_t type)
+static inline machine_msg_t *od_read_impl(od_io_t *io, uint32_t time_ms,
+					  od_read_msg_type_t type)
 {
 	kiwi_header_t header;
 	int rc;
@@ -222,6 +223,19 @@ static inline machine_msg_t *od_read(od_io_t *io, uint32_t time_ms,
 		machine_msg_free(msg);
 		return NULL;
 	}
+
+	return msg;
+}
+
+static inline machine_msg_t *od_read(od_io_t *io, uint32_t time_ms,
+				     od_read_msg_type_t type)
+{
+	od_wait_event_t event = (type == OD_READ_FE) ? OD_WAIT_CLIENT_READ :
+						       OD_WAIT_SERVER_READ;
+
+	od_wait_event_start(event);
+	machine_msg_t *msg = od_read_impl(io, time_ms, type);
+	od_wait_event_end(event);
 
 	return msg;
 }

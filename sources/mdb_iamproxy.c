@@ -15,6 +15,7 @@
 #include <instance.h>
 #include <client.h>
 #include <util.h>
+#include <wait_event.h>
 
 /*CONNECTION CALLBACK TYPES*/
 #define MDB_IAMPROXY_CONN_ERROR -1
@@ -62,19 +63,23 @@ machine_msg_t *mdb_iamproxy_io_read(mm_io_t *io)
 	uint64_t body_size = 0;
 
 	/* RECEIVE HEADER */
+	od_wait_event_start(OD_WAIT_AUTH_EXTERNAL);
 	header = machine_read(io, MDB_IAMPROXY_DEFAULT_HEADER_SIZE,
 			      MDB_IAMPROXY_DEFAULT_RECEIVING_HEADER_TIMEOUT);
 	if (header == NULL) {
+		od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 		return NULL;
 	}
 	fetch_header(&body_size, (char *)machine_msg_data(header));
 	machine_msg_free(header);
 
 	if (body_size > MDB_IAMPROXY_MAX_MSG_BODY_SIZE) {
+		od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 		return NULL;
 	}
 	msg = machine_read(io, body_size,
 			   MDB_IAMPROXY_DEFAULT_RECEIVING_BODY_TIMEOUT);
+	od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 	if (msg == NULL) {
 		return NULL;
 	}
