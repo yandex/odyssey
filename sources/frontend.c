@@ -2539,7 +2539,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 		/* close client connection and close server
 			 * connection in case of server errors */
 		od_log(&instance->logger, context, client, server,
-		       "replication lag is too big (%" PRId64 " sec), failed to wait replica for catchup: status %s",
+		       "replication lag is too big (%" PRId64
+		       " sec), failed to wait replica for catchup: status %s",
 		       client->last_catchup_lag,
 		       od_frontend_status_to_str(status));
 
@@ -2547,7 +2548,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 			client, KIWI_CONNECTION_FAILURE,
 			"replication lag of the node you are trying to connect is too big, connection rejected",
 			"wait until the replica catches up with the primary",
-			"replication lag too big (%" PRId64 " seconds), connection rejected: %s %s",
+			"replication lag too big (%" PRId64
+			" seconds), connection rejected: %s %s",
 			client->last_catchup_lag,
 			client->startup.database.value,
 			client->startup.user.value);
@@ -2698,50 +2700,9 @@ void od_frontend(void *arg)
 	/* handle cancel request */
 	if (client->startup.is_cancel) {
 		od_debug(&instance->logger, "startup", client, NULL,
-			 "cancel request");
+			 "cancel request ignored");
 
 		od_atomic_u32_dec(&router->clients_routing);
-
-		uint32_t queue_timeout =
-			instance->config.cancel_queue_timeout_ms >= 0 ?
-				(uint32_t)instance->config
-					.cancel_queue_timeout_ms :
-				2 * (uint32_t)instance->config.cancel_timeout_ms;
-
-		rc = mm_sem_timedwait(&global->cancel_sem, queue_timeout);
-		if (rc == -1) {
-			od_error(
-				&instance->logger, "startup", client, NULL,
-				"dropping cancel request due to queue timeout %u ms",
-				queue_timeout);
-			od_frontend_close(client);
-			return;
-		}
-
-		od_router_cancel_t cancel;
-		od_router_cancel_init(&cancel);
-		rc = od_router_cancel(router, &client->startup.key, &cancel);
-		if (rc == 0) {
-			/*
-			 * server might be free during cancel end
-			 * so need to preserve it route ptr
-			 */
-			od_route_t *srv_route = cancel.server->route;
-			od_stat_cancel(&srv_route->stats);
-
-			od_cancel(client->global, cancel.storage,
-				  cancel.address, &cancel.key, &cancel.id);
-
-			od_route_lock(srv_route);
-			od_server_cancel_end(cancel.server);
-			/* signal about possible free connection */
-			od_route_signal_locked(srv_route, NULL);
-			od_route_unlock(srv_route);
-
-			od_router_cancel_free(&cancel);
-		}
-
-		mm_sem_post(&global->cancel_sem);
 
 		od_frontend_close(client);
 		return;
@@ -2891,21 +2852,22 @@ void od_frontend(void *arg)
 		od_frontend_status_t catchup_status =
 			od_frontend_check_replica_catchup(instance, client);
 		if (od_frontend_status_is_err(catchup_status)) {
-			od_error(
-				&instance->logger, "catchup", client, NULL,
-				"replication lag too big (%" PRId64 "), connection rejected: %s %s",
-				client->last_catchup_lag,
-				client->startup.database.value,
-				client->startup.user.value);
+			od_error(&instance->logger, "catchup", client, NULL,
+				 "replication lag too big (%" PRId64
+				 "), connection rejected: %s %s",
+				 client->last_catchup_lag,
+				 client->startup.database.value,
+				 client->startup.user.value);
 
 			od_frontend_fatal_detailed(
 				client, KIWI_CONNECTION_FAILURE,
 				"replication lag of the node you are trying to connect is too big, connection rejected",
 				"wait until the replica catches up with the primary",
-			"replication lag too big (%" PRId64 " seconds), connection rejected: %s %s",
-			client->last_catchup_lag,
-			client->startup.database.value,
-			client->startup.user.value);
+				"replication lag too big (%" PRId64
+				" seconds), connection rejected: %s %s",
+				client->last_catchup_lag,
+				client->startup.database.value,
+				client->startup.user.value);
 			rc = NOT_OK_RESPONSE;
 		} else {
 			rc = od_auth_frontend(client);
