@@ -30,12 +30,17 @@ int mm_sem_wait(mm_sem_t *sem)
 
 int mm_sem_timedwait(mm_sem_t *sem, uint32_t timeout_ms)
 {
-	uint64_t start_ms = machine_time_ms();
-	uint64_t end_ms = start_ms + timeout_ms;
 	int infinite = timeout_ms == UINT32_MAX;
+	uint64_t start_ms = 0;
+	uint64_t end_ms = 0;
+	if (!infinite) {
+		start_ms = machine_time_ms();
+		end_ms = start_ms + timeout_ms;
+	}
 
 	while (1) {
-		uint64_t val = atomic_load(&sem->value);
+		uint64_t val =
+			atomic_load_explicit(&sem->value, memory_order_relaxed);
 
 		if (val == 0) {
 			uint64_t now_ms = machine_time_ms();

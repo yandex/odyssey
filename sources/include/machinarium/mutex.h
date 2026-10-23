@@ -6,15 +6,12 @@
  * cooperative multitasking engine.
  */
 
-#include <stdatomic.h>
-
-#include <machinarium/wait_list.h>
+#include <machinarium/sem.h>
 
 typedef struct {
-	atomic_uint_fast64_t state;
+	mm_sem_t sem;
 	void *owner_machine;
 	uint64_t owner_coro_id;
-	mm_wait_list_t wl;
 } mm_mutex_t;
 
 void mm_mutex_init(mm_mutex_t *mutex);
