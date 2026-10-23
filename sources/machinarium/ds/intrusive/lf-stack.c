@@ -38,9 +38,12 @@ void mm_lf_stack_destroy(mm_lf_stack_t *st)
 
 int mm_lf_stack_push(mm_lf_stack_t *st, mm_lf_stack_entry_t *e)
 {
-	/* the load is only a hint for the CAS below, it may be stale */
-	mm_int128 old_raw =
-		atomic_load_explicit(&st->raw, memory_order_relaxed);
+	/* bootstrapped by the CAS below: the initial value is a pure hint,
+	 * so the stack performs no 16-byte atomic load (gcc does not inline
+	 * it and would pull in libatomic). on CAS failure the current head
+	 * is stored back into old_raw
+	 */
+	mm_int128 old_raw = 0;
 
 	for (;;) {
 		mm_lf_stack_head_t old = mm_lf_head_unpack(old_raw);
@@ -69,23 +72,24 @@ int mm_lf_stack_push(mm_lf_stack_t *st, mm_lf_stack_entry_t *e)
 
 mm_lf_stack_entry_t *mm_lf_stack_pop(mm_lf_stack_t *st)
 {
-	/* acquire: pair with the release CAS of the last push, so that
-	 * entry->prev written before that push is visible below
+	/* bootstrapped by the CAS below: no 16-byte atomic load, the
+	 * current head comes from the CAS itself. acquire on CAS failure
+	 * pairs with the release CAS of the push, so that entry->prev
+	 * written before that push is visible below
 	 */
-	mm_int128 old_raw =
-		atomic_load_explicit(&st->raw, memory_order_acquire);
+	mm_int128 old_raw = 0;
 
 	for (;;) {
 		mm_lf_stack_head_t old = mm_lf_head_unpack(old_raw);
-		if (old.ptr == 0) {
-			return NULL;
-		}
-
 		mm_lf_stack_entry_t *entry = (mm_lf_stack_entry_t *)old.ptr;
 
 		mm_lf_stack_head_t neu;
-		neu.ptr = (uintptr_t)atomic_load_explicit(&entry->prev,
-							  memory_order_relaxed);
+		/* the bootstrap iteration has no entry yet: the CAS below
+		 * confirms the stack is empty and returns NULL
+		 */
+		neu.ptr = entry ? (uintptr_t)atomic_load_explicit(
+					  &entry->prev, memory_order_relaxed) :
+				  0;
 		neu.tag = old.tag + 1;
 
 		mm_int128 neu_raw = mm_lf_head_pack(neu);

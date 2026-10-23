@@ -93,9 +93,12 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
 endif()
 
 # The lf-stack uses a 128-bit atomic CAS (stdatomic) and must not depend on
-# libatomic. Some targets (e.g. s390x) emit an unresolvable libatomic call
-# for 128-bit CAS, so check that it actually compiles and links. Otherwise
-# lf-stack falls back to a spinlock.
+# libatomic: the CAS must compile to an inline instruction (e.g. cmpxchg16b
+# on x86-64 or cdsg on s390x). Only the CAS is checked: the stack bootstraps
+# its head with the CAS itself and performs no 16-byte atomic loads/stores,
+# which gcc does not inline (e.g. on x86-64) and would silently pull in
+# libatomic. Targets that cannot inline the 128-bit CAS (e.g. gcc on aarch64)
+# fall back to the spinlock path.
 include(CheckCSourceCompiles)
 set(CMAKE_REQUIRED_FLAGS "${COMMON_CFLAGS}")
 check_c_source_compiles("
@@ -103,8 +106,7 @@ check_c_source_compiles("
 static _Atomic __int128_t v;
 int main(void)
 {
-	__int128_t cur = atomic_load(&v);
-	__int128_t expected = cur;
+	__int128_t expected = 0;
 	return (int)atomic_compare_exchange_strong(&v, &expected,
 						   (__int128_t)1);
 }" MM_HAVE_ATOMIC_CAS_16)
