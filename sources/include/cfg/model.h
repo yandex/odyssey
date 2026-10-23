@@ -222,6 +222,7 @@ typedef struct od_cfg_storage {
 
 	od_cfg_int_field_t server_max_routing;
 	od_cfg_u64_field_t endpoints_status_poll_interval_ms;
+	od_cfg_u64_field_t rwr_wait_timeout_ms;
 
 	od_cfg_balancing_t balancing;
 

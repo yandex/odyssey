@@ -175,6 +175,7 @@ od_rule_storage_t *od_rules_storage_allocate(void)
 	atomic_init(&storage->refs, 1);
 
 	storage->endpoints_status_poll_interval_ms = 1000;
+	storage->rwr_wait_timeout_ms = 60000;
 	od_storage_balancing_init(&storage->balancing);
 
 	od_list_init(&storage->link);

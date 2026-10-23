@@ -56,6 +56,11 @@ static od_retcode_t od_rwr_parse_text_datarow(machine_msg_t *msg, char *buf,
 		goto error;
 	}
 
+	/* the declared column length must fit the rest of the message */
+	if (len > pos_size) {
+		goto error;
+	}
+
 	if (len + 1 > buf_size) {
 		goto error;
 	}
@@ -92,6 +97,19 @@ static od_retcode_t od_rwr_lsn_is_valid(const char *lsn)
 }
 
 /*
+ * Upper bound for the rwr side queries (ms): the per-storage
+ * rwr_wait_timeout option; 0 means no limit
+ */
+static uint32_t od_rwr_timeout_ms(od_storage_endpoint_t *endpoint)
+{
+	od_rule_storage_t *storage = endpoint->storage;
+	if (storage == NULL || storage->rwr_wait_timeout_ms <= 0) {
+		return UINT32_MAX;
+	}
+	return (uint32_t)storage->rwr_wait_timeout_ms;
+}
+
+/*
  * Read the endpoint status, live-refreshing it as od_backend_check_tsa
  * does (the cached status may still hold the constructor defaults, e.g.
  * a replica is misreported as a primary until the first poll)
@@ -113,7 +131,33 @@ static od_retcode_t od_rwr_endpoint_status(od_client_t *client,
 		if (od_backend_update_endpoint_status(instance, client, server,
 						      "rwr", NULL, endpoint) !=
 		    OK_RESPONSE) {
-			return NOT_OK_RESPONSE;
+			/*
+			 * A failed refresh must not kill the client
+			 * session: drain the leftover server output (the
+			 * failed refresh may have left some) and proceed
+			 * with the stale cached status
+			 */
+			if (machine_timedout()) {
+				od_error(&instance->logger, "rwr", client,
+					 server,
+					 "failed to refresh storage endpoint "
+					 "status: timed out, dropping backend "
+					 "connection");
+				return NOT_OK_RESPONSE;
+			}
+			if (od_backend_ready_wait(
+				    server, "rwr",
+				    od_rwr_timeout_ms(endpoint)) ==
+			    NOT_OK_RESPONSE) {
+				od_error(&instance->logger, "rwr", client,
+					 server,
+					 "failed to refresh storage endpoint "
+					 "status: connection is broken");
+				return NOT_OK_RESPONSE;
+			}
+			od_error(&instance->logger, "rwr", client, server,
+				 "failed to refresh storage endpoint "
+				 "status, proceeding with the cached one");
 		}
 	}
 
@@ -124,23 +168,32 @@ static od_retcode_t od_rwr_endpoint_status(od_client_t *client,
 /*
  * Execute a side query. On a backend error, drain the leftover server
  * output up to ReadyForQuery to keep the connection reusable; if the
- * connection is broken, report NOT_OK_RESPONSE.
+ * query timed out the connection cannot be reused (the result will
+ * arrive later and corrupt the stream) - report NOT_OK_RESPONSE.
  */
 static od_retcode_t od_rwr_side_query(od_client_t *client, od_server_t *server,
 				      char *context, const char *query,
+				      uint32_t timeout_ms,
 				      machine_msg_t **result)
 {
 	od_instance_t *instance = client->global->instance;
 
 	machine_msg_t *msg;
-	msg = od_query_do(server, context, query, NULL,
-			  OD_RWR_QUERY_TIMEOUT_MS);
+	msg = od_query_do(server, context, query, NULL, timeout_ms);
 	if (msg != NULL) {
 		*result = msg;
 		return OK_RESPONSE;
 	}
 
-	if (od_backend_ready_wait(server, context, OD_RWR_QUERY_TIMEOUT_MS) ==
+	if (machine_timedout()) {
+		od_error(&instance->logger, context, client, server,
+			 "failed to execute '%s': timed out, dropping "
+			 "backend connection",
+			 query);
+		return NOT_OK_RESPONSE;
+	}
+
+	if (od_backend_ready_wait(server, context, timeout_ms) ==
 	    NOT_OK_RESPONSE) {
 		od_error(&instance->logger, context, client, server,
 			 "failed to execute '%s': connection is broken", query);
@@ -188,7 +241,8 @@ od_retcode_t od_rwr_capture_lsn(od_client_t *client, od_server_t *server)
 	machine_msg_t *msg = NULL;
 	od_retcode_t rc;
 	rc = od_rwr_side_query(client, server, "rwr",
-			       "SELECT pg_current_wal_insert_lsn()", &msg);
+			       "SELECT pg_current_wal_insert_lsn()",
+			       od_rwr_timeout_ms(endpoint), &msg);
 	if (rc != OK_RESPONSE) {
 		client->rwr_last_lsn_valid = false;
 		return NOT_OK_RESPONSE;
@@ -248,10 +302,18 @@ od_retcode_t od_rwr_wait_lsn(od_client_t *client, od_server_t *server)
 
 	int server_version_major = od_storage_endpoint_server_version(endpoint);
 	if (server_version_major < 19) {
-		od_log(&instance->logger, "rwr", client, server,
-		       "read-your-writes: WAIT FOR LSN is not supported by "
-		       "server version %d",
-		       server_version_major);
+		if (!endpoint->rwr_wait_unsupported_logged) {
+			endpoint->rwr_wait_unsupported_logged = 1;
+			od_log(&instance->logger, "rwr", client, server,
+			       "read-your-writes: WAIT FOR LSN is not supported "
+			       "by server version %d",
+			       server_version_major);
+		} else {
+			od_debug(&instance->logger, "rwr", client, server,
+				 "read-your-writes: WAIT FOR LSN is not "
+				 "supported by server version %d",
+				 server_version_major);
+		}
 		return OK_RESPONSE;
 	}
 
@@ -265,7 +327,8 @@ od_retcode_t od_rwr_wait_lsn(od_client_t *client, od_server_t *server)
 
 	machine_msg_t *msg = NULL;
 	od_retcode_t rc;
-	rc = od_rwr_side_query(client, server, "rwr", query, &msg);
+	rc = od_rwr_side_query(client, server, "rwr", query,
+			       od_rwr_timeout_ms(endpoint), &msg);
 	if (msg != NULL) {
 		machine_msg_free(msg);
 	}

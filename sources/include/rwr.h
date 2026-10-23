@@ -18,11 +18,13 @@
  * forwarding the client query, so the read observes all the writes done
  * so far.
  *
+ * Both the capture and the wait are bounded by the per-storage
+ * rwr_wait_timeout option (rwr_wait_timeout_ms; 0 = no limit): a side
+ * query that does not fit the budget makes the backend connection
+ * unusable and is reported to the relay.
+ *
  * Only the simple protocol query path is supported.
  */
-
-/* both captures and waits are blocked until the server reports infinite */
-#define OD_RWR_QUERY_TIMEOUT_MS UINT32_MAX
 
 /*
  * Capture LSN on the primary after a client write. Returns

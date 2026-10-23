@@ -68,6 +68,9 @@ struct od_storage_endpoint {
 
 	od_storage_endpoint_status_t status;
 
+	/* rwr: log "WAIT FOR LSN unsupported" once per endpoint */
+	int rwr_wait_unsupported_logged;
+
 	struct od_rule_storage *storage;
 };
 
@@ -98,6 +101,8 @@ struct od_rule_storage {
 	od_list_t link;
 
 	int endpoints_status_poll_interval_ms;
+	/* rwr: WAIT FOR LSN timeout in ms; 0 = no limit */
+	int rwr_wait_timeout_ms;
 	od_storage_balancing_t balancing;
 
 	atomic_int_fast64_t refs;
