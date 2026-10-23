@@ -37,40 +37,54 @@ static inline int od_soft_oom_get_system_memory_consumption(uint64_t *result)
 		return NOT_OK_RESPONSE;
 	}
 
-	int64_t mem_available = 0, mem_total = 0;
+	int64_t mem_available, mem_total;
 
-	char *cursor = buf;
-	char *line;
-	while ((line = od_next_line(&cursor)) != NULL) {
-		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
-			   &mem_available) == 1) {
-			continue;
-		}
-
-		if (sscanf(line, "MemTotal: %" PRId64 " kB", &mem_total) == 1) {
-			continue;
-		}
-	}
+	od_soft_oom_get_system_memory_consumption_from_meminfo(
+		buf, &mem_available, &mem_total);
 
 	mm_free(buf);
 
 	int64_t mem_used = mem_total - mem_available;
 
 	if (mem_used >= 0) {
-		*result = ((uint64_t)mem_used);
+		*result = (uint64_t)mem_used;
 
 		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			"updated memory consumption for system: %" PRIu64 " KB",
+			"updated memory consumption for system: %" PRIu64
+			" bytes",
 			*result);
 	} else {
 		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			"got negative mem used: total = %" PRId64
-			", available = %" PRId64,
+			"got negative mem used: total = %" PRId64 " bytes"
+			", available = %" PRId64 " bytes",
 			mem_total, mem_available);
 		*result = 0;
 	}
 
 	return OK_RESPONSE;
+}
+
+void od_soft_oom_get_system_memory_consumption_from_meminfo(
+	char *meminfo, int64_t *mem_available, int64_t *mem_total)
+{
+	*mem_available = 0;
+	*mem_total = 0;
+
+	char *cursor = meminfo;
+	char *line;
+	while ((line = od_next_line(&cursor)) != NULL) {
+		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
+			   mem_available) == 1) {
+			continue;
+		}
+
+		if (sscanf(line, "MemTotal: %" PRId64 " kB", mem_total) == 1) {
+			continue;
+		}
+	}
+
+	*mem_available *= 1024;
+	*mem_total *= 1024;
 }
 
 static inline void strstrip_right(char *s)
