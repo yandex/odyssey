@@ -926,8 +926,7 @@ static inline machine_msg_t *rewrite_bind_msg(char *data, int size,
 	/* packet header */
 	memcpy(rewrite_data, data, opname_start_offset);
 	/* prefix for opname */
-	od_snprintf(rewrite_data + opname_start_offset, opnamelen, "%s",
-		    opname);
+	memcpy(rewrite_data + opname_start_offset, opname, opnamelen);
 	/* rest of msg */
 	memcpy(rewrite_data + opname_start_offset + opnamelen,
 	       data + opname_start_offset + operator_name_len,

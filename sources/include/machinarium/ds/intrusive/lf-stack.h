@@ -19,8 +19,10 @@ typedef struct mm_lf_stack_entry {
 	struct mm_lf_stack_entry *prev;
 } mm_lf_stack_entry_t;
 
-/* MM_HAVE_SYNC_CAS_16 is set by cmake when 128-bit __sync CAS links */
-#if defined(__SIZEOF_INT128__) && defined(MM_HAVE_SYNC_CAS_16)
+/* MM_HAVE_SYNC_CAS_16 is set by cmake when a 128-bit __sync CAS compiles
+ * and links, so the __int128_t type is guaranteed to exist here */
+
+#if defined(MM_HAVE_SYNC_CAS_16)
 
 /* lock-free path: 128-bit tagged pointer via __sync builtins */
 
