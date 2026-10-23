@@ -4,7 +4,7 @@
 
 #if MM_LF_STACK_TAGGED
 
-/* ---- lock-free path: 128-bit tagged pointer via __sync builtins ---- */
+/* ---- lock-free path: 128-bit tagged pointer via stdatomic ---- */
 
 static inline mm_int128 mm_lf_head_pack(mm_lf_stack_head_t h)
 {
@@ -28,7 +28,7 @@ static inline mm_lf_stack_head_t mm_lf_head_unpack(mm_int128 raw)
 
 void mm_lf_stack_init(mm_lf_stack_t *st)
 {
-	st->raw = 0;
+	atomic_init(&st->raw, (mm_int128)0);
 }
 
 void mm_lf_stack_destroy(mm_lf_stack_t *st)
@@ -38,11 +38,15 @@ void mm_lf_stack_destroy(mm_lf_stack_t *st)
 
 int mm_lf_stack_push(mm_lf_stack_t *st, mm_lf_stack_entry_t *e)
 {
-	mm_int128 old_raw = st->raw;
+	/* the load is only a hint for the CAS below, it may be stale */
+	mm_int128 old_raw =
+		atomic_load_explicit(&st->raw, memory_order_relaxed);
 
 	for (;;) {
 		mm_lf_stack_head_t old = mm_lf_head_unpack(old_raw);
-		e->prev = (mm_lf_stack_entry_t *)old.ptr;
+		atomic_store_explicit(&e->prev,
+				      (struct mm_lf_stack_entry *)old.ptr,
+				      memory_order_relaxed);
 
 		mm_lf_stack_head_t neu;
 		neu.ptr = (uintptr_t)e;
@@ -50,15 +54,14 @@ int mm_lf_stack_push(mm_lf_stack_t *st, mm_lf_stack_entry_t *e)
 
 		mm_int128 neu_raw = mm_lf_head_pack(neu);
 
-		mm_int128 prev_raw =
-			__sync_val_compare_and_swap(&st->raw, old_raw, neu_raw);
-
-		if (prev_raw == old_raw) {
+		/* release: publish e->prev together with the new head */
+		if (atomic_compare_exchange_strong_explicit(
+			    &st->raw, &old_raw, neu_raw, memory_order_release,
+			    memory_order_relaxed)) {
 			break;
 		}
 
-		/* CAS failed: prev_raw holds the current head. Retry. */
-		old_raw = prev_raw;
+		/* CAS failed: old_raw holds the current head. Retry. */
 	}
 
 	return 0;
@@ -66,7 +69,11 @@ int mm_lf_stack_push(mm_lf_stack_t *st, mm_lf_stack_entry_t *e)
 
 mm_lf_stack_entry_t *mm_lf_stack_pop(mm_lf_stack_t *st)
 {
-	mm_int128 old_raw = st->raw;
+	/* acquire: pair with the release CAS of the last push, so that
+	 * entry->prev written before that push is visible below
+	 */
+	mm_int128 old_raw =
+		atomic_load_explicit(&st->raw, memory_order_acquire);
 
 	for (;;) {
 		mm_lf_stack_head_t old = mm_lf_head_unpack(old_raw);
@@ -77,20 +84,22 @@ mm_lf_stack_entry_t *mm_lf_stack_pop(mm_lf_stack_t *st)
 		mm_lf_stack_entry_t *entry = (mm_lf_stack_entry_t *)old.ptr;
 
 		mm_lf_stack_head_t neu;
-		neu.ptr = (uintptr_t)entry->prev;
+		neu.ptr = (uintptr_t)atomic_load_explicit(&entry->prev,
+							  memory_order_relaxed);
 		neu.tag = old.tag + 1;
 
 		mm_int128 neu_raw = mm_lf_head_pack(neu);
 
-		mm_int128 prev_raw =
-			__sync_val_compare_and_swap(&st->raw, old_raw, neu_raw);
-
-		if (prev_raw == old_raw) {
+		/* release: publish the new head; acquire on failure so the
+		 * retried iteration sees entry->prev of the new head
+		 */
+		if (atomic_compare_exchange_strong_explicit(
+			    &st->raw, &old_raw, neu_raw, memory_order_release,
+			    memory_order_acquire)) {
 			return entry;
 		}
 
 		/* CAS failed: retry with the current head. */
-		old_raw = prev_raw;
 	}
 }
 

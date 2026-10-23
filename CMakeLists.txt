@@ -92,21 +92,25 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
     set(COMMON_CFLAGS "${COMMON_CFLAGS} -mcx16")
 endif()
 
-# The lf-stack uses __sync builtins for 128-bit CAS and must not depend on
-# libatomic. Some targets (e.g. s390x) define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
-# but still emit an unresolvable __sync_val_compare_and_swap_16 call, so check
-# that the builtin actually links. Otherwise lf-stack falls back to a spinlock.
+# The lf-stack uses a 128-bit atomic CAS (stdatomic) and must not depend on
+# libatomic. Some targets (e.g. s390x) emit an unresolvable libatomic call
+# for 128-bit CAS, so check that it actually compiles and links. Otherwise
+# lf-stack falls back to a spinlock.
 include(CheckCSourceCompiles)
 set(CMAKE_REQUIRED_FLAGS "${COMMON_CFLAGS}")
 check_c_source_compiles("
-static __int128_t v;
+#include <stdatomic.h>
+static _Atomic __int128_t v;
 int main(void)
 {
-	return (int)__sync_val_compare_and_swap(&v, (__int128_t)0, (__int128_t)1);
-}" MM_HAVE_SYNC_CAS_16)
+	__int128_t cur = atomic_load(&v);
+	__int128_t expected = cur;
+	return (int)atomic_compare_exchange_strong(&v, &expected,
+						   (__int128_t)1);
+}" MM_HAVE_ATOMIC_CAS_16)
 unset(CMAKE_REQUIRED_FLAGS)
-if(MM_HAVE_SYNC_CAS_16)
-    add_definitions(-DMM_HAVE_SYNC_CAS_16)
+if(MM_HAVE_ATOMIC_CAS_16)
+    add_definitions(-DMM_HAVE_ATOMIC_CAS_16)
 endif()
 
 # WORDS_BIGENDIAN is expected by the code borrowed from postgres

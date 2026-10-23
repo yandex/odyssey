@@ -129,13 +129,15 @@ int mm_signalmgr_wait(mm_signalmgr_t *mgr, uint32_t time_ms)
 
 #else
 
-static volatile int mm_signalmgr_write_fd = -1;
+static _Atomic int mm_signalmgr_write_fd = -1;
 
 static void mm_signalmgr_handler(int signo)
 {
-	if (mm_signalmgr_write_fd != -1) {
+	int fd = atomic_load_explicit(&mm_signalmgr_write_fd,
+				      memory_order_acquire);
+	if (fd != -1) {
 		uint8_t byte = (uint8_t)signo;
-		ssize_t rc = write(mm_signalmgr_write_fd, &byte, 1);
+		ssize_t rc = write(fd, &byte, 1);
 		(void)rc;
 	}
 }
@@ -169,7 +171,8 @@ int mm_signalmgr_init(mm_signalmgr_t *mgr, mm_loop_t *loop)
 		return -1;
 	}
 
-	mm_signalmgr_write_fd = mgr->write_fd;
+	atomic_store_explicit(&mm_signalmgr_write_fd, mgr->write_fd,
+			      memory_order_release);
 	return 0;
 }
 
@@ -183,7 +186,7 @@ void mm_signalmgr_free(mm_signalmgr_t *mgr, mm_loop_t *loop)
 	close(mgr->write_fd);
 	mgr->fd.fd = -1;
 	mgr->write_fd = -1;
-	mm_signalmgr_write_fd = -1;
+	atomic_store_explicit(&mm_signalmgr_write_fd, -1, memory_order_release);
 }
 
 int mm_signalmgr_set(mm_signalmgr_t *mgr, sigset_t *set, sigset_t *ignore)
