@@ -4,3 +4,9 @@ test: deallocate_across_switch
 test: shared_backend
 test: sql_execute
 test: prepared_hazards
+test: sql_switch_backend
+test: sql_rollback_and_errors
+test: sql_deallocate
+test: sql_reserved_names
+test: sql_shared_backend
+test: sql_unknown_statement

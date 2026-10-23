@@ -1,0 +1,37 @@
+-- names starting with odyssey_pstmt_ belong to odyssey's own statements
+-- on backends and are rejected
+prepare odyssey_pstmt_1 as select 1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+execute odyssey_pstmt_1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+execute U&"odyssey\005fpstmt_1";
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+explain analyze create table sql_reserved as execute odyssey_pstmt_1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+deallocate odyssey_pstmt_1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+-- not a statement name: allowed
+select 'odyssey_pstmt_1' as v;
+        v        
+-----------------
+ odyssey_pstmt_1
+(1 row)
+
+-- quoted names are case-sensitive: this one is not reserved, while the
+-- same name unquoted folds to lower case and is
+prepare "ODYSSEY_PSTMT_1" as select 'quoted' as v;
+execute "ODYSSEY_PSTMT_1";
+   v    
+--------
+ quoted
+(1 row)
+
+execute ODYSSEY_PSTMT_1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+deallocate "ODYSSEY_PSTMT_1";

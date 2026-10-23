@@ -61,6 +61,12 @@ int od_reset(od_server_t *server)
 		goto drop;
 	}
 
+	if (server->sql_pstmt.unknown) {
+		od_log(&instance->logger, server->client, server,
+		       "server holds unknown prepared statements, closing and drop connection");
+		goto drop;
+	}
+
 	/* support route rollback off */
 	if (!route->rule->pool->rollback) {
 		if (server->is_transaction) {

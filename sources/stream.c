@@ -308,6 +308,11 @@ stream_handle_message(stream_t *stream, od_server_t *server, char *data,
 			break;
 		}
 
+		if (client != NULL) {
+			od_sql_pstmt_query_on_complete(
+				&client->sql_pstmt.query);
+		}
+
 		if (!route->rule->pool->pin_on_listen) {
 			break;
 		}
