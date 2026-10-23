@@ -92,6 +92,36 @@ static od_retcode_t od_rwr_lsn_is_valid(const char *lsn)
 }
 
 /*
+ * Read the endpoint status, live-refreshing it as od_backend_check_tsa
+ * does (the cached status may still hold the constructor defaults, e.g.
+ * a replica is misreported as a primary until the first poll)
+ */
+static od_retcode_t od_rwr_endpoint_status(od_client_t *client,
+					   od_server_t *server,
+					   od_storage_endpoint_t *endpoint,
+					   od_storage_endpoint_status_t *status)
+{
+	od_rule_storage_t *storage = endpoint->storage;
+	uint64_t poll_interval_ms = 0ULL;
+	if (storage != NULL && storage->endpoints_status_poll_interval_ms > 0) {
+		poll_interval_ms =
+			(uint64_t)storage->endpoints_status_poll_interval_ms;
+	}
+	if (od_storage_endpoint_status_is_outdated(&endpoint->status,
+						   poll_interval_ms)) {
+		od_instance_t *instance = client->global->instance;
+		if (od_backend_update_endpoint_status(instance, client, server,
+						      "rwr", NULL, endpoint) !=
+		    OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	od_storage_endpoint_status_get(&endpoint->status, status);
+	return OK_RESPONSE;
+}
+
+/*
  * Execute a side query. On a backend error, drain the leftover server
  * output up to ReadyForQuery to keep the connection reusable; if the
  * connection is broken, report NOT_OK_RESPONSE.
@@ -145,10 +175,13 @@ od_retcode_t od_rwr_capture_lsn(od_client_t *client, od_server_t *server)
 	}
 
 	od_storage_endpoint_status_t status;
-	od_storage_endpoint_status_get(&endpoint->status, &status);
+	if (od_rwr_endpoint_status(client, server, endpoint, &status) !=
+	    OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
 
 	/* capture LSN only on the primary */
-	if (!status.is_read_write) {
+	if (!status.is_read_write || !status.alive) {
 		return OK_RESPONSE;
 	}
 
@@ -203,10 +236,13 @@ od_retcode_t od_rwr_wait_lsn(od_client_t *client, od_server_t *server)
 	}
 
 	od_storage_endpoint_status_t status;
-	od_storage_endpoint_status_get(&endpoint->status, &status);
+	if (od_rwr_endpoint_status(client, server, endpoint, &status) !=
+	    OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
 
 	/* reads served by the primary are always consistent */
-	if (status.is_read_write) {
+	if (status.is_read_write || !status.alive) {
 		return OK_RESPONSE;
 	}
 

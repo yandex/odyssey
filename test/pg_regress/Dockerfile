@@ -25,7 +25,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
 
 FROM common-builder AS pg-build
 
-RUN git clone --depth 1 --branch REL_18_STABLE https://github.com/postgres/postgres.git
+RUN git clone --depth 1 --branch REL_19_STABLE https://github.com/postgres/postgres.git
 RUN cd postgres && ./configure --prefix /usr --without-icu --without-zlib && make -j install >/dev/null
 
 RUN git clone --depth 1 https://github.com/pg-sharding/ttt /ttt
