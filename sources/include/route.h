@@ -280,12 +280,19 @@ static inline void od_route_lock(od_route_t *route)
 {
 	mm_mutex_lock2(&route->lock);
 
-	od_multi_pool_lock(od_route_server_pools(route));
+	/* the exclusive mpool is private to the route and is always
+	 * accessed under route->lock, so its own lock is redundant;
+	 * the shared mpool is cross-route and still needs it */
+	if (od_route_has_shared_pool(route)) {
+		od_multi_pool_lock(od_route_server_pools(route));
+	}
 }
 
 static inline void od_route_unlock(od_route_t *route)
 {
-	od_multi_pool_unlock(od_route_server_pools(route));
+	if (od_route_has_shared_pool(route)) {
+		od_multi_pool_unlock(od_route_server_pools(route));
+	}
 
 	mm_mutex_unlock(&route->lock);
 }
