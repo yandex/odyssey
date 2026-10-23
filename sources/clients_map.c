@@ -27,11 +27,11 @@ static inline int od_global_clients_map_hm_cmp(const void *a, const void *b)
 
 od_global_clients_map_t *od_global_clients_map_create(size_t nlocks)
 {
-	mm_hashmap_t *hm = mm_hashmap_create(32768, nlocks, sizeof(kiwi_key_t),
-					     sizeof(od_client_t *),
-					     od_global_clients_map_hm_cmp,
-					     od_global_clients_map_hm_hash,
-					     NULL, NULL, NULL);
+	mm_hashmap_t *hm = mm_hashmap_create(
+		32768, nlocks, sizeof(kiwi_key_t), sizeof(od_client_t *),
+		od_global_clients_map_hm_cmp, od_global_clients_map_hm_hash,
+		NULL, NULL, NULL,
+		0 /* nfree_max: default, capped at nbuckets */);
 	if (hm == NULL) {
 		return NULL;
 	}

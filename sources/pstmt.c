@@ -70,7 +70,10 @@ mm_hashmap_t *od_client_pstmt_hashmap_create(void)
 		sizeof(od_pstmt_t *) /* val size */, str_ptr_cmp /* key cmp */,
 		xxh_str_ptr /* key hash */, str_ptr_dtor /* key dtor */,
 		NULL /* no need to free the pointer from global table */,
-		str_ptr_copy /* key copy */);
+		str_ptr_copy /* key copy */,
+		64 /* nfree_max: pooled shells well above the live set of a
+		    * serial client, bounded so the pool is not the retention
+		    * multiplier across the whole client population */);
 }
 
 static int unref_pstmt_entry(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
@@ -216,7 +219,10 @@ mm_hashmap_t *od_client_portal_hashmap_create(void)
 		str_ptr_cmp /* key cmp */, xxh_str_ptr /* key hash */,
 		str_ptr_dtor /* key dtor */,
 		NULL /* no need to free the pointer from global table */,
-		str_ptr_copy /* key copy */);
+		str_ptr_copy /* key copy */,
+		32 /* nfree_max: portals live per transaction and the client
+		    * is serial, so a couple dozen shells cover the hot reuse
+		    * without inflating per-client retention */);
 }
 
 void od_client_portal_hashmap_free(mm_hashmap_t *hm)
@@ -360,7 +366,8 @@ mm_hashmap_t *od_server_pstmt_hashmap_create(void)
 		str_inplace_cmp /* key cmp */, xxh_str_inplace /* key hash */,
 		NULL /* no need to free on inplace str */,
 		NULL /* no need to free the pointer from global table */,
-		NULL /* no key copy function */
+		NULL /* no key copy function */,
+		0 /* nfree_max: default, capped at nbuckets */
 	);
 }
 
@@ -682,7 +689,8 @@ od_global_pstmt_map_t *od_global_pstmts_map_create(size_t nlocks)
 		xxh_pstmt_desc /* key hash */,
 		NULL /* key does not own desc.data */,
 		pstmt_desc_val_dtor /* value owns the pstmt pointer */,
-		NULL /* no key copy — raw memcpy, data ptr overwritten after insert */
+		NULL /* no key copy — raw memcpy, data ptr overwritten after insert */,
+		0 /* nfree_max: default, capped at nbuckets */
 	);
 
 	if (hm == NULL) {

@@ -120,30 +120,15 @@ const void *mm_hashmap_kvp_val_const(const mm_hashmap_t *hm,
 	return (const void *)((const uint8_t *)kvp + hm->valoff);
 }
 
-static mm_hashmap_kvp_t *kvp_create(mm_hashmap_t *hm, mm_hash_t hash,
-				    const void *key)
+static mm_hashmap_kvp_t *kvp_alloc(mm_hashmap_t *hm)
 {
-	mm_hashmap_kvp_t *kvp = mm_malloc(hm->kvpsize);
-	if (kvp == NULL) {
-		return NULL;
-	}
-	memset(kvp, 0, hm->kvpsize);
-
-	mm_list_init(&kvp->link);
-	kvp->hash = hash;
-
-	void *kkey = mm_hashmap_kvp_key(hm, kvp);
-	if (hm->kcopy != NULL) {
-		int rc = hm->kcopy(kkey, key);
-		if (rc != 0) {
-			mm_free(kvp);
-			return NULL;
-		}
-	} else {
-		memcpy(kkey, key, hm->keysz);
+	mm_lf_stack_entry_t *e = mm_lf_stack_pop(&hm->freelist);
+	if (e != NULL) {
+		atomic_fetch_sub_explicit(&hm->nfree, 1, memory_order_relaxed);
+		return mm_container_of(e, mm_hashmap_kvp_t, stack);
 	}
 
-	return kvp;
+	return mm_malloc(hm->kvpsize);
 }
 
 static void kvp_free(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp)
@@ -156,7 +141,41 @@ static void kvp_free(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp)
 		hm->vdtor(mm_hashmap_kvp_val(hm, kvp));
 	}
 
-	mm_free(kvp);
+	size_t nfree =
+		atomic_fetch_add_explicit(&hm->nfree, 1, memory_order_relaxed);
+	if (nfree >= hm->nfree_max) {
+		atomic_fetch_sub_explicit(&hm->nfree, 1, memory_order_relaxed);
+		mm_free(kvp);
+		return;
+	}
+
+	mm_lf_stack_push(&hm->freelist, &kvp->stack);
+}
+
+static mm_hashmap_kvp_t *kvp_create(mm_hashmap_t *hm, mm_hash_t hash,
+				    const void *key)
+{
+	mm_hashmap_kvp_t *kvp = kvp_alloc(hm);
+	if (kvp == NULL) {
+		return NULL;
+	}
+	memset(kvp, 0, hm->kvpsize);
+
+	mm_list_init(&kvp->link);
+	kvp->hash = hash;
+
+	void *kkey = mm_hashmap_kvp_key(hm, kvp);
+	if (hm->kcopy != NULL) {
+		int rc = hm->kcopy(kkey, key);
+		if (rc != 0) {
+			kvp_free(hm, kvp);
+			return NULL;
+		}
+	} else {
+		memcpy(kkey, key, hm->keysz);
+	}
+
+	return kvp;
 }
 
 mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
@@ -164,7 +183,7 @@ mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
 				mm_hm_key_hash_fn khash,
 				mm_hm_key_dtor_fn kdtor,
 				mm_hm_value_dtor_fn vdtor,
-				mm_hm_key_copy_fn kcopy)
+				mm_hm_key_copy_fn kcopy, size_t nfree_max)
 {
 	nbuckets = adjust_to_prime(nbuckets);
 
@@ -212,6 +231,10 @@ mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
 	hm->valoff = alignsz(hm->keyoff + hm->keysz);
 	hm->kvpsize = alignsz(hm->valoff + hm->valsz);
 
+	mm_lf_stack_init(&hm->freelist);
+
+	atomic_init(&hm->nfree, 0);
+	hm->nfree_max = nfree_max != 0 ? nfree_max : nbuckets;
 	init_locks(hm);
 	init_buckets(hm);
 
@@ -257,6 +280,15 @@ void mm_hashmap_free(mm_hashmap_t *hm)
 	}
 
 	mm_hashmap_clear(hm);
+
+	mm_lf_stack_entry_t *e;
+	while ((e = mm_lf_stack_pop(&hm->freelist)) != NULL) {
+		mm_hashmap_kvp_t *kvp =
+			mm_container_of(e, mm_hashmap_kvp_t, stack);
+		mm_free(kvp);
+	}
+
+	mm_lf_stack_destroy(&hm->freelist);
 
 	destroy_locks(hm);
 
