@@ -7,6 +7,8 @@ SELECT pg_wal_replay_pause();
 SET odyssey.execute_on_host TO 'localhost:5432';
 CREATE TABLE rwr_test (i int);
 INSERT INTO rwr_test (i) VALUES (42);
+-- setting an already enabled mode must preserve the captured LSN
+SET odyssey.rwr_consistent TO 'on';
 -- resume the paused replica replay in the background: the next SELECT
 -- must block on WAIT FOR LSN until the INSERT is replayed, so it sees
 -- the just-inserted row instead of the pre-INSERT state

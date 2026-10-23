@@ -469,9 +469,14 @@ static od_frontend_status_t process_vset(od_client_t *client,
 
 	if (strcmp(ctx->s1, ODYSSEY_RWR_CONSISTENT) == 0) {
 		if (instance->config.virtual_processing) {
-			return build_set_generic_bool(
+			od_frontend_status_t status = build_set_generic_bool(
 				client, ctx, portal, &client->rwr_consistent,
-				&client->rwr_last_lsn_valid);
+				NULL);
+			/* Reasserting "on" must preserve the last write position. */
+			if (!client->rwr_consistent) {
+				client->rwr_last_lsn_valid = false;
+			}
+			return status;
 		}
 	}
 

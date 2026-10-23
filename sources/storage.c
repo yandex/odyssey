@@ -496,6 +496,7 @@ int od_storage_parse_endpoints(const char *host_str,
 	}
 
 	for (size_t i = 0; i < c; ++i) {
+		result[i].rwr_wait_unsupported_logged = 0;
 		od_address_t *result_addr = &result[i].address;
 		od_address_init(result_addr);
 		od_address_move(result_addr, &addrs[i]);
