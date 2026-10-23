@@ -50,7 +50,7 @@ typedef struct mm_sleepy {
 typedef struct {
 	mm_spinlock_t lock;
 	mm_list_t sleepies;
-	uint64_t sleepy_count;
+	atomic_uint_fast64_t sleepy_count;
 
 	/*
 	This field is analogous to a futex word.
@@ -94,3 +94,21 @@ void *mm_wait_list_notify_cb(mm_wait_list_t *wait_list, mm_wl_private_cb_t cb,
  */
 int mm_wait_list_waitv(mm_wait_list_t **wait_lists, size_t count,
 		       uint32_t timeout_ms);
+
+/*
+ * Cheap racy check, to be used as a fast path right after the futex word
+ * was changed by the caller (e.g. mutex unlock):
+ *
+ * - a non-zero result does not guarantee the list is non-empty, notify()
+ *   will then find nothing and return, which is cheap;
+ * - a zero result does not guarantee the list is empty, but a waiter that
+ *   is being queued concurrently is safe: mm_wait_list_compare_wait()
+ *   re-checks the word after enqueueing and bails out instead of sleeping.
+ *
+ * Waiters queued via mm_wait_list_wait() do not re-check anything, so
+ * using this hint with plain wait() may lose wakeups.
+ */
+static inline int mm_wait_list_maybe_waiters(mm_wait_list_t *wait_list)
+{
+	return atomic_load(&wait_list->sleepy_count) != 0;
+}

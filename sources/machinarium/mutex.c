@@ -99,5 +99,7 @@ void mm_mutex_unlock(mm_mutex_t *mutex)
 	mutex->owner_coro_id = MM_SLEEPY_NO_CORO_ID;
 	atomic_store(&mutex->state, MM_MUTEX_UNLOCKED);
 
-	mm_wait_list_notify(&mutex->wl);
+	if (mm_wait_list_maybe_waiters(&mutex->wl)) {
+		mm_wait_list_notify(&mutex->wl);
+	}
 }
