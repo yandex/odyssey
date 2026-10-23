@@ -133,6 +133,14 @@ typedef enum {
 	OD_XPLAN_VIRTUAL_COMMAND_COMPLETE,
 
 	/*
+	 * virtual response for the isolationtester
+	 * pg_isolation_test_session_is_blocked() probe (BindComplete or
+	 * RowDescription + DataRow + CommandComplete), which is virtualized
+	 * (not sent to server)
+	 */
+	OD_XPLAN_VIRTUAL_PROBE_RESULT,
+
+	/*
 	 * deferred simple query begin
 	 */
 	OD_XPLAN_DEFERRED_BEGIN,
@@ -172,6 +180,9 @@ typedef struct {
 	 * no CloseComplete msg here - it is always const seq of bytes
 	 * no CommandComplete msg here - it is always const seq of bytes
 	 *                                (handled by vcc_data, vcc_len)
+	 * except the isolationtester probe result
+	 * (OD_XPLAN_VIRTUAL_PROBE_RESULT), which is a pre-built
+	 * RowDescription + DataRow + CommandComplete sequence
 	 *
 	 * can be NULL, owned by xplan
 	 */

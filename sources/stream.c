@@ -20,6 +20,7 @@
 #include <stat.h>
 #include <misc.h>
 #include <stream.h>
+#include <sql_pstmt.h>
 
 /*
  * https://www.postgresql.org/docs/current/protocol-flow.html
@@ -290,6 +291,25 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 
 		od_backend_ready(server, data, size);
 
+		/*
+		 * SQL PREPARE tracking: apply the statements the backend
+		 * completed; a DEALLOCATE ALL also drops protocol-level
+		 * prepared statements of the client
+		 */
+		if (!is_service && client != NULL) {
+			int deallocated_all = 0;
+			if (od_sql_pstmt_query_finish(
+				    &client->sql_pstmt, &server->sql_pstmt,
+				    &deallocated_all, client->global) != 0) {
+				return OD_ESERVER_READ;
+			}
+			od_sql_pstmt_query_reset(&client->sql_pstmt.query);
+			if (deallocated_all) {
+				od_client_pstmts_clear(client);
+				od_client_portals_clear(client);
+			}
+		}
+
 		if (is_service) {
 			break;
 		}
@@ -306,6 +326,12 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 	case KIWI_BE_COMMAND_COMPLETE:
 		if (is_service) {
 			break;
+		}
+
+		/* SQL PREPARE tracking: count completed statements */
+		if (client != NULL && client->sql_pstmt.query.counting > 0) {
+			od_sql_pstmt_query_on_complete(
+				&client->sql_pstmt.query);
 		}
 
 		if (!route->rule->pool->pin_on_listen) {

@@ -13,3 +13,4 @@
 #include <types.h>
 
 int od_console_query(od_client_t *, od_tuple_table_slot_t *, char *, uint32_t);
+int od_console_fill_global_pstmt_rows(od_client_t *, od_tuple_table_slot_t *);

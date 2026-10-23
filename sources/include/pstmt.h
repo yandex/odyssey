@@ -92,6 +92,13 @@ struct od_pstmt {
 
 	od_global_pstmt_map_t *source;
 
+	/*
+	 * the statement is the isolationtester
+	 * pg_isolation_test_session_is_blocked() probe: the arguments are
+	 * rewritten before it reaches the backend (see xplan.c)
+	 */
+	int isolation_probe;
+
 	_Alignas(max_align_t) uint8_t desc_data[];
 };
 

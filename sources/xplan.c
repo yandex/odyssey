@@ -16,6 +16,7 @@
 #include <misc.h>
 #include <util.h>
 #include <worker.h>
+#include <sql/full/parser.h>
 
 /* max plan entries sent without a heap-allocated iovec array */
 #define OD_XPLAN_IOVEC_INLINE_MAX 32
@@ -61,6 +62,8 @@ static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 		return "OD_XPLAN_VIRTUAL_PARSE_COMPLETE";
 	case OD_XPLAN_VIRTUAL_COMMAND_COMPLETE:
 		return "OD_XPLAN_VIRTUAL_COMMAND_COMPLETE";
+	case OD_XPLAN_VIRTUAL_PROBE_RESULT:
+		return "OD_XPLAN_VIRTUAL_PROBE_RESULT";
 	case OD_XPLAN_DEFERRED_BEGIN:
 		return "OD_XPLAN_DEFERRED_BEGIN";
 	default:
@@ -311,6 +314,14 @@ static void entry_init_virtual_close_complete(od_xplan_entry_t *e,
 			    NULL, NULL);
 }
 
+static void entry_init_virtual_probe_result(od_xplan_entry_t *e,
+					    machine_msg_t *original,
+					    machine_msg_t *vresp)
+{
+	entry_init_internal(e, OD_XPLAN_VIRTUAL_PROBE_RESULT, original, NULL,
+			    vresp, OD_XPLAN_DELTA_NONE, NULL, NULL, NULL);
+}
+
 static void entry_init_deferred_begin(od_xplan_entry_t *e, machine_msg_t *begin)
 {
 	od_assert(msg_is_begin_query(begin));
@@ -537,6 +548,21 @@ static inline od_frontend_status_t xplan_append_virtual_command_complete(
 	return OD_OK;
 }
 
+static inline od_frontend_status_t
+xplan_append_virtual_probe_result(od_xplan_t *xp, machine_msg_t *original,
+				  machine_msg_t *vresp)
+{
+	od_xplan_entry_t e;
+	entry_init_virtual_probe_result(&e, original, vresp);
+
+	int rc = xplan_append(xp, &e);
+	if (rc != 0) {
+		return OD_EOOM;
+	}
+
+	return OD_OK;
+}
+
 void od_xplan_init(od_xplan_t *xp)
 {
 	memset(xp, 0, sizeof(od_xplan_t));
@@ -741,6 +767,312 @@ static inline od_frontend_status_t plan_predeploy_pstmt(od_xplan_t *xp,
 	return xplan_append_parse_shadow(xp, pstmt, clmsg, pmsg);
 }
 
+/*
+ * isolationtester pg_isolation_test_session_is_blocked() support
+ *
+ * The vanilla isolationtester sends, on its control connection,
+ *
+ *     PREPARE isolationtester_waiting AS
+ *     SELECT pg_catalog.pg_isolation_test_session_is_blocked(
+ *         $1, '{<pid>,<pid>,...}')
+ *
+ * and re-executes it whenever a step might be waiting on a lock. The
+ * pids it inlines are the PQbackendPID() of every spec session - and
+ * behind odyssey those are the fake backend keys odyssey hands out,
+ * not real backend pids, so even with a matching stub function
+ * installed in postgres the fake pids never match pg_locks and the
+ * probe always answers "not blocked".
+ *
+ * So the probe never reaches the backend: it is virtualized. The
+ * fake pids are resolved back to the clients via the global
+ * clients-by-pid map, and the probe answers true only if the session
+ * is busy on its backend while some other session from the list has
+ * an open transaction on an attached backend (i.e. can be holding
+ * locks). No stub function is needed in postgres.
+ */
+
+static const char isolation_probe_func_name[] =
+	"pg_isolation_test_session_is_blocked";
+
+static void isolation_probe_ignore_error(const char *msg, void *userdata)
+{
+	(void)msg;
+	(void)userdata;
+}
+
+static const char *mem_find(const char *hay, size_t hay_len, const char *needle,
+			    size_t needle_len)
+{
+	if (needle_len == 0 || hay_len < needle_len) {
+		return NULL;
+	}
+	for (size_t i = 0; i + needle_len <= hay_len; ++i) {
+		if (hay[i] == needle[0] &&
+		    memcmp(hay + i, needle, needle_len) == 0) {
+			return hay + i;
+		}
+	}
+	return NULL;
+}
+
+/* is this the plain probe: SELECT pg_catalog.<the probe function>(...) */
+static int isolation_probe_query(const char *query, size_t query_len,
+				 od_linear_alloc_t *arena)
+{
+	if (mem_find(query, query_len, isolation_probe_func_name,
+		     sizeof(isolation_probe_func_name) - 1) == NULL) {
+		return 0;
+	}
+
+	List *tree = od_sql_full_parse(arena, query, query_len,
+				       isolation_probe_ignore_error, NULL);
+	if (tree == NIL || list_length(tree) != 1) {
+		return 0;
+	}
+
+	RawStmt *rs = linitial_node(RawStmt, tree);
+	if (!IsA(rs->stmt, SelectStmt)) {
+		return 0;
+	}
+
+	SelectStmt *sel = castNode(SelectStmt, rs->stmt);
+	if (sel->targetList == NIL || sel->fromClause != NIL ||
+	    sel->whereClause != NULL || sel->groupClause != NIL ||
+	    sel->havingClause != NULL) {
+		return 0;
+	}
+
+	/* accept any number of targets as long as the first is the probe */
+	ResTarget *target = linitial_node(ResTarget, sel->targetList);
+	if (target->val == NULL || !IsA(target->val, FuncCall)) {
+		return 0;
+	}
+
+	FuncCall *call = castNode(FuncCall, target->val);
+	if (call->funcname == NIL || call->agg_star) {
+		return 0;
+	}
+
+	/*
+	 * funcname is a list of Strings; odyssey's dialect only ever has
+	 * "pg_catalog" (maybe) plus the name
+	 */
+	if (list_length(call->funcname) > 2) {
+		return 0;
+	}
+	if (list_length(call->funcname) == 2 &&
+	    strcmp(strVal(linitial(call->funcname)), "pg_catalog") != 0) {
+		return 0;
+	}
+
+	return strcmp(strVal(llast(call->funcname)),
+		      isolation_probe_func_name) == 0;
+}
+
+/* fake client pid -> the client behind it, if any */
+static od_client_t *isolation_probe_client(od_instance_t *instance,
+					   uint32_t pid)
+{
+	if (pid == 0) {
+		return NULL;
+	}
+	return od_global_clients_pid_map_get(instance->clients_by_pid, pid);
+}
+
+/* the session has a query in flight on its backend */
+static int isolation_probe_client_busy(const od_client_t *client)
+{
+	const od_server_t *server = client->server;
+	if (server == NULL) {
+		return 0;
+	}
+	return server->sync_request != server->sync_reply;
+}
+
+/*
+ * evaluate the probe (see the comment block above): the first
+ * argument is the pid of the possibly blocked session, the literal
+ * array lists the pids of the spec sessions. The probe answers true
+ * only if the session is busy on its backend and some other session
+ * from the list can be holding locks (an open transaction on an
+ * attached backend)
+ */
+static int isolation_probe_evaluate(od_instance_t *instance,
+				    const od_pstmt_t *pstmt, uint32_t pid)
+{
+	od_client_t *victim = isolation_probe_client(instance, pid);
+	if (victim == NULL || !isolation_probe_client_busy(victim)) {
+		return 0;
+	}
+
+	/* the pid list is the last '{...}' of the query text */
+	const char *query = pstmt->desc.data;
+	size_t query_len = strlen(query);
+	const char *open = NULL;
+	for (size_t i = 0; i + 1 < query_len; ++i) {
+		if (query[i] == '{') {
+			open = query + i;
+		}
+	}
+	if (open == NULL) {
+		return 0;
+	}
+	const char *close =
+		memchr(open, '}', query_len - (size_t)(open - query));
+	if (close == NULL) {
+		return 0;
+	}
+
+	for (const char *p = open + 1; p < close;) {
+		while (p < close && (*p == ' ' || *p == '\t')) {
+			++p;
+		}
+		uint32_t blocker_pid = 0;
+		size_t digits = 0;
+		while (p < close && *p >= '0' && *p <= '9') {
+			blocker_pid = blocker_pid * 10 + (uint32_t)(*p - '0');
+			++p;
+			++digits;
+		}
+		while (p < close && (*p == ' ' || *p == '\t')) {
+			++p;
+		}
+		if (p < close && *p == ',') {
+			++p;
+		}
+		if (digits == 0 || digits > 10) {
+			continue;
+		}
+
+		od_client_t *blocker =
+			isolation_probe_client(instance, blocker_pid);
+		if (blocker == NULL || blocker == victim) {
+			continue;
+		}
+		od_server_t *server = blocker->server;
+		if (server != NULL && server != victim->server &&
+		    server->is_transaction) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * the possibly blocked session pid: the first (and the only) Bind
+ * parameter, a plain decimal number; returns 0 if not readable
+ */
+static uint32_t isolation_probe_bind_pid(const machine_msg_t *msg)
+{
+	char *data = machine_msg_data((machine_msg_t *)msg);
+	int size = machine_msg_size((machine_msg_t *)msg);
+
+	char *pos = data + sizeof(kiwi_header_t);
+	uint32_t rem = (uint32_t)size - sizeof(kiwi_header_t);
+
+	int rc = kiwi_readsz(&pos, &rem); /* portal */
+	if (rc == -1) {
+		return 0;
+	}
+	rc = kiwi_readsz(&pos, &rem); /* prepared statement name */
+	if (rc == -1) {
+		return 0;
+	}
+
+	uint16_t nfmt;
+	rc = kiwi_read16(&nfmt, &pos, &rem);
+	if (rc == -1) {
+		return 0;
+	}
+	for (uint16_t i = 0; i < nfmt; ++i) {
+		uint16_t fmt;
+		rc = kiwi_read16(&fmt, &pos, &rem);
+		if (rc == -1) {
+			return 0;
+		}
+	}
+
+	uint16_t nparams;
+	rc = kiwi_read16(&nparams, &pos, &rem);
+	if (rc == -1 || nparams < 1) {
+		return 0;
+	}
+
+	uint32_t param_len;
+	rc = kiwi_read32(&param_len, &pos, &rem);
+	if (rc == -1 || param_len < 1 || rem < param_len) {
+		/* NULL parameter */
+		return 0;
+	}
+
+	char *param_val = pos;
+
+	uint32_t pid = 0;
+	size_t digits = 0;
+	for (uint32_t i = 0; i < param_len; ++i) {
+		char c = param_val[i];
+		if (c < '0' || c > '9') {
+			return 0;
+		}
+		if (c != '0' || digits > 0) {
+			++digits;
+		}
+		if (digits > 10) {
+			return 0;
+		}
+		pid = pid * 10 + (uint32_t)(c - '0');
+	}
+
+	return pid;
+}
+
+/*
+ * build the virtual probe response for the client:
+ * RowDescription(single bool column) + DataRow(t/f) + CommandComplete
+ */
+static machine_msg_t *isolation_probe_result_msg(od_instance_t *instance,
+						 od_pstmt_t *pstmt,
+						 uint32_t pid)
+{
+	int blocked = isolation_probe_evaluate(instance, pstmt, pid);
+
+	/* RowDescription(26) + DataRow(12) + CommandComplete(12) */
+	machine_msg_t *msg = machine_msg_create(50);
+	if (msg == NULL) {
+		return NULL;
+	}
+	char *pos = machine_msg_data(msg);
+
+	/* RowDescription: one unnamed bool column, text format */
+	kiwi_write8(&pos, KIWI_BE_ROW_DESCRIPTION);
+	kiwi_write32(&pos, 4 + 2 + 1 + 4 + 2 + 4 + 2 + 4 + 2);
+	kiwi_write16(&pos, 1); /* nfields */
+	kiwi_write8(&pos, 0); /* attname: "" */
+	kiwi_write32(&pos, 0); /* table oid */
+	kiwi_write16(&pos, 0); /* attnum */
+	kiwi_write32(&pos, 16); /* BOOLOID */
+	kiwi_write16(&pos, 1); /* typlen */
+	kiwi_write32(&pos, 0xFFFFFFFF); /* typmod: -1 */
+	kiwi_write16(&pos, 0); /* format: text */
+
+	/* DataRow: a single text bool */
+	kiwi_write8(&pos, KIWI_BE_DATA_ROW);
+	kiwi_write32(&pos, 4 + 2 + 4 + 1);
+	kiwi_write16(&pos, 1); /* ncols */
+	kiwi_write32(&pos, 1); /* col len */
+	kiwi_write8(&pos, blocked ? 't' : 'f');
+
+	/* CommandComplete */
+	kiwi_write8(&pos, KIWI_BE_COMMAND_COMPLETE);
+	kiwi_write32(&pos, 4 + 7);
+	kiwi_write(&pos, "SELECT\0", 7);
+
+	od_assert(pos - (char *)machine_msg_data(msg) == 50);
+
+	return msg;
+}
+
 static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 				       od_xbuf_msg_t *m)
 {
@@ -785,6 +1117,19 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		return OD_EOOM;
 	}
 	/* we now hold the ref to pstmt */
+
+	if (isolation_probe_query(desc.data, strlen(desc.data), arena)) {
+		pstmt->isolation_probe = 1;
+	}
+
+	if (pstmt->isolation_probe) {
+		/*
+		 * the probe never reaches the backend: it is answered
+		 * virtually, so only the client mapping is updated
+		 */
+		return xplan_append_virtual_parse_complete(xp, pstmt_name,
+							   pstmt, msg);
+	}
 
 	if (plan_server_has_pstmt(xp, server, pstmt)) {
 		/*
@@ -976,6 +1321,24 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
 
+	if (pstmt->isolation_probe) {
+		/*
+		 * the probe never reaches the backend: answer virtually,
+		 * only the client portal mapping is updated. The main
+		 * thread evaluates the answer on the following Execute,
+		 * remember the Bind parameter (the possibly blocked
+		 * session pid)
+		 */
+		static const uint8_t bind_complete[] = { KIWI_BE_BIND_COMPLETE,
+							 0, 0, 0, 4 };
+
+		client->isolation_probe_pid = isolation_probe_bind_pid(msg);
+
+		return xplan_append_virtual_command_complete(
+			xp, msg, OD_XPLAN_DELTA_ADD_PORTAL, NULL, portal_name,
+			bind_complete, sizeof(bind_complete));
+	}
+
 	/* predeploy will create ref to pstmt if needed */
 	od_frontend_status_t st = plan_predeploy_pstmt(xp, server, msg, pstmt);
 	if (st != OD_OK) {
@@ -1037,6 +1400,21 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 		 */
 		return xplan_append_fwd_no_delta(xp, msg,
 						 NULL /* no rewrite */);
+	}
+
+	if (pstmt->isolation_probe) {
+		/*
+		 * the probe never reaches the backend: send the client
+		 * a RowDescription + DataRow + CommandComplete, with the
+		 * answer computed from the clients-by-pid map
+		 */
+		machine_msg_t *vresp = isolation_probe_result_msg(
+			instance, pstmt, client->isolation_probe_pid);
+		if (vresp == NULL) {
+			return OD_EOOM;
+		}
+
+		return xplan_append_virtual_probe_result(xp, msg, vresp);
 	}
 
 	/*
@@ -1439,6 +1817,25 @@ static od_frontend_status_t run_virtual_close_complete(od_xplan_entry_t *cc,
 	return OD_OK;
 }
 
+static od_frontend_status_t run_virtual_probe_result(od_xplan_entry_t *pr,
+						     od_client_t *client,
+						     uint32_t timeout_ms)
+{
+	od_assert(pr->vresp != NULL);
+
+	char *data = machine_msg_data(pr->vresp);
+	size_t size = machine_msg_size(pr->vresp);
+
+	size_t unused;
+	int rc = od_io_write_raw(&client->io, data, size, &unused, timeout_ms,
+				 0);
+	if (rc != 0) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	return OD_OK;
+}
+
 static od_frontend_status_t run_virtual_command_complete(od_xplan_entry_t *cc,
 							 od_client_t *client,
 							 uint32_t timeout_ms)
@@ -1805,6 +2202,10 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		case OD_XPLAN_VIRTUAL_COMMAND_COMPLETE:
 			status = run_virtual_command_complete(entry, client,
 							      timeout_ms);
+			break;
+		case OD_XPLAN_VIRTUAL_PROBE_RESULT:
+			status = run_virtual_probe_result(entry, client,
+							  timeout_ms);
 			break;
 		case OD_XPLAN_FORWARD:
 			/* fallthrough */

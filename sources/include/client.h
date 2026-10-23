@@ -18,6 +18,7 @@
 #include <rules.h>
 #include <list.h>
 #include <pstmt.h>
+#include <sql_pstmt.h>
 #include <scram.h>
 #include <od_ldap.h>
 
@@ -67,6 +68,16 @@ struct od_client {
 
 	/* desc preparet statements ids */
 	mm_hashmap_t *prep_stmt_ids;
+
+	/* prepared statements created by SQL PREPARE (simple protocol) */
+	od_sql_pstmt_client_t sql_pstmt;
+
+	/*
+	 * the isolationtester pg_isolation_test_session_is_blocked()
+	 * probe: the pid passed as the first Bind parameter of the
+	 * current probe execution (0 - no probe in flight)
+	 */
+	uint32_t isolation_probe_pid;
 
 	/* portal name -> *od_pstmt_t (extended protocol portals tracking) */
 	mm_hashmap_t *portals;

@@ -3580,6 +3580,13 @@ void od_frontend(void *arg)
 		return;
 	}
 
+	rc = od_global_clients_pid_map_add(instance->clients_by_pid, client);
+	if (rc == -1) {
+		od_frontend_close(client);
+		od_routing_slot_release(global);
+		return;
+	}
+
 	/* route client */
 	od_router_status_t router_status;
 	router_status = od_router_route(router, client);
@@ -3697,6 +3704,8 @@ void od_frontend(void *arg)
 
 		od_global_clients_map_remove(instance->clients_by_key, client);
 		od_frontend_close(client);
+		od_global_clients_pid_map_remove(instance->clients_by_pid,
+						 client);
 		return;
 	}
 
@@ -3841,6 +3850,7 @@ void od_frontend(void *arg)
 
 cleanup:
 	od_global_clients_map_remove(instance->clients_by_key, client);
+	od_global_clients_pid_map_remove(instance->clients_by_pid, client);
 
 	/* detach client from its route */
 	od_router_unroute(router, client);

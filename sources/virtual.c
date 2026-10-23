@@ -23,6 +23,8 @@
 #include <stream.h>
 #include <xplan.h>
 #include <pstmt.h>
+#include <console.h>
+#include <sql_pstmt.h>
 #include <misc.h>
 #include <option.h>
 #include <worker.h>
@@ -570,6 +572,31 @@ static od_frontend_status_t process_show_version(od_client_t *client,
 	return build_show_str(client, portal, ODYSSEY_VERSION_STR, data);
 }
 
+/*
+ * SHOW GLOBAL_PREPARED_STATEMENTS answered locally for an ordinary
+ * (non-console) session, mirroring the console output, so single-database
+ * clients like isolationtester can inspect the global map
+ */
+static od_frontend_status_t
+process_show_global_pstmts(od_client_t *client, od_virtual_portal_t *portal)
+{
+	portal->tts = od_tuple_table_slot_create();
+	if (portal->tts == NULL) {
+		return OD_EOOM;
+	}
+
+	int rc = od_console_fill_global_pstmt_rows(client, portal->tts);
+	if (rc != OK_RESPONSE) {
+		return OD_EOOM;
+	}
+
+	if (virtual_portal_set_complete(portal, "SHOW") != 0) {
+		return OD_EOOM;
+	}
+
+	return OD_SKIP;
+}
+
 static od_frontend_status_t process_vshow(od_client_t *client,
 					  const od_query_ctx_t *ctx,
 					  od_virtual_portal_t *portal)
@@ -606,6 +633,12 @@ static od_frontend_status_t process_vshow(od_client_t *client,
 	if (strcmp(ctx->s1, ODYSSEY_POOLING_MODE) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_show_pooling_mode(client, portal);
+		}
+	}
+
+	if (strcmp(ctx->s1, "global_prepared_statements") == 0) {
+		if (instance->config.virtual_processing) {
+			return process_show_global_pstmts(client, portal);
 		}
 	}
 
@@ -791,6 +824,17 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 {
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
 		return OD_OK;
+	}
+
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL) ||
+	    od_query_ctx_has(ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME)) {
+		/*
+		 * a DEALLOCATE of a statement created by SQL PREPARE must
+		 * reach the backend instead of being answered virtually
+		 */
+		if (od_sql_pstmt_query_must_forward(&client->sql_pstmt)) {
+			return OD_OK;
+		}
 	}
 
 	if (!virtual_query_supported(client, ctx)) {
