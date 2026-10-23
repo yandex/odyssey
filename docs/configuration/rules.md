@@ -715,6 +715,18 @@ SHOW odyssey.opportunistic_acquire;
 
 Enable support of prepared statements in transactional pooling.
 
+Both protocol-level prepared statements (Parse/Bind) and statements created
+with SQL `PREPARE` are supported. For SQL `PREPARE`, odyssey keeps the text of
+every successful statement per client. Whenever the client is attached to a
+server connection, the connection is made to hold exactly that client's
+statements: statements of other clients are deallocated and the client's
+missing statements are prepared again. `EXECUTE` and `DEALLOCATE` work as in a
+direct session.
+
+- names starting with `odyssey_pstmt_` are reserved for odyssey's own statements; `PREPARE`, `EXECUTE` and `DEALLOCATE` of such names are rejected
+- statements created by dynamic SQL (e.g. `EXECUTE 'PREPARE ...'` in a function or `DO` block) are not visible to odyssey, they will continue to work until the frontend stick to the same backend and then you will see errors
+- requires `query_parsing` not to be disabled
+
 `pool_reserve_prepared_statement yes`
 
 ## **server_pstmt_cache_size**

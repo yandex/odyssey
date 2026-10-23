@@ -232,8 +232,13 @@ ADD_FLEX_BISON_DEPENDENCY(sql_full_scanner sql_full_parser)
 set_source_files_properties(${FLEX_sql_full_scanner_OUTPUTS} PROPERTIES
     COMPILE_FLAGS "-Wno-unused-function -Wno-macro-redefined -Wno-unused-parameter -Wno-missing-field-initializers"
 )
+set(SQL_FULL_PARSER_FLAGS "-Wno-macro-redefined -Wno-unused-but-set-variable -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-unused-value -Wno-unused-parameter -Wno-int-to-pointer-cast -Wno-constant-conversion -Wno-shift-count-overflow")
+# at -O0 with sanitizers the generated parser needs a frame larger than a coroutine stack
+if(CMAKE_BUILD_TYPE MATCHES "^(Debug|ASAN|TSAN)$")
+    set(SQL_FULL_PARSER_FLAGS "${SQL_FULL_PARSER_FLAGS} -O1")
+endif()
 set_source_files_properties(${BISON_sql_full_parser_OUTPUTS} PROPERTIES
-    COMPILE_FLAGS "-Wno-macro-redefined -Wno-unused-but-set-variable -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-unused-value -Wno-unused-parameter -Wno-int-to-pointer-cast -Wno-constant-conversion -Wno-shift-count-overflow"
+    COMPILE_FLAGS "${SQL_FULL_PARSER_FLAGS}"
 )
 list(APPEND od_src
     ${FLEX_sql_full_scanner_OUTPUTS}

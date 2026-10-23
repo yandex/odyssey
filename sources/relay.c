@@ -223,10 +223,34 @@ static void process_discard(od_client_t *client, od_server_t *server)
 
 		od_client_pstmts_clear(client);
 		od_client_portals_clear(client);
+		od_sql_pstmt_client_clear(&client->sql_pstmt);
 		if (server != NULL) {
 			od_server_pstmts_clear(server);
+			od_sql_pstmt_server_clear(&server->sql_pstmt);
 		}
 	}
+}
+
+/* apply SQL PREPARE / DEALLOCATE statements the backend completed */
+static od_frontend_status_t process_sql_pstmts(od_client_t *client,
+					       od_server_t *server)
+{
+	int deallocated_all;
+	if (od_sql_pstmt_query_finish(&client->sql_pstmt, &server->sql_pstmt,
+				      &deallocated_all) != 0) {
+		od_gerror(client, server,
+			  "failed to track prepared statements of the query");
+		return OD_EOOM;
+	}
+
+	if (deallocated_all) {
+		/* DEALLOCATE ALL drops protocol-level statements too */
+		od_client_pstmts_clear(client);
+		od_client_portals_clear(client);
+		od_server_pstmts_clear(server);
+	}
+
+	return OD_OK;
 }
 
 static inline void process_unlisten(od_client_t *client, od_server_t *server)
@@ -331,6 +355,18 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_instance_t *instance = client->global->instance;
 
+	od_sql_pstmt_query_t *sql_query = &client->sql_pstmt.query;
+	if (client->rule->pool->reserve_prepared_statement &&
+	    !sql_query->analyzed) {
+		/* must run first: the full parser resets the arena */
+		rc = od_sql_pstmt_query_analyze(
+			sql_query, query, query_len - 1 /* zero included */,
+			arena);
+		if (rc != 0) {
+			return OD_EOOM;
+		}
+	}
+
 	od_config_query_parsing_t parsing = instance->config.query_parsing;
 	if (parsing.mode == OD_CONFIG_QUERY_PARSING_MODE_FULL &&
 	    !od_tsa_auto_route_ro_enabled(client)) {
@@ -402,6 +438,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	uint64_t errors_before = server->error_responses;
 
+	od_sql_pstmt_query_start_counting(sql_query);
+
 	status = od_stream_server_until_rfq(server, timeout_ms,
 					    OD_WAIT_STREAM_SERVER_READ);
 
@@ -422,6 +460,11 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		 */
 		process_discard(client, server);
 		process_unlisten(client, server);
+	}
+
+	if (status == OD_OK) {
+		/* checks by itself which statements of the query completed */
+		status = process_sql_pstmts(client, server);
 	}
 
 	return status;
@@ -748,6 +791,7 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 		process_query_impl, relay, msg, timeout_ms);
 
 	od_query_ctx_reset(&relay->client->query_ctx);
+	od_sql_pstmt_query_reset(&relay->client->sql_pstmt.query);
 
 	/*
 	 * in vanilla PG, executing simple query removes the
