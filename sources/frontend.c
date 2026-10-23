@@ -38,6 +38,7 @@
 #include <misc.h>
 #include <log_sampling.h>
 #include <server.h>
+#include <wait_event.h>
 
 static inline void od_frontend_close(od_client_t *client)
 {
@@ -2010,7 +2011,9 @@ client_read_full_msg(od_client_t *client, const kiwi_header_t *header,
 	memcpy(dest, header, sizeof(kiwi_header_t));
 	dest += sizeof(kiwi_header_t);
 
+	od_wait_event_start(OD_WAIT_CLIENT_READ);
 	int rc = od_io_read(&client->io, dest, size, timeout_ms);
+	od_wait_event_end(OD_WAIT_CLIENT_READ);
 	if (rc == -1) {
 		return OD_ECLIENT_READ;
 	}
@@ -2309,7 +2312,15 @@ static od_frontend_status_t client_read_header(od_client_t *client,
 {
 	while (od_readahead_unread(&client->io.readahead) <
 	       (int)sizeof(kiwi_header_t)) {
+		od_server_t *server = client->server;
+		od_wait_event_t wait_event = OD_WAIT_CLIENT_READ;
+		if (server != NULL && !od_server_synchronized(server)) {
+			wait_event = OD_WAIT_SERVER_READ;
+		}
+
+		od_wait_event_start(wait_event);
 		int rc = od_io_read_some(&client->io, 1000);
+		od_wait_event_end(wait_event);
 		if (rc != 0) {
 			int err = machine_errno();
 			if (err == ETIMEDOUT) {
@@ -2317,7 +2328,6 @@ static od_frontend_status_t client_read_header(od_client_t *client,
 			}
 			if (err == EAGAIN) {
 				/* interrupted by event on server io */
-				od_server_t *server = client->server;
 				od_assert(server != NULL);
 				int ev = od_io_last_event(&server->io);
 				if (ev & MM_R || ev & MM_ERR || ev & MM_CLOSE) {
@@ -2329,8 +2339,10 @@ static od_frontend_status_t client_read_header(od_client_t *client,
 		}
 	}
 
+	od_wait_event_start(OD_WAIT_CLIENT_READ);
 	int rc = od_io_read(&client->io, (char *)header, sizeof(kiwi_header_t),
 			    1000);
+	od_wait_event_end(OD_WAIT_CLIENT_READ);
 	if (rc != 0) {
 		/*
 		 * impossible - readahead already contains enough
@@ -3460,12 +3472,18 @@ static inline int wait_cancel_allowed(od_global_t *global,
 				      od_instance_t *instance,
 				      uint32_t timeout_ms)
 {
+	int rc;
 	if (instance->config.cancel_rate_limit != 0) {
-		return od_rate_limiter_waitn(&global->cancel_rate_limiter, 1,
-					     timeout_ms);
+		od_wait_event_start(OD_WAIT_RATELIMIT_CANCEL);
+		rc = od_rate_limiter_waitn(&global->cancel_rate_limiter, 1,
+					   timeout_ms);
+		od_wait_event_end(OD_WAIT_RATELIMIT_CANCEL);
 	} else {
-		return mm_sem_timedwait(&global->cancel_sem, timeout_ms);
+		od_wait_event_start(OD_WAIT_RATELIMIT_CANCEL);
+		rc = mm_sem_timedwait(&global->cancel_sem, timeout_ms);
+		od_wait_event_end(OD_WAIT_RATELIMIT_CANCEL);
 	}
+	return rc;
 }
 
 static inline void cancel_finished(od_global_t *global, od_instance_t *instance)

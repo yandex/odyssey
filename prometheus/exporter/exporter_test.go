@@ -288,6 +288,9 @@ func TestCollectWithDBContinuesAfterStepFailure(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"database", "avg_xact_count", "avg_query_count"}).
 			AddRow("db1", 1, 2))
 
+	mock.ExpectQuery(regexp.QuoteMeta(showWaitEventsCommand)).
+		WillReturnRows(sqlmock.NewRows([]string{"wait_event", "count"}))
+
 	mock.ExpectQuery(regexp.QuoteMeta(showDatabasesCommand)).
 		WillReturnRows(sqlmock.NewRows([]string{"name", "pool_size"}).AddRow("db1", "4"))
 
@@ -347,6 +350,89 @@ func TestSendListsMetricsReturnsRowsErr(t *testing.T) {
 		t.Fatalf("unmet expectations: %v", err)
 	}
 }
+
+func TestSendWaitEventMetrics(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	exporter := &Exporter{
+		logger: logger,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	rows := sqlmock.NewRows([]string{"wait_event", "count"}).
+		AddRow("QUEUE", "12").
+		AddRow("SERVER_READ", []byte("3"))
+
+	mock.ExpectQuery(regexp.QuoteMeta(showWaitEventsCommand)).WillReturnRows(rows)
+
+	ch := make(chan prometheus.Metric, 16)
+	err = exporter.sendWaitEventMetrics(context.Background(), ch, db)
+	if err != nil {
+		t.Fatalf("sendWaitEventMetrics returned error: %v", err)
+	}
+
+	close(ch)
+
+	got := map[string]float64{}
+	for metric := range ch {
+		if metric.Desc().String() != waitEventCountDescription.String() {
+			continue
+		}
+
+		var written dto.Metric
+		if err := metric.Write(&written); err != nil {
+			t.Fatalf("failed to write metric: %v", err)
+		}
+
+		waitEvent := ""
+		for _, label := range written.GetLabel() {
+			if label.GetName() == "wait_event" {
+				waitEvent = label.GetValue()
+			}
+		}
+
+		got[waitEvent] = written.GetGauge().GetValue()
+	}
+
+	if len(got) != 2 || got["QUEUE"] != 12 || got["SERVER_READ"] != 3 {
+		t.Fatalf("unexpected wait event metrics, got %v", got)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
+func TestSendWaitEventMetricsRejectsUnexpectedFormat(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	exporter := &Exporter{
+		logger: logger,
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	mock.ExpectQuery(regexp.QuoteMeta(showWaitEventsCommand)).
+		WillReturnRows(sqlmock.NewRows([]string{"event", "n"}).AddRow("QUEUE", "1"))
+
+	ch := make(chan prometheus.Metric, 16)
+	err = exporter.sendWaitEventMetrics(context.Background(), ch, db)
+	if err == nil || !strings.Contains(err.Error(), "invalid format") {
+		t.Fatalf("expected format error, got %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
 func TestCollectWithDBRespectsContextCancellation(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	exporter := &Exporter{
@@ -365,6 +451,7 @@ func TestCollectWithDBRespectsContextCancellation(t *testing.T) {
 		showIsPausedCommand,
 		showErrorsCommand,
 		showStatsCommand,
+		showWaitEventsCommand,
 		showDatabasesCommand,
 		showPoolsExtendedCommand,
 	} {

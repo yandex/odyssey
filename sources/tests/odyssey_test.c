@@ -143,6 +143,7 @@ extern void odyssey_test_console_parser(void);
 extern void odyssey_test_config_field(void);
 extern void odyssey_test_autoconf(void);
 extern void odyssey_test_soft_oom(void);
+extern void odyssey_test_wait_event(void);
 
 extern void machinarium_test_tsan_simple_race_example(void);
 
@@ -280,6 +281,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_config_field);
 	odyssey_test(odyssey_test_autoconf);
 	odyssey_test(odyssey_test_soft_oom);
+	odyssey_test(odyssey_test_wait_event);
 
 	odyssey_playground_test(machinarium_test_tsan_simple_race_example);
 

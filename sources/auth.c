@@ -25,6 +25,7 @@
 #include <extension.h>
 #include <external_auth.h>
 #include <mdb_iamproxy.h>
+#include <wait_event.h>
 
 static inline int od_auth_frontend_external_authentication(od_client_t *client)
 {
@@ -194,7 +195,9 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 			 "checking passwd against ldap endpoint %s",
 			 client->rule->ldap_endpoint_name);
 
+		od_wait_event_start(OD_WAIT_AUTH_LDAP);
 		rc = od_auth_ldap(client, &client_token);
+		od_wait_event_end(OD_WAIT_AUTH_LDAP);
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		if (rc != OK_RESPONSE) {
@@ -229,9 +232,11 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		od_pam_convert_passwd(client->rule->auth_pam_data,
 				      client_token.password);
 
+		od_wait_event_start(OD_WAIT_AUTH_PAM);
 		rc = od_pam_auth(client->rule->auth_pam_service,
 				 client->startup.user.value,
 				 client->rule->auth_pam_data, client->io.io);
+		od_wait_event_end(OD_WAIT_AUTH_PAM);
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		if (rc == -1) {
@@ -404,7 +409,9 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 			 "checking passwd against ldap endpoint %s",
 			 client->rule->ldap_endpoint_name);
 
+		od_wait_event_start(OD_WAIT_AUTH_LDAP);
 		rc = od_auth_ldap(client, &client_token);
+		od_wait_event_end(OD_WAIT_AUTH_LDAP);
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		if (rc != OK_RESPONSE) {

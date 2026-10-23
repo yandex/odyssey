@@ -12,6 +12,7 @@
 #include <client.h>
 #include <server.h>
 #include <io.h>
+#include <wait_event.h>
 #include <list.h>
 #include <backend.h>
 #include <instance.h>
@@ -568,7 +569,9 @@ od_stream_server_impl(char *ctx, od_server_t *server, int is_service,
 			continue;
 		}
 
+		od_wait_event_start(OD_WAIT_SERVER_READ);
 		rc = od_io_read_some(&server->io, timeout_ms);
+		od_wait_event_end(OD_WAIT_SERVER_READ);
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == EAGAIN) {
@@ -889,7 +892,9 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 		od_assert(od_readahead_unread(&client->io.readahead) <
 			  (int)sizeof(kiwi_header_t));
 
+		od_wait_event_start(OD_WAIT_CLIENT_READ);
 		rc = od_io_read_some(&client->io, timeout_ms);
+		od_wait_event_end(OD_WAIT_CLIENT_READ);
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == EAGAIN) {

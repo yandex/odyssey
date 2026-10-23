@@ -34,6 +34,7 @@ const (
 	showIsPausedCommand          = "show is_paused;"
 	showErrorsCommand            = "show errors;"
 	showStatsCommand             = "show stats;"
+	showWaitEventsCommand        = "show wait_events;"
 	showDatabasesCommand         = "show databases;"
 	showPoolsExtendedCommand     = "show pools_extended;"
 	poolModeColumnName           = "pool_mode"
@@ -184,6 +185,12 @@ var (
 		[]string{"type"}, nil,
 	)
 
+	waitEventCountDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "wait_events", "count"),
+		"Number of clients currently waiting on each wait event",
+		[]string{"wait_event"}, nil,
+	)
+
 	listMetricNameToDescription = map[string]*(prometheus.Desc){
 		"databases": prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "lists", "databases"),
@@ -253,6 +260,7 @@ var (
 		routeTransactionDurationSecondsDescription,
 		routeClientLifetimeSecondsDescription,
 		errorsTotalDescription,
+		waitEventCountDescription,
 		serverPoolStateRouteDescription,
 	}
 )
@@ -457,6 +465,7 @@ func (exporter *Exporter) collectWithDB(ctx context.Context, ch chan<- prometheu
 	runStep("is_paused", func() error { return exporter.sendIsPausedMetric(ctx, ch, db) })
 	runStep("errors", func() error { return exporter.sendErrorMetrics(ctx, ch, db) })
 	runStep("stats", func() error { return exporter.sendStatsMetrics(ctx, ch, db) })
+	runStep("wait_events", func() error { return exporter.sendWaitEventMetrics(ctx, ch, db) })
 
 	var poolCapacities map[routeKey]float64
 	runStep("databases", func() error {
@@ -841,6 +850,48 @@ func (exporter *Exporter) sendErrorMetrics(ctx context.Context, ch chan<- promet
 
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("error iterating errors rows: %w", err)
+	}
+
+	return nil
+}
+
+func (exporter *Exporter) sendWaitEventMetrics(ctx context.Context, ch chan<- prometheus.Metric, db *sql.DB) error {
+	rows, err := db.QueryContext(ctx, showWaitEventsCommand)
+	if err != nil {
+		return fmt.Errorf("error getting wait events: %w", err)
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return fmt.Errorf("can't get columns of wait events")
+	}
+	if len(columns) != 2 || columns[0] != "wait_event" || columns[1] != "count" {
+		return fmt.Errorf("invalid format of wait events output")
+	}
+
+	var waitEvent string
+	var count sql.RawBytes
+	for rows.Next() {
+		if err = rows.Scan(&waitEvent, &count); err != nil {
+			return fmt.Errorf("error scanning wait events row: %w", err)
+		}
+
+		value, err := strconv.ParseFloat(string(count), 64)
+		if err != nil {
+			return fmt.Errorf("can't parse count of %q: %w", string(count), err)
+		}
+
+		ch <- prometheus.MustNewConstMetric(
+			waitEventCountDescription,
+			prometheus.GaugeValue,
+			value,
+			waitEvent,
+		)
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error iterating wait events rows: %w", err)
 	}
 
 	return nil
