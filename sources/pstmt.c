@@ -667,6 +667,7 @@ static void pstmt_init_new(od_global_pstmt_map_t *hm, od_pstmt_t *out)
 	atomic_init(&out->pins, 1);
 	atomic_init(&out->refs, 1);
 	out->source = hm;
+	out->isolation_probe = 0;
 
 	od_snprintf(out->name, sizeof(od_pstmt_name_t), "%s%" PRIu64,
 		    OD_PSTMT_NAME_PREFIX, num);

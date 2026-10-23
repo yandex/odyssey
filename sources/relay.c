@@ -327,6 +327,20 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_instance_t *instance = client->global->instance;
 
+	/*
+	 * SQL PREPARE tracking: find PREPARE/DEALLOCATE statements of the
+	 * simple protocol query, so completed ones can be recorded once the
+	 * backend answers (see the stream.c reply hooks)
+	 */
+	od_sql_pstmt_query_t *sql_pstmt = &client->sql_pstmt.query;
+	if (client->rule->pool->reserve_prepared_statement) {
+		od_sql_pstmt_query_reset(sql_pstmt);
+		od_sql_pstmt_query_analyze(sql_pstmt, query,
+					   query_len - 1 /* zero included */,
+					   arena);
+		od_sql_pstmt_query_start_counting(sql_pstmt);
+	}
+
 	od_config_query_parsing_t parsing = instance->config.query_parsing;
 	if (parsing.mode == OD_CONFIG_QUERY_PARSING_MODE_FULL &&
 	    !od_tsa_auto_route_ro_enabled(client)) {

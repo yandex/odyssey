@@ -1452,8 +1452,13 @@ static inline int show_pstmt_cb(const od_pstmt_t *pstmt, void *arg)
 	}
 
 	/* description */
-	rc = kiwi_be_write_data_row_add(stream, offset, pstmt->desc.data,
-					pstmt->desc.len);
+	size_t desc_len = pstmt->desc.len;
+	const char *desc_data = pstmt->desc.data;
+	if (desc_len > 0 && desc_data[desc_len - 1] == '\0') {
+		/* do not show the terminating NUL */
+		--desc_len;
+	}
+	rc = kiwi_be_write_data_row_add(stream, offset, desc_data, desc_len);
 	if (rc != 0) {
 		goto error;
 	}
@@ -1473,8 +1478,45 @@ error:
 	return 1;
 }
 
-static inline int od_console_show_prep_stmts(od_client_t *client,
-					     od_tuple_table_slot_t *tts)
+static int show_pstmt_sort_cmp(const void *a, const void *b)
+{
+	const od_pstmt_t *pa = *(const od_pstmt_t *const *)a;
+	const od_pstmt_t *pb = *(const od_pstmt_t *const *)b;
+	return strcmp(pa->name, pb->name);
+}
+
+typedef struct {
+	od_pstmt_t **items;
+	size_t count;
+	size_t cap;
+	int oom;
+} show_pstmt_collect_t;
+
+static int show_pstmt_collect_cb(const od_pstmt_t *pstmt, void *arg)
+{
+	show_pstmt_collect_t *c = arg;
+	if (c->count == c->cap) {
+		size_t cap = c->cap > 0 ? c->cap * 2 : 16;
+		od_pstmt_t **items = od_realloc(c->items, cap * sizeof(*items));
+		if (items == NULL) {
+			c->oom = 1;
+			return 1;
+		}
+		c->items = items;
+		c->cap = cap;
+	}
+	/* the map is only read, the const is safe to cast away for sorting */
+	c->items[c->count++] = (od_pstmt_t *)pstmt;
+	return 0;
+}
+
+/*
+ * fill the slot with the name/definition/refcount rows of the global
+ * prepared statements map, shared by the console SHOW and the virtual
+ * SHOW GLOBAL_PREPARED_STATEMENTS of ordinary sessions
+ */
+int od_console_fill_global_pstmt_rows(od_client_t *client,
+				       od_tuple_table_slot_t *tts)
 {
 	machine_msg_t *desc = tts->row_description;
 	machine_msg_t *stream = tts->data_rows;
@@ -1492,10 +1534,38 @@ static inline int od_console_show_prep_stmts(od_client_t *client,
 		return NOT_OK_RESPONSE;
 	}
 
-	od_global_pstmt_foreach(instance->pstmts, show_pstmt_cb,
-				(void *)stream);
+	/* collect and sort, so the output does not depend on the map order */
+	show_pstmt_collect_t collect = { NULL, 0, 0, 0 };
+	od_global_pstmt_foreach(instance->pstmts, show_pstmt_collect_cb,
+				&collect);
+	if (collect.oom) {
+		od_free(collect.items);
+		return NOT_OK_RESPONSE;
+	}
 
-	return kiwi_be_write_complete(stream, "SHOW", 5);
+	qsort(collect.items, collect.count, sizeof(*collect.items),
+	      show_pstmt_sort_cmp);
+
+	for (size_t i = 0; i < collect.count; ++i) {
+		if (show_pstmt_cb(collect.items[i], stream) != 0) {
+			od_free(collect.items);
+			return NOT_OK_RESPONSE;
+		}
+	}
+	od_free(collect.items);
+
+	return OK_RESPONSE;
+}
+
+static inline int od_console_show_prep_stmts(od_client_t *client,
+					     od_tuple_table_slot_t *tts)
+{
+	int rc = od_console_fill_global_pstmt_rows(client, tts);
+	if (rc != OK_RESPONSE) {
+		return NOT_OK_RESPONSE;
+	}
+
+	return kiwi_be_write_complete(tts->data_rows, "SHOW", 5);
 }
 
 static inline int od_console_show_is_paused(od_client_t *client,

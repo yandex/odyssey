@@ -1109,6 +1109,15 @@ static inline void od_system(void *arg)
 		return;
 	}
 
+	instance->clients_by_pid = od_global_clients_pid_map_create(
+		32768, 64 * (size_t)instance->config.workers);
+	if (instance->clients_by_pid == NULL) {
+		od_error(&instance->logger, "system", NULL, NULL,
+			 "failed to create clients by pid map, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+		return;
+	}
+
 	uint64_t max_inflight =
 		instance->config.cancel_max_inflight > 0 ?
 			(uint64_t)instance->config.cancel_max_inflight :

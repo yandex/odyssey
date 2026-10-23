@@ -20,6 +20,9 @@
 #include <pstmt.h>
 #include <sql_pstmt.h>
 #include <sql/full/parser.h>
+#include <worker.h>
+#include <instance.h>
+#include <global.h>
 
 static const uint64_t hash_seed = 0;
 
@@ -43,6 +46,9 @@ static void entry_free(od_sql_pstmt_t *e)
 {
 	od_free(e->name);
 	od_free(e->text);
+	if (e->pstmt != NULL) {
+		od_pstmt_unref(e->pstmt);
+	}
 	od_free(e);
 }
 
@@ -294,6 +300,185 @@ static int is_reserved_name(const char *name)
 				       sizeof(OD_PSTMT_NAME_PREFIX) - 1) == 0;
 }
 
+/*
+ * find the prepared statement body, i.e. everything past the
+ * "PREPARE name [(types)] AS" prologue, by scanning the statement text.
+ * The full SQL parser does not record the body location, and the text is
+ * the only source; on anything unexpected NULL is returned and the caller
+ * falls back to the full PREPARE text.
+ */
+typedef struct {
+	char *pos;
+	char *end;
+} prep_scan_t;
+
+static void prep_scan_ws(prep_scan_t *s)
+{
+	char *pos = s->pos;
+	char *end = s->end;
+
+	for (;;) {
+		while (pos < end &&
+		       (*pos == ' ' || *pos == '\t' || *pos == '\n' ||
+			*pos == '\r' || *pos == '\f' || *pos == '\v')) {
+			++pos;
+		}
+		if (end - pos >= 2 && pos[0] == '-' && pos[1] == '-') {
+			pos += 2;
+			while (pos < end && *pos != '\n') {
+				++pos;
+			}
+			continue;
+		}
+		if (end - pos >= 2 && pos[0] == '/' && pos[1] == '*') {
+			pos += 2;
+			while (end - pos >= 2 &&
+			       !(pos[0] == '*' && pos[1] == '/')) {
+				++pos;
+			}
+			if (end - pos >= 2) {
+				pos += 2;
+			} else {
+				pos = end;
+			}
+			continue;
+		}
+		break;
+	}
+
+	s->pos = pos;
+}
+
+static int prep_scan_word_is(prep_scan_t *s, const char *word)
+{
+	size_t len = strlen(word);
+	return s->end - s->pos >= (ptrdiff_t)len &&
+	       strncasecmp(s->pos, word, len) == 0;
+}
+
+static void prep_scan_word(prep_scan_t *s)
+{
+	char *pos = s->pos;
+	if (pos < s->end) {
+		++pos;
+	}
+	while (pos < s->end && (isalnum((unsigned char)*pos) || *pos == '_' ||
+				*pos == '$' || *pos == '#')) {
+		++pos;
+	}
+	s->pos = pos;
+}
+
+static void prep_scan_quoted(prep_scan_t *s)
+{
+	char *pos = s->pos;
+	char *end = s->end;
+	char quote = *pos++;
+
+	while (pos < end) {
+		if (*pos == quote) {
+			if (pos + 1 < end && pos[1] == quote) {
+				pos += 2;
+				continue;
+			}
+			s->pos = pos + 1;
+			return;
+		}
+		++pos;
+	}
+
+	s->pos = end;
+}
+
+static void prep_scan_parens(prep_scan_t *s)
+{
+	int depth = 0;
+
+	while (s->pos < s->end) {
+		char c = *s->pos;
+
+		if (c == '\'' || c == '"') {
+			prep_scan_quoted(s);
+			continue;
+		}
+		if (s->end - s->pos >= 2 && c == '-' && s->pos[1] == '-') {
+			while (s->pos < s->end && *s->pos != '\n') {
+				++s->pos;
+			}
+			continue;
+		}
+		if (s->end - s->pos >= 2 && c == '/' && s->pos[1] == '*') {
+			s->pos += 2;
+			while (s->end - s->pos >= 2 &&
+			       !(s->pos[0] == '*' && s->pos[1] == '/')) {
+				++s->pos;
+			}
+			continue;
+		}
+		++s->pos;
+		if (c == '(') {
+			++depth;
+		} else if (c == ')') {
+			if (--depth == 0) {
+				return;
+			}
+		}
+	}
+}
+
+static char *prep_body_scan(char *text, size_t text_len, size_t *body_len)
+{
+	prep_scan_t s = { text, text + text_len };
+
+	/* PREPARE */
+	prep_scan_ws(&s);
+	if (!prep_scan_word_is(&s, "prepare")) {
+		return NULL;
+	}
+	prep_scan_word(&s);
+
+	/* name */
+	prep_scan_ws(&s);
+	if (s.pos >= s.end) {
+		return NULL;
+	}
+	if (*s.pos == '"') {
+		prep_scan_quoted(&s);
+	} else {
+		prep_scan_word(&s);
+	}
+
+	/* optional (types) */
+	prep_scan_ws(&s);
+	if (s.pos < s.end && *s.pos == '(') {
+		prep_scan_parens(&s);
+	}
+
+	/* AS */
+	prep_scan_ws(&s);
+	if (!prep_scan_word_is(&s, "as")) {
+		return NULL;
+	}
+	prep_scan_word(&s);
+
+	/* the body, without leading whitespace */
+	prep_scan_ws(&s);
+	if (s.pos >= s.end) {
+		return NULL;
+	}
+
+	/* and without the trailing whitespace of the query */
+	while (s.end > s.pos && isspace((unsigned char)s.end[-1])) {
+		--s.end;
+	}
+	if (s.pos >= s.end) {
+		return NULL;
+	}
+
+	*body_len = s.end - s.pos;
+	return s.pos;
+}
+
 static int op_from_stmt(od_sql_pstmt_op_t *op, RawStmt *rs, const char *query,
 			size_t len)
 {
@@ -333,6 +518,13 @@ static int op_from_stmt(od_sql_pstmt_op_t *op, RawStmt *rs, const char *query,
 	op->text[stmt_len] = '\0';
 	op->text_len = stmt_len;
 	op->hash = mm_xxh64_hash(op->text, stmt_len, hash_seed);
+
+	/*
+	 * the prepared statement itself: everything past the "PREPARE name
+	 * AS" prologue - this is the text of the statement the clients
+	 * share, whatever name it was prepared under
+	 */
+	op->body = prep_body_scan(op->text, op->text_len, &op->body_len);
 
 	return 0;
 }
@@ -439,9 +631,37 @@ int od_sql_pstmt_query_must_forward(od_sql_pstmt_client_t *client)
 	return 0;
 }
 
+static int sql_pstmt_global_register(struct od_global *global,
+				     od_sql_pstmt_t *entry,
+				     const od_sql_pstmt_op_t *op)
+{
+	od_instance_t *instance = global->instance;
+
+	/* fall back to the full PREPARE text if the body is unknown */
+	const char *desc_data = op->body != NULL ? op->body : entry->text;
+	size_t desc_len = op->body != NULL ? op->body_len : entry->text_len;
+
+	od_pstmt_desc_t desc = {
+		.data = (char *)desc_data,
+		.len = desc_len + 1 /* include the terminating NUL */,
+	};
+
+	od_pstmt_t *pstmt =
+		od_pstmt_create_or_get(instance->pstmts, desc,
+				       od_worker_get_local_linear_alloc(),
+				       &instance->config.query_parsing);
+	if (pstmt == NULL) {
+		return -1;
+	}
+
+	/* the entry owns the reference from now on */
+	entry->pstmt = pstmt;
+	return 0;
+}
+
 int od_sql_pstmt_apply(od_sql_pstmt_client_t *client,
 		       od_sql_pstmt_server_t *server,
-		       const od_sql_pstmt_op_t *op)
+		       const od_sql_pstmt_op_t *op, struct od_global *global)
 {
 	switch (op->type) {
 	case OD_SQL_PSTMT_OP_PREPARE:
@@ -461,6 +681,17 @@ int od_sql_pstmt_apply(od_sql_pstmt_client_t *client,
 					 op->hash) == NULL) {
 			server->unknown = 1;
 			return -1;
+		}
+		if (global != NULL) {
+			od_sql_pstmt_t *entry =
+				od_sql_pstmt_map_get(&client->stmts, op->name);
+			od_release_assert(entry != NULL);
+			if (sql_pstmt_global_register(global, entry, op) != 0) {
+				if (server != NULL) {
+					server->unknown = 1;
+				}
+				return -1;
+			}
 		}
 		break;
 	case OD_SQL_PSTMT_OP_DEALLOCATE:
@@ -482,7 +713,7 @@ int od_sql_pstmt_apply(od_sql_pstmt_client_t *client,
 
 int od_sql_pstmt_query_finish(od_sql_pstmt_client_t *client,
 			      od_sql_pstmt_server_t *server,
-			      int *deallocated_all)
+			      int *deallocated_all, struct od_global *global)
 {
 	od_sql_pstmt_query_t *q = &client->query;
 
@@ -504,7 +735,7 @@ int od_sql_pstmt_query_finish(od_sql_pstmt_client_t *client,
 			break;
 		}
 
-		if (od_sql_pstmt_apply(client, server, op) != 0) {
+		if (od_sql_pstmt_apply(client, server, op, global) != 0) {
 			return -1;
 		}
 

@@ -82,6 +82,9 @@ void od_client_init(od_client_t *client)
 	client->backend_pin_listen = false;
 	client->opportunistic_acquire = false;
 	od_address_init(&client->execute_on_host);
+
+	od_sql_pstmt_client_init(&client->sql_pstmt);
+	client->isolation_probe_pid = 0;
 }
 
 void od_client_free(od_client_t *client)
@@ -111,6 +114,8 @@ void od_client_free(od_client_t *client)
 	if (client->portals) {
 		od_client_portal_hashmap_free(client->portals);
 	}
+
+	od_sql_pstmt_client_free(&client->sql_pstmt);
 	if (client->external_id) {
 		od_free(client->external_id);
 	}

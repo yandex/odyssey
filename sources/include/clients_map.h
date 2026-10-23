@@ -30,6 +30,33 @@ od_global_clients_map_t *od_global_clients_map_create(size_t nlocks);
 void od_global_clients_map_free(od_global_clients_map_t *map);
 
 /*
+ * global clients by pid map: the key is the "pid" part of the backend
+ * key odyssey reports to the clients (client->key.key_pid, different
+ * from the real backend pids) -> od_client_t *
+ *
+ * used to resolve such a pid back to the client and its server, e.g.
+ * to translate the arguments of the isolationtester
+ * pg_isolation_test_session_is_blocked() probe
+ */
+
+typedef struct od_global_clients_pid_map od_global_clients_pid_map_t;
+
+struct od_global_clients_pid_map {
+	mm_hashmap_t *hm;
+};
+
+od_global_clients_pid_map_t *od_global_clients_pid_map_create(size_t nbuckets,
+							      size_t nlocks);
+void od_global_clients_pid_map_free(od_global_clients_pid_map_t *map);
+
+int od_global_clients_pid_map_add(od_global_clients_pid_map_t *map,
+				  od_client_t *client);
+int od_global_clients_pid_map_remove(od_global_clients_pid_map_t *map,
+				     od_client_t *client);
+od_client_t *od_global_clients_pid_map_get(od_global_clients_pid_map_t *map,
+					   uint32_t pid);
+
+/*
  * lock the bucket for the key; klock.found tells whether
  * a client with such key is registered
  * 

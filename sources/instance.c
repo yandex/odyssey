@@ -220,6 +220,7 @@ void od_instance_free(od_instance_t *instance)
 		od_global_pstmts_map_free(instance->pstmts);
 	}
 	od_global_clients_map_free(instance->clients_by_key);
+	od_global_clients_pid_map_free(instance->clients_by_pid);
 
 	/* as mallocd on start */
 	od_free(instance->config_file);

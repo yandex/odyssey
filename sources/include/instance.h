@@ -37,6 +37,7 @@ struct od_instance {
 
 	od_global_pstmt_map_t *pstmts;
 	od_global_clients_map_t *clients_by_key;
+	od_global_clients_pid_map_t *clients_by_pid;
 };
 
 od_instance_t *od_instance_create(void);

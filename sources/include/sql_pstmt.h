@@ -30,6 +30,10 @@
 #include <types.h>
 #include <list.h>
 
+/* forward decls */
+struct od_global;
+struct od_pstmt;
+
 typedef struct {
 	/* insertion order, the oldest first */
 	od_list_t link;
@@ -39,6 +43,12 @@ typedef struct {
 	/* length of text without the terminating NUL */
 	size_t text_len;
 	uint64_t hash;
+	/*
+	 * PREPARE statements are mirrored in the global prepared statements
+	 * map (shown by SHOW GLOBAL_PREPARED_STATEMENTS); a client-side
+	 * entry holds a reference, NULL in server maps
+	 */
+	struct od_pstmt *pstmt;
 } od_sql_pstmt_t;
 
 typedef struct {
@@ -63,7 +73,14 @@ typedef struct {
 	char *name;
 	/* PREPARE only */
 	char *text;
+	/* length of text without the terminating NUL */
 	size_t text_len;
+	/*
+	 * PREPARE only: the prepared statement itself, without the
+	 * "PREPARE name AS" prologue, points into text
+	 */
+	char *body;
+	size_t body_len;
 	uint64_t hash;
 } od_sql_pstmt_op_t;
 
@@ -160,12 +177,16 @@ static inline void od_sql_pstmt_query_on_complete(od_sql_pstmt_query_t *q)
  * (server may be NULL). Returns -1 on out of memory; if a completed
  * PREPARE could not be recorded, server->unknown is set.
  *
+ * global may be NULL; when set, a successfully recorded PREPARE is also
+ * mirrored in the global prepared statements map with a reference held
+ * by the client entry (so SHOW GLOBAL_PREPARED_STATEMENTS sees it).
+ *
  * DEALLOCATE ALL drops protocol-level prepared statements too; the caller
  * must forget those itself.
  */
 int od_sql_pstmt_apply(od_sql_pstmt_client_t *client,
 		       od_sql_pstmt_server_t *server,
-		       const od_sql_pstmt_op_t *op);
+		       const od_sql_pstmt_op_t *op, struct od_global *global);
 
 /*
  * after a simple query: apply the statements the backend completed.
@@ -174,7 +195,7 @@ int od_sql_pstmt_apply(od_sql_pstmt_client_t *client,
  */
 int od_sql_pstmt_query_finish(od_sql_pstmt_client_t *client,
 			      od_sql_pstmt_server_t *server,
-			      int *deallocated_all);
+			      int *deallocated_all, struct od_global *global);
 
 /*
  * on attach of a client to a server connection: make the backend hold

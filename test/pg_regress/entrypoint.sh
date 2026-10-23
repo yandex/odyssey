@@ -54,6 +54,42 @@ do_test() {
     ody-stop
 }
 
+# runs the native isolation specs (SPQR-style) against odyssey
+do_isolation_test() {
+    local name=$1
+    local port=$2
+    local user=$3
+
+    export ASAN_OPTIONS="log_path=/asan-output.log fast_unwind_on_malloc=0"
+    export TSAN_OPTIONS="log_path=/tsan-output.log"
+    odyssey ${REGRESS_DIR}/conf/${name}
+
+    local it=0
+    until (( it == 50 )) || pg_isready -h localhost -p ${port} -U ${user} -d postgres; do
+        echo "Wait for odyssey..."
+        echo "$(( it++ ))"
+        sleep 0.1
+    done
+    (( it < 50 ))
+
+    # isolationtester prepares its lock-wait probe as a prepared
+    # statement at startup; odyssey virtualizes the probe itself and
+    # answers it from the clients-by-pid map, nothing has to be
+    # installed in the backend
+
+    PG_ISOLATION_REGRESS=/postgres/src/test/isolation/pg_isolation_regress \
+    PGHOST=localhost PGPORT=${port} PGUSER=${user} PGDATABASE=postgres \
+        /home/postgres/isolation/run_tests.sh || {
+            echo "====== DIFFS ======="
+            cat /home/postgres/isolation/results/results/*.diffs 2>/dev/null || true
+
+            ody-stop
+            exit 1
+        }
+
+    ody-stop
+}
+
 pg_ctl stop -D ${PGDIRREPL1} || true
 pg_ctl stop -D ${PGDIRREPL2} || true
 pg_ctl stop -D ${PGDIRREPL3} || true
@@ -116,3 +152,5 @@ do_test tsa 6432 postgres
 do_test tsa_5node 6432 postgres
 
 do_test az_aware 6432 postgres
+
+do_isolation_test global_pstmts_show 6432 postgres
