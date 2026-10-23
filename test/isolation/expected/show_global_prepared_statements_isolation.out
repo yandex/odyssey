@@ -16,7 +16,6 @@ odyssey_pstmt_0|SELECT set_config('application_name',
   current_setting('application_name') || '/' || $1,
   false)  |       3
 odyssey_pstmt_1|SELECT pg_catalog.pg_isolation_test_session_is_blocked($1, '{PIDS}')     |       2
-odyssey_pstmt_2|SELECT 1::int + $1::int
-                                                                            |       3
+odyssey_pstmt_2|SELECT 1::int + $1::int                                                                             |       3
 (3 rows)
 

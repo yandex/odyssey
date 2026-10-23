@@ -3582,6 +3582,7 @@ void od_frontend(void *arg)
 
 	rc = od_global_clients_pid_map_add(instance->clients_by_pid, client);
 	if (rc == -1) {
+		od_global_clients_map_remove(instance->clients_by_key, client);
 		od_frontend_close(client);
 		od_routing_slot_release(global);
 		return;
@@ -3703,9 +3704,9 @@ void od_frontend(void *arg)
 		}
 
 		od_global_clients_map_remove(instance->clients_by_key, client);
-		od_frontend_close(client);
 		od_global_clients_pid_map_remove(instance->clients_by_pid,
 						 client);
+		od_frontend_close(client);
 		return;
 	}
 

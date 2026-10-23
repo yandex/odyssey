@@ -134,9 +134,8 @@ typedef enum {
 
 	/*
 	 * virtual response for the isolationtester
-	 * pg_isolation_test_session_is_blocked() probe (BindComplete or
-	 * RowDescription + DataRow + CommandComplete), which is virtualized
-	 * (not sent to server)
+	 * pg_isolation_test_session_is_blocked() probe: Describe metadata or
+	 * Execute's DataRow + CommandComplete (not sent to server)
 	 */
 	OD_XPLAN_VIRTUAL_PROBE_RESULT,
 
@@ -182,7 +181,7 @@ typedef struct {
 	 *                                (handled by vcc_data, vcc_len)
 	 * except the isolationtester probe result
 	 * (OD_XPLAN_VIRTUAL_PROBE_RESULT), which is a pre-built
-	 * RowDescription + DataRow + CommandComplete sequence
+	 * Describe response or DataRow + CommandComplete sequence
 	 *
 	 * can be NULL, owned by xplan
 	 */

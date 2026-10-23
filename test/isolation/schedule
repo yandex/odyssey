@@ -1,1 +1,2 @@
 test: show_global_prepared_statements_isolation
+test: isolation_probe_wait

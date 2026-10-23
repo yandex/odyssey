@@ -149,6 +149,7 @@ od_global_clients_pid_map_t *od_global_clients_pid_map_create(size_t nbuckets,
 	}
 
 	map->hm = hm;
+	mm_mutex_init(&map->lock);
 	return map;
 }
 
@@ -167,13 +168,16 @@ int od_global_clients_pid_map_add(od_global_clients_pid_map_t *map,
 {
 	mm_hashmap_keylock_t klock;
 	uint32_t pid = client->key.key_pid;
+	mm_mutex_lock2(&map->lock);
 	int rc = mm_hashmap_lock_key(map->hm, &klock, &pid, MM_HASHMAP_CREATE);
 	if (rc == -1) {
+		mm_mutex_unlock(&map->lock);
 		return -1;
 	}
 	void *val = mm_hashmap_kvp_val(map->hm, klock.kvp);
 	memcpy(val, &client, sizeof(od_client_t *));
 	mm_hashmap_unlock_key(map->hm, &klock);
+	mm_mutex_unlock(&map->lock);
 	return 0;
 }
 
@@ -182,12 +186,15 @@ int od_global_clients_pid_map_remove(od_global_clients_pid_map_t *map,
 {
 	mm_hashmap_keylock_t klock;
 	uint32_t pid = client->key.key_pid;
+	mm_mutex_lock2(&map->lock);
 	int rc = mm_hashmap_lock_key(map->hm, &klock, &pid, 0);
 	if (rc == -1 || !klock.found) {
 		/* the key lock is not held when not found */
+		mm_mutex_unlock(&map->lock);
 		return rc == -1 ? -1 : 0;
 	}
 	mm_hashmap_remove(map->hm, &klock);
+	mm_mutex_unlock(&map->lock);
 	return 0;
 }
 
@@ -204,4 +211,14 @@ od_client_t *od_global_clients_pid_map_get(od_global_clients_pid_map_t *map,
 		*(od_client_t **)mm_hashmap_kvp_val(map->hm, klock.kvp);
 	mm_hashmap_unlock_key(map->hm, &klock);
 	return client;
+}
+
+void od_global_clients_pid_map_lock(od_global_clients_pid_map_t *map)
+{
+	mm_mutex_lock2(&map->lock);
+}
+
+void od_global_clients_pid_map_unlock(od_global_clients_pid_map_t *map)
+{
+	mm_mutex_unlock(&map->lock);
 }

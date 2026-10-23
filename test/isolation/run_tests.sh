@@ -59,4 +59,7 @@ for expected in "$DIR/expected"/*.out; do
 	fi
 done
 
+PGHOST="$PGHOST" PGPORT="$PGPORT" PGUSER="$PGUSER" PGDATABASE="$PGDATABASE" \
+	python3 "$DIR/check_protocol.py" || status=1
+
 exit "$status"

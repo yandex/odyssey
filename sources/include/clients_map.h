@@ -43,6 +43,14 @@ typedef struct od_global_clients_pid_map od_global_clients_pid_map_t;
 
 struct od_global_clients_pid_map {
 	mm_hashmap_t *hm;
+	/*
+	 * guards cross-worker dereferences of clients taken from the
+	 * map (e.g. the isolationtester probe evaluation): while the
+	 * lock is held, a client can not pass through remove (and the
+	 * following frontend cleanup that frees it), so a raw
+	 * od_client_t * taken under the lock stays valid
+	 */
+	mm_mutex_t lock;
 };
 
 od_global_clients_pid_map_t *od_global_clients_pid_map_create(size_t nbuckets,
@@ -55,6 +63,15 @@ int od_global_clients_pid_map_remove(od_global_clients_pid_map_t *map,
 				     od_client_t *client);
 od_client_t *od_global_clients_pid_map_get(od_global_clients_pid_map_t *map,
 					   uint32_t pid);
+
+/*
+ * hold/remove lock pair for the whole evaluation of a probe that
+ * dereferences clients of other workers: must be taken around
+ * every map_get call of such an evaluation (and is held by
+ * add/remove internally, do not nest)
+ */
+void od_global_clients_pid_map_lock(od_global_clients_pid_map_t *map);
+void od_global_clients_pid_map_unlock(od_global_clients_pid_map_t *map);
 
 /*
  * lock the bucket for the key; klock.found tells whether

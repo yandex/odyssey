@@ -222,8 +222,10 @@ static void process_discard(od_client_t *client, od_server_t *server)
 
 		od_client_pstmts_clear(client);
 		od_client_portals_clear(client);
+		od_sql_pstmt_client_clear(&client->sql_pstmt);
 		if (server != NULL) {
 			od_server_pstmts_clear(server);
+			od_sql_pstmt_server_clear(&server->sql_pstmt);
 		}
 	}
 }

@@ -1505,9 +1505,24 @@ static int show_pstmt_collect_cb(const od_pstmt_t *pstmt, void *arg)
 		c->items = items;
 		c->cap = cap;
 	}
-	/* the map is only read, the const is safe to cast away for sorting */
+	/*
+	 * hold a pin: the map bucket lock is dropped after the
+	 * foreach, so without it the entry can be freed by a
+	 * concurrent DEALLOCATE before it is sorted and shown.
+	 * A pin (unlike a ref) does not touch the refcount column
+	 * and does not delay the removal of the entry from the map
+	 */
+	od_pstmt_pin((od_pstmt_t *)pstmt);
 	c->items[c->count++] = (od_pstmt_t *)pstmt;
 	return 0;
+}
+
+static void show_pstmt_unref_collected(show_pstmt_collect_t *c)
+{
+	for (size_t i = 0; i < c->count; ++i) {
+		od_pstmt_unpin(c->items[i]);
+	}
+	od_free(c->items);
 }
 
 /*
@@ -1539,7 +1554,7 @@ int od_console_fill_global_pstmt_rows(od_client_t *client,
 	od_global_pstmt_foreach(instance->pstmts, show_pstmt_collect_cb,
 				&collect);
 	if (collect.oom) {
-		od_free(collect.items);
+		show_pstmt_unref_collected(&collect);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -1548,11 +1563,11 @@ int od_console_fill_global_pstmt_rows(od_client_t *client,
 
 	for (size_t i = 0; i < collect.count; ++i) {
 		if (show_pstmt_cb(collect.items[i], stream) != 0) {
-			od_free(collect.items);
+			show_pstmt_unref_collected(&collect);
 			return NOT_OK_RESPONSE;
 		}
 	}
-	od_free(collect.items);
+	show_pstmt_unref_collected(&collect);
 
 	return OK_RESPONSE;
 }

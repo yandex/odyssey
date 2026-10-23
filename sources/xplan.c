@@ -96,6 +96,7 @@ static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 	case OD_XPLAN_VIRTUAL_PARSE_COMPLETE:
 	case OD_XPLAN_VIRTUAL_CLOSE_COMPLETE:
 	case OD_XPLAN_VIRTUAL_COMMAND_COMPLETE:
+	case OD_XPLAN_VIRTUAL_PROBE_RESULT:
 		return NULL;
 	default:
 		abort();
@@ -357,10 +358,11 @@ static void entry_init_fwd_portal(od_xplan_entry_t *e, machine_msg_t *original,
 static void entry_init_virtual_command_complete(
 	od_xplan_entry_t *e, machine_msg_t *original,
 	od_xplan_delta_type_t delta_type, const char *client_pstmt,
-	const char *portal_name, const uint8_t *vcc_data, size_t vcc_len)
+	od_pstmt_t *pstmt, const char *portal_name, const uint8_t *vcc_data,
+	size_t vcc_len)
 {
 	entry_init_internal(e, OD_XPLAN_VIRTUAL_COMMAND_COMPLETE, original,
-			    NULL, NULL, delta_type, client_pstmt, NULL,
+			    NULL, NULL, delta_type, client_pstmt, pstmt,
 			    portal_name);
 	e->vcc_data = vcc_data;
 	e->vcc_len = vcc_len;
@@ -533,15 +535,19 @@ xplan_append_fwd_portal(od_xplan_t *xp, machine_msg_t *original,
 static inline od_frontend_status_t xplan_append_virtual_command_complete(
 	od_xplan_t *xp, machine_msg_t *original,
 	od_xplan_delta_type_t delta_type, const char *client_pstmt,
-	const char *portal_name, const uint8_t *vcc_data, size_t vcc_len)
+	od_pstmt_t *pstmt, const char *portal_name, const uint8_t *vcc_data,
+	size_t vcc_len)
 {
 	od_xplan_entry_t e;
 	entry_init_virtual_command_complete(&e, original, delta_type,
-					    client_pstmt, portal_name, vcc_data,
-					    vcc_len);
+					    client_pstmt, pstmt, portal_name,
+					    vcc_data, vcc_len);
 
 	int rc = xplan_append(xp, &e);
 	if (rc != 0) {
+		if (pstmt != NULL) {
+			od_pstmt_unref(pstmt);
+		}
 		return OD_EOOM;
 	}
 
@@ -557,6 +563,7 @@ xplan_append_virtual_probe_result(od_xplan_t *xp, machine_msg_t *original,
 
 	int rc = xplan_append(xp, &e);
 	if (rc != 0) {
+		machine_msg_free(vresp);
 		return OD_EOOM;
 	}
 
@@ -896,12 +903,20 @@ static int isolation_probe_client_busy(const od_client_t *client)
  * only if the session is busy on its backend and some other session
  * from the list can be holding locks (an open transaction on an
  * attached backend)
+ *
+ * the whole evaluation runs under the clients by pid map lock: the
+ * clients may belong to other workers, and without the lock such a
+ * client could be removed from the map (and freed by the frontend
+ * cleanup) between the resolution and the dereference
  */
 static int isolation_probe_evaluate(od_instance_t *instance,
 				    const od_pstmt_t *pstmt, uint32_t pid)
 {
+	od_global_clients_pid_map_lock(instance->clients_by_pid);
+
 	od_client_t *victim = isolation_probe_client(instance, pid);
 	if (victim == NULL || !isolation_probe_client_busy(victim)) {
+		od_global_clients_pid_map_unlock(instance->clients_by_pid);
 		return 0;
 	}
 
@@ -915,11 +930,13 @@ static int isolation_probe_evaluate(od_instance_t *instance,
 		}
 	}
 	if (open == NULL) {
+		od_global_clients_pid_map_unlock(instance->clients_by_pid);
 		return 0;
 	}
 	const char *close =
 		memchr(open, '}', query_len - (size_t)(open - query));
 	if (close == NULL) {
+		od_global_clients_pid_map_unlock(instance->clients_by_pid);
 		return 0;
 	}
 
@@ -952,10 +969,13 @@ static int isolation_probe_evaluate(od_instance_t *instance,
 		od_server_t *server = blocker->server;
 		if (server != NULL && server != victim->server &&
 		    server->is_transaction) {
+			od_global_clients_pid_map_unlock(
+				instance->clients_by_pid);
 			return 1;
 		}
 	}
 
+	od_global_clients_pid_map_unlock(instance->clients_by_pid);
 	return 0;
 }
 
@@ -1027,48 +1047,48 @@ static uint32_t isolation_probe_bind_pid(const machine_msg_t *msg)
 	return pid;
 }
 
-/*
- * build the virtual probe response for the client:
- * RowDescription(single bool column) + DataRow(t/f) + CommandComplete
- */
+/* Describe is answered locally because the probe has no backend portal. */
+static machine_msg_t *isolation_probe_describe_msg(kiwi_fe_describe_type_t type)
+{
+	machine_msg_t *msg = NULL;
+	if (type == KIWI_FE_DESCRIBE_PREPARED_STATEMENT) {
+		msg = machine_msg_create(11);
+		if (msg == NULL) {
+			return NULL;
+		}
+		char *pos = machine_msg_data(msg);
+		kiwi_write8(&pos, KIWI_BE_PARAMETER_DESCRIPTION);
+		kiwi_write32(&pos, 10);
+		kiwi_write16(&pos, 1);
+		kiwi_write32(&pos, 23); /* INT4OID: the victim pid */
+	}
+
+	machine_msg_t *desc = kiwi_be_write_row_descriptionf(
+		msg, "b", isolation_probe_func_name);
+	if (desc == NULL) {
+		machine_msg_free_safe(msg);
+	}
+	return desc;
+}
+
+/* Execute returns DataRow(t/f) + CommandComplete; Describe sends metadata. */
 static machine_msg_t *isolation_probe_result_msg(od_instance_t *instance,
 						 od_pstmt_t *pstmt,
 						 uint32_t pid)
 {
 	int blocked = isolation_probe_evaluate(instance, pstmt, pid);
 
-	/* RowDescription(26) + DataRow(12) + CommandComplete(12) */
-	machine_msg_t *msg = machine_msg_create(50);
+	int offset;
+	machine_msg_t *msg = kiwi_be_write_data_row(NULL, &offset);
 	if (msg == NULL) {
 		return NULL;
 	}
-	char *pos = machine_msg_data(msg);
-
-	/* RowDescription: one unnamed bool column, text format */
-	kiwi_write8(&pos, KIWI_BE_ROW_DESCRIPTION);
-	kiwi_write32(&pos, 4 + 2 + 1 + 4 + 2 + 4 + 2 + 4 + 2);
-	kiwi_write16(&pos, 1); /* nfields */
-	kiwi_write8(&pos, 0); /* attname: "" */
-	kiwi_write32(&pos, 0); /* table oid */
-	kiwi_write16(&pos, 0); /* attnum */
-	kiwi_write32(&pos, 16); /* BOOLOID */
-	kiwi_write16(&pos, 1); /* typlen */
-	kiwi_write32(&pos, 0xFFFFFFFF); /* typmod: -1 */
-	kiwi_write16(&pos, 0); /* format: text */
-
-	/* DataRow: a single text bool */
-	kiwi_write8(&pos, KIWI_BE_DATA_ROW);
-	kiwi_write32(&pos, 4 + 2 + 4 + 1);
-	kiwi_write16(&pos, 1); /* ncols */
-	kiwi_write32(&pos, 1); /* col len */
-	kiwi_write8(&pos, blocked ? 't' : 'f');
-
-	/* CommandComplete */
-	kiwi_write8(&pos, KIWI_BE_COMMAND_COMPLETE);
-	kiwi_write32(&pos, 4 + 7);
-	kiwi_write(&pos, "SELECT\0", 7);
-
-	od_assert(pos - (char *)machine_msg_data(msg) == 50);
+	if (kiwi_be_write_data_row_add(msg, offset, blocked ? "t" : "f", 1) !=
+		    0 ||
+	    kiwi_be_write_complete(msg, "SELECT 1", 9) != 0) {
+		machine_msg_free(msg);
+		return NULL;
+	}
 
 	return msg;
 }
@@ -1122,16 +1142,7 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		pstmt->isolation_probe = 1;
 	}
 
-	if (pstmt->isolation_probe) {
-		/*
-		 * the probe never reaches the backend: it is answered
-		 * virtually, so only the client mapping is updated
-		 */
-		return xplan_append_virtual_parse_complete(xp, pstmt_name,
-							   pstmt, msg);
-	}
-
-	if (plan_server_has_pstmt(xp, server, pstmt)) {
+	if (pstmt->isolation_probe || plan_server_has_pstmt(xp, server, pstmt)) {
 		/*
 		 * note: xplan entry will hold the ref
 		 */
@@ -1174,7 +1185,11 @@ static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
 	if (rc == -1) {
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
-	if (type == KIWI_FE_DESCRIBE_PORTAL) {
+	od_pstmt_t *pstmt = type == KIWI_FE_DESCRIBE_PORTAL ?
+				    plan_client_get_portal(xp, client, pstmt_name) :
+				    plan_client_get_pstmt(xp, client, pstmt_name);
+	if (type == KIWI_FE_DESCRIBE_PORTAL &&
+	    (pstmt == NULL || !pstmt->isolation_probe)) {
 		/* skip this, we only need to rewrite statement */
 		return xplan_append_fwd_no_delta(xp, msg,
 						 NULL /* no rewrite */);
@@ -1184,7 +1199,6 @@ static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
 	 * note: pstmt was returned without ref holded because
 	 * it already belongs to client or some xplan entry
 	 */
-	od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
 	if (pstmt == NULL) {
 		machine_msg_t *vresp = pstmt_does_not_exists_msg(pstmt_name);
 		if (vresp == NULL) {
@@ -1193,6 +1207,14 @@ static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
 
 		/* plan entry will take the additional ref to pstmt */
 		return xplan_append_virtual_error_response(xp, msg, vresp);
+	}
+
+	if (pstmt->isolation_probe) {
+		machine_msg_t *vresp = isolation_probe_describe_msg(type);
+		if (vresp == NULL) {
+			return OD_EOOM;
+		}
+		return xplan_append_virtual_probe_result(xp, msg, vresp);
 	}
 
 	/* will create xplan entry with ref if needed */
@@ -1335,7 +1357,7 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 		client->isolation_probe_pid = isolation_probe_bind_pid(msg);
 
 		return xplan_append_virtual_command_complete(
-			xp, msg, OD_XPLAN_DELTA_ADD_PORTAL, NULL, portal_name,
+			xp, msg, OD_XPLAN_DELTA_ADD_PORTAL, NULL, pstmt, portal_name,
 			bind_complete, sizeof(bind_complete));
 	}
 
@@ -1404,9 +1426,9 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 
 	if (pstmt->isolation_probe) {
 		/*
-		 * the probe never reaches the backend: send the client
-		 * a RowDescription + DataRow + CommandComplete, with the
-		 * answer computed from the clients-by-pid map
+		 * the probe never reaches the backend: send DataRow +
+		 * CommandComplete, with the answer computed from the
+		 * clients-by-pid map
 		 */
 		machine_msg_t *vresp = isolation_probe_result_msg(
 			instance, pstmt, client->isolation_probe_pid);
@@ -1452,7 +1474,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 			&instance->logger, "rewrite execute", client, server,
 			"DEALLOCATE ALL detected via portal, invalidate client caches");
 		return xplan_append_virtual_command_complete(
-			xp, msg, OD_XPLAN_DELTA_REMOVE_CLIENT_ALL, NULL, NULL,
+			xp, msg, OD_XPLAN_DELTA_REMOVE_CLIENT_ALL, NULL, NULL, NULL,
 			cc_deallocate_all, sizeof(cc_deallocate_all));
 	}
 
@@ -1477,7 +1499,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 		}
 		od_frontend_status_t st = xplan_append_virtual_command_complete(
 			xp, msg, OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME,
-			dealloc_name_z, NULL, cc_deallocate,
+			dealloc_name_z, NULL, NULL, cc_deallocate,
 			sizeof(cc_deallocate));
 		if (st != OD_OK) {
 			od_free(dealloc_name_z);
@@ -1720,6 +1742,8 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 		od_client_pstmts_clear(client);
 		od_client_portals_clear(client);
 		od_server_pstmts_clear(server);
+		od_sql_pstmt_client_clear(&client->sql_pstmt);
+		od_sql_pstmt_server_clear(&server->sql_pstmt);
 		break;
 	case OD_XPLAN_DELTA_REMOVE_CLIENT_ALL:
 		od_client_pstmts_clear(client);

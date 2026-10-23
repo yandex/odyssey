@@ -641,8 +641,21 @@ static int sql_pstmt_global_register(struct od_global *global,
 	const char *desc_data = op->body != NULL ? op->body : entry->text;
 	size_t desc_len = op->body != NULL ? op->body_len : entry->text_len;
 
+	/*
+	 * desc_data points into the client query text, so the byte
+	 * at desc_data[desc_len] is not necessarily NUL - make a
+	 * NUL-terminated copy, od_pstmt_create_or_get expects a
+	 * terminating NUL within desc.len (it strlen()s the copy)
+	 */
+	char *desc_copy = od_malloc(desc_len + 1);
+	if (desc_copy == NULL) {
+		return -1;
+	}
+	memcpy(desc_copy, desc_data, desc_len);
+	desc_copy[desc_len] = '\0';
+
 	od_pstmt_desc_t desc = {
-		.data = (char *)desc_data,
+		.data = desc_copy,
 		.len = desc_len + 1 /* include the terminating NUL */,
 	};
 
@@ -650,6 +663,7 @@ static int sql_pstmt_global_register(struct od_global *global,
 		od_pstmt_create_or_get(instance->pstmts, desc,
 				       od_worker_get_local_linear_alloc(),
 				       &instance->config.query_parsing);
+	od_free(desc_copy);
 	if (pstmt == NULL) {
 		return -1;
 	}

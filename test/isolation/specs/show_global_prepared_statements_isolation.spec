@@ -4,7 +4,8 @@
 
 setup
 {
-    DEALLOCATE isolationtester_waiting;
+    -- Drop the controller's unnamed startup portal, keeping its probe usable.
+    SET statement_timeout = 0;
 }
 
 teardown
