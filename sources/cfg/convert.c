@@ -508,6 +508,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_BOOL(cfg->replication_proxy_phys, config->replication_proxy_phys);
 	COPY_BOOL(cfg->replication_proxy_logic,
 		  config->replication_proxy_logic);
+	COPY_BOOL(cfg->ignore_cancel, config->ignore_cancel);
 
 	COPY_INT(cfg->priority, config->priority);
 	COPY_U64(cfg->graceful_shutdown_timeout_ms,

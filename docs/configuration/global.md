@@ -103,6 +103,7 @@ megabytes) and is rejected by time-valued options.
 | `cancel_queue_timeout_ms`                  | int (ms)         | `-1` (2 × cancel_timeout_ms) | SIGHUP  | Timeout for queued cancel requests; -1 = 2 × cancel_timeout_ms  |
 | `cancel_max_inflight`                      | int              | `-1` (2 × workers) | SIGHUP  | Max concurrent in-flight cancel requests; -1 = 2 × workers       |
 | `cancel_rate_limit`                        | int              | `0` (none)  | restart | Max cancels per second; 0 = unlimited                              |
+| `ignore_cancel`                            | int (bool)       | `no`        | SIGHUP  | Drop all incoming client cancel requests without forwarding them to the backend |
 | `virtual_transaction`                           | int (bool)       | `yes`       | restart  | Enable virtual transaction features    |
 | `replication_proxy_phys`                   | int (bool)       | `no`        | SIGHUP  | Forward physical replication connections as is to the first endpoint of the first remote storage, bypassing all Odyssey logic |
 | `replication_proxy_logic`                  | int (bool)       | `no`        | SIGHUP  | Forward logical replication connections as is to the first endpoint of the first remote storage, bypassing all Odyssey logic |
@@ -774,6 +775,16 @@ Default: 0 (unlimited)
 Conflicts with **cancel\_max\_inflight**.
 
 `cancel_rate_limit 10`
+
+## **ignore\_cancel**
+*bool*
+
+When enabled, all incoming client cancel requests are dropped: Odyssey
+closes the cancel connection without forwarding the cancel to the backend.
+Useful when cancels from clients are not desirable (e.g. they cause
+unwanted load on the storage). Default: `no`.
+
+`ignore_cancel yes`
 
 ## **dns\_cache\_ttl**
 *integer*
