@@ -10,7 +10,7 @@
 #include <list.h>
 #include <ldap_endpoint.h>
 #include <logger.h>
-#include <thread_pool.h>
+#include <machinarium/thread_pool.h>
 
 /* For functions ldap_unbind, ldap_search_s, ldap_simple_bind_s */
 #define LDAP_DEPRECATED 1

@@ -8,11 +8,14 @@
 
 #include <regex.h>
 
+#include <machinarium/file.h>
 #include <machinarium/io.h>
+#include <machinarium/memory.h>
 
 #include <cfg/convert.h>
 #include <od_memory.h>
 #include <duration.h>
+#include <util.h>
 #include <shared_pool.h>
 #include <affinity.h>
 #include <rules.h>
@@ -258,22 +261,24 @@ static int parse_hba_names(const char *path, int line_no, const char *token,
 static int parse_hba_file(const char *path, od_hba_rules_t *hba_rules,
 			  od_cfg_diag_list_t *diags, od_cfg_location_t loc)
 {
-	FILE *f = fopen(path, "r");
-	if (f == NULL) {
+	char *buf;
+	size_t buf_size;
+	if (mm_file_read_all(path, &buf, &buf_size) != 0) {
 		od_cfg_diag_error(diags, loc, "can't open hba_file '%s': %s",
 				  path, strerror(errno));
 		return -1;
 	}
 
-	char line_buf[4096];
 	int line_no = 0;
 	int rc = 0;
 
-	while (fgets(line_buf, sizeof(line_buf), f) != NULL) {
+	char *cursor = buf;
+	char *line;
+	while ((line = od_next_line(&cursor)) != NULL) {
 		line_no++;
 
 		/* strip trailing newline / comment */
-		char *comment = strchr(line_buf, '#');
+		char *comment = strchr(line, '#');
 		if (comment) {
 			*comment = '\0';
 		}
@@ -282,7 +287,7 @@ static int parse_hba_file(const char *path, od_hba_rules_t *hba_rules,
 		char *save = NULL;
 		char *tok[6];
 		int ntok = 0;
-		char *t = strtok_r(line_buf, " \t\r\n", &save);
+		char *t = strtok_r(line, " \t\r\n", &save);
 		while (t != NULL && ntok < 6) {
 			tok[ntok++] = t;
 			t = strtok_r(NULL, " \t\r\n", &save);
@@ -459,7 +464,7 @@ static int parse_hba_file(const char *path, od_hba_rules_t *hba_rules,
 		od_hba_rules_add(hba_rules, rule);
 	}
 
-	fclose(f);
+	mm_free(buf);
 	return rc;
 }
 
@@ -565,6 +570,15 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 		 config->group_checker_interval_ms);
 	COPY_INT(cfg->workers, config->workers);
 
+	COPY_U64(cfg->auth_query_cache_ttl_ms, config->auth_query_cache_ttl_ms);
+	COPY_U64(cfg->auth_query_cache_ttl_jitter_ms,
+		 config->auth_query_cache_ttl_jitter_ms);
+	COPY_U64(cfg->auth_query_cache_error_retry_ms,
+		 config->auth_query_cache_error_retry_ms);
+	COPY_BOOL(cfg->auth_query_cache_stale_on_error,
+		  config->auth_query_cache_stale_on_error);
+	COPY_U64(cfg->auth_query_timeout_ms, config->auth_query_timeout_ms);
+
 	if (config->keepalive_usr_timeout_ms < 0) {
 		/* the advice is returned in milliseconds (TCP_USER_TIMEOUT) */
 		config->keepalive_usr_timeout_ms =
@@ -580,7 +594,9 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 
 	if (cfg->promhttp_server_port.seen.is_set) {
 #ifdef PROMHTTP_FOUND
-		if (od_prom_set_port(cfg->promhttp_server_port.value,
+		/* Config checks have no cron and must not change live metrics. */
+		if (global->cron != NULL &&
+		    od_prom_set_port(cfg->promhttp_server_port.value,
 				     global->cron->metrics) != OK_RESPONSE) {
 			od_cfg_diag_error(
 				diags, cfg->promhttp_server_port.seen.location,
@@ -776,6 +792,7 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	if (rule->password != NULL) {
 		rule->password_len = strlen(rule->password);
 	}
+	COPY_STR(cfg->password_pgpass, rule->password_pgpass, diags);
 
 	if (cfg->role.seen.is_set) {
 		if (strcmp(cfg->role.value, "admin") == 0) {
@@ -1413,6 +1430,8 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 	return 0;
 
 error:
+	/* A failed conversion must not leave a freed storage in rules. */
+	od_list_unlink(&storage->link);
 	od_rules_storage_unref(storage);
 	return -1;
 }
@@ -1515,14 +1534,8 @@ static int convert_soft_oom(convert_ctx_t *ctx, const od_cfg_soft_oom_t *cfg)
 	od_cfg_diag_list_t *diags = ctx->diags;
 	od_config_soft_oom_t *soft_oom = &config->soft_oom;
 
-	if (!cfg->seen.is_set) {
-		return 0;
-	}
-
 	if (!cfg->limit.seen.is_set) {
-		od_cfg_diag_error(diags, cfg->location,
-				  "limits is not set in soft_oom");
-		goto error;
+		return 0;
 	}
 
 	COPY_INT(cfg->limit, soft_oom->limit_bytes);
@@ -1530,7 +1543,7 @@ static int convert_soft_oom(convert_ctx_t *ctx, const od_cfg_soft_oom_t *cfg)
 
 	soft_oom->enabled = 1;
 
-	if (cfg->drop.seen.is_set) {
+	if (cfg->drop.signal.seen.is_set || cfg->drop.max_rate.seen.is_set) {
 		soft_oom->drop.enabled = 1;
 		COPY_INT(cfg->drop.max_rate, soft_oom->drop.max_rate);
 
@@ -1599,10 +1612,6 @@ static int parse_standby_function_list(convert_ctx_t *ctx,
 static int convert_query_parsing(convert_ctx_t *ctx,
 				 const od_cfg_query_parsing_t *cfg)
 {
-	if (!cfg->seen.is_set) {
-		return 0;
-	}
-
 	od_config_t *config = ctx->config;
 	od_config_query_parsing_t *qp = &config->query_parsing;
 

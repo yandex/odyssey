@@ -108,6 +108,11 @@ megabytes) and is rejected by time-valued options.
 | `replication_proxy_logic`                  | int (bool)       | `no`        | SIGHUP  | Forward logical replication connections as is to the first endpoint of the first remote storage, bypassing all Odyssey logic |
 | `maintain_params`                          | int (bool)       | `yes`       | restart | Global default of route-level `maintain_params`; routes that set it explicitly override this |
 | `dns_cache_ttl`                            | int (ms)         | `30000`     | SIGHUP  | TTL for DNS cache entries                                         |
+| `auth_query_timeout`                       | int (ms)         | `500`       | SIGHUP  | auth\_query execution timeout; also the wait for a route's first password fetch |
+| `auth_query_cache_ttl`                     | int (ms)         | `10000`     | SIGHUP  | How long a fetched `auth_query` password is considered fresh; duration suffixes supported |
+| `auth_query_cache_ttl_jitter`              | int (ms)         | `5000`      | SIGHUP  | Max random jitter added to `auth_query_cache_ttl`; 0 disables |
+| `auth_query_cache_error_retry`             | int (ms)         | `1000`      | SIGHUP  | Delay before the next refresh attempt after a failed one |
+| `auth_query_cache_stale_on_error`          | int (bool)       | `yes`       | SIGHUP  | Keep serving the stale cached password when a refresh fails; `no` drops it (fail closed) |
 | `cache_msg_gc_size`                        | int (bytes)      | `0`         | SIGHUP  | Max single message buffer size for caching; 0 = caching disabled   |
 | `cache_msg_gc_count`                      | int              | `0`         | SIGHUP  | Message GC cache max count; 0 = unlimited                         |
 | `graceful_die_on_errors`                   | int (bool)       | `no`        | runtime | **Deprecated.** Use SIGUSR2 signal directly instead               |
@@ -778,6 +783,68 @@ has elapsed the entry is resolved again on the next connection attempt.
 Default: 30000 (30 seconds). Set to 0 to disable caching.
 
 `dns_cache_ttl 30000`
+
+## **auth\_query\_timeout**
+*duration*
+
+Timeout for a single `auth_query` execution against the storage, and also the
+maximum time a client waits for the route's very first password fetch
+(subsequent fetches run in the background and clients are served from the
+cache immediately, see **auth\_query\_cache\_ttl**).
+
+Default: 500 (500 ms). Minimum value is 1 ms.
+
+`auth_query_timeout 500ms`
+
+## **auth\_query\_cache\_ttl**
+*duration*
+
+For how long a password successfully fetched by `auth_query` is considered
+fresh. When the cached value becomes older than this, a background refresh is
+scheduled; until the refresh completes clients keep being served the cached
+value, so this option effectively bounds the password staleness on rotation.
+
+Default: 10000 (10 seconds). Set to 0 to refresh on (almost) every
+authentication.
+
+`auth_query_cache_ttl 10s`
+
+## **auth\_query\_cache\_ttl\_jitter**
+*duration*
+
+Maximum random jitter added on top of **auth\_query\_cache\_ttl**. Spreads
+background password refreshes of different routes in time instead of syncing
+them all to the same moment. Default: 5000 (5 seconds). Set to 0 to disable.
+
+`auth_query_cache_ttl_jitter 5s`
+
+## **auth\_query\_cache\_error\_retry**
+*duration*
+
+Delay before the next background `auth_query` refresh attempt after a failed
+one. While waiting, the behaviour is defined by
+**auth\_query\_cache\_stale\_on\_error**. Default: 1000 (1 second).
+
+`auth_query_cache_error_retry 1s`
+
+## **auth\_query\_cache\_stale\_on\_error**
+*yes|no*
+
+How to treat a failed `auth_query` password refresh when a cached value
+already exists.
+
+* `yes` (default) — keep serving the stale cached password and retry the
+  refresh after **auth\_query\_cache\_error\_retry**; authentication
+  continues even while the password source is unavailable.
+* `no` — drop the cached password ("fail closed"): clients can not
+  authenticate until a refresh succeeds. Use this when passwords may be
+  revoked and serving a stale value is unacceptable.
+
+The very first fetch of a route (no cached value yet) always fails the
+client's authentication when `auth_query` itself fails, regardless of this
+option.
+
+`auth_query_cache_stale_on_error yes`
 
 ## **cache\_msg\_gc\_size**
 *integer*

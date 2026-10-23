@@ -155,6 +155,30 @@ struct od_config {
 	char *hba_file;
 	/* Soft interval between group checks (milliseconds) */
 	uint64_t group_checker_interval_ms;
+
+	/*
+	 * auth_query cached password lifetime (milliseconds) and the
+	 * maximum random jitter added on top of it (0 disables jitter)
+	 */
+	uint64_t auth_query_cache_ttl_ms;
+	uint64_t auth_query_cache_ttl_jitter_ms;
+	/*
+	 * Delay before the next auth_query password refresh attempt
+	 * after a failed one (milliseconds)
+	 */
+	uint64_t auth_query_cache_error_retry_ms;
+	/*
+	 * Continue to serve the stale cached password when an auth_query
+	 * password refresh fails; when disabled the cached value is
+	 * dropped and clients can not authenticate until a refresh
+	 * succeeds
+	 */
+	int auth_query_cache_stale_on_error;
+	/*
+	 * auth_query execution timeout (milliseconds), also used as the
+	 * initial wait for the first password fetch of a route
+	 */
+	uint64_t auth_query_timeout_ms;
 	od_list_t listen;
 
 	uint64_t backend_connect_timeout_ms;
@@ -213,6 +237,10 @@ typedef struct {
 
 size_t od_config_fields_count(void);
 const od_config_field_t *od_config_field_at(size_t index);
+const od_config_field_t *od_config_field_by_key(const char *key);
+int od_config_field_deprecated(const od_config_field_t *field);
+int od_config_field_format(const od_config_field_t *field, const char *value,
+			   char *buf, size_t size);
 void od_config_field_value(od_config_t *config, const od_config_field_t *field,
 			   char *buf, size_t size);
 void od_config_field_default(const od_config_field_t *field, char *buf,

@@ -170,6 +170,25 @@ static inline long od_memtol(char *data, size_t data_size, char **end_ptr,
 	return result;
 }
 
+/* Splits a NUL-terminated buffer into lines in place: replaces the next
+ * '\n' with '\0' and returns the line start, or NULL when exhausted.
+ * The last line may lack '\n'. */
+static inline char *od_next_line(char **cursor)
+{
+	char *line = *cursor;
+	if (*line == '\0') {
+		return NULL;
+	}
+	char *nl = strchr(line, '\n');
+	if (nl != NULL) {
+		*nl = '\0';
+		*cursor = nl + 1;
+	} else {
+		*cursor += strlen(line);
+	}
+	return line;
+}
+
 static inline uint32_t od_bswap32(uint32_t x)
 {
 	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |

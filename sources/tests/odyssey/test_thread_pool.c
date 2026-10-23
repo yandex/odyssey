@@ -1,7 +1,7 @@
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
 #include <odyssey.h>
-#include <thread_pool.h>
+#include <machinarium/thread_pool.h>
 #include <od_memory.h>
 #include <tests/odyssey_test.h>
 
@@ -37,29 +37,29 @@ static void test_integral(void *arg)
 
 	size_t n = 100;
 
-	od_future_t **futures = od_malloc(n * sizeof(od_future_t *));
+	mm_future_t **futures = od_malloc(n * sizeof(mm_future_t *));
 	test(futures != NULL);
-	memset(futures, 0, n * sizeof(od_future_t *));
+	memset(futures, 0, n * sizeof(mm_future_t *));
 
-	od_thread_pool_t pool;
-	test(od_thread_pool_init(&pool, "integrator", 5, 100) == 0);
+	mm_thread_pool_t pool;
+	test(mm_thread_pool_init(&pool, "integrator", 5, 100) == 0);
 
 	for (size_t i = 0; i < n; ++i) {
-		futures[i] = od_thread_pool_submit(&pool, calc, &value, NULL,
+		futures[i] = mm_thread_pool_submit(&pool, calc, &value, NULL,
 						   NULL, 0);
 		test(futures[i] != NULL);
 	}
 
 	for (size_t i = 0; i < n; ++i) {
-		test(od_thread_pool_wait(futures[i], 60 * 1000) == 0);
-		od_future_unref(futures[i]);
+		test(mm_thread_pool_wait(futures[i], 60 * 1000) == 0);
+		mm_future_unref(futures[i]);
 	}
 
 	test(atomic_load(&value) == (n * 1000));
 
 	od_free(futures);
 
-	od_thread_pool_destroy(&pool);
+	mm_thread_pool_destroy(&pool);
 }
 
 static void *sleepy(void *a)
@@ -87,12 +87,12 @@ static void test_queue_full(void *arg)
 
 	size_t n = 4;
 
-	od_future_t **futures = od_malloc(n * sizeof(od_future_t *));
+	mm_future_t **futures = od_malloc(n * sizeof(mm_future_t *));
 	test(futures != NULL);
-	memset(futures, 0, n * sizeof(od_future_t *));
+	memset(futures, 0, n * sizeof(mm_future_t *));
 
-	od_thread_pool_t pool;
-	test(od_thread_pool_init(&pool, "sleeper", 2, 2) == 0);
+	mm_thread_pool_t pool;
+	test(mm_thread_pool_init(&pool, "sleeper", 2, 2) == 0);
 
 	machine_wait_group_t *wait_group = machine_wait_group_create();
 	test(wait_group != NULL);
@@ -104,38 +104,38 @@ static void test_queue_full(void *arg)
 	blocking_arg.group = wait_group;
 
 	machine_wait_group_add(wait_group);
-	futures[0] = od_thread_pool_submit(&pool, blocking_task, &blocking_arg,
+	futures[0] = mm_thread_pool_submit(&pool, blocking_task, &blocking_arg,
 					   NULL, NULL, 0);
 	test(futures[0] != NULL);
 
 	machine_wait_group_add(wait_group);
-	futures[1] = od_thread_pool_submit(&pool, blocking_task, &blocking_arg,
+	futures[1] = mm_thread_pool_submit(&pool, blocking_task, &blocking_arg,
 					   NULL, NULL, 0);
 	test(futures[1] != NULL);
 
 	test(machine_wait_group_wait(wait_group, 60 * 1000) == 0);
 
-	futures[2] = od_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
+	futures[2] = mm_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
 	test(futures[2] != NULL);
 
-	futures[3] = od_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
+	futures[3] = mm_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
 	test(futures[3] != NULL);
 
-	od_future_t *f =
-		od_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
+	mm_future_t *f =
+		mm_thread_pool_submit(&pool, sleepy, NULL, NULL, NULL, 0);
 	test(f == NULL);
 	test(mm_errno_get() == EAGAIN);
 
 	mm_wait_flag_set(blocking_flag);
 
 	for (size_t i = 0; i < n; ++i) {
-		test(od_thread_pool_wait(futures[i], 60 * 1000) == 0);
-		od_future_unref(futures[i]);
+		test(mm_thread_pool_wait(futures[i], 60 * 1000) == 0);
+		mm_future_unref(futures[i]);
 	}
 
 	od_free(futures);
 
-	od_thread_pool_destroy(&pool);
+	mm_thread_pool_destroy(&pool);
 	machine_wait_group_destroy(wait_group);
 	mm_wait_flag_destroy(blocking_flag);
 }

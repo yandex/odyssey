@@ -156,21 +156,12 @@ static void dump_storage(FILE *file, const od_cfg_storage_t *s)
 
 static void dump_soft_oom(FILE *file, const od_cfg_soft_oom_t *s)
 {
-	if (!s->seen.is_set) {
-		return;
-	}
-
-	fprintf(file, "soft_oom {\n");
-	dump_uint64(file, "limit", 1, &s->limit);
-	dump_string(file, "process", 1, &s->process);
-	dump_uint64(file, "check_interval_ms", 1, &s->check_interval_ms);
-	if (s->drop.seen.is_set) {
-		fprintf(file, "\tdrop {\n");
-		dump_string(file, "signal", 2, &s->drop.signal);
-		dump_int(file, "max_rate", 2, &s->drop.max_rate);
-		fprintf(file, "\t}\n");
-	}
-	fprintf(file, "}\n");
+	dump_uint64(file, "soft_oom_limit", 0, &s->limit);
+	dump_string(file, "soft_oom_process", 0, &s->process);
+	dump_uint64(file, "soft_oom_check_interval_ms", 0,
+		    &s->check_interval_ms);
+	dump_string(file, "soft_oom_drop_signal", 0, &s->drop.signal);
+	dump_int(file, "soft_oom_drop_max_rate", 0, &s->drop.max_rate);
 }
 
 static void dump_ldap_endpoint(FILE *file, const od_cfg_ldap_endpoint_t *e)
@@ -511,6 +502,17 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 	dump_uint64(file, "group_checker_interval_ms", 0,
 		    &model->global.group_checker_interval_ms);
 	dump_int(file, "workers", 0, &model->global.workers);
+
+	dump_uint64(file, "auth_query_cache_ttl_ms", 0,
+		    &model->global.auth_query_cache_ttl_ms);
+	dump_uint64(file, "auth_query_cache_ttl_jitter_ms", 0,
+		    &model->global.auth_query_cache_ttl_jitter_ms);
+	dump_uint64(file, "auth_query_cache_error_retry_ms", 0,
+		    &model->global.auth_query_cache_error_retry_ms);
+	dump_bool(file, "auth_query_cache_stale_on_error", 0,
+		  &model->global.auth_query_cache_stale_on_error);
+	dump_uint64(file, "auth_query_timeout_ms", 0,
+		    &model->global.auth_query_timeout_ms);
 
 	for (size_t i = 0; i < model->listens_count; ++i) {
 		dump_listen(file, model->listens[i]);
@@ -973,6 +975,12 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_u64_field_free(&g->group_checker_interval_ms);
 	od_cfg_int_field_free(&g->workers);
 
+	od_cfg_u64_field_free(&g->auth_query_cache_ttl_ms);
+	od_cfg_u64_field_free(&g->auth_query_cache_ttl_jitter_ms);
+	od_cfg_u64_field_free(&g->auth_query_cache_error_retry_ms);
+	od_cfg_bool_field_free(&g->auth_query_cache_stale_on_error);
+	od_cfg_u64_field_free(&g->auth_query_timeout_ms);
+
 	memset(g, 0, sizeof(*g));
 }
 
@@ -986,13 +994,9 @@ void od_cfg_model_free(od_cfg_model_t *model)
 	od_cfg_int_field_free(&model->conn_drop_options.rate);
 	od_cfg_u64_field_free(&model->conn_drop_options.interval_ms);
 
-	od_cfg_seen_free(&model->soft_oom.seen);
-	od_cfg_location_free(&model->soft_oom.location);
 	od_cfg_u64_field_free(&model->soft_oom.limit);
 	od_cfg_string_field_free(&model->soft_oom.process);
 	od_cfg_u64_field_free(&model->soft_oom.check_interval_ms);
-	od_cfg_seen_free(&model->soft_oom.drop.seen);
-	od_cfg_location_free(&model->soft_oom.drop.location);
 	od_cfg_string_field_free(&model->soft_oom.drop.signal);
 	od_cfg_int_field_free(&model->soft_oom.drop.max_rate);
 
@@ -1000,7 +1004,6 @@ void od_cfg_model_free(od_cfg_model_t *model)
 	od_cfg_u64_field_free(&model->query_parsing.mem_limit);
 	od_cfg_u64_field_free(&model->query_parsing.max_query_len);
 	od_cfg_string_list_free(&model->query_parsing.standby_function_list);
-	od_cfg_seen_free(&model->query_parsing.seen);
 
 	for (size_t i = 0; i < model->databases_count; ++i) {
 		od_cfg_database_free(model->databases[i]);
@@ -1719,14 +1722,30 @@ static int od_cfg_validate_soft_oom(od_cfg_model_t *model,
 {
 	od_cfg_soft_oom_t *so = &model->soft_oom;
 
-	if (!so->seen.is_set) {
+	int any = so->process.seen.is_set ||
+		  so->check_interval_ms.seen.is_set ||
+		  so->drop.signal.seen.is_set || so->drop.max_rate.seen.is_set;
+
+	if (!so->limit.seen.is_set) {
+		if (any) {
+			od_cfg_diag_error(
+				diags,
+				so->process.seen.is_set ?
+					so->process.seen.location :
+				so->check_interval_ms.seen.is_set ?
+					so->check_interval_ms.seen.location :
+				so->drop.signal.seen.is_set ?
+					so->drop.signal.seen.location :
+					so->drop.max_rate.seen.location,
+				"soft_oom_limit is not set for soft_oom");
+			return -1;
+		}
 		return 0;
 	}
 
-	if (so->seen.is_set &&
-	    (!so->limit.seen.is_set || so->limit.value == 0)) {
-		od_cfg_diag_error(diags, so->location,
-				  "limit is not set for soft_oom");
+	if (so->limit.value == 0) {
+		od_cfg_diag_error(diags, so->limit.seen.location,
+				  "soft_oom_limit must be positive");
 		return -1;
 	}
 

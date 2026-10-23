@@ -10,12 +10,15 @@
 #include <dirent.h>
 #include <signal.h>
 
+#include <machinarium/file.h>
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
+#include <machinarium/memory.h>
 
 #include <soft_oom.h>
 #include <config.h>
 #include <od_memory.h>
+#include <util.h>
 
 #define SOFT_OOM_LOG_CONTEXT "soft-oom"
 #define PROC_DIR_PATH "/proc"
@@ -26,46 +29,62 @@
 
 static inline int od_soft_oom_get_system_memory_consumption(uint64_t *result)
 {
-	FILE *fp = fopen(PROC_MEMINFO, "re");
-	if (!fp) {
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(PROC_MEMINFO, &buf, &size) != 0) {
 		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
 			  "can't open '%s': %s", PROC_MEMINFO, strerror(errno));
 		return NOT_OK_RESPONSE;
 	}
 
-	char line[256];
-	int64_t mem_available = 0, mem_total = 0;
+	int64_t mem_available, mem_total;
 
-	while (fgets(line, sizeof(line), fp)) {
-		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
-			   &mem_available) == 1) {
-			continue;
-		}
+	od_soft_oom_get_system_memory_consumption_from_meminfo(
+		buf, &mem_available, &mem_total);
 
-		if (sscanf(line, "MemTotal: %" PRId64 " kB", &mem_total) == 1) {
-			continue;
-		}
-	}
-
-	fclose(fp);
+	mm_free(buf);
 
 	int64_t mem_used = mem_total - mem_available;
 
 	if (mem_used >= 0) {
-		*result = ((uint64_t)mem_used);
+		*result = (uint64_t)mem_used;
 
 		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			"updated memory consumption for system: %" PRIu64 " KB",
+			"updated memory consumption for system: %" PRIu64
+			" bytes",
 			*result);
 	} else {
 		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			"got negative mem used: total = %" PRId64
-			", available = %" PRId64,
+			"got negative mem used: total = %" PRId64 " bytes"
+			", available = %" PRId64 " bytes",
 			mem_total, mem_available);
 		*result = 0;
 	}
 
 	return OK_RESPONSE;
+}
+
+void od_soft_oom_get_system_memory_consumption_from_meminfo(
+	char *meminfo, int64_t *mem_available, int64_t *mem_total)
+{
+	*mem_available = 0;
+	*mem_total = 0;
+
+	char *cursor = meminfo;
+	char *line;
+	while ((line = od_next_line(&cursor)) != NULL) {
+		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
+			   mem_available) == 1) {
+			continue;
+		}
+
+		if (sscanf(line, "MemTotal: %" PRId64 " kB", mem_total) == 1) {
+			continue;
+		}
+	}
+
+	*mem_available *= 1024;
+	*mem_total *= 1024;
 }
 
 static inline void strstrip_right(char *s)
@@ -88,17 +107,19 @@ static inline int od_soft_oom_is_target_process(const char *target_comm,
 						int *result)
 {
 	char comm_path[256];
-	char comm[32];
 
 	snprintf(comm_path, sizeof(comm_path), PROC_COMM_FMT, pid);
 
-	FILE *fp = fopen(comm_path, "re");
-	if (fp == NULL) {
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(comm_path, &buf, &size) != 0) {
 		return NOT_OK_RESPONSE;
 	}
 
-	if (fgets(comm, sizeof(comm), fp) == NULL) {
-		fclose(fp);
+	char *cursor = buf;
+	char *comm = od_next_line(&cursor);
+	if (comm == NULL) {
+		mm_free(buf);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -107,10 +128,11 @@ static inline int od_soft_oom_is_target_process(const char *target_comm,
 	if (strstr(comm, target_comm) != NULL) {
 		*result = 1;
 		strstrip_right(comm);
-		strcpy(pid_comm, comm);
+		strncpy(pid_comm, comm, 32 - 1);
+		pid_comm[32 - 1] = '\0';
 	}
 
-	fclose(fp);
+	mm_free(buf);
 
 	return OK_RESPONSE;
 }
@@ -121,19 +143,21 @@ static inline int od_soft_oom_accumulate_process_pss(pid_t pid,
 	char smaps_path[256];
 	snprintf(smaps_path, sizeof(smaps_path), PROC_SMAPS_ROLLUP, pid);
 
-	FILE *smaps = fopen(smaps_path, "re");
-	if (smaps == NULL) {
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(smaps_path, &buf, &size) != 0) {
 		return NOT_OK_RESPONSE;
 	}
 
-	char line[256];
 	size_t pss_kb = 0;
-	while (fgets(line, sizeof(line), smaps)) {
+	char *cursor = buf;
+	char *line;
+	while ((line = od_next_line(&cursor)) != NULL) {
 		if (sscanf(line, "Pss:%zu", &pss_kb) == 1) {
 			break;
 		}
 	}
-	fclose(smaps);
+	mm_free(buf);
 
 	*result += (pss_kb * 1024);
 

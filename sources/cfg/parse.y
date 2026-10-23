@@ -227,6 +227,11 @@
 %token SYSTEM_COROUTINE_STACK_SIZE "system_coroutine_stack_size"
 %token PROMHTTP_SERVER_PORT "promhttp_server_port"
 %token GROUP_CHECKER_INTERVAL "group_checker_interval"
+%token AUTH_QUERY_CACHE_TTL "auth_query_cache_ttl"
+%token AUTH_QUERY_CACHE_TTL_JITTER "auth_query_cache_ttl_jitter"
+%token AUTH_QUERY_CACHE_ERROR_RETRY "auth_query_cache_error_retry"
+%token AUTH_QUERY_CACHE_STALE_ON_ERROR "auth_query_cache_stale_on_error"
+%token AUTH_QUERY_TIMEOUT "auth_query_timeout"
 %token SHARED_POOL "shared_pool"
 %token POOL_SIZE "pool_size"
 %token CONN_DROP_OPTIONS "conn_drop_options"
@@ -262,13 +267,11 @@
 %token CACHE_CHUNK "cache_chunk"
 %token PACKET_READ_SIZE "packet_read_size"
 %token PACKET_WRITE_QUEUE "packet_write_queue"
-%token SOFT_OOM "soft_oom"
-%token LIMIT "limit"
-%token PROCESS "process"
-%token CHECK_INTERVAL_MS "check_interval_ms"
-%token DROP "drop"
-%token SIGNAL "signal"
-%token MAX_RATE "max_rate"
+%token SOFT_OOM_LIMIT "soft_oom_limit"
+%token SOFT_OOM_PROCESS "soft_oom_process"
+%token SOFT_OOM_CHECK_INTERVAL_MS "soft_oom_check_interval_ms"
+%token SOFT_OOM_DROP_SIGNAL "soft_oom_drop_signal"
+%token SOFT_OOM_DROP_MAX_RATE "soft_oom_drop_max_rate"
 %token LDAP_ENDPOINT "ldap_endpoint"
 %token LDAP_SERVER "ldapserver"
 %token LDAP_PORT "ldapport"
@@ -300,6 +303,7 @@
 %token AUTH_QUERY_USER "auth_query_user"
 %token PASSWORD_PASSTHROUGH "password_passthrough"
 %token PASSWORD "password"
+%token PASSWORD_PGPASS "password_pgpass"
 %token ROLE "role"
 %token CLIENT_FWD_ERROR "client_fwd_error"
 %token CLIENT_SHOW_ID "client_show_id"
@@ -350,14 +354,13 @@
 %token INCLUDE "include"
 %token AZ_AWARE "az_aware"
 %token VIRTUAL_TRANSACTION "virtual_transaction"
-%token QUERY_PARSING "query_parsing"
-%token STANDBY_FUNCTION_LIST "standby_function_list"
-%token MODE "mode"
+%token QUERY_PARSING_MODE "query_parsing_mode"
+%token QUERY_PARSING_MEM_LIMIT "query_parsing_mem_limit"
+%token QUERY_PARSING_MAX_QUERY_LEN "query_parsing_max_query_len"
+%token QUERY_PARSING_STANDBY_FUNCTION_LIST "query_parsing_standby_function_list"
 %token DISABLED "disabled"
 %token MINIMAL "minimal"
 %token FULL "full"
-%token MEM_LIMIT "mem_limit"
-%token MAX_QUERY_LEN "max_query_len"
 %token RESERVED_CLIENTS "reserved_clients"
 
 %type <boolean> bool_value
@@ -954,6 +957,46 @@ top_item:
 						@1,
 						"group_checker_interval");
 		}
+	| AUTH_QUERY_CACHE_TTL time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.auth_query_cache_ttl_ms,
+						&$2, 1, 0, INT64_MAX,
+						@1,
+						"auth_query_cache_ttl");
+		}
+	| AUTH_QUERY_CACHE_TTL_JITTER time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.auth_query_cache_ttl_jitter_ms,
+						&$2, 1, 0, INT64_MAX,
+						@1,
+						"auth_query_cache_ttl_jitter");
+		}
+	| AUTH_QUERY_CACHE_ERROR_RETRY time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.auth_query_cache_error_retry_ms,
+						&$2, 1, 0, INT64_MAX,
+						@1,
+						"auth_query_cache_error_retry");
+		}
+	| AUTH_QUERY_CACHE_STALE_ON_ERROR bool_value
+		{
+			od_cfg_set_bool(ctx->diags,
+						&ctx->model->global.auth_query_cache_stale_on_error,
+						$2,
+						@1,
+						"auth_query_cache_stale_on_error");
+		}
+	| AUTH_QUERY_TIMEOUT time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+						&ctx->model->global.auth_query_timeout_ms,
+						&$2, 1, 1, INT_MAX,
+						@1,
+						"auth_query_timeout");
+		}
 	| WORKERS int_value
 		{
 			od_cfg_set_int_range_from_i64(ctx->diags,
@@ -1018,8 +1061,112 @@ top_item:
 	| ldap_endpoint_section
 	| shared_pool_section
 	| conn_drop_options_section
-	| soft_oom_section
-	| query_parsing_section
+	| SOFT_OOM_LIMIT size_value
+		{
+			if ($2 < 0) {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "soft_oom_limit must be non-negative");
+			} else {
+				od_cfg_set_u64(ctx->diags,
+							&ctx->model->soft_oom.limit,
+							(uint64_t) $2,
+							@1,
+							"soft_oom_limit");
+			}
+		}
+	| SOFT_OOM_PROCESS string_value
+		{
+			od_cfg_set_string(ctx->diags,
+							  &ctx->model->soft_oom.process,
+							  $2,
+							  @1,
+							  "soft_oom_process");
+			$2 = NULL;
+		}
+	| SOFT_OOM_CHECK_INTERVAL_MS time_value
+		{
+			od_cfg_set_time_u64_ms(ctx->diags,
+									&ctx->model->soft_oom.check_interval_ms,
+									&$2, 1, 0, INT_MAX,
+									@1,
+									"soft_oom_check_interval_ms");
+		}
+	| SOFT_OOM_DROP_SIGNAL string_value
+		{
+			od_cfg_set_string(ctx->diags,
+							  &ctx->model->soft_oom.drop.signal,
+							  $2,
+							  @1,
+							  "soft_oom_drop_signal");
+			$2 = NULL;
+		}
+	| SOFT_OOM_DROP_MAX_RATE int_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+									&ctx->model->soft_oom.drop.max_rate,
+									$2,
+									0, INT_MAX,
+									@1,
+									"soft_oom_drop_max_rate");
+		}
+	| QUERY_PARSING_MODE DISABLED
+		{
+			od_cfg_set_query_parsing_mode(ctx->diags,
+										  &ctx->model->query_parsing.mode,
+										  OD_CFG_QUERY_PARSING_MODE_DISABLED,
+										  @1,
+										  "query_parsing_mode");
+		}
+	| QUERY_PARSING_MODE MINIMAL
+		{
+			od_cfg_set_query_parsing_mode(ctx->diags,
+										  &ctx->model->query_parsing.mode,
+										  OD_CFG_QUERY_PARSING_MODE_MINIMAL,
+										  @1,
+										  "query_parsing_mode");
+		}
+	| QUERY_PARSING_MODE FULL
+		{
+			od_cfg_set_query_parsing_mode(ctx->diags,
+										  &ctx->model->query_parsing.mode,
+										  OD_CFG_QUERY_PARSING_MODE_FULL,
+										  @1,
+										  "query_parsing_mode");
+		}
+	| QUERY_PARSING_MEM_LIMIT size_value
+		{
+			if ($2 < 0) {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "query_parsing_mem_limit must be non-negative");
+			} else {
+				od_cfg_set_u64(ctx->diags,
+						   &ctx->model->query_parsing.mem_limit,
+						   $2,
+						   @1,
+						   "query_parsing_mem_limit");
+			}
+		}
+	| QUERY_PARSING_MAX_QUERY_LEN int_value
+		{
+			if ($2 < 0) {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "query_parsing_max_query_len must be non-negative");
+			} else {
+				od_cfg_set_u64(ctx->diags,
+						   &ctx->model->query_parsing.max_query_len,
+						   $2,
+						   @1,
+						   "query_parsing_max_query_len");
+			}
+		}
+	| QUERY_PARSING_STANDBY_FUNCTION_LIST
+		{
+			od_cfg_string_list_begin(ctx->diags,
+						  &ctx->model->query_parsing.standby_function_list,
+						  @1,
+						  "query_parsing_standby_function_list");
+		}
+	  '{' standby_function_list_items '}'
 	| INCLUDE STRING
 		{
 			if (!ctx->allow_include) {
@@ -1376,6 +1523,16 @@ route_item:
 							  $2,
 							  @1,
 							  "password");
+			$2 = NULL;
+		}
+	| PASSWORD_PGPASS string_value
+		{
+			od_cfg_route_t *ur = ctx->current_user;
+			od_cfg_set_string(ctx->diags,
+							  &ur->password_pgpass,
+							  $2,
+							  @1,
+							  "password_pgpass");
 			$2 = NULL;
 		}
 	| ROLE string_value
@@ -2604,213 +2761,17 @@ conn_drop_options_section:
 		}
 	;
 
-query_parsing_section:
-	QUERY_PARSING
-		{
-			od_cfg_query_parsing_t *opts = &ctx->model->query_parsing;
-
-			if (opts->seen.is_set) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "query_parsing is redefined");
-				YYERROR;
-			}
-
-			od_cfg_seen_set(&opts->seen, @1);
-
-			ctx->current_query_parsing = opts;
-		}
-		'{' query_parsing_items '}'
-		{
-			ctx->current_query_parsing = NULL;
-		}
-
-query_parsing_items:
-	 %empty
-	| query_parsing_items query_parsing_item
-	;
-
-query_parsing_item:
-	  MODE DISABLED
-		{
-			od_cfg_set_query_parsing_mode(ctx->diags,
-										  &ctx->current_query_parsing->mode,
-										  OD_CFG_QUERY_PARSING_MODE_DISABLED,
-										  @1,
-										  "mode");
-		}
-	| MODE MINIMAL
-		{
-			od_cfg_set_query_parsing_mode(ctx->diags,
-										  &ctx->current_query_parsing->mode,
-										  OD_CFG_QUERY_PARSING_MODE_MINIMAL,
-										  @1,
-										  "mode");
-		}
-	| MODE FULL
-		{
-			od_cfg_set_query_parsing_mode(ctx->diags,
-										  &ctx->current_query_parsing->mode,
-										  OD_CFG_QUERY_PARSING_MODE_FULL,
-										  @1,
-										  "mode");
-		}
-	| MEM_LIMIT size_value
-		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-						  "mem_limit must be non-negative");
-			} else {
-				od_cfg_set_u64(ctx->diags,
-						   &ctx->current_query_parsing->mem_limit,
-						   $2,
-						   @1,
-						   "mem_limit");
-			}
-		}
-	| MAX_QUERY_LEN int_value
-		{
-			if ($2 < 0) {
-				od_cfg_diag_error(ctx->diags, @1,
-						  "max_query_len must be non-negative");
-			} else {
-				od_cfg_set_u64(ctx->diags,
-						   &ctx->current_query_parsing->max_query_len,
-						   $2,
-						   @1,
-						   "max_query_len");
-			}
-		}
-	| STANDBY_FUNCTION_LIST
-		{
-			od_cfg_string_list_begin(ctx->diags,
-						  &ctx->current_query_parsing->standby_function_list,
-						  @1,
-						  "standby_function_list");
-		}
-	  '{' standby_function_list_items '}'
-	;
-
 standby_function_list_items:
 	  %empty
 	| standby_function_list_items STRING
 		{
 			od_cfg_string_list_append(
 				ctx->diags,
-				&ctx->current_query_parsing->standby_function_list,
+				&ctx->model->query_parsing.standby_function_list,
 				$2);
 			$2 = NULL;
 		}
 	;
-
-soft_oom_section:
-	SOFT_OOM
-		{
-			od_cfg_soft_oom_t *soom = &ctx->model->soft_oom;
-
-			if (soom->seen.is_set) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "soft_oom is redefined");
-				YYERROR;
-			}
-
-			od_cfg_seen_set(&soom->seen, @1);
-			soom->location = od_cfg_location_copy(@1);
-
-			ctx->current_soft_oom = soom;
-		}
-		'{' soft_oom_items '}'
-		{
-			ctx->current_soft_oom = NULL;
-		}
-	;
-
-soft_oom_items:
-	 %empty
-	| soft_oom_items soft_oom_item
-	;
-
-soft_oom_item:
-	  LIMIT size_value
-		{
-			if ($2 < 0) {
-				 od_cfg_diag_error(ctx->diags, @1,
-						  "limit must be non-negative");
-			} else {
-				od_cfg_set_u64(ctx->diags,
-							&ctx->current_soft_oom->limit,
-							(uint64_t) $2,
-							@1,
-							"limit");
-			}
-		}
-	| PROCESS string_value
-		{
-			od_cfg_set_string(ctx->diags,
-							  &ctx->current_soft_oom->process,
-							  $2,
-							  @1,
-							  "process");
-			$2 = NULL;
-		}
-	| CHECK_INTERVAL_MS time_value
-		{
-			od_cfg_set_time_u64_ms(ctx->diags,
-									&ctx->current_soft_oom->check_interval_ms,
-									&$2, 1, 0, INT_MAX,
-									@1,
-									"check_interval_ms");
-		}
-	| soft_oom_drop
-	;
-
-soft_oom_drop:
-	DROP
-		{
-			od_cfg_soft_oom_drop_t *drop = &ctx->current_soft_oom->drop;
-
-			if (drop->seen.is_set) {
-				od_cfg_diag_error(ctx->diags, @1,
-								  "soft_oom.drop is redefined");
-				YYERROR;
-			}
-
-			od_cfg_seen_set(&drop->seen, @1);
-			drop->location = od_cfg_location_copy(@1);
-
-			ctx->current_soft_oom_drop = drop;
-		}
-		'{' soft_oom_drop_items '}'
-		{
-			ctx->current_soft_oom_drop = NULL;
-		}
-	;
-
-soft_oom_drop_items:
-	  %empty
-	| soft_oom_drop_items soft_oom_drop_item
-	;
-
-soft_oom_drop_item:
-	  SIGNAL string_value
-		{
-			od_cfg_set_string(ctx->diags,
-							  &ctx->current_soft_oom_drop->signal,
-							  $2,
-							  @1,
-							  "signal");
-			$2 = NULL;
-		}
-	| MAX_RATE int_value
-		{
-			od_cfg_set_int_range_from_i64(ctx->diags,
-									&ctx->current_soft_oom_drop->max_rate,
-									$2,
-									0, INT_MAX,
-									@1,
-									"max_rate");
-		}
-	;
-
 
 conn_drop_options_keyword:
 	  CONN_DROP_OPTIONS

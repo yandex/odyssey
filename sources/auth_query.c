@@ -158,8 +158,10 @@ static int do_auth_query(od_instance_t *instance, od_client_t *client,
 	od_server_t *server = client->server;
 	od_assert(server != NULL);
 
+	uint32_t timeout_ms = (uint32_t)instance->config.auth_query_timeout_ms;
+
 	machine_msg_t *msg =
-		od_query_do(server, "auth_query", query, user, 500);
+		od_query_do(server, "auth_query", query, user, timeout_ms);
 	if (msg == NULL) {
 		od_error(&instance->logger, "auth_query", client, server,
 			 "auth query returned empty msg");
@@ -218,21 +220,51 @@ static void pswd_update_task(void *a)
 	int rc = get_password_from_auth_query(global, instance, rule, arg->user,
 					      arg->query, &password);
 
-	uint64_t jitter = ((uint64_t)machine_lrand48()) % 5000;
-	uint64_t until = machine_time_ms() + 10 * 1000 + jitter;
-
 	od_route_lock(route);
-
-	route->auth_query_cache.valid_until_ms = machine_time_ms() + 1000;
 
 	if (rc == OK_RESPONSE) {
 		od_route_pswd_t *new = od_route_pswd_create(password.password);
 		od_free(password.password);
 		if (new != NULL) {
+			uint64_t jitter = 0;
+			uint64_t jitter_max =
+				instance->config.auth_query_cache_ttl_jitter_ms;
+			if (jitter_max != 0) {
+				jitter = ((uint64_t)machine_lrand48()) %
+					 jitter_max;
+			}
+
 			od_route_pswd_unref(route->auth_query_cache.password);
 			route->auth_query_cache.password = new;
-			route->auth_query_cache.valid_until_ms = until;
+			route->auth_query_cache.valid_until_ms =
+				machine_time_ms() +
+				instance->config.auth_query_cache_ttl_ms +
+				jitter;
+		} else {
+			/* out of memory, keep the old value and retry soon */
+			route->auth_query_cache.valid_until_ms =
+				machine_time_ms() +
+				instance->config.auth_query_cache_error_retry_ms;
 		}
+	} else if (instance->config.auth_query_cache_stale_on_error) {
+		/*
+		 * refresh failed, keep the stale value for now
+		 * and retry later
+		 */
+		route->auth_query_cache.valid_until_ms =
+			machine_time_ms() +
+			instance->config.auth_query_cache_error_retry_ms;
+	} else {
+		/*
+		 * refresh failed and stale values are not allowed:
+		 * drop the cached password, so clients will fail
+		 * to authenticate until a refresh succeeds
+		 */
+		od_route_pswd_unref(route->auth_query_cache.password);
+		route->auth_query_cache.password = NULL;
+
+		od_error(&instance->logger, "auth_query", NULL, NULL,
+			 "auth query failed, stale cached password is dropped");
 	}
 
 	route->auth_query_cache.refresh_in_progress = 0;
@@ -336,7 +368,9 @@ int od_auth_query(od_client_t *client, char *peer)
 
 		if (rc == 0) {
 			od_route_unlock(route);
-			mm_wait_flag_wait(route->auth_query_cache.ready, 500);
+			mm_wait_flag_wait(route->auth_query_cache.ready,
+					  (uint32_t)instance->config
+						  .auth_query_timeout_ms);
 			od_route_lock(route);
 		}
 

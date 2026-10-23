@@ -12,12 +12,12 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <sys/un.h>
-#include <sys/stat.h>
 #include <sys/file.h>
 #include <netinet/in.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
+#include <machinarium/file.h>
 #include <machinarium/socket.h>
 
 #include <status.h>
@@ -40,6 +40,7 @@
 #include <setproctitle.h>
 #include <worker_pool.h>
 #include <cfg_import.h>
+#include <autoconf.h>
 #include <tls.h>
 #include <memory.h>
 #include <od_error.h>
@@ -149,31 +150,43 @@ fail:
 static void od_system_unix_socket_release(od_system_server_t *server)
 {
 	if (server->unix_socket_owned) {
-		struct stat st;
-		if (lstat(server->unix_socket_path, &st) == 0) {
-			if (S_ISSOCK(st.st_mode) &&
-			    st.st_dev == server->unix_socket_dev &&
-			    st.st_ino == server->unix_socket_ino) {
-				if (unlink(server->unix_socket_path) == -1 &&
-				    errno != ENOENT) {
-					od_gerror(
-						"server", NULL, NULL,
-						"failed to remove unix socket %s: %s",
-						server->unix_socket_path,
-						strerror(errno));
-				}
+		/*
+		 * The path may be replaced between lstat() and unlink(),
+		 * yet only the socket we bound is removed: it is matched
+		 * by dev/ino captured at bind time, and unlink() does
+		 * not follow symlinks. Swapping the path requires write
+		 * access to the socket directory, which alone already
+		 * allows removing the socket, so the residual race grants
+		 * no additional privileges (Coverity TOCTOU is accepted).
+		 */
+		dev_t dev;
+		ino_t ino;
+		int rc =
+			mm_file_is_socket(server->unix_socket_path, &dev, &ino);
+		if (rc == -1) {
+			if (errno != ENOENT) {
+				od_gerror(
+					"server", NULL, NULL,
+					"failed to inspect unix socket %s: %s",
+					server->unix_socket_path,
+					strerror(errno));
 			}
-		} else if (errno != ENOENT) {
-			od_gerror("server", NULL, NULL,
-				  "failed to inspect unix socket %s: %s",
-				  server->unix_socket_path, strerror(errno));
+		} else if (rc == 1 && dev == server->unix_socket_dev &&
+			   ino == server->unix_socket_ino) {
+			if (mm_file_unlink(server->unix_socket_path) == -1 &&
+			    errno != ENOENT) {
+				od_gerror("server", NULL, NULL,
+					  "failed to remove unix socket %s: %s",
+					  server->unix_socket_path,
+					  strerror(errno));
+			}
 		}
 		server->unix_socket_owned = false;
 	}
 
 	/* Keep the lock file: unlinking it would allow independent locks. */
 	if (server->unix_socket_lock_fd != -1) {
-		close(server->unix_socket_lock_fd);
+		mm_file_close(server->unix_socket_lock_fd);
 		server->unix_socket_lock_fd = -1;
 	}
 	od_free(server->unix_socket_path);
@@ -194,34 +207,41 @@ static int od_system_unix_socket_prepare(od_system_server_t *server,
 	char lock_path[sizeof(addr->sun_path) + sizeof(".odyssey.lock")];
 	od_snprintf(lock_path, sizeof(lock_path), "%s.odyssey.lock",
 		    addr->sun_path);
-	server->unix_socket_lock_fd = open(
-		lock_path, O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0600);
+	server->unix_socket_lock_fd =
+		mm_file_open(lock_path, O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
 	if (server->unix_socket_lock_fd == -1) {
 		return -1;
 	}
-	if (flock(server->unix_socket_lock_fd, LOCK_EX | LOCK_NB) == -1) {
+	if (mm_file_flock(server->unix_socket_lock_fd, LOCK_EX | LOCK_NB) ==
+	    -1) {
 		*lock_held = errno == EWOULDBLOCK || errno == EAGAIN;
 		return -1;
 	}
 
-	struct stat st;
-	if (fstat(server->unix_socket_lock_fd, &st) == -1) {
+	int rc = mm_file_is_regular(server->unix_socket_lock_fd);
+	if (rc == -1) {
 		return -1;
 	}
-	if (!S_ISREG(st.st_mode)) {
+	if (rc == 0) {
 		errno = EINVAL;
 		return -1;
 	}
-	if (lstat(addr->sun_path, &st) == -1) {
+
+	dev_t sock_dev;
+	ino_t sock_ino;
+	rc = mm_file_is_socket(addr->sun_path, &sock_dev, &sock_ino);
+	if (rc == -1) {
 		return errno == ENOENT ? 0 : -1;
 	}
-	if (!S_ISSOCK(st.st_mode)) {
+	if (rc == 0) {
 		errno = EEXIST;
 		return -1;
 	}
 
 #if !defined(__linux__)
 	/* BSD/macOS can return ECONNREFUSED for a live, overloaded listener. */
+	(void)sock_dev;
+	(void)sock_ino;
 	errno = EADDRINUSE;
 	return -1;
 #else
@@ -230,7 +250,7 @@ static int od_system_unix_socket_prepare(od_system_server_t *server,
 	if (fd == -1) {
 		return -1;
 	}
-	int rc = mm_socket_set_nonblock(fd, 1);
+	rc = mm_socket_set_nonblock(fd, 1);
 	if (rc == 0) {
 		rc = mm_socket_connect(fd, (struct sockaddr *)addr);
 	}
@@ -246,17 +266,25 @@ static int od_system_unix_socket_prepare(od_system_server_t *server,
 		return -1;
 	}
 
-	/* Do not remove a path replaced while checking the listener. */
-	struct stat current;
-	if (lstat(addr->sun_path, &current) == -1) {
+	/*
+	 * Do not remove a path replaced while checking the listener: the
+	 * dev/ino comparison against the probed socket narrows the residual
+	 * lstat-to-unlink race window. Swapping the path requires write
+	 * access to the socket directory, which alone already allows
+	 * removing it, so the race grants no additional privileges
+	 * (Coverity TOCTOU is accepted).
+	 */
+	dev_t current_dev;
+	ino_t current_ino;
+	rc = mm_file_is_socket(addr->sun_path, &current_dev, &current_ino);
+	if (rc == -1) {
 		return errno == ENOENT ? 0 : -1;
 	}
-	if (!S_ISSOCK(current.st_mode) || current.st_dev != st.st_dev ||
-	    current.st_ino != st.st_ino) {
+	if (rc == 0 || current_dev != sock_dev || current_ino != sock_ino) {
 		errno = EAGAIN;
 		return -1;
 	}
-	if (unlink(addr->sun_path) == -1 && errno != ENOENT) {
+	if (mm_file_unlink(addr->sun_path) == -1 && errno != ENOENT) {
 		return -1;
 	}
 	return 0;
@@ -616,21 +644,24 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 
 	/* chmod */
 	if (server->addr == NULL) {
-		struct stat st;
-		if (lstat(server->unix_socket_path, &st) == -1) {
+		dev_t dev;
+		ino_t ino;
+		int is_sock =
+			mm_file_is_socket(server->unix_socket_path, &dev, &ino);
+		if (is_sock == -1) {
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "failed to inspect bound unix socket '%s': %s",
 				 server->unix_socket_path, strerror(errno));
 			goto error;
 		}
-		if (!S_ISSOCK(st.st_mode)) {
+		if (is_sock == 0) {
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "bound unix socket '%s' was replaced",
 				 server->unix_socket_path);
 			goto error;
 		}
-		server->unix_socket_dev = st.st_dev;
-		server->unix_socket_ino = st.st_ino;
+		server->unix_socket_dev = dev;
+		server->unix_socket_ino = ino;
 		server->unix_socket_owned = true;
 
 		long mode;
@@ -640,7 +671,7 @@ static inline od_retcode_t od_system_server_start(od_system_t *system,
 			od_error(&instance->logger, "server", NULL, NULL,
 				 "incorrect unix_socket_mode");
 		} else {
-			rc = chmod(saddr_un.sun_path, mode);
+			rc = mm_file_chmod(saddr_un.sun_path, (mode_t)mode);
 			if (rc == -1) {
 				od_error(&instance->logger, "server", NULL,
 					 NULL, "chmod(%s, %ld) failed",
@@ -766,6 +797,71 @@ static inline int od_config_listen_host_cmp(char *host_listen,
 		return 1;
 	}
 	return strcmp(host_listen, host_server);
+}
+
+/* a new autoconf file must pass the checks RELOAD would run */
+static int od_system_alter_system_check(const char *autoconf_path, void *arg)
+{
+	od_global_t *global = arg;
+	od_instance_t *instance = global->instance;
+	return od_cfg_check(&instance->logger, instance->config_file,
+			    autoconf_path);
+}
+
+typedef struct {
+	od_global_t *global;
+	const char *key;
+	const char *line;
+	char *err;
+	size_t err_size;
+	int result;
+} od_system_alter_system_task_t;
+
+static void od_system_alter_system_task(void *arg)
+{
+	static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+	od_system_alter_system_task_t *task = arg;
+	od_instance_t *instance = task->global->instance;
+	/* Each command has its own machine, but shares the autoconf file. */
+	pthread_mutex_lock(&mutex);
+	task->result =
+		od_autoconf_update(instance->config_file, task->key, task->line,
+				   od_system_alter_system_check, task->global,
+				   task->err, task->err_size);
+	pthread_mutex_unlock(&mutex);
+}
+
+int od_system_alter_system(od_global_t *global, const char *key,
+			   const char *line, char *err, size_t err_size)
+{
+	od_system_alter_system_task_t task = {
+		.global = global,
+		.key = key,
+		.line = line,
+		.err = err,
+		.err_size = err_size,
+		.result = -1,
+	};
+
+	int64_t machine = machine_create("alter_system",
+					 od_system_alter_system_task, &task);
+	if (machine == -1) {
+		od_snprintf(err, (int)err_size,
+			    "could not start the change: %s",
+			    strerror(machine_errno()));
+		return -1;
+	}
+
+	/* the task writes into task, so it must finish before we return */
+	int rc = machine_wait_nb(machine);
+	if (rc != 0) {
+		od_snprintf(err, (int)err_size,
+			    "waiting for the change failed: %s",
+			    strerror(machine_errno()));
+		return -1;
+	}
+	return task.result;
 }
 
 void od_system_config_reload(od_system_t *system)
@@ -1064,7 +1160,9 @@ static inline void od_system(void *arg)
 		od_logger_shutdown(&instance->logger);
 		/* Other threads still exist: leave logger storage alive until exit. */
 		if (instance->logger.async) {
-			machine_wait(instance->logger.machine);
+			if (machine_wait(instance->logger.machine)) {
+				abort();
+			}
 		}
 		od_fatal(&instance->logger, "system", NULL, NULL,
 			 "failed to bind any listen address, errno=%d (%s)",

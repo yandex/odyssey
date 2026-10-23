@@ -141,6 +141,12 @@ typedef struct od_cfg_global {
 	od_cfg_u64_field_t group_checker_interval_ms;
 	od_cfg_int_field_t workers;
 
+	od_cfg_u64_field_t auth_query_cache_ttl_ms;
+	od_cfg_u64_field_t auth_query_cache_ttl_jitter_ms;
+	od_cfg_u64_field_t auth_query_cache_error_retry_ms;
+	od_cfg_bool_field_t auth_query_cache_stale_on_error;
+	od_cfg_u64_field_t auth_query_timeout_ms;
+
 } od_cfg_global_t;
 
 typedef struct od_cfg_listen_storage {
@@ -244,17 +250,11 @@ typedef struct od_cfg_shared_pool {
 } od_cfg_shared_pool_t;
 
 typedef struct od_cfg_soft_oom_drop {
-	od_cfg_seen_t seen;
-	od_cfg_location_t location;
-
 	od_cfg_string_field_t signal;
 	od_cfg_int_field_t max_rate;
 } od_cfg_soft_oom_drop_t;
 
 typedef struct od_cfg_soft_oom {
-	od_cfg_seen_t seen;
-	od_cfg_location_t location;
-
 	od_cfg_u64_field_t limit;
 	od_cfg_string_field_t process;
 	od_cfg_u64_field_t check_interval_ms;
@@ -274,7 +274,6 @@ typedef struct od_cfg_query_parsing_mode {
 } od_cfg_query_parsing_mode_field_t;
 
 typedef struct od_cfg_query_parsing {
-	od_cfg_seen_t seen;
 	od_cfg_query_parsing_mode_field_t mode;
 	od_cfg_u64_field_t mem_limit;
 	od_cfg_u64_field_t max_query_len;
@@ -381,6 +380,7 @@ struct od_cfg_route {
 	od_cfg_string_field_t auth_query_user;
 	od_cfg_bool_field_t password_passthrough;
 	od_cfg_string_field_t password;
+	od_cfg_string_field_t password_pgpass;
 	od_cfg_string_field_t role;
 	od_cfg_int_field_t client_max;
 	od_cfg_bool_field_t client_fwd_error;

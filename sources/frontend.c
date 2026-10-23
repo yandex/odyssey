@@ -1632,20 +1632,22 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 			break;
 		}
 
-		machine_msg_t *stream = machine_msg_create(0);
-		if (stream == NULL) {
+		od_tuple_table_slot_t *tts = od_tuple_table_slot_create();
+		if (tts == NULL) {
 			machine_msg_free(msg);
 			return OD_EOOM;
 		}
 
+		machine_msg_t *stream = tts->data_rows;
+
 		int rc;
 		if (type == KIWI_FE_QUERY) {
-			rc = od_console_query(client, stream,
+			rc = od_console_query(client, tts,
 					      machine_msg_data(msg),
 					      machine_msg_size(msg));
 			machine_msg_free(msg);
 			if (rc == -1) {
-				machine_msg_free(stream);
+				od_tuple_table_slot_free(tts);
 				return OD_EOOM;
 			}
 		} else {
@@ -1661,22 +1663,36 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 						 "unsupported request '%s'",
 						 kiwi_fe_type_to_string(type));
 			if (msg == NULL) {
-				machine_msg_free(stream);
+				od_tuple_table_slot_free(tts);
 				return OD_EOOM;
+			}
+		}
+
+		/* write row description first, if any */
+		if (machine_msg_size(tts->row_description) > 0) {
+			rc = od_write(&client->io, tts->row_description);
+			tts->row_description = NULL;
+			if (rc == -1) {
+				od_tuple_table_slot_free(tts);
+				return OD_ECLIENT_WRITE;
 			}
 		}
 
 		/* ready */
 		msg = kiwi_be_write_ready(stream, 'I');
 		if (msg == NULL) {
-			machine_msg_free(stream);
+			od_tuple_table_slot_free(tts);
 			return OD_EOOM;
 		}
 
 		rc = od_write(&client->io, stream);
+		tts->data_rows = NULL;
 		if (rc == -1) {
+			od_tuple_table_slot_free(tts);
 			return OD_ECLIENT_WRITE;
 		}
+
+		od_tuple_table_slot_free(tts);
 	}
 
 	return OD_OK;
@@ -3195,7 +3211,7 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 	if (od_frontend_status_is_err(status)) {
 		od_error_logger_store_err(l, status);
 
-		if (route->extra_logging_enabled &&
+		if (route != NULL && route->extra_logging_enabled &&
 		    !od_route_is_dynamic(route)) {
 			od_error_logger_store_err(route->err_logger, status);
 		}
@@ -3301,7 +3317,8 @@ static void od_frontend_cleanup(od_client_t *client, char *context,
 
 	case OD_ESERVER_CONNECT:
 		/* server attached to client and connection failed */
-		if (server->error_connect && route->rule->client_fwd_error) {
+		if (server->error_connect && route != NULL &&
+		    route->rule->client_fwd_error) {
 			/* forward server error to client */
 			od_frontend_error_fwd(client);
 		} else {
