@@ -2312,7 +2312,15 @@ static od_frontend_status_t client_read_header(od_client_t *client,
 {
 	while (od_readahead_unread(&client->io.readahead) <
 	       (int)sizeof(kiwi_header_t)) {
+		od_server_t *server = client->server;
+		od_wait_event_t wait_event = OD_WAIT_CLIENT_READ;
+		if (server != NULL && !od_server_synchronized(server)) {
+			wait_event = OD_WAIT_SERVER_READ;
+		}
+
+		od_wait_event_start(wait_event);
 		int rc = od_io_read_some(&client->io, 1000);
+		od_wait_event_end(wait_event);
 		if (rc != 0) {
 			int err = machine_errno();
 			if (err == ETIMEDOUT) {
@@ -2320,7 +2328,6 @@ static od_frontend_status_t client_read_header(od_client_t *client,
 			}
 			if (err == EAGAIN) {
 				/* interrupted by event on server io */
-				od_server_t *server = client->server;
 				od_assert(server != NULL);
 				int ev = od_io_last_event(&server->io);
 				if (ev & MM_R || ev & MM_ERR || ev & MM_CLOSE) {
