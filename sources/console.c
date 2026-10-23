@@ -34,6 +34,7 @@
 #include <autoconf.h>
 #include <log_sampling.h>
 #include <tuple_table_slot.h>
+#include <wait_event.h>
 
 static inline int od_console_show_stats_add(machine_msg_t *stream,
 					    char *database, int database_len,
@@ -205,7 +206,7 @@ static inline int od_console_show_help(machine_msg_t *stream)
 		"Console usage\n"
 		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS|HOST_UTILIZATION\n"
 		"\tSHOW LISTS|INSTANCE|ERRORS|ERRORS_PER_ROUTE|VERSION|VERSION_EXTENDED|LISTEN|STORAGES\n"
-		"\tSHOW CONFIG|RULES|IS_PAUSED|GLOBAL_PREPARED_STATEMENTS|TSA_CACHE\n"
+		"\tSHOW CONFIG|RULES|IS_PAUSED|GLOBAL_PREPARED_STATEMENTS|TSA_CACHE|WAIT_EVENTS\n"
 		"\tKILL_CLIENT <client_id>\n"
 		"\tRELOAD\n"
 		"\tGC\n"
@@ -1498,6 +1499,60 @@ static inline int od_console_show_prep_stmts(od_client_t *client,
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
 
+static inline int od_console_show_wait_events(od_tuple_table_slot_t *tts)
+{
+	machine_msg_t *desc = tts->row_description;
+	machine_msg_t *stream = tts->data_rows;
+	int offset;
+
+	od_assert(stream);
+	od_assert(desc);
+
+	if (kiwi_be_write_row_descriptionf(desc, "ssd", "wait_event_type",
+					   "wait_event", "count") == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	char data[64];
+	int data_len;
+
+	for (int event = OD_WAIT_NONE + 1; event < OD_WAIT_COUNT; event++) {
+		uint64_t count = atomic_load_explicit(
+			&od_wait_counters[event].counter, memory_order_relaxed);
+		if (count == 0) {
+			continue;
+		}
+
+		if (kiwi_be_write_data_row(stream, &offset) == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+
+		data_len = od_snprintf(
+			data, sizeof(data), "%s",
+			od_wait_class_name(od_wait_event_class(event)));
+		int rc = kiwi_be_write_data_row_add(stream, offset, data,
+						    data_len);
+		if (rc != OK_RESPONSE) {
+			return rc;
+		}
+
+		data_len = od_snprintf(data, sizeof(data), "%s",
+				       od_wait_event_name(event));
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc != OK_RESPONSE) {
+			return rc;
+		}
+
+		data_len = od_snprintf(data, sizeof(data), "%" PRIu64, count);
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc != OK_RESPONSE) {
+			return rc;
+		}
+	}
+
+	return kiwi_be_write_complete(stream, "SHOW", 5);
+}
+
 static inline int od_console_show_is_paused(od_client_t *client,
 					    od_tuple_table_slot_t *tts)
 {
@@ -2476,7 +2531,11 @@ typedef enum {
 	OD_SHOW_HOST_UTILIZATION,
 	OD_SHOW_RULES,
 	OD_SHOW_CONFIG,
+<<<<<<< HEAD
 	OD_SHOW_TSA_CACHE,
+=======
+	OD_SHOW_WAITS,
+>>>>>>> c8d7dc55 (Add simple wait events statistic infra)
 } od_show_target_id_t;
 
 static od_show_target_id_t od_console_show_target_lookup(const char *name)
@@ -2506,7 +2565,11 @@ static od_show_target_id_t od_console_show_target_lookup(const char *name)
 		{ "host_utilization", OD_SHOW_HOST_UTILIZATION },
 		{ "rules", OD_SHOW_RULES },
 		{ "config", OD_SHOW_CONFIG },
+<<<<<<< HEAD
 		{ "tsa_cache", OD_SHOW_TSA_CACHE },
+=======
+		{ "wait_events", OD_SHOW_WAITS },
+>>>>>>> c8d7dc55 (Add simple wait events statistic infra)
 	};
 
 	for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
@@ -2570,8 +2633,13 @@ static inline int od_console_show(od_client_t *client,
 		return od_console_show_rules(tts);
 	case OD_SHOW_CONFIG:
 		return od_console_show_config(client, tts, arg);
+<<<<<<< HEAD
 	case OD_SHOW_TSA_CACHE:
 		return od_console_show_tsa_cache(client, tts);
+=======
+	case OD_SHOW_WAITS:
+		return od_console_show_wait_events(tts);
+>>>>>>> c8d7dc55 (Add simple wait events statistic infra)
 	default:
 		od_frontend_errorf(client, tts->data_rows, KIWI_SYNTAX_ERROR,
 				   "unknown show target: %s", name);
