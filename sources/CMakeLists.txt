@@ -27,6 +27,9 @@ set(od_src
     machinarium/clock.c
     machinarium/socket.c
     machinarium/file.c
+    # plain file primitives per platform, chosen like the epoll/kqueue
+    # poll backends below; all current targets are POSIX
+    machinarium/file_posix.c
     machinarium/stat.c
     machinarium/context_stack.c
     machinarium/context.c
@@ -480,6 +483,7 @@ set(od_test_src
     tests/odyssey/test_duration_parse.c
     tests/odyssey/test_misc.c
     tests/odyssey/test_thread_pool.c
+    tests/odyssey/test_file_async.c
     tests/odyssey/test_linear_alloc.c
     tests/odyssey/test_scram.c
     tests/odyssey/test_sql_parser.c
