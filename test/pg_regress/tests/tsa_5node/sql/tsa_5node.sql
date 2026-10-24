@@ -28,6 +28,8 @@ SET odyssey.target_session_attrs TO 'any';
 SET odyssey.execute_on_host TO 'localhost:5432';
 SELECT pg_is_in_recovery();
 SET odyssey.execute_on_host TO DEFAULT;
+-- the watchdog-polled rw/ro classification is visible in the console
+\! psql 'host=localhost port=6432 user=postgres dbname=console' -c 'SHOW tsa_cache' 2>&1 | sed -E 's/[[:space:]]+[0-9]+$//'
 -- cut the replicas off: prefer-standby must fall back to the primary
 \! ${PGTEST_DIR}/sql/replicas.sh stop
 \! sleep 1
