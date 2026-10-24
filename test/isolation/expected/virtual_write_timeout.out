@@ -1,0 +1,21 @@
+Parsed test spec with 3 sessions
+
+starting permutation: wait_set stall_set release_set wait_error stall_error release_error
+step wait_set: SELECT pg_advisory_xact_lock(759103); <waiting ...>
+step stall_set: COPY (SELECT 'go') TO '@SIGNAL_DIR@/set.go';
+step wait_set: <... completed>
+pg_advisory_xact_lock
+---------------------
+                     
+(1 row)
+
+step release_set: COMMIT;
+step wait_error: SELECT pg_advisory_xact_lock(759104); <waiting ...>
+step stall_error: COPY (SELECT 'go') TO '@SIGNAL_DIR@/error.go';
+step wait_error: <... completed>
+pg_advisory_xact_lock
+---------------------
+                     
+(1 row)
+
+step release_error: COMMIT;

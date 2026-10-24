@@ -1,0 +1,21 @@
+include "/home/postgres/regress/conf/_base"
+
+storage "postgres_server" {
+	type "remote"
+	host "localhost:5432"
+}
+
+database "postgres" {
+	user "postgres" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 4
+		pool_timeout 0
+		pool_cancel yes
+		pool_rollback yes
+		client_fwd_error yes
+		client_show_id no
+	}
+}
