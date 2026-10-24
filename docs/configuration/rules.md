@@ -152,6 +152,25 @@ auth_query_db ""
 auth_query_user ""
 ```
 
+The query must return at most one row with two columns: username and password.
+No rows or a NULL password deny authentication. A successful refresh with either
+result replaces any previously cached password. SQL and connection errors keep
+the previous result unless
+[auth_query_cache_stale_on_error](global.md#auth_query_cache_stale_on_error)
+is disabled.
+
+Results are cached separately for different frontend users and for queries
+whose `%h` values differ. Each route caches up to 64 results. Waiting for cache
+capacity and a usable result shares the
+[auth_query_timeout](global.md#auth_query_timeout) budget; authentication fails
+if no result becomes available.
+
+Cached results are refreshed on a later login after
+[auth_query_cache_ttl](global.md#auth_query_cache_ttl) plus up to
+[auth_query_cache_ttl_jitter](global.md#auth_query_cache_ttl_jitter), or after
+[auth_query_cache_error_retry](global.md#auth_query_cache_error_retry) if the
+previous refresh failed. The cached result is used while the refresh runs.
+
 Disabled by default.
 
 ---
