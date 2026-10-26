@@ -365,8 +365,7 @@ static inline uint64_t od_route_pools_version(od_route_t *route)
 }
 
 int od_route_wait(od_route_t *route, od_client_t *client,
-		  const od_address_t *address, uint64_t version,
-		  uint32_t timeout_ms);
+		  const od_address_t *address, uint32_t timeout_ms);
 
 void od_route_signal_locked(od_route_t *route, od_server_t *server);
 

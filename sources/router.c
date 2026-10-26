@@ -1076,8 +1076,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	od_router_status_t status = OD_ROUTER_ERROR_TIMEDOUT;
 
 	while (now_ms < end_time_ms) {
-		uint64_t version = od_route_pools_version(route);
-
 		rc = od_router_try_attach(router, client, wait_for_idle,
 					  endpoint);
 		if (rc != OD_ROUTER_NEED_WAIT) {
@@ -1108,7 +1106,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				       notice_deadline - machine_time_ms());
 		}
 
-		od_route_wait(route, client, &endpoint->address, version,
+		od_route_wait(route, client, &endpoint->address,
 			      od_min(end_time_ms - now_ms, until_notice));
 		if (client->server != NULL) {
 			/* someone attached freed server directly to us */
