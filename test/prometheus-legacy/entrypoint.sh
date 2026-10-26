@@ -7,17 +7,15 @@ until pg_isready -h primary -p 5432 -U postgres -d postgres; do
   sleep 1
 done
 
-/odyssey/build/sources/odyssey /odyssey/test/prometheus-legacy/config.conf
-sleep 3
+trap 'ody-stop || exit 1' EXIT
+ODYSSEY_BIN=/odyssey/build/sources/odyssey ody-start /odyssey/test/prometheus-legacy/config.conf
 
 netstat -tulpan | grep ":7777" || {
   echo "Can't find prom port"
-  ody-stop
   exit 1
 }
 netstat -tulpan | grep ":6432" || {
   echo "Can't find odyssey port"
-  ody-stop
   exit 1
 }
 
@@ -26,14 +24,12 @@ do
 psql "host=localhost port=6432 dbname=postgres user=postgres" -A -t -c "select $i" || {
     echo "error: failed to successfully auth"
     cat /var/log/odyssey.log
-    ody-stop
     exit 1
 }
 done
 
 curl  -v http://localhost:7777/metrics | grep "TYPE" || {
   echo "Can't find odyssey metrics in prometheus format"
-  ody-stop
   exit 1
 }
 sleep 1
@@ -42,7 +38,6 @@ sleep 1
 
 curl  "http://prometheus:9090/api/v1/targets/metadata?job=odyssey" | jq | grep "odyssey" || {
   echo "Can't find odyssey metrics from prom"
-  ody-stop
   exit 1
 }
 

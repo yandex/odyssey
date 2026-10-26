@@ -21,6 +21,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     libsystemd-dev \
     libpthread-stubs0-dev libclang-rt-dev \
     bison flex \
+    procps \
     python3
 
 FROM common-builder AS pg-build
@@ -45,7 +46,8 @@ RUN CC=${odyssey_cc} make clean && make ${build_type}
 
 RUN cp /build_dir/build/sources/odyssey /usr/bin/odyssey
 COPY ./sources/machinarium/gdb/machinarium-gdb.py /gdb.py
-COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./test/bin/ody-start /usr/bin/ody-start
+COPY ./test/bin/ody-stop /usr/bin/ody-stop
 
 FROM odyssey-build AS runner
 
