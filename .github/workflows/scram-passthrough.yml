@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/scram-passthrough.yml"
       - "sources/**"
       - "test/**"
       - "CMakeLists.txt"
@@ -28,4 +30,8 @@ jobs:
       with:
         submodules: recursive
     - name: Odyssey scram_passthrough tests
-      run: make scram_passthrough_test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_CC=${{ matrix.cc }}
+      shell: bash
+      run: make scram_passthrough_test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_CC=${{ matrix.cc }} 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

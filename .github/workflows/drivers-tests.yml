@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/drivers-tests.yml"
       - "sources/**"
       - "test/**"
       - "CMakeLists.txt"
@@ -25,7 +27,11 @@ jobs:
     - name: docker buildx
       uses: docker/setup-buildx-action@v4
     - name: Odyssey JDBC compatibility tests
-      run: make jdbc_test
+      shell: bash
+      run: make jdbc_test 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs
   userver:
     name: userver
     runs-on: ubuntu-latest
@@ -36,4 +42,8 @@ jobs:
     - name: docker buildx
       uses: docker/setup-buildx-action@v4
     - name: Odyssey userver compatibility tests
-      run: make userver_test
+      shell: bash
+      run: make userver_test 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

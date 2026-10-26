@@ -1,0 +1,22 @@
+name: Test failure logs
+description: Collect console and file logs from the test job, including stopped containers.
+runs:
+  using: composite
+  steps:
+    - name: Collect container logs
+      shell: bash
+      continue-on-error: true
+      env:
+        LOG_COLLECTOR: ${{ github.action_path }}/collect.sh
+      run: bash "$LOG_COLLECTOR"
+    - name: Upload test logs
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: test-logs-${{ github.job }}-${{ strategy.job-index }}
+        path: |
+          test-run.log
+          test-reports/
+          build/CMakeFiles/CMakeConfigureLog.yaml
+          build/CMakeFiles/CMakeOutput.log
+          build/CMakeFiles/CMakeError.log

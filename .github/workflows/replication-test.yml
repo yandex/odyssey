@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/replication-test.yml"
       - "sources/**"
       - "test/**"
       - "CMakeLists.txt"
@@ -23,4 +25,8 @@ jobs:
       with:
         submodules: recursive
     - name: Replication protocol with Odyssey image test
-      run: make replication_test
+      shell: bash
+      run: make replication_test 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs
