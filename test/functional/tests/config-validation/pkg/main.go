@@ -15,7 +15,31 @@ const pathPrefix = "/tests/config-validation/configs"
 
 const configIsValid = "config is valid"
 
+// Invalid fixtures declare their expected diagnostic on the first line.
+func readExpectedError(pathToConfig string) (string, error) {
+	config, err := os.ReadFile(pathToConfig)
+	if err != nil {
+		return "", fmt.Errorf("read expected error: %w", err)
+	}
+	line, _, _ := strings.Cut(string(config), "\n")
+	expected, ok := strings.CutPrefix(line, "# expect-error:")
+	expected = strings.TrimSpace(expected)
+	if !ok || expected == "" {
+		return "", errors.New("first line must contain a non-empty '# expect-error:'")
+	}
+	return expected, nil
+}
+
 func makeTest(ctx context.Context, binary, pathToConfig string, isValidConfig bool) error {
+	var expectedError string
+	if !isValidConfig {
+		var err error
+		expectedError, err = readExpectedError(pathToConfig)
+		if err != nil {
+			return err
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -42,8 +66,8 @@ func makeTest(ctx context.Context, binary, pathToConfig string, isValidConfig bo
 	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
 		return fmt.Errorf("unexpected validation failure: %w\n%s", err, strOut)
 	}
-	if !strings.Contains(strOut, "error (") {
-		return fmt.Errorf("missing validation error message:\n%s", strOut)
+	if !strings.Contains(strOut, expectedError) {
+		return fmt.Errorf("expected validation error %q not found:\n%s", expectedError, strOut)
 	}
 
 	return nil

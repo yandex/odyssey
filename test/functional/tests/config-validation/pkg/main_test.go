@@ -18,6 +18,40 @@ func script(t *testing.T, body string) string {
 	return path
 }
 
+func fixture(t *testing.T, body string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.conf")
+	if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestReadExpectedError(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		body    string
+		want    string
+		wantErr bool
+	}{
+		{"expected error", "# expect-error: bad workers\nworkers 0\n", "bad workers", false},
+		{"whitespace", "# expect-error:  bad workers \t\n", "bad workers", false},
+		{"missing", "workers 0\n", "", true},
+		{"empty", "# expect-error: \n", "", true},
+		{"not first line", "# comment\n# expect-error: bad workers\n", "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := readExpectedError(fixture(t, tc.body))
+			if got != tc.want || (err != nil) != tc.wantErr {
+				t.Fatalf("readExpectedError = %q, %v; want %q, error = %v", got, err, tc.want, tc.wantErr)
+			}
+		})
+	}
+	if _, err := readExpectedError(filepath.Join(t.TempDir(), "missing.conf")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("readExpectedError = %v, want missing file", err)
+	}
+}
+
 func TestMakeTest(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
@@ -31,6 +65,8 @@ func TestMakeTest(t *testing.T) {
 		{"valid missing message", "exit 0", true, true},
 		{"valid message with failure", "echo 'config is valid'; exit 1", true, true},
 		{"invalid rejected", "echo 'error (config) bad workers'; exit 1", false, false},
+		{"invalid rejected stderr", "echo 'error (config) bad workers' >&2; exit 1", false, false},
+		{"invalid unrelated error", "echo 'error (config) no listen sections defined'; exit 1", false, true},
 		{"invalid accepted", "echo 'config is valid'", false, true},
 		{"invalid exit zero", "echo 'error (config) bad workers'", false, true},
 		{"invalid unexpected exit", "echo 'error (config) bad workers'; exit 2", false, true},
@@ -39,7 +75,8 @@ func TestMakeTest(t *testing.T) {
 		{"invalid crash", "kill -TERM $$", false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := makeTest(context.Background(), script(t, tc.body), "config.conf", tc.valid)
+			config := fixture(t, "# expect-error: bad workers\nworkers 0\n")
+			err := makeTest(context.Background(), script(t, tc.body), config, tc.valid)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("makeTest error = %v, want error = %v", err, tc.wantErr)
 			}
@@ -47,9 +84,17 @@ func TestMakeTest(t *testing.T) {
 	}
 }
 
+func TestMakeTestMissingExpectedError(t *testing.T) {
+	err := makeTest(context.Background(), script(t, "echo 'error (config) bad workers'; exit 1"), fixture(t, "workers 0\n"), false)
+	if err == nil {
+		t.Fatal("invalid config without an expected error returned success")
+	}
+}
+
 func TestMakeTestStartFailure(t *testing.T) {
+	config := fixture(t, "# expect-error: bad workers\nworkers 0\n")
 	for _, valid := range []bool{true, false} {
-		if err := makeTest(context.Background(), filepath.Join(t.TempDir(), "missing"), "config.conf", valid); err == nil {
+		if err := makeTest(context.Background(), filepath.Join(t.TempDir(), "missing"), config, valid); err == nil {
 			t.Fatalf("missing executable accepted, valid = %v", valid)
 		}
 	}
@@ -58,7 +103,8 @@ func TestMakeTestStartFailure(t *testing.T) {
 func TestMakeTestTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	err := makeTest(ctx, script(t, "exec sleep 30"), "config.conf", false)
+	config := fixture(t, "# expect-error: bad workers\nworkers 0\n")
+	err := makeTest(ctx, script(t, "exec sleep 30"), config, false)
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("makeTest error = %v, want deadline exceeded", err)
 	}
@@ -115,11 +161,12 @@ func TestRunTestsExitStatus(t *testing.T) {
 		{"success", "", 0},
 		{"valid rejected", `case "$1" in */workers/valid/odyssey-test1.conf) echo 'error (config) bad workers'; exit 1 ;; esac`, 1},
 		{"invalid accepted", `case "$1" in */workers/invalid/odyssey-test1.conf) echo 'config is valid'; exit 0 ;; esac`, 1},
+		{"invalid unrelated error", `case "$1" in */listen_empty/invalid/odyssey-test1.conf) echo 'error (config) bad workers'; exit 1 ;; esac`, 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			binary := script(t, tc.prefix+`
 case "$1" in
-    */invalid/*) echo 'error (config) invalid config'; exit 1 ;;
+    */invalid/*) sed -n '1s/^# expect-error:[[:space:]]*/error (config) /p' "$1"; exit 1 ;;
     *) echo 'config is valid' ;;
 esac`)
 			if status := runTests(binary, filepath.Join("..", "configs")); status != tc.want {
