@@ -117,7 +117,7 @@ NOTICE:  select host tcp://localhost:5432
 
 SET odyssey.execute_on_host TO DEFAULT;
 NOTICE:  processed virtually by odyssey
--- the watchdog-polled rw/ro classification is visible in the console
+-- the preceding TSA checks populate the endpoint cache shown by the console
 \! psql 'host=localhost port=6432 user=postgres dbname=console' -c 'SHOW tsa_cache' 2>&1 | sed -E 's/[[:space:]]+[0-9]+$//'
      storage     |   host    | port | alive |   state    | repl_lag_sec | last_update_ms 
 -----------------+-----------+------+-------+------------+--------------+----------------
