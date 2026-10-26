@@ -57,6 +57,7 @@ static inline int od_backend_terminate(od_server_t *server)
 static void od_backend_disconnect(od_server_t *server, int graceful)
 {
 	od_assert(server != NULL);
+	atomic_store(&server->backend_pid, 0);
 	if (!od_backend_not_connected(server)) {
 		if (graceful && mm_io_connected(server->io.io)) {
 			od_backend_terminate(server);
@@ -461,6 +462,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 					"failed to parse BackendKeyData message");
 				return -1;
 			}
+			atomic_store(&server->backend_pid, server->key.key_pid);
 			break;
 		case KIWI_BE_PARAMETER_STATUS: {
 			char *name;

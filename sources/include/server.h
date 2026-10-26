@@ -53,6 +53,8 @@ struct od_server {
 	int idle_time;
 
 	kiwi_key_t key;
+	/* Published at startup for concurrent isolation-probe PID snapshots. */
+	atomic_uint backend_pid;
 	kiwi_key_t key_client;
 	kiwi_vars_t vars;
 
@@ -114,6 +116,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	od_scram_state_init(&server->scram_state);
 
 	kiwi_key_init(&server->key);
+	atomic_init(&server->backend_pid, 0);
 	kiwi_key_init(&server->key_client);
 	kiwi_vars_init(&server->vars);
 

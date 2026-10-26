@@ -18,6 +18,7 @@
 #include <server.h>
 #include <pstmt.h>
 #include <query.h>
+#include <isolation.h>
 
 /* XXX: randomize seed ? */
 static const uint64_t hash_seed = 0;
@@ -786,6 +787,10 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 		od_query_parse_fill_ctx(value->desc.data,
 					strlen(value->desc.data), arena,
 					&value->query_ctx, parsing);
+		if (parsing->mode != OD_CONFIG_QUERY_PARSING_MODE_DISABLED &&
+		    strlen(value->desc.data) <= parsing->max_query_len) {
+			od_isolation_probe_parse(value, arena);
+		}
 	} else {
 		/* the key already exists and has a copy of desc.data, do nothing */
 		value = *slot;

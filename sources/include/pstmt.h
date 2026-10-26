@@ -66,6 +66,10 @@ struct od_pstmt {
 	 */
 	od_query_ctx_t query_ctx;
 
+	/* SQL string literal containing the isolation probe's virtual PID array. */
+	uint32_t isolation_pids_offset;
+	uint32_t isolation_pids_len;
+
 	/*
 	 * holded by:
 	 * - client pstmts, portals

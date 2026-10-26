@@ -16,6 +16,7 @@
 #include <misc.h>
 #include <util.h>
 #include <worker.h>
+#include <isolation.h>
 
 /* max plan entries sent without a heap-allocated iovec array */
 #define OD_XPLAN_IOVEC_INLINE_MAX 32
@@ -438,6 +439,7 @@ xplan_append_parse_shadow(od_xplan_t *xp, od_pstmt_t *pstmt,
 
 	int rc = xplan_append(xp, &e);
 	if (rc != 0) {
+		plan_entry_destroy(&e);
 		return OD_EOOM;
 	}
 
@@ -513,6 +515,7 @@ xplan_append_fwd_portal(od_xplan_t *xp, machine_msg_t *original,
 
 	int rc = xplan_append(xp, &e);
 	if (rc != 0) {
+		plan_entry_destroy(&e);
 		return OD_EOOM;
 	}
 
@@ -975,15 +978,35 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
 
+	od_pstmt_t *rewritten_pstmt = NULL;
+	machine_msg_t *bmsg = NULL;
+	od_frontend_status_t st;
+	if (pstmt->isolation_pids_len != 0) {
+		st = od_isolation_probe_bind(client, pstmt, msg,
+					     &rewritten_pstmt, &bmsg);
+		if (st != OD_OK) {
+			return st;
+		}
+		if (rewritten_pstmt != NULL) {
+			pstmt = rewritten_pstmt;
+		}
+	}
+
 	/* predeploy will create ref to pstmt if needed */
-	od_frontend_status_t st = plan_predeploy_pstmt(xp, server, msg, pstmt);
+	st = plan_predeploy_pstmt(xp, server, msg, pstmt);
 	if (st != OD_OK) {
+		machine_msg_free_safe(bmsg);
+		if (rewritten_pstmt != NULL) {
+			od_pstmt_unref(rewritten_pstmt);
+		}
 		return st;
 	}
 
-	machine_msg_t *bmsg =
-		rewrite_bind_msg(data, size, pstmt_start_offset, pstmt_name_len,
-				 pstmt->name, strlen(pstmt->name) + 1);
+	if (bmsg == NULL) {
+		bmsg = rewrite_bind_msg(data, size, pstmt_start_offset,
+					pstmt_name_len, pstmt->name,
+					strlen(pstmt->name) + 1);
+	}
 	if (bmsg == NULL) {
 		return OD_EOOM;
 	}
@@ -993,7 +1016,11 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 	 *
 	 * the ref on pstmt created on plan entry
 	 */
-	return xplan_append_fwd_portal(xp, msg, bmsg, portal_name, pstmt);
+	st = xplan_append_fwd_portal(xp, msg, bmsg, portal_name, pstmt);
+	if (rewritten_pstmt != NULL) {
+		od_pstmt_unref(rewritten_pstmt);
+	}
+	return st;
 }
 
 static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
