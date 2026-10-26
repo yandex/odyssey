@@ -116,3 +116,5 @@ do_test tsa 6432 postgres
 do_test tsa_5node 6432 postgres
 
 do_test az_aware 6432 postgres
+
+do_test tsa_promote 6432 postgres
