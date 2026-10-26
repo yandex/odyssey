@@ -216,17 +216,26 @@ int mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 
 	uint64_t count = atomic_load(&wait_list->sleepy_count);
 
+	mm_spinlock_unlock(&wait_list->lock);
+
+	if (count == 0) {
+		return 0;
+	}
+
 	int *event_mgr_fds = mm_malloc(sizeof(int) * count);
 	if (event_mgr_fds == NULL) {
 		abort();
 	}
 
-	if (count > 0) {
-		signaled = 1;
+	mm_spinlock_lock(&wait_list->lock);
+
+	uint64_t signaled_count = atomic_load(&wait_list->sleepy_count);
+	if (signaled_count > count) {
+		signaled_count = count;
 	}
 
 	mm_sleepy_t *sleepy;
-	for (uint64_t i = 0; i < count; ++i) {
+	for (uint64_t i = 0; i < signaled_count; ++i) {
 		sleepy = mm_list_peek(wait_list->sleepies, mm_sleepy_t);
 
 		release_sleepy(wait_list, sleepy);
@@ -234,9 +243,13 @@ int mm_wait_list_notify_all(mm_wait_list_t *wait_list)
 		event_mgr_fds[i] = wakeup_event_from_sleepy(sleepy);
 	}
 
+	if (signaled_count > 0) {
+		signaled = 1;
+	}
+
 	mm_spinlock_unlock(&wait_list->lock);
 
-	for (uint64_t i = 0; i < count; ++i) {
+	for (uint64_t i = 0; i < signaled_count; ++i) {
 		if (event_mgr_fds[i] > 0) {
 			mm_eventmgr_wakeup(event_mgr_fds[i]);
 		}

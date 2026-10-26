@@ -123,24 +123,49 @@ od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
 					     od_rules_t *rules)
 {
 	od_list_t *i;
+	size_t count = 0;
+	od_list_foreach (&rules->storages, i) {
+		count++;
+	}
+
+	od_rule_storage_t **storages = NULL;
+	if (count > 0) {
+		storages = od_malloc(sizeof(od_rule_storage_t *) * count);
+		if (storages == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	size_t to_start = 0;
+
+	od_rules_lock(rules);
 	od_list_foreach (&rules->storages, i) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 		if (storage->watchdog && storage->watchdog_coro_id == -1) {
-			int64_t coroutine_id;
 			/* the ref is held by watchdog */
 			od_rules_storage_ref(storage);
-			coroutine_id = machine_coroutine_create(
-				od_storage_watchdog_watch, storage->watchdog);
-			if (coroutine_id == INVALID_COROUTINE_ID) {
-				od_rules_storage_unref(storage);
-				od_error(logger, "system", NULL, NULL,
-					 "failed to start watchdog coroutine");
-				return NOT_OK_RESPONSE;
-			}
-			storage->watchdog_coro_id = coroutine_id;
+			storages[to_start++] = storage;
 		}
 	}
+	od_rules_unlock(rules);
+
+	for (size_t n = 0; n < to_start; ++n) {
+		od_rule_storage_t *storage = storages[n];
+		int64_t coroutine_id;
+		coroutine_id = machine_coroutine_create(
+			od_storage_watchdog_watch, storage->watchdog);
+		if (coroutine_id == INVALID_COROUTINE_ID) {
+			od_rules_storage_unref(storage);
+			od_error(logger, "system", NULL, NULL,
+				 "failed to start watchdog coroutine");
+			od_free(storages);
+			return NOT_OK_RESPONSE;
+		}
+		storage->watchdog_coro_id = coroutine_id;
+	}
+
+	od_free(storages);
 	return OK_RESPONSE;
 }
 
@@ -494,26 +519,47 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 					  od_rules_t *rules)
 {
 	od_list_t *i;
+	size_t count = 0;
+	od_list_foreach (&rules->rules, i) {
+		count++;
+	}
+
+	od_rule_t **group_rules = NULL;
+	if (count > 0) {
+		group_rules = od_malloc(sizeof(od_rule_t *) * count);
+		if (group_rules == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	size_t to_start = 0;
+
+	od_rules_lock(rules);
 	od_list_foreach (&rules->rules, i) {
 		od_rule_t *rule;
 		rule = od_container_of(i, od_rule_t, link);
 		if (rule->group && !rule->obsolete && !rule->group->online) {
 			/* group checkers holds the ref - it will do unref on exit */
 			od_rules_ref(rule);
+			group_rules[to_start++] = rule;
+		}
+	}
+	od_rules_unlock(rules);
 
-			rule->group_checker_machine_id =
-				machine_coroutine_create(do_group_check, rule);
-			if (rule->group_checker_machine_id ==
-			    INVALID_COROUTINE_ID) {
-				od_rules_unref(rule);
-				od_error(
-					logger, "system", NULL, NULL,
-					"failed to start group_checker coroutine");
-				return NOT_OK_RESPONSE;
-			}
+	for (size_t n = 0; n < to_start; ++n) {
+		od_rule_t *rule = group_rules[n];
+		rule->group_checker_machine_id =
+			machine_coroutine_create(do_group_check, rule);
+		if (rule->group_checker_machine_id == INVALID_COROUTINE_ID) {
+			od_rules_unref(rule);
+			od_error(logger, "system", NULL, NULL,
+				 "failed to start group_checker coroutine");
+			od_free(group_rules);
+			return NOT_OK_RESPONSE;
 		}
 	}
 
+	od_free(group_rules);
 	return OK_RESPONSE;
 }
 

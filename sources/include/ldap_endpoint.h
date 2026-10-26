@@ -8,7 +8,6 @@
 #include <list.h>
 
 typedef struct {
-	mm_mutex_t lock;
 	char *name;
 
 	char *ldapserver;

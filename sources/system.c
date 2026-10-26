@@ -1043,9 +1043,7 @@ void od_system_config_reload(od_system_t *system)
 
 	/* start watchdogs and group checkers for new/changed storages
 	 * and rules — directly in system thread scheduler */
-	od_rules_lock(&router->rules);
 	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
-	od_rules_unlock(&router->rules);
 
 	od_router_lock(router);
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);

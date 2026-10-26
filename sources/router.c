@@ -134,6 +134,32 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	updates = od_rules_merge(&router->rules, rules, &added, &deleted,
 				 &to_drop, &not_changed);
 
+	if (updates != 0) {
+		void *argv[] = { &to_drop };
+		od_route_pool_foreach(&router->route_pool,
+				      od_drop_obsolete_rule_connections_cb,
+				      argv);
+	}
+
+	/* reloadcallback */
+	od_extension_t *extensions = router->global->extensions;
+	od_module_t *modules = extensions->modules;
+
+	od_list_foreach (&modules->link, i) {
+		od_module_t *module;
+		module = od_container_of(i, od_module_t, link);
+		if (module->od_config_reload_cb == NULL) {
+			continue;
+		}
+
+		if (module->od_config_reload_cb(&added, &deleted) ==
+		    OD_MODULE_CB_FAIL_RETCODE) {
+			break;
+		}
+	}
+
+	od_router_unlock(router);
+
 	od_list_foreach_safe (&not_changed, i, j) {
 		od_rule_key_t *rk;
 		rk = od_container_of(i, od_rule_key_t, link);
@@ -144,9 +170,6 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 
 		od_rule_key_free(rk);
 	}
-
-	od_extension_t *extensions = router->global->extensions;
-	od_module_t *modules = extensions->modules;
 
 	od_list_foreach (&added, i) {
 		od_rule_key_t *rk;
@@ -164,27 +187,6 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		       "rule %s %s %s %s was deleted", rk->db_name,
 		       rk->usr_name, rk->address_range.string_value,
 		       od_rule_conn_type_to_str(rk->conn_type));
-	}
-
-	if (updates != 0) {
-		void *argv[] = { &to_drop };
-		od_route_pool_foreach(&router->route_pool,
-				      od_drop_obsolete_rule_connections_cb,
-				      argv);
-	}
-
-	/* reloadcallback */
-	od_list_foreach (&modules->link, i) {
-		od_module_t *module;
-		module = od_container_of(i, od_module_t, link);
-		if (module->od_config_reload_cb == NULL) {
-			continue;
-		}
-
-		if (module->od_config_reload_cb(&added, &deleted) ==
-		    OD_MODULE_CB_FAIL_RETCODE) {
-			break;
-		}
 	}
 
 	od_list_foreach_safe (&added, i, j) {
@@ -210,7 +212,6 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 		od_rule_key_free(rk);
 	}
 
-	od_router_unlock(router);
 	return updates;
 }
 
@@ -427,10 +428,14 @@ static inline int od_router_create_idle_server(od_route_t *route,
 	/* the pool still need in that connection */
 	od_server_set_pool_state(server, OD_SERVER_IDLE);
 
+	od_route_unlock(route);
+
 	od_logger_t *logger = &server->global->instance->logger;
 	od_log(logger, "idle-preallocate", NULL, server,
 	       "idle server connection preallocated for %s.%s",
 	       route->id.database, route->id.user);
+
+	od_route_lock(route);
 
 	return OK_RESPONSE;
 }
@@ -722,29 +727,36 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		/* need to unlock - will do i/o operation */
 		od_router_unlock(router);
 		int rc = od_auth_ldap_resolve_storage_credentials(client, rule);
+
+		char *storage_user = NULL;
+		char *storage_password = NULL;
+		if (rc == OK_RESPONSE) {
+			id.user = client->ldap_storage_username;
+			id.user_len = client->ldap_storage_username_len + 1;
+			storage_user = od_strdup(client->ldap_storage_username);
+			storage_password =
+				od_strdup(client->ldap_storage_password);
+			od_debug(&instance->logger, "routing", client, NULL,
+				 "route->id.user changed to %s", id.user);
+		}
+
 		od_router_lock(router);
 
 		od_rules_unref(rule);
 
 		if (rc == OK_RESPONSE) {
-			id.user = client->ldap_storage_username;
-			id.user_len = client->ldap_storage_username_len + 1;
 			if (rule->storage_user != NULL) {
 				od_free(rule->storage_user);
 			}
-			rule->storage_user =
-				od_strdup(client->ldap_storage_username);
+			rule->storage_user = storage_user;
 			rule->storage_user_len =
 				client->ldap_storage_username_len;
 			if (rule->storage_password != NULL) {
 				od_free(rule->storage_password);
 			}
-			rule->storage_password =
-				od_strdup(client->ldap_storage_password);
+			rule->storage_password = storage_password;
 			rule->storage_password_len =
 				client->ldap_storage_password_len;
-			od_debug(&instance->logger, "routing", client, NULL,
-				 "route->id.user changed to %s", id.user);
 		} else {
 			/* mask the possible insufficient access error */
 			od_router_unlock(router);

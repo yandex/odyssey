@@ -222,6 +222,8 @@ static void pswd_update_task(void *a)
 
 	od_route_lock(route);
 
+	int drop_cached_password = 0;
+
 	if (rc == OK_RESPONSE) {
 		od_route_pswd_t *new = od_route_pswd_create(password.password);
 		od_free(password.password);
@@ -263,15 +265,19 @@ static void pswd_update_task(void *a)
 		od_route_pswd_unref(route->auth_query_cache.password);
 		route->auth_query_cache.password = NULL;
 
-		od_error(&instance->logger, "auth_query", NULL, NULL,
-			 "auth query failed, stale cached password is dropped");
+		drop_cached_password = 1;
 	}
 
 	route->auth_query_cache.refresh_in_progress = 0;
 
-	mm_wait_flag_set(route->auth_query_cache.ready);
-
 	od_route_unlock(route);
+
+	if (drop_cached_password) {
+		od_error(&instance->logger, "auth_query", NULL, NULL,
+			 "auth query failed, stale cached password is dropped");
+	}
+
+	mm_wait_flag_set(route->auth_query_cache.ready);
 
 	od_rules_unref(rule);
 	od_free(arg);
@@ -376,10 +382,10 @@ int od_auth_query(od_client_t *client, char *peer)
 
 		cached = od_route_pswd_ref(route->auth_query_cache.password);
 		if (cached == NULL) {
+			od_route_unlock(route);
 			od_error(
 				&instance->logger, "auth_query", client, NULL,
 				"timeout on wait for password to become available or other error");
-			od_route_unlock(route);
 			return -1;
 		}
 	}

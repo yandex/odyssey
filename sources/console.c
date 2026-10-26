@@ -597,12 +597,27 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 	td_histogram_t *queries_hgram = NULL;
 	td_histogram_t *freeze_hgram = NULL;
 	td_histogram_t *client_lifetime_hgram = NULL;
+	int locked = 0;
 	msg = kiwi_be_write_data_row(stream, &offset);
 	if (msg == NULL) {
 		return NOT_OK_RESPONSE;
 	}
 
+	if (*extended) {
+		transactions_hgram = td_new(QUANTILES_COMPRESSION);
+		queries_hgram = td_new(QUANTILES_COMPRESSION);
+		client_lifetime_hgram = td_new(QUANTILES_COMPRESSION);
+		freeze_hgram = td_new(QUANTILES_COMPRESSION);
+		if (transactions_hgram == NULL || queries_hgram == NULL ||
+		    client_lifetime_hgram == NULL || freeze_hgram == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	int enable_quantiles = 0;
+
 	od_route_lock(route);
+	locked = 1;
 	int rc;
 	rc = kiwi_be_write_data_row_add(stream, offset, route->id.database,
 					route->id.database_len - 1);
@@ -740,16 +755,14 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 			goto error;
 		}
 
-		transactions_hgram = td_new(QUANTILES_COMPRESSION);
-		queries_hgram = td_new(QUANTILES_COMPRESSION);
-		client_lifetime_hgram = td_new(QUANTILES_COMPRESSION);
-		freeze_hgram = td_new(QUANTILES_COMPRESSION);
-		if (transactions_hgram == NULL || queries_hgram == NULL ||
-		    client_lifetime_hgram == NULL || freeze_hgram == NULL) {
-			rc = NOT_OK_RESPONSE;
-			goto error;
-		}
-		if (route->stats.enable_quantiles) {
+		enable_quantiles = route->stats.enable_quantiles;
+	}
+
+	od_route_unlock(route);
+	locked = 0;
+
+	if (*extended) {
+		if (enable_quantiles) {
 			for (size_t i = 0; i < QUANTILES_WINDOW; ++i) {
 				td_copy(freeze_hgram,
 					route->stats.transaction_hgram[i]);
@@ -766,6 +779,7 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 			td_merge(common_client_lifetime_hgram,
 				 client_lifetime_hgram);
 		}
+
 		rc = od_console_show_quantiles(stream, offset, *quantiles_count,
 					       quantiles, transactions_hgram,
 					       queries_hgram,
@@ -774,18 +788,20 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 			goto error;
 		}
 	}
+
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
 	td_safe_free(freeze_hgram);
 	td_safe_free(client_lifetime_hgram);
-	od_route_unlock(route);
 	return 0;
 error:
+	if (locked) {
+		od_route_unlock(route);
+	}
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
 	td_safe_free(freeze_hgram);
 	td_safe_free(client_lifetime_hgram);
-	od_route_unlock(route);
 	return NOT_OK_RESPONSE;
 }
 
