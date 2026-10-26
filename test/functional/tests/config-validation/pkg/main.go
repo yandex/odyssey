@@ -4,34 +4,52 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 const pathPrefix = "/tests/config-validation/configs"
 
 const configIsValid = "config is valid"
-const configWithInvalidValuePass = "config with invalid value pass"
 
-func makeTest(pathToConfig string, isValidConfig bool) error {
-	ctx := context.TODO()
+func makeTest(ctx context.Context, binary, pathToConfig string, isValidConfig bool) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
-	out, _ := exec.CommandContext(ctx, "/usr/bin/odyssey", pathToConfig, "--test").Output()
+	out, err := exec.CommandContext(ctx, binary, pathToConfig, "--test").CombinedOutput()
 	strOut := string(out)
-
-	if isValidConfig && !strings.Contains(strOut, configIsValid) {
-		return errors.New(strOut)
+	if ctx.Err() != nil {
+		return fmt.Errorf("validation did not finish: %w\n%s", ctx.Err(), strOut)
 	}
 
-	if !isValidConfig && strings.Contains(strOut, configIsValid) {
-		return errors.New(configWithInvalidValuePass)
+	if isValidConfig {
+		if err != nil {
+			return fmt.Errorf("valid config rejected: %w\n%s", err, strOut)
+		}
+		if !strings.Contains(strOut, configIsValid) {
+			return fmt.Errorf("missing validation success message:\n%s", strOut)
+		}
+		return nil
+	}
+
+	if err == nil || strings.Contains(strOut, configIsValid) {
+		return fmt.Errorf("invalid config accepted:\n%s", strOut)
+	}
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+		return fmt.Errorf("unexpected validation failure: %w\n%s", err, strOut)
+	}
+	if !strings.Contains(strOut, "error (") {
+		return fmt.Errorf("missing validation error message:\n%s", strOut)
 	}
 
 	return nil
 }
 
-func makeTests(field string, isValid bool) {
+func makeTests(binary, configsRoot, field string, isValid bool) (int, int) {
 	var group string
 	if isValid {
 		group = "valid"
@@ -39,20 +57,37 @@ func makeTests(field string, isValid bool) {
 		group = "invalid"
 	}
 
-	pathToDir := pathPrefix + "/" + field + "/" + group
-	configs, _ := ioutil.ReadDir(pathToDir)
+	pathToDir := filepath.Join(configsRoot, field, group)
+	configs, err := os.ReadDir(pathToDir)
+	if err != nil {
+		fmt.Printf("%s (ERROR): %s\n", pathToDir, err)
+		return 0, 1
+	}
+	if len(configs) == 0 {
+		fmt.Printf("%s (ERROR): no configs found\n", pathToDir)
+		return 0, 1
+	}
 
-	for ind, config := range configs {
-		pathToConfig := pathToDir + "/" + config.Name()
-		if err := makeTest(pathToConfig, isValid); err != nil {
-			fmt.Printf("%s_test_%s_%d (ERROR): %s\n", field, group, ind, err)
+	total, failed := 0, 0
+	for _, config := range configs {
+		pathToConfig := filepath.Join(pathToDir, config.Name())
+		if config.IsDir() {
+			fmt.Printf("%s (ERROR): expected a config file, got a directory\n", pathToConfig)
+			failed++
+			continue
+		}
+		total++
+		if err := makeTest(context.Background(), binary, pathToConfig, isValid); err != nil {
+			fmt.Printf("%s (ERROR): %s\n", pathToConfig, err)
+			failed++
 		} else {
-			fmt.Printf("%s_test_%s_%d: Ok\n", field, group, ind)
+			fmt.Printf("%s: Ok\n", pathToConfig)
 		}
 	}
+	return total, failed
 }
 
-func runTests() {
+func runTests(binary, configsRoot string) int {
 	tests := []string{
 		"workers",
 		"resolvers",
@@ -76,12 +111,21 @@ func runTests() {
 		"duration",
 	}
 
-	for _, test := range tests {
-		makeTests(test, true)
-		makeTests(test, false)
+	total, failed := 0, 0
+	for _, field := range tests {
+		for _, isValid := range []bool{true, false} {
+			count, failures := makeTests(binary, configsRoot, field, isValid)
+			total += count
+			failed += failures
+		}
 	}
+	fmt.Printf("config-validation: %d configs checked, %d errors\n", total, failed)
+	if total == 0 || failed != 0 {
+		return 1
+	}
+	return 0
 }
 
 func main() {
-	runTests()
+	os.Exit(runTests("/usr/bin/odyssey", pathPrefix))
 }
