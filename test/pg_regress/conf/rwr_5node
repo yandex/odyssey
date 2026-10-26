@@ -1,6 +1,8 @@
 include "/home/postgres/regress/conf/_base"
 
 log_config no
+# Keep public before pg_catalog for the capture-query guard in this test.
+smart_search_path_enquoting yes
 
 # 1 primary (localhost:5432) and 4 replicas (localhost:5433..5436)
 storage "postgres_server" {

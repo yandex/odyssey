@@ -81,6 +81,8 @@ struct od_server {
 
 	/* number of ErrorResponse messages received */
 	uint64_t error_responses;
+	/* Valid ttt.last_write_lsn received for the current simple query. */
+	bool rwr_lsn_feedback;
 
 	int need_startup;
 };

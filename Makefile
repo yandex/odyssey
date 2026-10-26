@@ -20,6 +20,7 @@ ODYSSEY_TEST_TARGET_PLATFORM ?= linux/$(shell uname -m)
 ODYSSEY_ORACLELINUX_VERSION ?= 8
 ODYSSEY_CC ?= gcc
 ODYSSEY_CMAKE_EXTRA ?=
+ODYSSEY_TTT_REF ?= master
 PROTO_TEST_TAG ?= all
 
 CMAKE_FLAGS += $(ODYSSEY_CMAKE_EXTRA)
@@ -246,6 +247,7 @@ userver_test: build_images
 
 regress_test:
 	docker build -f ./test/pg_regress/Dockerfile \
+		--build-arg ttt_ref=$(ODYSSEY_TTT_REF) \
 		--build-arg build_type=$(ODYSSEY_BUILD_TYPE) \
 		--build-arg odyssey_cc=$(ODYSSEY_CC) \
 		--tag=odyssey/regress-tester .

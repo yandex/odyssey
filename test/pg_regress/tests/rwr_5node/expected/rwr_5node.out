@@ -6,6 +6,20 @@ SET application_name TO 'rwr_5node';
 NOTICE:  select host tcp://localhost:5432
 CREATE TABLE rwr_test (i int);
 NOTICE:  select host tcp://localhost:5432
+-- With ttt installed, the INSERT must use feedback. Without ttt, the
+-- same function delegates to PostgreSQL and exercises the fallback.
+CREATE FUNCTION public.pg_current_wal_insert_lsn() RETURNS pg_lsn
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF current_setting('ttt.last_write_lsn', true) IS NOT NULL THEN
+        RAISE EXCEPTION 'Odyssey must use ttt.last_write_lsn feedback';
+    END IF;
+    RETURN pg_catalog.pg_current_wal_insert_lsn();
+END
+$$;
+NOTICE:  select host tcp://localhost:5432
+SET search_path TO public, pg_catalog;
+NOTICE:  select host tcp://localhost:5432
 -- replicate the empty table, then confirm replay has actually stopped
 \! ${PGTEST_DIR}/sql/replay.sh pause
 replica replay is paused
@@ -57,6 +71,10 @@ NOTICE:  processed virtually by odyssey
 SET odyssey.execute_on_host TO 'localhost:5432';
 NOTICE:  processed virtually by odyssey
 DROP TABLE rwr_test;
+NOTICE:  select host tcp://localhost:5432
+DROP FUNCTION public.pg_current_wal_insert_lsn();
+NOTICE:  select host tcp://localhost:5432
+SET search_path TO DEFAULT;
 NOTICE:  select host tcp://localhost:5432
 SET odyssey.execute_on_host TO DEFAULT;
 NOTICE:  processed virtually by odyssey

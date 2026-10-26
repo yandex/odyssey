@@ -117,4 +117,19 @@ do_test tsa_5node 6432 postgres
 
 do_test rwr_5node 6432 postgres
 
+# New primary connections have no extension; replica connections still do.
+# Exercise the SELECT fallback in a mixed deployment as well.
+echo "session_preload_libraries = ''" >> ${PGDIR}/postgresql.conf
+psql -p 5432 -c 'SELECT pg_reload_conf();'
+for ((preload_it = 0; preload_it < 100; ++preload_it)); do
+    if [ "$(psql -X -Atq -p 5432 -c "SELECT current_setting('ttt.owns_session_objs', true) IS NULL")" = t ]; then
+        break
+    fi
+    sleep 0.05
+done
+((preload_it < 100))
+do_test rwr_5node 6432 postgres
+echo "session_preload_libraries = 'transaction_transients_trace'" >> ${PGDIR}/postgresql.conf
+psql -p 5432 -c 'SELECT pg_reload_conf();'
+
 do_test az_aware 6432 postgres

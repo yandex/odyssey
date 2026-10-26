@@ -77,23 +77,42 @@ static od_retcode_t od_rwr_lsn_is_valid(const char *lsn)
 {
 	/* pg_lsn format: [0-9A-F]{1,8}/[0-9A-F]{1,8}, e.g. 0/302CD20 */
 	int slashes = 0;
+	int digits = 0;
+	bool nonzero = false;
 	const char *p;
 	for (p = lsn; *p != '\0'; ++p) {
 		if (*p == '/') {
-			slashes++;
+			if (++slashes != 1 || digits == 0) {
+				return NOT_OK_RESPONSE;
+			}
+			digits = 0;
 			continue;
 		}
-		if (!isxdigit((unsigned char)*p)) {
+		if (!isxdigit((unsigned char)*p) || ++digits > 8) {
 			return NOT_OK_RESPONSE;
 		}
+		nonzero |= *p != '0';
 	}
-	if (slashes != 1) {
-		return NOT_OK_RESPONSE;
-	}
-	if (lsn[0] == '\0' || lsn[0] == '/' || p[-1] == '/') {
+	if (slashes != 1 || digits == 0 || !nonzero) {
 		return NOT_OK_RESPONSE;
 	}
 	return OK_RESPONSE;
+}
+
+void od_rwr_receive_lsn(od_server_t *server, const char *value, size_t len)
+{
+	od_client_t *client = server->client;
+	server->rwr_lsn_feedback = false;
+	if (client == NULL || !client->rwr_consistent || len < 2 ||
+	    len > sizeof(client->rwr_last_lsn) || value[len - 1] != '\0' ||
+	    strlen(value) != len - 1 ||
+	    od_rwr_lsn_is_valid(value) != OK_RESPONSE) {
+		return;
+	}
+
+	memcpy(client->rwr_last_lsn, value, len);
+	client->rwr_last_lsn_valid = true;
+	server->rwr_lsn_feedback = true;
 }
 
 /*
@@ -218,6 +237,9 @@ od_retcode_t od_rwr_capture_lsn(od_client_t *client, od_server_t *server)
 	 * would break the client's snapshot.
 	 */
 	if (server->is_transaction) {
+		return OK_RESPONSE;
+	}
+	if (server->rwr_lsn_feedback) {
 		return OK_RESPONSE;
 	}
 

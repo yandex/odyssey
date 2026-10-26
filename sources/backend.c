@@ -30,6 +30,7 @@
 #include <query.h>
 #include <stream.h>
 #include <tls.h>
+#include <rwr.h>
 
 #define TTT_SESSION_OWNS_TEMP_RELS_STR "ttt.owns_session_objs"
 
@@ -1151,6 +1152,13 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 	/* update server only or client and server parameter */
 	od_debug(&instance->logger, context, client, server, "%.*s = %.*s",
 		 name_len, name, value_len, value);
+	if (name_len == sizeof("ttt.last_write_lsn") &&
+	    memcmp(name, "ttt.last_write_lsn", name_len) == 0) {
+		if (!server_only) {
+			od_rwr_receive_lsn(server, value, value_len);
+		}
+		return 0;
+	}
 
 	/* ttt reports temp-rel ownership via ParameterStatus */
 	if (client != NULL &&

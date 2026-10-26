@@ -351,6 +351,10 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	od_query_parse_fill_ctx(query, query_len - 1 /* zero included */, arena,
 				&client->query_ctx, &parsing);
 
+	/* Include rewritten SET queries; startup/deploy feedback cannot cover them. */
+	if (server != NULL) {
+		server->rwr_lsn_feedback = false;
+	}
 	status = try_virtual_process_query(client, &client->query_ctx);
 	od_linear_alloc_reset(arena, 0);
 
@@ -371,7 +375,6 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		if (od_rwr_wait_lsn(client, server) != OK_RESPONSE) {
 			return OD_ESERVER_READ;
 		}
-
 		if (client->pending_begin) {
 			machine_msg_t *rewritten = kiwi_fe_write_query_join(
 				NULL, "BEGIN;", query, NULL);
