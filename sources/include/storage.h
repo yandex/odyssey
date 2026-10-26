@@ -50,6 +50,7 @@ typedef struct {
 	int alive;
 	bool is_read_write;
 	int64_t repl_lag_sec;
+	int server_version_major;
 } od_storage_endpoint_status_t;
 
 void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status);
@@ -67,8 +68,15 @@ struct od_storage_endpoint {
 
 	od_storage_endpoint_status_t status;
 
+	/* rwr: log "WAIT FOR LSN unsupported" once per endpoint */
+	int rwr_wait_unsupported_logged;
+
 	struct od_rule_storage *storage;
 };
+
+void od_storage_endpoint_set_server_version(od_storage_endpoint_t *endpoint,
+					    int server_version_major);
+int od_storage_endpoint_server_version(od_storage_endpoint_t *endpoint);
 
 int od_storage_parse_endpoints(const char *host_str,
 			       od_storage_endpoint_t **out, size_t *count);
@@ -93,6 +101,8 @@ struct od_rule_storage {
 	od_list_t link;
 
 	int endpoints_status_poll_interval_ms;
+	/* rwr: WAIT FOR LSN timeout in ms; 0 = no limit */
+	int rwr_wait_timeout_ms;
 	od_storage_balancing_t balancing;
 
 	atomic_int_fast64_t refs;

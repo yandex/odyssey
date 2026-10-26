@@ -110,6 +110,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "type", TYPE },
 	{ "server_max_routing", SERVER_MAX_ROUTING },
 	{ "endpoints_status_poll_interval", ENDPOINTS_STATUS_POLL_INTERVAL },
+	{ "rwr_wait_timeout", RWR_WAIT_TIMEOUT },
 	{ "balancing", BALANCING },
 	{ "method", METHOD },
 	{ "show_notice_messages", SHOW_NOTICE_MESSAGES },
