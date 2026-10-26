@@ -46,12 +46,15 @@ int od_deploy(od_client_t *client)
 	int query_count;
 	query_count = 0;
 
-	char query[OD_QRY_MAX_SZ];
+	char *query = NULL;
 	int query_size;
-	query_size =
-		kiwi_vars_cas(&client->vars, &server->vars, query,
-			      sizeof(query) - 1,
-			      instance->config.smart_search_path_enquoting);
+	int normalize_search_path;
+	query_size = kiwi_vars_cas(&client->vars, &server->vars, &query,
+				   instance->config.smart_search_path_enquoting,
+				   &normalize_search_path);
+	if (query_size == -1) {
+		return -1;
+	}
 
 	if (query_size > 0) {
 		query[query_size] = 0;
@@ -59,6 +62,7 @@ int od_deploy(od_client_t *client)
 		machine_msg_t *msg;
 		msg = kiwi_fe_write_query(NULL, query, query_size);
 		if (msg == NULL) {
+			free(query);
 			return -1;
 		}
 
@@ -67,6 +71,7 @@ int od_deploy(od_client_t *client)
 		rc = od_write(&server->io, msg);
 		od_wait_event_end(OD_WAIT_DEPLOY_SERVER_WRITE);
 		if (rc == -1) {
+			free(query);
 			return -1;
 		}
 
@@ -79,10 +84,30 @@ int od_deploy(od_client_t *client)
 		client->server->synced_settings = true;
 	}
 
+	free(query);
+
 	if (query_count > 0) {
 		od_server_sync_request(server, query_count);
 
-		return complete_deploy(instance, server);
+		if (complete_deploy(instance, server) != OK_RESPONSE) {
+			return -1;
+		}
+		if (!normalize_search_path) {
+			return OK_RESPONSE;
+		}
+
+		/* Cache normalization only when restoration preserves the name list.
+		 * Leave unreported parameters (e.g. upstream PG16) untouched. */
+		kiwi_var_t *client_path =
+			kiwi_vars_get(&client->vars, KIWI_VAR_SEARCH_PATH);
+		kiwi_var_t *server_path =
+			kiwi_vars_get(&server->vars, KIWI_VAR_SEARCH_PATH);
+		if (client_path && server_path &&
+		    !kiwi_var_compare(client_path, server_path)) {
+			return kiwi_var_set(client_path, KIWI_VAR_SEARCH_PATH,
+					    server_path->value,
+					    server_path->value_len);
+		}
 	}
 
 	return OK_RESPONSE;
