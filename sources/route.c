@@ -170,12 +170,25 @@ int od_route_server_pool_can_add_locked(od_route_t *route,
 }
 
 int od_route_wait(od_route_t *route, od_client_t *client,
-		  const od_address_t *address, uint64_t version,
-		  uint32_t timeout_ms)
+		  const od_address_t *address, uint32_t timeout_ms)
 {
 	od_route_lock(route);
 	od_multi_pool_element_t *mpel =
 		od_route_get_server_pool_element_locked(route, address);
+	if (mpel == NULL) {
+		od_route_unlock(route);
+		mm_errno_set(ENOENT);
+		return -1;
+	}
+
+	od_server_t *idle = od_pg_server_pool_next(&mpel->pool, OD_SERVER_IDLE);
+	if (idle != NULL) {
+		od_server_attach_client(idle, client);
+		od_route_unlock(route);
+		return 0;
+	}
+
+	uint64_t version = od_route_pools_version(route);
 	od_route_unlock(route);
 
 	return od_multi_pool_wait(mpel, client, version, timeout_ms);
