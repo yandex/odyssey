@@ -9,6 +9,18 @@ sleep 1
 pgbench 'host=localhost port=6432 user=postgres dbname=postgres' -S -T 17 -j2 -c8 --no-vacuum 2>&1 >/tests/cancel/pgbenchlog &
 pgbenchpid=$!
 
+wait_for_cancellation() {
+	local pid=$1
+	local log=$2
+	local exit_code=0
+	wait "$pid" || exit_code=$?
+	if [ "$exit_code" -eq 0 ] || ! grep -Fq 'ERROR:  canceling statement due to user request' "$log"; then
+		echo "Expected query cancellation, got psql exit code $exit_code: $log" >&2
+		cat "$log" >&2
+		return 1
+	fi
+}
+
 for i in {1..7}; do
 	psql 'host=localhost port=6432 user=postgres dbname=postgres' -c 'select pg_sleep(10)' 2>/tests/cancel/log1 1>&2 &
 	pid1=$!
@@ -25,29 +37,9 @@ for i in {1..7}; do
 	kill -s SIGINT $pid2
 	kill -s SIGINT $pid3
 
-	wait $pid1 || {
-		cat /tests/cancel/log1 | grep "ERROR:  canceling statement due to user request" -q || {
-			echo "seems like cancel 1 failed"
-			cat /tests/cancel/log1
-			exit 1
-		}
-	}
-
-	wait $pid2 || {
-		cat /tests/cancel/log2 | grep "ERROR:  canceling statement due to user request" -q || {
-			echo "seems like cancel 2 failed"
-			cat /tests/cancel/log2
-			exit 1
-		}
-	}
-
-	wait $pid3 || {
-		cat /tests/cancel/log3 | grep "ERROR:  canceling statement due to user request" -q || {
-			echo "seems like cancel 3 failed"
-			cat /tests/cancel/log3
-			exit 1
-		}
-	}
+	wait_for_cancellation "$pid1" /tests/cancel/log1
+	wait_for_cancellation "$pid2" /tests/cancel/log2
+	wait_for_cancellation "$pid3" /tests/cancel/log3
 done
 
 wait $pgbenchpid || {
