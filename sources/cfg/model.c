@@ -166,6 +166,7 @@ static void od_cfg_storage_free(od_cfg_storage_t *storage)
 	od_cfg_string_field_free(&storage->tls_protocols);
 	od_cfg_int_field_free(&storage->server_max_routing);
 	od_cfg_u64_field_free(&storage->endpoints_status_poll_interval_ms);
+	od_cfg_u64_field_free(&storage->rwr_wait_timeout_ms);
 
 	od_cfg_balancing_free(&storage->balancing);
 

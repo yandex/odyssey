@@ -258,6 +258,7 @@
 %token TYPE "type"
 %token SERVER_MAX_ROUTING "server_max_routing"
 %token ENDPOINTS_STATUS_POLL_INTERVAL "endpoints_status_poll_interval"
+%token RWR_WAIT_TIMEOUT "rwr_wait_timeout"
 %token BALANCING "balancing"
 %token METHOD "method"
 %token SHOW_NOTICE_MESSAGES "show_notice_messages"
@@ -2434,6 +2435,15 @@ storage_item:
 				&$2, 1, 1, INT_MAX,
 				@1,
 				"endpoints_status_poll_interval");
+		}
+	| RWR_WAIT_TIMEOUT time_value
+		{
+			od_cfg_set_time_u64_ms(
+				ctx->diags,
+				&ctx->current_storage->rwr_wait_timeout_ms,
+				&$2, 1, 0, INT_MAX,
+				@1,
+				"rwr_wait_timeout");
 		}
 	| WATCHDOG
 		{

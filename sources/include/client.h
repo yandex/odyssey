@@ -21,6 +21,9 @@
 #include <scram.h>
 #include <od_ldap.h>
 
+/* max length of pg_lsn value, e.g. "0/302CD20" (+ terminating zero) */
+#define OD_RWR_LSN_MAX 32
+
 typedef enum {
 	OD_CLIENT_UNDEF,
 	OD_CLIENT_PENDING,
@@ -113,6 +116,14 @@ struct od_client {
 #endif
 
 	int64_t last_catchup_lag;
+
+	/*
+	 * SET odyssey.rwr_consistent, read-your-writes consistency: capture
+	 * the primary LSN before releasing its backend and wait on replicas
+	 */
+	bool rwr_consistent;
+	bool rwr_last_lsn_valid;
+	char rwr_last_lsn[OD_RWR_LSN_MAX];
 
 	/* external_id for logging additional info about client authneticated with external auth */
 	char *external_id;

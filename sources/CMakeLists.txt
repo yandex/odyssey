@@ -137,6 +137,7 @@ set(od_src
     tls_config.c
     tsa.c
     query.c
+    rwr.c
     storage.c
     wait_event.c
     server.c

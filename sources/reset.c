@@ -19,6 +19,7 @@
 #include <cancel.h>
 #include <stream.h>
 #include <wait_event.h>
+#include <rwr.h>
 
 int od_reset(od_server_t *server)
 {
@@ -240,6 +241,13 @@ int od_reset(od_server_t *server)
 		} else {
 			machine_msg_free(stream);
 		}
+	}
+
+	/* Capture after cleanup, before this backend can serve another client.
+	 * Do not infer writes from SQL: functions, batches and extended queries
+	 * can all advance WAL without being classified by the query parser. */
+	if (od_rwr_capture_lsn(server->client, server) != OK_RESPONSE) {
+		goto error;
 	}
 
 	if (od_readahead_unread(&server->io.readahead) > 0) {

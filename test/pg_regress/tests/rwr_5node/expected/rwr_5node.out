@@ -1,0 +1,132 @@
+-- read-your-writes: 1 primary (localhost:5432) and 4 replicas
+-- (localhost:5433..5436)
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+SET application_name TO 'rwr_5node';
+NOTICE:  select host tcp://localhost:5432
+CREATE TABLE rwr_test (i int);
+NOTICE:  select host tcp://localhost:5432
+CREATE FUNCTION rwr_write(int) RETURNS void LANGUAGE SQL AS $$ INSERT INTO rwr_test VALUES ($1) $$;
+NOTICE:  select host tcp://localhost:5432
+-- replicate the empty table, then confirm replay has actually stopped
+\! ${PGTEST_DIR}/sql/replay.sh pause
+replica replay is paused
+SET odyssey.rwr_consistent TO 'on';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ on
+(1 row)
+
+INSERT INTO rwr_test (i) VALUES (42);
+NOTICE:  select host tcp://localhost:5432
+-- setting an already enabled mode must preserve the captured LSN
+SET odyssey.rwr_consistent TO 'on';
+NOTICE:  processed virtually by odyssey
+-- resume replay only after observing Odyssey blocked on WAIT FOR LSN
+\! ${PGTEST_DIR}/sql/replay.sh observe &
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT count(*) FROM rwr_test;
+NOTICE:  select host tcp://localhost:5434
+ count 
+-------
+     1
+(1 row)
+
+\! ${PGTEST_DIR}/sql/replay.sh check
+observed Odyssey blocked on WAIT FOR LSN before resuming replay
+SELECT i FROM rwr_test;
+NOTICE:  select host tcp://localhost:5434
+ i  
+----
+ 42
+(1 row)
+
+-- A SELECT can write WAL, even though the full parser classifies it as a read.
+SET odyssey.parser_mode TO 'full';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+\! ${PGTEST_DIR}/sql/replay.sh pause
+replica replay is paused
+SELECT rwr_write(43);
+NOTICE:  select host tcp://localhost:5432
+ rwr_write 
+-----------
+ 
+(1 row)
+
+\! ${PGTEST_DIR}/sql/replay.sh observe &
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT count(*) FROM rwr_test;
+NOTICE:  select host tcp://localhost:5434
+ count 
+-------
+     2
+(1 row)
+
+\! ${PGTEST_DIR}/sql/replay.sh check
+observed Odyssey blocked on WAIT FOR LSN before resuming replay
+-- An unclassified extended-protocol write and read must use the same barrier.
+SET odyssey.parser_mode TO 'mini';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+\! ${PGTEST_DIR}/sql/replay.sh pause
+replica replay is paused
+INSERT INTO rwr_test VALUES (44) \bind \g
+NOTICE:  select host tcp://localhost:5432
+\! ${PGTEST_DIR}/sql/replay.sh observe &
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT count(*) FROM rwr_test \bind \g
+NOTICE:  select host tcp://localhost:5434
+ count 
+-------
+     3
+(1 row)
+
+\! ${PGTEST_DIR}/sql/replay.sh check
+observed Odyssey blocked on WAIT FOR LSN before resuming replay
+-- Exceeding query_parsing_max_query_len must not disable LSN capture or wait.
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+\! ${PGTEST_DIR}/sql/replay.sh pause
+replica replay is paused
+INSERT INTO rwr_test VALUES (45) /* This query deliberately exceeds the parser length limit of 128 bytes: its write must still advance the consistency barrier. */;
+NOTICE:  select host tcp://localhost:5432
+\! ${PGTEST_DIR}/sql/replay.sh observe &
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT count(*) FROM rwr_test /* This query also exceeds the parser length limit of 128 bytes: its read must still wait until the replica has replayed our write. */;
+NOTICE:  select host tcp://localhost:5434
+ count 
+-------
+     4
+(1 row)
+
+\! ${PGTEST_DIR}/sql/replay.sh check
+observed Odyssey blocked on WAIT FOR LSN before resuming replay
+SET odyssey.execute_on_host TO DEFAULT;
+NOTICE:  processed virtually by odyssey
+SET odyssey.rwr_consistent TO 'off';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ off
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+DROP FUNCTION rwr_write(int);
+NOTICE:  select host tcp://localhost:5432
+DROP TABLE rwr_test;
+NOTICE:  select host tcp://localhost:5432
+SET odyssey.execute_on_host TO DEFAULT;
+NOTICE:  processed virtually by odyssey

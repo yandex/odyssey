@@ -6,6 +6,7 @@
  */
 
 #include <odyssey.h>
+#include <rwr.h>
 
 #include <openssl/rand.h>
 
@@ -1103,7 +1104,18 @@ od_frontend_status_t od_frontend_attach(od_client_t *client,
 od_frontend_status_t od_frontend_attach_and_deploy(od_client_t *client)
 {
 	/* attach and maybe connect server, then deploy params */
-	return attach_impl(client, NULL, 1 /* is_deploy */);
+	od_frontend_status_t status =
+		attach_impl(client, NULL, 1 /* is_deploy */);
+	if (status != OD_OK) {
+		return status;
+	}
+
+	/* Wait before any client command, including an extended-query pipeline
+	 * or BEGIN, can establish a snapshot on the newly attached backend. */
+	if (od_rwr_wait_lsn(client, client->server) != OK_RESPONSE) {
+		return OD_ESERVER_READ;
+	}
+	return OD_OK;
 }
 
 static inline od_frontend_status_t od_frontend_setup_params(od_client_t *client)
@@ -1195,6 +1207,18 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 	od_route_t *route = client->route;
+
+	/* Startup options also enable consistency when SQL parsing is disabled. */
+	kiwi_var_t *rwr =
+		kiwi_vars_get(&client->vars, KIWI_VAR_ODYSSEY_RWR_CONSISTENT);
+	if (rwr != NULL && instance->config.virtual_processing &&
+	    !parse_bool(rwr->value, &client->rwr_consistent)) {
+		od_frontend_fatal(
+			client, KIWI_INVALID_PARAMETER_VALUE,
+			"invalid value for parameter odyssey.rwr_consistent: %s",
+			rwr->value);
+		return OD_ECLIENT_PROTOCOL_ERROR;
+	}
 
 	/* set parameters */
 	od_frontend_status_t status;
