@@ -2619,12 +2619,20 @@ static inline int od_console_kill_client(od_client_t *client,
 static inline int od_console_load(od_client_t *client, machine_msg_t *stream,
 				  const char *name)
 {
+#ifdef ENABLE_INJECTION_POINTS
 	od_instance_t *instance = client->global->instance;
 
 	od_log(&instance->logger, "console", NULL, NULL, "LOAD %s", name);
 	od_injection_load(name);
 
 	return kiwi_be_write_complete(stream, "LOAD", 5);
+#else
+	(void)name;
+	machine_msg_t *msg = od_frontend_errorf(
+		client, stream, KIWI_FEATURE_NOT_SUPPORTED,
+		"LOAD is disabled: injection points are not enabled in this build");
+	return msg == NULL ? NOT_OK_RESPONSE : OK_RESPONSE;
+#endif
 }
 
 static inline int od_console_reload(od_client_t *client, machine_msg_t *stream)

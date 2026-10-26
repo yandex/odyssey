@@ -37,7 +37,7 @@ COPY . .
 ENV CC=${odyssey_cc}
 
 RUN make clean
-RUN make ${odyssey_build_type}
+RUN make ${odyssey_build_type} ODYSSEY_CMAKE_EXTRA="-DENABLE_INJECTION_POINTS=ON"
 
 FROM golang:1.25-alpine AS golang-tests-builder
 
