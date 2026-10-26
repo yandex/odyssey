@@ -13,6 +13,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     openssl \
     libpam0g-dev \
     build-essential \
+    patch \
     cmake \
     bison flex \
     pkg-config \
@@ -27,6 +28,10 @@ FROM common-builder AS pg-build
 
 RUN git clone --depth 1 --branch REL_18_STABLE https://github.com/postgres/postgres.git
 RUN cd postgres && ./configure --prefix /usr --without-icu --without-zlib && make -j install >/dev/null
+
+# pg_isolation_regress and isolationtester are not installed by make install.
+COPY ./test/isolation/isolationtester.patch /tmp/isolationtester.patch
+RUN cd postgres && patch -p1 < /tmp/isolationtester.patch && make -C src/test/isolation -j
 
 RUN git clone --depth 1 https://github.com/pg-sharding/ttt /ttt
 RUN cd /ttt && make USE_PGXS=1 && make USE_PGXS=1 install
@@ -57,8 +62,10 @@ COPY ./test/pg_regress/entrypoint.sh /home/postgres/entrypoint.sh
 COPY ./test/pg_regress/conf /home/postgres/regress/conf
 COPY ./test/pg_regress/tests /home/postgres/regress/tests
 COPY ./test/pg_regress/schedule /home/postgres/regress/schedule
+COPY ./test/isolation /home/postgres/isolation
 
 RUN chown -R postgres /home/postgres/regress
+RUN chown -R postgres /home/postgres/isolation
 RUN chown postgres /home/postgres/entrypoint.sh
 
 USER postgres

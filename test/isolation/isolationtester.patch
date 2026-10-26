@@ -1,0 +1,61 @@
+--- a/src/test/isolation/isolationtester.c
++++ b/src/test/isolation/isolationtester.c
+@@ -185,17 +185,17 @@
+ 								 NULL);
+ 
+ 		/*
+-		 * Similarly, append the session name to application_name to make it
+-		 * easier to map spec file sessions to log output and
+-		 * pg_stat_activity. The reason to append instead of just setting the
+-		 * name is that we don't know the name of the test currently running.
++		 * Odyssey reports a virtual backend PID. Tag the session with it so
++		 * the lock probe can find its current backend even after pool reuse.
+ 		 */
++		conns[i].backend_pid = PQbackendPID(conns[i].conn);
++		conns[i].backend_pid_str = psprintf("%d", conns[i].backend_pid);
+ 		res = PQexecParams(conns[i].conn,
+ 						   "SELECT set_config('application_name',\n"
+-						   "  current_setting('application_name') || '/' || $1,\n"
++						   "  'odyssey-isolation/' || $1,\n"
+ 						   "  false)",
+ 						   1, NULL,
+-						   &sessionname,
++						   &conns[i].backend_pid_str,
+ 						   NULL, NULL, 0);
+ 		if (PQresultStatus(res) != PGRES_TUPLES_OK)
+ 		{
+@@ -204,9 +204,7 @@
+ 			exit(1);
+ 		}
+ 
+-		/* Save each connection's backend PID for subsequent use. */
+-		conns[i].backend_pid = PQbackendPID(conns[i].conn);
+-		conns[i].backend_pid_str = psprintf("%d", conns[i].backend_pid);
++		PQclear(res);
+ 	}
+ 
+ 	/*
+@@ -219,12 +217,19 @@
+ 	 */
+ 	initPQExpBuffer(&wait_query);
+ 	appendPQExpBufferStr(&wait_query,
+-						 "SELECT pg_catalog.pg_isolation_test_session_is_blocked($1, '{");
++						 "SELECT EXISTS ("
++						 "SELECT 1 FROM pg_catalog.pg_stat_activity AS waiting, "
++						 "pg_catalog.pg_stat_activity AS blocker "
++						 "WHERE waiting.application_name = 'odyssey-isolation/' || $1 "
++						 "AND blocker.pid = ANY (pg_catalog.pg_blocking_pids(waiting.pid)) "
++						 "AND blocker.application_name = ANY ('{");
+ 	/* The spec syntax requires at least one session; assume that here. */
+-	appendPQExpBufferStr(&wait_query, conns[1].backend_pid_str);
++	appendPQExpBuffer(&wait_query, "odyssey-isolation/%s",
++					 conns[1].backend_pid_str);
+ 	for (i = 2; i < nconns; i++)
+-		appendPQExpBuffer(&wait_query, ",%s", conns[i].backend_pid_str);
+-	appendPQExpBufferStr(&wait_query, "}')");
++		appendPQExpBuffer(&wait_query, ",odyssey-isolation/%s",
++						 conns[i].backend_pid_str);
++	appendPQExpBufferStr(&wait_query, "}'))");
+ 
+ 	res = PQprepare(conns[0].conn, PREP_WAITING, wait_query.data, 0, NULL);
+ 	if (PQresultStatus(res) != PGRES_COMMAND_OK)
