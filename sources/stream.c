@@ -207,13 +207,16 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 		}
 	}
 
-	if (type == KIWI_BE_COMMAND_COMPLETE) {
-		const char *command_tag = data + sizeof(kiwi_header_t);
-		od_debug(&instance->logger, ctx, client, server, "%s - %s",
-			 kiwi_be_type_to_string(type), command_tag);
-	} else {
-		od_debug(&instance->logger, ctx, client, server, "%s",
-			 kiwi_be_type_to_string(type));
+	if (instance->config.log_debug) {
+		if (type == KIWI_BE_COMMAND_COMPLETE) {
+			const char *command_tag = data + sizeof(kiwi_header_t);
+			od_debug(&instance->logger, ctx, client, server,
+				 "%s - %s", kiwi_be_type_to_string(type),
+				 command_tag);
+		} else {
+			od_debug(&instance->logger, ctx, client, server, "%s",
+				 kiwi_be_type_to_string(type));
+		}
 	}
 
 	switch (type) {
@@ -297,7 +300,7 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 		int64_t query_time = 0;
 		od_stat_query_end(&route->stats, &server->stats_state,
 				  server->is_transaction, &query_time);
-		if (query_time > 0) {
+		if (instance->config.log_debug && query_time > 0) {
 			od_debug(&instance->logger, ctx, server->client, server,
 				 "query time: %" PRIi64 " microseconds",
 				 query_time);
