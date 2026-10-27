@@ -1332,6 +1332,7 @@ static int convert_storage(const od_cfg_storage_t *cfg, od_list_t *spools,
 	COPY_INT(cfg->server_max_routing, storage->server_max_routing);
 	COPY_U64(cfg->endpoints_status_poll_interval_ms,
 		 storage->endpoints_status_poll_interval_ms);
+	COPY_U64(cfg->rwr_wait_timeout_ms, storage->rwr_wait_timeout_ms);
 
 	if (cfg->host.seen.is_set) {
 		int rc = od_storage_parse_endpoints(cfg->host.value,

@@ -25,6 +25,7 @@
 #include <xplan.h>
 #include <pstmt.h>
 #include <misc.h>
+#include <rwr.h>
 #include <option.h>
 #include <worker.h>
 #include <query.h>
@@ -334,13 +335,22 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_config_query_parsing_t parsing = instance->config.query_parsing;
 	if (parsing.mode == OD_CONFIG_QUERY_PARSING_MODE_FULL &&
-	    !od_tsa_auto_route_ro_enabled(client)) {
+	    !od_tsa_auto_route_ro_enabled(client) && !client->rwr_consistent) {
 		/*
 		 * auto routing is the only consumer of the full-parser-only
 		 * results (is_select) - for clients without it the cheaper
-		 * minimal parser is enough
+		 * minimal parser is enough. The same results are needed by
+		 * read-your-writes to detect client writes
 		 */
 		parsing.mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
+	}
+
+	if (client->rwr_consistent) {
+		/*
+		 * read-your-writes needs the is_select flag to distinguish
+		 * reads from writes even when the cheap parser is configured
+		 */
+		parsing.mode = OD_CONFIG_QUERY_PARSING_MODE_FULL;
 	}
 
 	od_query_parse_fill_ctx(query, query_len - 1 /* zero included */, arena,
@@ -357,6 +367,14 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	} else if (status == OD_OK) {
 		if (server == NULL) {
 			return OD_ATTACH;
+		}
+
+		/*
+		 * read-your-writes: before a query is sent to a replica,
+		 * wait for the LSN captured after the last client write
+		 */
+		if (od_rwr_wait_lsn(client, server) != OK_RESPONSE) {
+			return OD_ESERVER_READ;
 		}
 
 		if (client->pending_begin) {
@@ -418,6 +436,16 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		 */
 		process_discard(client, server);
 		process_unlisten(client, server);
+
+		/*
+		 * read-your-writes: after a client write, capture LSN on
+		 * the primary to wait for it on replicas later
+		 */
+		if (!od_query_ctx_standby_friendly(&client->query_ctx)) {
+			if (od_rwr_capture_lsn(client, server) != OK_RESPONSE) {
+				return OD_ESERVER_READ;
+			}
+		}
 	}
 
 	return status;

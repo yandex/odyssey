@@ -81,6 +81,9 @@ void od_client_init(od_client_t *client)
 	client->backend_pin = false;
 	client->backend_pin_listen = false;
 	client->opportunistic_acquire = false;
+	client->rwr_consistent = false;
+	client->rwr_last_lsn_valid = false;
+	client->rwr_last_lsn[0] = '\0';
 	od_address_init(&client->execute_on_host);
 }
 

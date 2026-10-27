@@ -144,6 +144,7 @@ static void dump_storage(FILE *file, const od_cfg_storage_t *s)
 	dump_int(file, "server_max_routing", 1, &s->server_max_routing);
 	dump_uint64(file, "endpoints_status_poll_interval_ms", 1,
 		    &s->endpoints_status_poll_interval_ms);
+	dump_uint64(file, "rwr_wait_timeout_ms", 1, &s->rwr_wait_timeout_ms);
 
 	dump_balancing(file, 1, &s->balancing);
 
@@ -696,6 +697,7 @@ static void od_cfg_storage_free(od_cfg_storage_t *storage)
 	od_cfg_string_field_free(&storage->tls_protocols);
 	od_cfg_int_field_free(&storage->server_max_routing);
 	od_cfg_u64_field_free(&storage->endpoints_status_poll_interval_ms);
+	od_cfg_u64_field_free(&storage->rwr_wait_timeout_ms);
 
 	od_cfg_balancing_free(&storage->balancing);
 
