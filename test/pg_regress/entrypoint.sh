@@ -47,6 +47,35 @@ do_test() {
     ody-stop
 }
 
+# Run the native isolation suite in the same container as pg_regress.
+do_isolation_test() {
+    local port=6432
+
+    export ASAN_OPTIONS="log_path=/asan-output.log fast_unwind_on_malloc=0"
+    export TSAN_OPTIONS="log_path=/tsan-output.log"
+    odyssey ${REGRESS_DIR}/conf/isolation
+
+    local it=0
+    until (( it == 50 )) || pg_isready -h localhost -p ${port} -U postgres -d postgres; do
+        echo 'Wait for odyssey...'
+        echo "$(( it++ ))"
+        sleep 0.1
+    done
+    (( it < 50 ))
+
+    PG_ISOLATION_REGRESS=/postgres/src/test/isolation/pg_isolation_regress \
+    PGHOST=localhost PGPORT=${port} PGUSER=postgres PGDATABASE=postgres \
+        /home/postgres/isolation/run_tests.sh || {
+            echo '====== ISOLATION DIFFS ======='
+            cat /home/postgres/isolation/output/regression.diffs || true
+            cat /home/postgres/isolation/output/regression.out || true
+            ody-stop
+            exit 1
+        }
+
+    ody-stop
+}
+
 pg_ctl stop -D ${PGDIRREPL1} || true
 pg_ctl stop -D ${PGDIRREPL2} || true
 pg_ctl stop -D ${PGDIRREPL3} || true
@@ -111,3 +140,5 @@ do_test tsa_5node 6432 postgres
 do_test az_aware 6432 postgres
 
 do_test tsa_promote 6432 postgres
+
+do_isolation_test
