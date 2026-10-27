@@ -2531,11 +2531,8 @@ typedef enum {
 	OD_SHOW_HOST_UTILIZATION,
 	OD_SHOW_RULES,
 	OD_SHOW_CONFIG,
-<<<<<<< HEAD
 	OD_SHOW_TSA_CACHE,
-=======
 	OD_SHOW_WAITS,
->>>>>>> c8d7dc55 (Add simple wait events statistic infra)
 } od_show_target_id_t;
 
 static od_show_target_id_t od_console_show_target_lookup(const char *name)
@@ -2565,11 +2562,8 @@ static od_show_target_id_t od_console_show_target_lookup(const char *name)
 		{ "host_utilization", OD_SHOW_HOST_UTILIZATION },
 		{ "rules", OD_SHOW_RULES },
 		{ "config", OD_SHOW_CONFIG },
-<<<<<<< HEAD
 		{ "tsa_cache", OD_SHOW_TSA_CACHE },
-=======
 		{ "wait_events", OD_SHOW_WAITS },
->>>>>>> c8d7dc55 (Add simple wait events statistic infra)
 	};
 
 	for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
@@ -2633,13 +2627,10 @@ static inline int od_console_show(od_client_t *client,
 		return od_console_show_rules(tts);
 	case OD_SHOW_CONFIG:
 		return od_console_show_config(client, tts, arg);
-<<<<<<< HEAD
 	case OD_SHOW_TSA_CACHE:
 		return od_console_show_tsa_cache(client, tts);
-=======
 	case OD_SHOW_WAITS:
 		return od_console_show_wait_events(tts);
->>>>>>> c8d7dc55 (Add simple wait events statistic infra)
 	default:
 		od_frontend_errorf(client, tts->data_rows, KIWI_SYNTAX_ERROR,
 				   "unknown show target: %s", name);
