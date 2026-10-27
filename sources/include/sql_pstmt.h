@@ -187,4 +187,4 @@ int od_sql_pstmt_query_finish(od_sql_pstmt_client_t *client,
  */
 int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 			od_sql_pstmt_server_t *srv, od_server_t *server,
-			char *context, uint32_t timeout_ms);
+			uint32_t timeout_ms);

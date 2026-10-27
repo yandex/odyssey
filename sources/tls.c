@@ -126,7 +126,7 @@ done:
 int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 			   od_config_listen_t *config, machine_tls_t *tls)
 {
-	od_debug(logger, "tls", client, NULL, "ssl request");
+	od_debug(logger, client, NULL, "ssl request");
 
 	int rc;
 	if (config->tls_opts->tls_mode == OD_CONFIG_TLS_DISABLE) {
@@ -140,11 +140,11 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 		*type = 'N';
 		rc = od_write(&client->io, msg);
 		if (rc == -1) {
-			od_error(logger, "tls", client, NULL, "write error: %s",
+			od_error(logger, client, NULL, "write error: %s",
 				 od_io_error(&client->io));
 			return -1;
 		}
-		od_debug(logger, "tls", client, NULL, "is disabled, ignoring");
+		od_debug(logger, client, NULL, "is disabled, ignoring");
 		return 0;
 	}
 
@@ -158,14 +158,13 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 	*type = 'S';
 	rc = od_write(&client->io, msg);
 	if (rc == -1) {
-		od_error(logger, "tls", client, NULL, "write error: %s",
+		od_error(logger, client, NULL, "write error: %s",
 			 od_io_error(&client->io));
 		return -1;
 	}
 
 	if (od_readahead_unread(&client->io.readahead) > 0) {
-		od_error(logger, "tls", client, NULL,
-			 "extraneous data from client");
+		od_error(logger, client, NULL, "extraneous data from client");
 		return -1; /* prevent possible buffer, protecting against CVE-2021-23214-like attacks */
 	}
 
@@ -173,14 +172,14 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 	rc = mm_io_set_tls(client->io.io, tls, config->client_login_timeout_ms);
 	od_wait_event_end(OD_WAIT_CONNECT_CLIENT_TLS);
 	if (rc == -1) {
-		od_error(logger, "tls", client, NULL,
+		od_error(logger, client, NULL,
 			 "error: %s, login time %" PRIu64 " us",
 			 od_io_error(&client->io),
 			 machine_time_us() - client->time_accept);
 		return -1;
 	}
 
-	od_debug(logger, "tls", client, NULL, "ok");
+	od_debug(logger, client, NULL, "ok");
 
 	return 0;
 }
@@ -234,7 +233,7 @@ machine_tls_t *od_tls_backend(od_tls_opts_t *opts)
 int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 			   od_tls_opts_t *opts)
 {
-	od_debug(logger, "tls", NULL, server, "init");
+	od_debug(logger, NULL, server, "init");
 
 	/* SSL Request */
 	machine_msg_t *msg;
@@ -245,7 +244,7 @@ int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 	int rc;
 	rc = od_write(&server->io, msg);
 	if (rc == -1) {
-		od_error(logger, "tls", NULL, server, "write error: %s",
+		od_error(logger, NULL, server, "write error: %s",
 			 od_io_error(&server->io));
 		return -1;
 	}
@@ -254,7 +253,7 @@ int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 	char type;
 	rc = od_io_read(&server->io, &type, 1, UINT32_MAX);
 	if (rc == -1) {
-		od_error(logger, "tls", NULL, server, "read error: %s",
+		od_error(logger, NULL, server, "read error: %s",
 			 od_io_error(&server->io));
 		return -1;
 	}
@@ -262,37 +261,36 @@ int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 	switch (type) {
 	case 'S':
 		/* supported */
-		od_debug(logger, "tls", NULL, server, "supported");
+		od_debug(logger, NULL, server, "supported");
 		if (od_readahead_unread(&server->io.readahead) > 0) {
-			od_error(logger, "tls", NULL, server,
+			od_error(logger, NULL, server,
 				 "extraneous data from server");
 			return -1; /* prevent possible buffer, protecting against CVE-2021-23222-like attacks */
 		}
 
 		rc = mm_io_set_tls(server->io.io, server->tls, UINT32_MAX);
 		if (rc == -1) {
-			od_error(logger, "tls", NULL, server, "error: %s",
+			od_error(logger, NULL, server, "error: %s",
 				 od_io_error(&server->io));
 			return -1;
 		}
-		od_debug(logger, "tls", NULL, server, "ok");
+		od_debug(logger, NULL, server, "ok");
 		break;
 	case 'N':
 		/* not supported */
 		if (opts->tls_mode == OD_CONFIG_TLS_ALLOW ||
 		    opts->tls_mode == OD_CONFIG_TLS_PREFER) {
-			od_debug(logger, "tls", NULL, server,
+			od_debug(logger, NULL, server,
 				 "not supported, continue (%s)",
 				 od_config_tls_to_str(opts->tls_mode));
 		} else {
-			od_error(logger, "tls", NULL, server,
+			od_error(logger, NULL, server,
 				 "not supported, closing");
 			return -1;
 		}
 		break;
 	default:
-		od_error(logger, "tls", NULL, server,
-			 "unexpected status reply");
+		od_error(logger, NULL, server, "unexpected status reply");
 		return -1;
 	}
 	return 0;

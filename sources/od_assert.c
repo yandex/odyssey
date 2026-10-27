@@ -69,7 +69,7 @@ void od_assert_fail(const char *expr, const char *file, int line)
 		log_buf);
 
 	if (global != NULL && instance != NULL) {
-		od_error(&instance->logger, "assert", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "assertion failed: %s (%s:%d)\n%s\n", expr, file, line,
 			 log_buf);
 		od_logger_flush(&instance->logger);

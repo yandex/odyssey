@@ -13,8 +13,6 @@
 #define PROC_MEMINFO_PATH "/proc/meminfo"
 #define PROC_STAT_PATH "/proc/stat"
 
-DEFINE_SIMPLE_MODULE_LOGGER(hw, "host-watcher")
-
 static inline uint64_t sub(uint64_t a, uint64_t b)
 {
 	return a > b ? a - b : 0;
@@ -53,15 +51,15 @@ static inline int get_cpu_stat(od_cpu_stat_t *out)
 	char *buf;
 	size_t size;
 	if (mm_file_read_all(PROC_STAT_PATH, &buf, &size) != 0) {
-		hw_error("can't open '%s': %s", PROC_STAT_PATH,
-			 strerror(errno));
+		od_gerror(NULL, NULL, "can't open '%s': %s", PROC_STAT_PATH,
+			  strerror(errno));
 		return -1;
 	}
 
 	char *cursor = buf;
 	char *cpu_stat_line = od_next_line(&cursor);
 	if (cpu_stat_line == NULL) {
-		hw_error("can't read '%s'", PROC_STAT_PATH);
+		od_gerror(NULL, NULL, "can't read '%s'", PROC_STAT_PATH);
 		mm_free(buf);
 		return -1;
 	}
@@ -100,8 +98,8 @@ static inline int get_memory_stat(od_mem_stat_t *out)
 	char *buf;
 	size_t size;
 	if (mm_file_read_all(PROC_MEMINFO_PATH, &buf, &size) != 0) {
-		hw_error("can't open '%s': %s", PROC_MEMINFO_PATH,
-			 strerror(errno));
+		od_gerror(NULL, NULL, "can't open '%s': %s", PROC_MEMINFO_PATH,
+			  strerror(errno));
 		return -1;
 	}
 
@@ -132,12 +130,13 @@ static inline void hw_watcher(void *arg)
 {
 	od_host_watcher_t *hw = arg;
 
-	hw_log("host watcher started");
+	od_glog(NULL, NULL, "host watcher started");
 
 	while (1) {
 		int rc = machine_wait_flag_wait(hw->stop_flag, 1000);
 		if (rc != -1 && machine_errno() != ETIMEDOUT) {
-			hw_log("stop flag is set, exiting host watcher");
+			od_glog(NULL, NULL,
+				"stop flag is set, exiting host watcher");
 			break;
 		}
 
@@ -156,11 +155,12 @@ static inline void hw_watcher(void *arg)
 		float ucpu, umem;
 		od_host_watcher_read(hw, &ucpu, &umem);
 
-		hw_log("update values to: %.2f%% cpu and %.2f%% mem", ucpu,
-		       umem);
+		od_glog(NULL, NULL,
+			"update values to: %.2f%% cpu and %.2f%% mem", ucpu,
+			umem);
 	}
 
-	hw_log("host watcher finished");
+	od_glog(NULL, NULL, "host watcher finished");
 }
 
 int od_host_watcher_init(od_host_watcher_t *hw)
@@ -183,7 +183,7 @@ int od_host_watcher_init(od_host_watcher_t *hw)
 
 	hw->worker_id = machine_create("host-watcher", hw_watcher, hw);
 	if (hw->worker_id == -1) {
-		hw_error("can't start host watcher machine");
+		od_gerror(NULL, NULL, "can't start host watcher machine");
 		machine_wait_flag_destroy(hw->stop_flag);
 		mm_spinlock_destroy(&hw->lock);
 		return -1;

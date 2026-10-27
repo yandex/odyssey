@@ -48,7 +48,7 @@ void send_sigterm_to_parent(void)
 		return;
 	}
 
-	online_restart_log("send SIGTERM to parent instance %d", target);
+	od_glog(NULL, NULL, "send SIGTERM to parent instance %d", target);
 
 	kill(target, SIGTERM);
 }
@@ -136,8 +136,8 @@ pid_t od_restart_run_new_binary(void)
 
 	pid_t p = fork();
 	if (p == -1) {
-		online_restart_error("can't fork new binary: %s",
-				     strerror(errno));
+		od_gerror(NULL, NULL, "can't fork new binary: %s",
+			  strerror(errno));
 		return -1;
 	}
 
@@ -152,6 +152,6 @@ pid_t od_restart_run_new_binary(void)
 		execve(instance->cmdline.argv[0], instance->cmdline.argv, envp);
 	}
 
-	online_restart_error("can't start new binary: %s", strerror(errno));
+	od_gerror(NULL, NULL, "can't start new binary: %s", strerror(errno));
 	abort();
 }

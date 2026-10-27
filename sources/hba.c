@@ -161,7 +161,7 @@ void od_hba_rules_print(od_hba_t *hba, od_logger_t *logger)
 				rule->address_range.string_value :
 				"";
 
-		od_log(logger, "config", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "hba rule  %-10s  db=%-20s  user=%-20s  addr=%-20s  %s",
 		       conn_type_str[rule->connection_type], db_buf, user_buf,
 		       addr_str,
