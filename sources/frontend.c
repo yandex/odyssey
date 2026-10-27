@@ -642,7 +642,11 @@ static inline od_frontend_status_t od_frontend_attach_to_endpoint(
 				"read-write status of '%s' is mismatched with expected '%s' or failed to update",
 				addr, od_target_session_attrs_to_str(tsa));
 
-			if (trc == OD_TSA_CHECK_BACKEND_ERROR) {
+			/* Setup may discard the collected startup parameters on
+			 * failure. Do not pool a connection that cannot send them
+			 * again when the next client initializes the route. */
+			if (trc == OD_TSA_CHECK_BACKEND_ERROR ||
+			    route_params != NULL) {
 				od_router_close(router, client);
 			} else {
 				od_router_detach(router, client);
