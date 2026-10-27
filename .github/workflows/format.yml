@@ -17,4 +17,8 @@ jobs:
       with:
         submodules: recursive
     - name: Check format
-      run: make check-format
+      shell: bash
+      run: make check-format 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

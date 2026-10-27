@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/unit-tests.yml"
       - "sources/**"
       - "test/**"
       - "CMakeLists.txt"
@@ -39,7 +41,11 @@ jobs:
     - name: docker buildx
       uses: docker/setup-buildx-action@v4
     - name: Odyssey unit tests
-      run: make ci-unittests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_TARGET_PLATFORM=${{ matrix.target-arch }} ODYSSEY_CC=${{ matrix.cc }}
+      shell: bash
+      run: make ci-unittests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} ODYSSEY_TEST_TARGET_PLATFORM=${{ matrix.target-arch }} ODYSSEY_CC=${{ matrix.cc }} 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs
 
   unit-compression:
     name: unit (compression)
@@ -54,4 +60,8 @@ jobs:
     - name: docker buildx
       uses: docker/setup-buildx-action@v4
     - name: Odyssey unit tests with BUILD_COMPRESSION=ON
-      run: make ci-unittests ODYSSEY_CMAKE_EXTRA="-DBUILD_COMPRESSION=ON"
+      shell: bash
+      run: make ci-unittests ODYSSEY_CMAKE_EXTRA="-DBUILD_COMPRESSION=ON" 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

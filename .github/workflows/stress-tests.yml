@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/stress-tests.yml"
       - "sources/**"
       - "test/**"
       - "CMakeLists.txt"
@@ -27,4 +29,8 @@ jobs:
       with:
         submodules: recursive
     - name: Odyssey stress tests
-      run: make stress-tests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}
+      shell: bash
+      run: make stress-tests ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs
