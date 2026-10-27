@@ -723,6 +723,33 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 	return 0;
 }
 
+int mm_tls_shutdown(mm_io_t *io, uint32_t timeout)
+{
+	if (io->tls_ssl == NULL) {
+		return 0;
+	}
+	mm_tls_error_reset(io);
+	mm_io_set_deadline(io, timeout);
+	for (;;) {
+		ERR_clear_error();
+		int rc = SSL_shutdown(io->tls_ssl);
+		/* Zero means close_notify was sent. Do not wait for the peer's reply. */
+		if (rc >= 0) {
+			return 0;
+		}
+		int error = SSL_get_error(io->tls_ssl, rc);
+		if (error == SSL_ERROR_WANT_READ ||
+		    error == SSL_ERROR_WANT_WRITE) {
+			if (mm_io_wait_deadline(io) == -1) {
+				return -1;
+			}
+			continue;
+		}
+		mm_tls_error(io, rc, "SSL_shutdown()");
+		return -1;
+	}
+}
+
 int mm_tls_write(mm_io_t *io, const char *buf, int size)
 {
 	mm_tls_error_reset(io);
