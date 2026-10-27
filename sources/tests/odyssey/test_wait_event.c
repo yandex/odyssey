@@ -127,12 +127,21 @@ static void test_classes(void)
 	     OD_WAIT_CLASS_QUERY_CYCLE);
 	test(od_wait_event_class(OD_WAIT_QUERY_SERVER_READ) ==
 	     OD_WAIT_CLASS_QUERY_CYCLE);
+	test(od_wait_event_class(OD_WAIT_QUERY_PLANNING) ==
+	     OD_WAIT_CLASS_QUERY_CYCLE);
 	test(od_wait_event_class(OD_WAIT_STREAM_CLIENT_WRITE) ==
 	     OD_WAIT_CLASS_STREAM);
 	test(od_wait_event_class(OD_WAIT_DEPLOY_SERVER_READ) ==
 	     OD_WAIT_CLASS_DEPLOY);
 	test(od_wait_event_class(OD_WAIT_RESET_SERVER_WRITE) ==
 	     OD_WAIT_CLASS_RESET);
+	test(od_wait_event_class(OD_WAIT_RESET_SERVER_READ) ==
+	     OD_WAIT_CLASS_RESET);
+	test(od_wait_event_class(OD_WAIT_AUTH_PAM) == OD_WAIT_CLASS_AUTH);
+	test(od_wait_event_class(OD_WAIT_AUTH_EXTERNAL) == OD_WAIT_CLASS_AUTH);
+	test(od_wait_event_class(OD_WAIT_AUTH_SERVER_READ) ==
+	     OD_WAIT_CLASS_AUTH);
+	test(od_wait_event_class(OD_WAIT_PAUSE) == OD_WAIT_CLASS_SYSTEM);
 	test(od_wait_event_class(OD_WAIT_RESET_SERVER_READ) ==
 	     OD_WAIT_CLASS_RESET);
 	test(od_wait_event_class(OD_WAIT_PAUSE) == OD_WAIT_CLASS_SYSTEM);

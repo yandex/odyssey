@@ -16,6 +16,7 @@
 #include <logger.h>
 #include <od_memory.h>
 #include <rate.h>
+#include <wait_event.h>
 
 struct od_global {
 	od_instance_t *instance;
@@ -90,7 +91,9 @@ static inline int od_global_wait_resumed(od_global_t *global, uint32_t timeout)
 		return 0;
 	}
 
+	od_wait_event_start(OD_WAIT_PAUSE);
 	int rc = mm_wait_list_wait(global->resume_waiters, NULL, timeout);
+	od_wait_event_end(OD_WAIT_PAUSE);
 	if (rc == 0) {
 		return 0;
 	}

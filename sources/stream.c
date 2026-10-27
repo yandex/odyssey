@@ -12,6 +12,7 @@
 #include <client.h>
 #include <server.h>
 #include <io.h>
+#include <wait_event.h>
 #include <list.h>
 #include <backend.h>
 #include <instance.h>
@@ -497,9 +498,11 @@ static od_frontend_status_t process_readahead(char *ctx, stream_t *stream,
 
 	if (total_processed > 0 && !is_service) {
 		size_t unused;
+		od_wait_event_start(OD_WAIT_STREAM_CLIENT_WRITE);
 		int rc = od_io_write_raw(&client->io, rvec.iov_base,
 					 total_processed, &unused, timeout_ms,
 					 OD_IO_WRITE_DUPLEX);
+		od_wait_event_end(OD_WAIT_STREAM_CLIENT_WRITE);
 		if (rc != 0) {
 			status = mm_errno_get() == ENOBUFS ?
 					 OD_ECLIENT_READAHEAD_FULL :
@@ -521,7 +524,7 @@ static od_frontend_status_t
 od_stream_server_impl(char *ctx, od_server_t *server, int is_service,
 		      int ignore_errors, int nresponses,
 		      od_stream_on_responce_cb on_response, void *arg,
-		      uint32_t timeout_ms)
+		      uint32_t timeout_ms, od_wait_event_t wait_event)
 {
 	od_frontend_status_t status = OD_OK;
 	int rc;
@@ -571,7 +574,9 @@ od_stream_server_impl(char *ctx, od_server_t *server, int is_service,
 			continue;
 		}
 
+		od_wait_event_start(wait_event);
 		rc = od_io_read_some(&server->io, timeout_ms);
+		od_wait_event_end(wait_event);
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == EAGAIN) {
@@ -605,39 +610,42 @@ od_stream_server_impl(char *ctx, od_server_t *server, int is_service,
 }
 
 od_frontend_status_t od_stream_server_until_rfq(char *ctx, od_server_t *server,
-						uint32_t timeout_ms)
+						uint32_t timeout_ms,
+						od_wait_event_t wait_event)
 {
 	return od_stream_server_impl(ctx, server, 0 /* is_service */,
 				     0 /* ignore_errors */, 0 /* nresponses */,
-				     NULL, NULL, timeout_ms);
+				     NULL, NULL, timeout_ms, wait_event);
 }
 
-od_frontend_status_t od_service_stream_server_until_rfq(char *ctx,
-							od_server_t *server,
-							int ignore_errors,
-							uint32_t timeout_ms)
+od_frontend_status_t
+od_service_stream_server_until_rfq(char *ctx, od_server_t *server,
+				   int ignore_errors, uint32_t timeout_ms,
+				   od_wait_event_t wait_event)
 {
 	return od_stream_server_impl(ctx, server, 1 /* is_service */,
 				     ignore_errors, 0 /* nresponses */, NULL,
-				     NULL, timeout_ms);
+				     NULL, timeout_ms, wait_event);
 }
 
 od_frontend_status_t
 od_stream_server_exact_completes(char *ctx, od_server_t *server, int n,
 				 od_stream_on_responce_cb on_response,
-				 void *arg, uint32_t timeout_ms)
+				 void *arg, uint32_t timeout_ms,
+				 od_wait_event_t wait_event)
 {
 	return od_stream_server_impl(ctx, server, 0 /* is_service */,
 				     0 /* ignore_errors */, n /* nresponses */,
-				     on_response, arg, timeout_ms);
+				     on_response, arg, timeout_ms, wait_event);
 }
 
 od_frontend_status_t od_stream_server_sync(char *ctx, od_server_t *server,
-					   uint32_t timeout_ms)
+					   uint32_t timeout_ms,
+					   od_wait_event_t wait_event)
 {
 	return od_stream_server_impl(ctx, server, 0 /* is_service */,
 				     0 /* ignore_errors */, 0 /* nresponses */,
-				     NULL, NULL, timeout_ms);
+				     NULL, NULL, timeout_ms, wait_event);
 }
 
 /*
@@ -805,9 +813,11 @@ copy_process_readahead(char *ctx, copy_stream_t *stream, od_client_t *client,
 
 	if (total_processed > 0) {
 		size_t unused;
+		od_wait_event_start(OD_WAIT_STREAM_SERVER_WRITE);
 		int rc = od_io_write_raw(&server->io, rvec.iov_base,
 					 total_processed, &unused, timeout_ms,
 					 0);
+		od_wait_event_end(OD_WAIT_STREAM_SERVER_WRITE);
 		od_assert((rc == 0 && (total_processed == unused)) ||
 			  ((total_processed != unused) && rc != 0));
 		if (rc != 0) {
@@ -842,7 +852,9 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 			return st;
 		}
 
+		od_wait_event_start(OD_WAIT_STREAM_SERVER_WRITE);
 		rc = od_io_write(&server->io, additional, timeout_ms);
+		od_wait_event_end(OD_WAIT_STREAM_SERVER_WRITE);
 		if (rc != 0) {
 			return OD_ESERVER_WRITE;
 		}
@@ -892,7 +904,9 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 		od_assert(od_readahead_unread(&client->io.readahead) <
 			  (int)sizeof(kiwi_header_t));
 
+		od_wait_event_start(OD_WAIT_STREAM_CLIENT_READ);
 		rc = od_io_read_some(&client->io, timeout_ms);
+		od_wait_event_end(OD_WAIT_STREAM_CLIENT_READ);
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == EAGAIN) {
@@ -946,7 +960,8 @@ od_frontend_status_t od_stream_copy_to_server(char *ctx, od_client_t *client,
 	}
 
 	/* server->copy_mode=0 will be set on RFQ */
-	status = od_stream_server_until_rfq(ctx, server, timeout_ms);
+	status = od_stream_server_until_rfq(ctx, server, timeout_ms,
+					    OD_WAIT_STREAM_SERVER_READ);
 
 	return status;
 }

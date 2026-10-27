@@ -16,6 +16,7 @@
 #include <misc.h>
 #include <util.h>
 #include <worker.h>
+#include <wait_event.h>
 
 /* max plan entries sent without a heap-allocated iovec array */
 #define OD_XPLAN_IOVEC_INLINE_MAX 32
@@ -1580,7 +1581,8 @@ static od_frontend_status_t run_parse(od_xplan_entry_t *ps, od_client_t *client,
 
 	return od_stream_server_exact_completes("main", server,
 						1 /* one complete for parse */,
-						NULL, NULL, timeout_ms);
+						NULL, NULL, timeout_ms,
+						OD_WAIT_STREAM_SERVER_READ);
 }
 
 typedef struct {
@@ -1661,10 +1663,9 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 	while (arg.idx < end && !server->xproto_err) {
 		size_t left = end - arg.idx;
 
-		status =
-			od_stream_server_exact_completes("main", server, left,
-							 forward_apply_delta_cb,
-							 &arg, timeout_ms);
+		status = od_stream_server_exact_completes(
+			"main", server, left, forward_apply_delta_cb, &arg,
+			timeout_ms, OD_WAIT_STREAM_SERVER_READ);
 
 		if (status == OD_COPY_IN_RECEIVED) {
 			machine_msg_t *add =
@@ -1706,7 +1707,8 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 	 * on ErrorResponse, RFQ is still pending and must be drained
 	 */
 	if (has_sync && server->xproto_err) {
-		status = od_stream_server_sync("main", server, timeout_ms);
+		status = od_stream_server_sync("main", server, timeout_ms,
+					       OD_WAIT_STREAM_SERVER_READ);
 	}
 
 	return status;
@@ -1851,7 +1853,9 @@ send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
 
+	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 	int rc = od_io_writev(&server->io, iovecs, niovecs, timeout_ms, 0);
+	od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 	if (rc == -1) {
 		return OD_ESERVER_WRITE;
 	}

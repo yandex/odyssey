@@ -13,6 +13,7 @@
 #include <router.h>
 #include <system.h>
 #include <global.h>
+#include <wait_event.h>
 #include <module.h>
 #include <backend.h>
 #include <instance.h>
@@ -721,7 +722,9 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 		/* need to unlock - will do i/o operation */
 		od_router_unlock(router);
+		od_wait_event_start(OD_WAIT_AUTH_LDAP);
 		int rc = od_auth_ldap_resolve_storage_credentials(client, rule);
+		od_wait_event_end(OD_WAIT_AUTH_LDAP);
 		od_router_lock(router);
 
 		od_rules_unref(rule);

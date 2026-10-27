@@ -15,6 +15,7 @@
 #include <client.h>
 #include <router.h>
 #include <server.h>
+#include <wait_event.h>
 #include <rules.h>
 #include <global.h>
 #include <balancing.h>
@@ -177,8 +178,10 @@ static int read_and_parse_startup(od_client_t *client, int *parse_rc)
 {
 	od_instance_t *instance = client->global->instance;
 
+	od_wait_event_start(OD_WAIT_CONNECT_CLIENT_STARTUP);
 	machine_msg_t *msg = od_read_startup(
 		&client->io, client->source->config->client_login_timeout_ms);
+	od_wait_event_end(OD_WAIT_CONNECT_CLIENT_STARTUP);
 	if (msg == NULL) {
 		if (parse_rc) {
 			*parse_rc = KIWI_STARTUP_READ_LEN_ERROR;
@@ -1196,7 +1199,9 @@ static inline od_frontend_status_t od_frontend_setup_params(od_client_t *client)
 		param = param->next;
 	}
 
+	od_wait_event_start(OD_WAIT_DEPLOY_CLIENT_WRITE);
 	rc = od_write(&client->io, stream);
+	od_wait_event_end(OD_WAIT_DEPLOY_CLIENT_WRITE);
 	if (rc == -1) {
 		return OD_ECLIENT_WRITE;
 	}
@@ -1242,7 +1247,9 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 	}
 
 	int rc;
+	od_wait_event_start(OD_WAIT_DEPLOY_CLIENT_WRITE);
 	rc = od_write(&client->io, stream);
+	od_wait_event_end(OD_WAIT_DEPLOY_CLIENT_WRITE);
 	if (rc == -1) {
 		return OD_ECLIENT_WRITE;
 	}
@@ -1310,7 +1317,9 @@ static inline od_frontend_status_t od_frontend_local_setup(od_client_t *client)
 		goto error;
 	}
 	int rc;
+	od_wait_event_start(OD_WAIT_QUERY_CLIENT_WRITE);
 	rc = od_write(&client->io, stream);
+	od_wait_event_end(OD_WAIT_QUERY_CLIENT_WRITE);
 	if (rc == -1) {
 		return OD_ECLIENT_WRITE;
 	}
@@ -1606,7 +1615,9 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 				return status;
 			}
 			/* one minute */
+			od_wait_event_start(OD_WAIT_QUERY_CLIENT_READ);
 			msg = od_read(&client->io, 60000, OD_READ_FE);
+			od_wait_event_end(OD_WAIT_QUERY_CLIENT_READ);
 
 			if (machine_timedout()) {
 				/* retry wait to recheck exit condition */
@@ -1685,7 +1696,9 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 			return OD_EOOM;
 		}
 
+		od_wait_event_start(OD_WAIT_QUERY_CLIENT_WRITE);
 		rc = od_write(&client->io, stream);
+		od_wait_event_end(OD_WAIT_QUERY_CLIENT_WRITE);
 		tts->data_rows = NULL;
 		if (rc == -1) {
 			od_tuple_table_slot_free(tts);
@@ -2009,7 +2022,9 @@ client_read_full_msg(od_client_t *client, const kiwi_header_t *header,
 	memcpy(dest, header, sizeof(kiwi_header_t));
 	dest += sizeof(kiwi_header_t);
 
+	od_wait_event_start(OD_WAIT_QUERY_CLIENT_READ);
 	int rc = od_io_read(&client->io, dest, size, timeout_ms);
+	od_wait_event_end(OD_WAIT_QUERY_CLIENT_READ);
 	if (rc == -1) {
 		return OD_ECLIENT_READ;
 	}
@@ -2310,7 +2325,9 @@ static od_frontend_status_t client_read_header(od_client_t *client,
 {
 	while (od_readahead_unread(&client->io.readahead) <
 	       (int)sizeof(kiwi_header_t)) {
+		od_wait_event_start(OD_WAIT_QUERY_CLIENT_READ);
 		int rc = od_io_read_some(&client->io, 1000);
+		od_wait_event_end(OD_WAIT_QUERY_CLIENT_READ);
 		if (rc != 0) {
 			int err = machine_errno();
 			if (err == ETIMEDOUT) {
@@ -2367,6 +2384,8 @@ static void od_frontend_replication_pipe(void *arg_)
 
 	od_io_t *src = NULL;
 	od_io_t *dst = NULL;
+	od_wait_event_t read_event;
+	od_wait_event_t write_event;
 	od_frontend_status_t read_err = OD_UNDEF;
 	od_frontend_status_t write_err = OD_UNDEF;
 	od_readahead_t *readahead = NULL;
@@ -2377,11 +2396,15 @@ static void od_frontend_replication_pipe(void *arg_)
 	if (is_client_to_server) {
 		src = &client->io;
 		dst = &server->io;
+		read_event = OD_WAIT_STREAM_CLIENT_READ;
+		write_event = OD_WAIT_STREAM_SERVER_WRITE;
 		read_err = OD_ECLIENT_READ;
 		write_err = OD_ESERVER_WRITE;
 	} else {
 		src = &server->io;
 		dst = &client->io;
+		read_event = OD_WAIT_STREAM_SERVER_READ;
+		write_event = OD_WAIT_STREAM_CLIENT_WRITE;
 		read_err = OD_ESERVER_READ;
 		write_err = OD_ECLIENT_WRITE;
 	}
@@ -2414,7 +2437,9 @@ static void od_frontend_replication_pipe(void *arg_)
 
 		struct iovec rvec = od_readahead_read_begin(readahead);
 		if (rvec.iov_len == 0) {
+			od_wait_event_start(read_event);
 			rc = od_io_read_some(src, 1000);
+			od_wait_event_end(read_event);
 			errno_ = machine_errno();
 			if (rc == 0) {
 				if (stats != NULL) {
@@ -2439,8 +2464,10 @@ static void od_frontend_replication_pipe(void *arg_)
 		}
 
 		size_t written;
+		od_wait_event_start(write_event);
 		rc = od_io_write_raw(dst, rvec.iov_base, rvec.iov_len, &written,
 				     1000, 0);
+		od_wait_event_end(write_event);
 		errno_ = machine_errno();
 		od_readahead_read_commit(readahead, written);
 		if (rc < 0 && errno_ != EAGAIN && errno_ != ETIMEDOUT) {
@@ -3464,12 +3491,18 @@ static inline int wait_cancel_allowed(od_global_t *global,
 				      od_instance_t *instance,
 				      uint32_t timeout_ms)
 {
+	int rc;
 	if (instance->config.cancel_rate_limit != 0) {
-		return od_rate_limiter_waitn(&global->cancel_rate_limiter, 1,
-					     timeout_ms);
+		od_wait_event_start(OD_WAIT_RATELIMIT_CANCEL);
+		rc = od_rate_limiter_waitn(&global->cancel_rate_limiter, 1,
+					   timeout_ms);
+		od_wait_event_end(OD_WAIT_RATELIMIT_CANCEL);
 	} else {
-		return mm_sem_timedwait(&global->cancel_sem, timeout_ms);
+		od_wait_event_start(OD_WAIT_RATELIMIT_CANCEL);
+		rc = mm_sem_timedwait(&global->cancel_sem, timeout_ms);
+		od_wait_event_end(OD_WAIT_RATELIMIT_CANCEL);
 	}
+	return rc;
 }
 
 static inline void cancel_finished(od_global_t *global, od_instance_t *instance)

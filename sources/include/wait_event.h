@@ -53,6 +53,7 @@ typedef enum {
 	X(AUTH_EXTERNAL, AUTH, "AUTH_EXTERNAL")                              \
 	/* query cycle: read command, forward, wait response, send result */ \
 	X(QUERY_CLIENT_READ, QUERY_CYCLE, "QUERY_CLIENT_READ")               \
+	X(QUERY_PLANNING, QUERY_CYCLE, "QUERY_PLANNING")                     \
 	X(QUERY_SERVER_WRITE, QUERY_CYCLE, "QUERY_SERVER_WRITE")             \
 	X(QUERY_SERVER_READ, QUERY_CYCLE, "QUERY_SERVER_READ")               \
 	X(QUERY_CLIENT_WRITE, QUERY_CYCLE, "QUERY_CLIENT_WRITE")             \

@@ -16,14 +16,18 @@
 #include <route.h>
 #include <instance.h>
 #include <stream.h>
+#include <wait_event.h>
 
 static inline int complete_deploy(od_instance_t *instance, od_server_t *server,
 				  char *context)
 {
 	uint32_t timeout = instance->config.backend_connect_timeout_ms;
 
-	if (od_service_stream_server_until_rfq(
-		    context, server, 0 /* ignore errors */, timeout) != OD_OK) {
+	int rc = od_service_stream_server_until_rfq(context, server,
+						    0 /* ignore errors */,
+						    timeout,
+						    OD_WAIT_DEPLOY_SERVER_READ);
+	if (rc != OD_OK) {
 		return NOT_OK_RESPONSE;
 	}
 
@@ -60,7 +64,9 @@ int od_deploy(od_client_t *client, char *context)
 		}
 
 		int rc;
+		od_wait_event_start(OD_WAIT_DEPLOY_SERVER_WRITE);
 		rc = od_write(&server->io, msg);
+		od_wait_event_end(OD_WAIT_DEPLOY_SERVER_WRITE);
 		if (rc == -1) {
 			return -1;
 		}
