@@ -27,6 +27,8 @@
 #include <util.h>
 #include <port.h>
 #include <attach.h>
+#include <alloc/linear.h>
+#include <sql/full/parser.h>
 
 const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
 {
@@ -458,7 +460,6 @@ static void do_group_check(void *arg)
 
 	od_router_unroute(router, group_checker_client);
 	od_client_free_extended(group_checker_client);
-	od_group_free(group);
 
 	char **t_names;
 	int t_count;
@@ -474,6 +475,7 @@ static void do_group_check(void *arg)
 	od_free(t_names);
 
 to_return:
+	group->online = 0;
 	od_log(&instance->logger, NULL, NULL,
 	       "group checking for %s.%s finished", group_rule->db_name,
 	       group_rule->user_name);
@@ -646,6 +648,10 @@ void od_rules_rule_free(od_rule_t *rule)
 static void od_rules_rule_free_now(od_rule_t *rule)
 {
 	kiwi_vars_free(&rule->vars);
+	/* A checker holds a rule reference; offline checks never start one. */
+	if (rule->group) {
+		od_group_free(rule->group);
+	}
 
 	if (rule->password) {
 		od_free(rule->password);
@@ -968,7 +974,7 @@ void od_rules_stop_checkers(od_rules_t *rules)
 	}
 }
 
-int od_rules_sort_for_matching(od_rules_t *rules)
+int od_rules_sort_for_matching(od_rules_t *rules, int sequential)
 {
 	size_t count = od_list_count(&rules->rules);
 	if (count == 0) {
@@ -996,8 +1002,6 @@ int od_rules_sort_for_matching(od_rules_t *rules)
 	 * place default-containing rules at the end
 	 * (default routes has lower priority when matching)
 	*/
-
-	int sequential = od_global_get_instance()->config.sequential_routing;
 
 	if (sequential) {
 		qsort(sorted, count, sizeof(od_rule_t *),
@@ -1050,6 +1054,9 @@ static int od_rule_conn_type_match(const od_rule_t *rule,
 {
 	if (rule->conn_type == OD_RULE_CONN_TYPE_DEFAULT) {
 		return 1;
+	}
+	if (user_addr == NULL) {
+		return 0;
 	}
 
 	sa_family_t family = user_addr->ss_family;
@@ -1796,7 +1803,8 @@ int od_rules_merge(od_rules_t *rules, od_rules_t *src, od_list_t *added,
 	/*
 	 * the rules list was changed, need to sort it for matching correct work
 	 */
-	od_rules_sort_for_matching(rules);
+	od_rules_sort_for_matching(
+		rules, od_global_get_instance()->config.sequential_routing);
 
 	return count_new + count_mark + count_deleted;
 }
@@ -1908,6 +1916,37 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	return OK_RESPONSE;
 }
 
+static od_rule_t *od_rules_auth_query_route(od_rules_t *rules, od_rule_t *rule)
+{
+	kiwi_be_startup_t startup = { 0 };
+	startup.database.value = rule->auth_query_db;
+	startup.user.value = rule->auth_query_user;
+	return od_rules_forward(rules, &startup, NULL, 1);
+}
+
+static bool od_rules_auth_query_group_route(od_rules_t *rules, od_rule_t *rule,
+					    od_rule_t *matched)
+{
+	/* Membership is fetched after startup; --test cannot resolve it offline. */
+	od_list_t *i;
+	od_list_foreach (&rules->rules, i) {
+		od_rule_t *candidate = od_container_of(i, od_rule_t, link);
+		if (candidate == matched) {
+			break;
+		}
+		if (!candidate->obsolete && candidate->group != NULL &&
+		    candidate->pool->routing == OD_RULE_POOL_INTERNAL &&
+		    candidate->address_range.is_default &&
+		    candidate->conn_type == OD_RULE_CONN_TYPE_DEFAULT &&
+		    candidate->storage->storage_type ==
+			    OD_RULE_STORAGE_REMOTE &&
+		    od_rule_db_match(candidate, rule->auth_query_db)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 {
 	od_rule_t *rule;
@@ -1920,10 +1959,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 
 		/* match storage and make a copy of in the user rules */
 		if (rule->auth_query != NULL &&
-		    !od_rules_match(rules, rule->db_name, rule->user_name,
-				    &rule->address_range, rule->conn_type,
-				    rule->db_is_default, rule->user_is_default,
-				    1)) {
+		    od_rules_auth_query_route(rules, rule) == NULL) {
 			need_autogen = true;
 			break;
 		}
@@ -2382,6 +2418,26 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 					rule->address_range.string_value);
 				return -1;
 			}
+
+			uint8_t *buffer = od_malloc(16 * 1024);
+			if (buffer == NULL) {
+				od_error(logger, NULL, NULL,
+					 "out of memory validating auth_query");
+				return -1;
+			}
+			od_linear_alloc_t arena;
+			od_linear_alloc_init(&arena, buffer, 16 * 1024);
+			int params = od_sql_full_parameter_count(
+				&arena, rule->auth_query);
+			od_free(buffer);
+			if (params != 1) {
+				od_error(
+					logger, NULL, NULL,
+					"rule '%s.%s %s': auth_query must use $1 as its only bind parameter (username)",
+					rule->db_name, rule->user_name,
+					rule->address_range.string_value);
+				return -1;
+			}
 		}
 
 		/* group */
@@ -2427,6 +2483,33 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 #endif
 	}
 
+	/* Match the same internal routes on --test, startup and reload. */
+	if (od_rules_autogenerate_defaults(rules, logger) != 0) {
+		return -1;
+	}
+	if (od_rules_sort_for_matching(rules, config->sequential_routing) !=
+	    0) {
+		od_error(logger, NULL, NULL, "out of memory sorting rules");
+		return -1;
+	}
+	od_list_foreach (&rules->rules, i) {
+		od_rule_t *rule = od_container_of(i, od_rule_t, link);
+		if (rule->auth_query == NULL) {
+			continue;
+		}
+		od_rule_t *auth_rule = od_rules_auth_query_route(rules, rule);
+		if ((auth_rule == NULL || auth_rule->storage->storage_type !=
+						  OD_RULE_STORAGE_REMOTE) &&
+		    !od_rules_auth_query_group_route(rules, rule, auth_rule)) {
+			od_error(
+				logger, NULL, NULL,
+				"rule '%s.%s %s': auth_query has no remote internal route for database '%s', user '%s'; configure pool_routing \"internal\"",
+				rule->db_name, rule->user_name,
+				rule->address_range.string_value,
+				rule->auth_query_db, rule->auth_query_user);
+			return -1;
+		}
+	}
 	return 0;
 }
 

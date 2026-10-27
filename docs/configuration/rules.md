@@ -148,9 +148,31 @@ to authenticate a client.
 
 ```
 auth_query "SELECT usename, passwd FROM pg_shadow WHERE usename=$1"
-auth_query_db ""
-auth_query_user ""
+auth_query_db "postgres"
+auth_query_user "authq"
 ```
+
+The client username is bound as `$1`. The query must use this bind parameter;
+`%u`, a quoted `'$1'`, or `$1` inside a comment does not declare a parameter.
+Other bind parameters such as `$2` are not supported. Repeated uses of `$1`
+are allowed.
+
+The selected route must use a remote storage and `pool_routing "internal"`:
+
+```
+database "postgres" {
+    user "authq" {
+        authentication "none"
+        storage "postgres_server"
+        pool "transaction"
+        pool_routing "internal"
+    }
+}
+```
+
+Wildcard internal routes and existing default-rule auto-generation are also
+supported. These requirements are checked by `--test`, startup and configuration
+reload, without connecting to PostgreSQL.
 
 Disabled by default.
 

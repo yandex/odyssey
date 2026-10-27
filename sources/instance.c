@@ -448,15 +448,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		goto error;
 	}
 
-	/* auto-generate default rule for auth_query if none specified */
-	rc = od_rules_autogenerate_defaults(&router.rules, &instance->logger);
-
-	od_rules_sort_for_matching(&router.rules);
-
-	if (rc == -1) {
-		goto error;
-	}
-
 	/*
 	 * run as daemon
 	 * should not daemonize when process was born by online restart

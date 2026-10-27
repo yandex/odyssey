@@ -266,7 +266,7 @@ void od_rules_stop_checkers(od_rules_t *rules);
 int od_rules_cleanup(od_rules_t *rules);
 int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src);
 
-int od_rules_sort_for_matching(od_rules_t *rules);
+int od_rules_sort_for_matching(od_rules_t *rules, int sequential);
 
 /* rule */
 od_rule_t *od_rules_add_new_rule(od_rules_t *rules, const char *dbname,

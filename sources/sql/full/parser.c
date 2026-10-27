@@ -57,6 +57,58 @@ full_parse_oom_handler(void)
 	longjmp(yyext->error_jmp, 1);
 }
 
+/* Lex only: configuration templates need not be complete SQL before expansion. */
+int
+od_sql_full_parameter_count(od_linear_alloc_t *la, const char *input)
+{
+	base_yy_extra_type yyextra = {0};
+	core_yyscan_t volatile scanner = NULL;
+	int result;
+
+	od_linear_alloc_reset(la, OD_LINEAR_ALLOC_REALLOC);
+	od_set_thread_linear_alloc(la);
+	yyextra.error_set = 1;
+	if (setjmp(yyextra.error_jmp) != 0)
+	{
+		result = -1;
+		goto done;
+	}
+	full_parse_oom_yyextra = &yyextra;
+	od_set_thread_oom_hook(full_parse_oom_handler);
+	scanner = scanner_init(input, &yyextra.core_yy_extra,
+					   &ScanKeywords, ScanKeywordTokens);
+	if (scanner == NULL)
+	{
+		result = -1;
+		goto done;
+	}
+
+	result = 0;
+	core_YYSTYPE value;
+	YYLTYPE location;
+	int token;
+	while ((token = core_yylex(&value, &location, scanner)) != 0)
+	{
+		if (token != PARAM)
+			continue;
+		if (value.ival <= 0)
+		{
+			result = -1;
+			break;
+		}
+		if (value.ival > result)
+			result = value.ival;
+	}
+
+done:
+	if (scanner != NULL)
+		scanner_finish(scanner);
+	od_set_thread_oom_hook(NULL);
+	full_parse_oom_yyextra = NULL;
+	od_set_thread_linear_alloc(NULL);
+	return result;
+}
+
 
 /*
  * od_sql_full_raw_parse

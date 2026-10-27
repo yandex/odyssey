@@ -877,8 +877,6 @@ void od_system_config_reload(od_system_t *system)
 
 	od_rules_lock(&router->rules);
 
-	od_rules_stop_checkers(&router->rules);
-
 	od_config_t config;
 	od_config_init(&config);
 
@@ -904,19 +902,12 @@ void od_system_config_reload(od_system_t *system)
 	if (rc == -1) {
 		goto error;
 	}
+	/* A rejected config must leave the current group checkers running. */
+	od_rules_stop_checkers(&router->rules);
 	od_config_reload(&instance->config, &config);
 	od_logger_set_debug(&instance->logger, instance->config.log_debug,
 			    instance->config.log_debug_sampling);
 	od_hba_reload(hba, &hba_rules);
-
-	/* auto-generate default rule for auth_query if none specified */
-	rc = od_rules_autogenerate_defaults(&rules, &instance->logger);
-
-	od_rules_sort_for_matching(&rules);
-
-	if (rc == -1) {
-		goto error;
-	}
 
 	/*
 	 * Merge storages: reuse unchanged storages (keeping their watchdogs

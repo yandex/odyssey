@@ -495,6 +495,7 @@ set(od_test_src
     tests/odyssey/test_sql_pstmt.c
     tests/odyssey/test_console_parser.c
     tests/odyssey/test_config_field.c
+    tests/odyssey/test_auth_query_config.c
     tests/odyssey/test_autoconf.c
     tests/odyssey/test_soft_oom.c
     tests/odyssey/test_wait_event.c)
