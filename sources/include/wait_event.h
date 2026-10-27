@@ -27,6 +27,7 @@
 	X(STREAM, "Stream")          \
 	X(DEPLOY, "Deploy")          \
 	X(RESET, "Reset")            \
+	X(CANCEL, "Cancel")          \
 	X(SYSTEM, "System")
 
 typedef enum {
@@ -73,6 +74,8 @@ typedef enum {
 	/* reset: cleaning up a server connection after a client */          \
 	X(RESET_SERVER_WRITE, RESET, "RESET_SERVER_WRITE")                   \
 	X(RESET_SERVER_READ, RESET, "RESET_SERVER_READ")                     \
+	/* cancel: executing a cancel request against a backend */           \
+	X(CANCEL_BACKEND_CONNECT, CANCEL, "CANCEL_BACKEND_CONNECT")          \
 	/* system: instance-wide operational state */                        \
 	X(PAUSE, SYSTEM, "PAUSE")
 

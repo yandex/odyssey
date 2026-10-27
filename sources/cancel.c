@@ -17,6 +17,7 @@
 #include <instance.h>
 #include <server.h>
 #include <backend.h>
+#include <wait_event.h>
 
 int od_cancel(od_global_t *global, od_rule_storage_t *storage,
 	      const od_address_t *address, kiwi_key_t *key, od_id_t *server_id)
@@ -29,7 +30,9 @@ int od_cancel(od_global_t *global, od_rule_storage_t *storage,
 		return NOT_OK_RESPONSE;
 	}
 	server->global = global;
+	od_wait_event_start(OD_WAIT_CANCEL_BACKEND_CONNECT);
 	int rc = od_backend_connect_cancel(server, storage, address, key);
+	od_wait_event_end(OD_WAIT_CANCEL_BACKEND_CONNECT);
 	od_backend_abort_connection(server);
 	od_backend_close(server);
 	return rc;
