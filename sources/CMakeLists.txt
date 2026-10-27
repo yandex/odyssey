@@ -138,6 +138,7 @@ set(od_src
     tsa.c
     query.c
     storage.c
+    wait_event.c
     server.c
     shared_pool.c
     address.c
@@ -495,7 +496,8 @@ set(od_test_src
     tests/odyssey/test_console_parser.c
     tests/odyssey/test_config_field.c
     tests/odyssey/test_autoconf.c
-    tests/odyssey/test_soft_oom.c)
+    tests/odyssey/test_soft_oom.c
+    tests/odyssey/test_wait_event.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")

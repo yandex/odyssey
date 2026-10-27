@@ -48,6 +48,7 @@
 #include <rate.h>
 #include <restart_sync.h>
 #include <od_ldap.h>
+#include <wait_event.h>
 
 int od_system_send_msg(od_system_t *system, int msg_type, void *arg)
 {
@@ -1083,6 +1084,8 @@ static inline void od_system(void *arg)
 	od_global_t *global = system->global;
 	od_instance_t *instance = system->global->instance;
 	od_router_t *router = system->global->router;
+
+	od_wait_counters_reset();
 
 	system->system_channel = machine_channel_create();
 	if (system->system_channel == NULL) {
