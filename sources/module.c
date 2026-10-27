@@ -50,7 +50,7 @@ int od_target_module_add(od_logger_t *logger, od_module_t *modules,
 	handle = od_dlopen(target_module_path);
 	if (!handle) {
 		if (logger) {
-			od_log(logger, "load_module", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "errors while opening %s module: %s",
 			       target_module_path, dlerror());
 		} else {
@@ -84,7 +84,7 @@ module_exists:
 	if (logger == NULL) {
 		/* most probably its logger is not ready yet */
 	} else {
-		od_log(logger, "od_load_module", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "od_load_module: skip load module %s: was already loaded!",
 		       target_module_path);
 	}
@@ -95,7 +95,7 @@ error_close_handle:
 error:
 	err = od_dlerror();
 	if (logger) {
-		od_log(logger, "od_load_module", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "od_load_module: failed to load module %s", err);
 	}
 	return OD_MODULE_CB_FAIL_RETCODE;
@@ -132,15 +132,14 @@ int od_target_module_unload(od_logger_t *logger, od_module_t *modules,
 		}
 	}
 
-	od_log(logger, "od target module unload failed", NULL, NULL,
+	od_log(logger, NULL, NULL,
 	       "od_module_unload: failed to find specified module to unload %s",
 	       target_module);
 
 	return OD_MODULE_CB_FAIL_RETCODE;
 error:
 	err = od_dlerror();
-	od_log(logger, "od unload module error", NULL, NULL,
-	       "od_module_unload: %s", err);
+	od_log(logger, NULL, NULL, "od_module_unload: %s", err);
 
 	return OD_MODULE_CB_FAIL_RETCODE;
 }
@@ -169,8 +168,7 @@ int od_modules_unload(od_logger_t *logger, od_module_t *modules)
 	return OD_MODULE_CB_OK_RETCODE;
 error:
 	err = od_dlerror();
-	od_log(logger, "od unload module error", NULL, NULL,
-	       "od_module_unload: %s", err);
+	od_log(logger, NULL, NULL, "od_module_unload: %s", err);
 
 	return OD_MODULE_CB_FAIL_RETCODE;
 }

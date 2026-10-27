@@ -85,7 +85,7 @@ static int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
 		result->password = NULL;
 		result->password_len = password_len + 1;
 
-		od_debug(logger, "query", NULL, NULL,
+		od_debug(logger, NULL, NULL,
 			 "auth query returned empty password for user %.*s",
 			 user_len, user);
 		goto success;
@@ -120,9 +120,9 @@ static od_client_t *create_auth_client(od_global_t *global,
 {
 	od_router_t *router = global->router;
 
-	od_client_t *client = od_client_allocate_internal(global, "auth-query");
+	od_client_t *client = od_client_allocate_internal(global);
 	if (client == NULL) {
-		od_error(&instance->logger, "auth_query", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "can't allocate auth client");
 		return NULL;
 	}
@@ -135,14 +135,14 @@ static od_client_t *create_auth_client(od_global_t *global,
 	od_router_status_t status;
 	status = od_router_route(router, client);
 	if (status != OD_ROUTER_OK) {
-		od_debug(&instance->logger, "auth_query", client, NULL,
+		od_debug(&instance->logger, client, NULL,
 			 "failed to route internal auth query client: %s",
 			 od_router_status_to_str(status));
 		od_client_free_extended(client);
 		return NULL;
 	}
 
-	int rc = od_attach_extended(instance, "auth_query", router, client);
+	int rc = od_attach_extended(instance, router, client);
 	if (rc != OK_RESPONSE) {
 		od_router_unroute(router, client);
 		od_client_free_extended(client);
@@ -162,11 +162,10 @@ static int do_auth_query(od_instance_t *instance, od_client_t *client,
 	uint32_t timeout_ms = (uint32_t)instance->config.auth_query_timeout_ms;
 
 	od_wait_event_start(OD_WAIT_AUTH_SERVER_READ);
-	machine_msg_t *msg =
-		od_query_do(server, "auth_query", query, user, timeout_ms);
+	machine_msg_t *msg = od_query_do(server, query, user, timeout_ms);
 	od_wait_event_end(OD_WAIT_AUTH_SERVER_READ);
 	if (msg == NULL) {
-		od_error(&instance->logger, "auth_query", client, server,
+		od_error(&instance->logger, client, server,
 			 "auth query returned empty msg");
 		return NOT_OK_RESPONSE;
 	}
@@ -266,7 +265,7 @@ static void pswd_update_task(void *a)
 		od_route_pswd_unref(route->auth_query_cache.password);
 		route->auth_query_cache.password = NULL;
 
-		od_error(&instance->logger, "auth_query", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "auth query failed, stale cached password is dropped");
 	}
 
@@ -301,7 +300,7 @@ static int run_refresh_task(od_global_t *global, od_instance_t *instance,
 	arg->route = route;
 	arg->rule = rule;
 	if (user->value_len > (int)sizeof(arg->user)) {
-		od_error(&instance->logger, "auth_query", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "user name is too long: %d bytes", user->value_len);
 		goto error;
 	}
@@ -325,7 +324,7 @@ error:
 	od_free(arg);
 	route->auth_query_cache.refresh_in_progress = 0;
 	int err = mm_errno_get();
-	od_error(&instance->logger, "auth_query", client, NULL,
+	od_error(&instance->logger, client, NULL,
 		 "can't run auth query coroutine: %d (%s)", err, strerror(err));
 
 	return -1;
@@ -380,7 +379,7 @@ int od_auth_query(od_client_t *client, char *peer)
 		cached = od_route_pswd_ref(route->auth_query_cache.password);
 		if (cached == NULL) {
 			od_error(
-				&instance->logger, "auth_query", client, NULL,
+				&instance->logger, client, NULL,
 				"timeout on wait for password to become available or other error");
 			od_route_unlock(route);
 			return -1;
@@ -397,7 +396,7 @@ int od_auth_query(od_client_t *client, char *peer)
 	client->password.password = od_strdup(cached->value);
 	od_route_pswd_unref(cached);
 	if (client->password.password == NULL) {
-		od_error(&instance->logger, "auth_query", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "can't reuse password: OOM");
 		return -1;
 	}

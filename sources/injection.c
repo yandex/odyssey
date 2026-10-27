@@ -35,8 +35,7 @@ void od_injection_load(const char *name)
 	od_injection_point_t *ip = od_injection_find(name);
 	if (ip != NULL) {
 		/* already loaded - release parked waiters */
-		od_log(NULL, "dbginject", NULL, NULL, "injection %s: release",
-		       name);
+		od_log(NULL, NULL, NULL, "injection %s: release", name);
 		ip->loaded = false;
 		atomic_store_explicit(&ip->tokens, OD_INJECTION_RELEASE_TOKENS,
 				      memory_order_release);
@@ -62,7 +61,7 @@ void od_injection_wait(const char *name)
 		return;
 	}
 
-	od_log(NULL, "dbginject", NULL, NULL, "injection %s: parking", name);
+	od_log(NULL, NULL, NULL, "injection %s: parking", name);
 
 	for (;;) {
 		uint64_t v =
@@ -74,8 +73,8 @@ void od_injection_wait(const char *name)
 		if (atomic_compare_exchange_weak_explicit(
 			    &ip->tokens, &v, v - 1, memory_order_acq_rel,
 			    memory_order_acquire)) {
-			od_log(NULL, "dbginject", NULL, NULL,
-			       "injection %s: released", name);
+			od_log(NULL, NULL, NULL, "injection %s: released",
+			       name);
 			return;
 		}
 	}

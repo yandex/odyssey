@@ -375,8 +375,8 @@ static char od_logger_escape_tab[256] = {
 	['\r'] = 'r', ['\\'] = '\\', ['='] = '='
 };
 
-__attribute__((hot)) static inline int od_logger_escape(char *dest, int size,
-							char *fmt, va_list args)
+__attribute__((hot)) static inline int
+od_logger_escape(char *dest, int size, const char *fmt, va_list args)
 {
 	char prefmt[512];
 	int prefmt_len;
@@ -514,9 +514,10 @@ static inline int od_logger_append_id(char *dst, char *dst_end,
 }
 
 __attribute__((hot)) static inline int
-od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
-		 od_client_t *client, od_server_t *server, char *fmt,
-		 va_list args, char *output, int output_len)
+od_logger_format(od_logger_t *logger, od_logger_level_t level,
+		 od_client_t *client, od_server_t *server, const char *file,
+		 int line, const char *fmt, va_list args, char *output,
+		 int output_len)
 {
 	char *dst_pos = output;
 	char *dst_end = output + output_len;
@@ -628,10 +629,17 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level, char *context,
 			dst_pos += od_logger_append_str(dst_pos, dst_end,
 							od_log_level[level]);
 			break;
-		case OD_FMT_CONTEXT:
-			dst_pos +=
-				od_logger_append_str(dst_pos, dst_end, context);
+		case OD_FMT_CONTEXT: {
+			if (file != NULL) {
+				dst_pos += od_logger_append_str(dst_pos,
+								dst_end, file);
+				dst_pos += od_logger_append_strn(
+					dst_pos, dst_end, ":", 1);
+				dst_pos += od_logger_append_u64(
+					dst_pos, dst_end, (uint64_t)line);
+			}
 			break;
+		}
 		case OD_FMT_MESSAGE:
 			dst_pos += od_vsnprintf(dst_pos, dst_end - dst_pos, fmt,
 						args);
@@ -815,7 +823,7 @@ static inline void log_machine_stats(od_logger_t *logger)
 	machine_stat(&count_coroutine, &count_coroutine_cache, &msg_allocated,
 		     &msg_cache_count, &msg_cache_gc_count, &msg_cache_size);
 
-	od_log(logger, "stats", NULL, NULL,
+	od_log(logger, NULL, NULL,
 	       "logger: msg (%" PRIu64 " allocated, %" PRIu64
 	       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
 	       "coroutines (%" PRIu64 " active, %" PRIu64 " cached), "
@@ -879,11 +887,11 @@ static void do_reopen_logfile(od_logger_t *logger)
 	if (rc == 0) {
 		mm_file_close(old);
 
-		od_log(logger, "logger", NULL, NULL, "log reopened");
+		od_log(logger, NULL, NULL, "log reopened");
 	} else {
 		/* do nothing, keep use old file */
-		od_error(logger, "logger", NULL, NULL,
-			 "failed to reopen log file '%s'", path);
+		od_error(logger, NULL, NULL, "failed to reopen log file '%s'",
+			 path);
 	}
 }
 
@@ -1038,8 +1046,9 @@ od_logger_json_add_string(char *dst, char *dst_end, const char *key,
 
 __attribute__((hot)) static inline int
 od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
-		      char *context, od_client_t *client, od_server_t *server,
-		      char *fmt, va_list args, char *output, int output_len)
+		      od_client_t *client, od_server_t *server,
+		      const char *file, int line, const char *fmt, va_list args,
+		      char *output, int output_len)
 {
 	char *dst = output;
 	char *dst_end = output + output_len - 2;
@@ -1071,8 +1080,13 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	dst = od_logger_json_add_string(dst, dst_end, "level",
 					od_log_level[level], add_comma);
 
-	dst = od_logger_json_add_string(dst, dst_end, "context", context,
-					add_comma);
+	if (file != NULL) {
+		char ctx_buf[256];
+		od_snprintf(ctx_buf, sizeof(ctx_buf), "%s:%d", file, line);
+		dst = od_logger_json_add_string(dst, dst_end, "context",
+						ctx_buf, add_comma);
+		add_comma = 1;
+	}
 
 	if (dst < dst_end) {
 		*dst++ = ',';
@@ -1278,9 +1292,31 @@ int od_logger_debug_enabled(od_logger_t *logger, od_client_t *client,
 	return debug_rule != NULL && debug_rule->log_debug;
 }
 
+/*
+ * Keep only the base name of the __FILE__ string: compilers are
+ * inconsistent about how much of the path they include, and the log
+ * output must not depend on the build directory.
+ */
+static inline const char *od_logger_file_basename(const char *file)
+{
+	if (file == NULL) {
+		return NULL;
+	}
+	const char *slash = strrchr(file, '/');
+	if (slash != NULL) {
+		file = slash + 1;
+	}
+	/* some Windows compilers use backslashes in __FILE__ strings */
+	slash = strrchr(file, '\\');
+	if (slash != NULL) {
+		file = slash + 1;
+	}
+	return file;
+}
+
 void od_logger_write(od_logger_t *logger, od_logger_level_t level,
-		     char *context, od_client_t *client, od_server_t *server,
-		     char *fmt, va_list args)
+		     od_client_t *client, od_server_t *server, const char *file,
+		     int line, const char *fmt, ...)
 {
 	if (logger == OD_LOGGER_GLOBAL) {
 		logger = od_global_get_logger();
@@ -1371,14 +1407,18 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 
 	/* Choose formatter based on format type */
+	va_list args;
+	va_start(args, fmt);
+	file = od_logger_file_basename(file);
 	if (logger->format_type == OD_LOGGER_FORMAT_JSON) {
-		len = od_logger_format_json(logger, level, context, client,
-					    server, fmt, args, output,
+		len = od_logger_format_json(logger, level, client, server, file,
+					    line, fmt, args, output,
 					    output_max);
 	} else {
-		len = od_logger_format(logger, level, context, client, server,
-				       fmt, args, output, output_max);
+		len = od_logger_format(logger, level, client, server, file,
+				       line, fmt, args, output, output_max);
 	}
+	va_end(args);
 
 	if (async_slot) {
 		async_slot->len = (size_t)len;

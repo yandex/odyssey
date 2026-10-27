@@ -159,8 +159,7 @@ void od_frontend_attach_init_candidates(
  */
 int od_frontend_host_is_known(od_client_t *client, const od_address_t *address);
 
-od_frontend_status_t od_frontend_attach(od_client_t *client, char *context,
+od_frontend_status_t od_frontend_attach(od_client_t *client,
 					kiwi_params_t *route_params);
 
-od_frontend_status_t od_frontend_attach_and_deploy(od_client_t *client,
-						   char *context);
+od_frontend_status_t od_frontend_attach_and_deploy(od_client_t *client);

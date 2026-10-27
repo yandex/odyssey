@@ -208,7 +208,7 @@ static od_frontend_status_t process_set_appname(od_client_t *client,
 	char peer_name[KIWI_MAX_VAR_SIZE];
 	rc = od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0);
 	if (rc != 0) {
-		od_gerror("query", client, client->server,
+		od_gerror(client, client->server,
 			  "can't get peer name, errno = %d (%s)",
 			  mm_errno_get(), strerror(mm_errno_get()));
 		goto error;
@@ -234,14 +234,14 @@ static od_frontend_status_t process_set_appname(od_client_t *client,
 	machine_msg_t *msg;
 	msg = kiwi_fe_write_query(NULL, query, strlen(query) + 1);
 	if (msg == NULL) {
-		od_gerror("query", client, client->server,
+		od_gerror(client, client->server,
 			  "can't create message to send \"%s\"", query);
 		return OD_EOOM;
 	}
 
 	rc = od_write(&client->server->io, msg);
 	if (rc != 0) {
-		od_gerror("query", client, client->server,
+		od_gerror(client, client->server,
 			  "can't write \"%s\", rc = %d, errno = %d", query, rc,
 			  machine_errno());
 		return OD_ESERVER_WRITE;
@@ -285,9 +285,9 @@ static od_frontend_status_t build_set_generic_bool(od_client_t *client,
 		*origin_to_reset = 0;
 	}
 
-	od_debug(&instance->logger, "virtual processing", client,
-		 client->server, "processed virtual bool GUC %.*s",
-		 (int)option_value_len, option_value);
+	od_debug(&instance->logger, client, client->server,
+		 "processed virtual bool GUC %.*s", (int)option_value_len,
+		 option_value);
 
 	if (virtual_portal_set_notice(portal) != 0) {
 		return OD_EOOM;
@@ -336,9 +336,9 @@ static od_frontend_status_t build_set_tsa(od_client_t *client,
 			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
 			      "prefer-standby", strlen("prefer-standby"));
 	} else {
-		od_debug(&instance->logger, "virtual processing", client,
-			 server, "unsupported tsa hint %.*s",
-			 (int)option_value_len, option_value);
+		od_debug(&instance->logger, client, server,
+			 "unsupported tsa hint %.*s", (int)option_value_len,
+			 option_value);
 
 		if (virtual_portal_reject_guc(
 			    portal, ODYSSEY_TARGET_SESSION_ATTRS_STR,
@@ -348,8 +348,8 @@ static od_frontend_status_t build_set_tsa(od_client_t *client,
 		return OD_SKIP;
 	}
 
-	od_debug(&instance->logger, "virtual processing", client, server,
-		 "parsed tsa hint %.*s", (int)option_value_len, option_value);
+	od_debug(&instance->logger, client, server, "parsed tsa hint %.*s",
+		 (int)option_value_len, option_value);
 
 	if (virtual_portal_set_notice(portal) != 0) {
 		return OD_EOOM;
@@ -376,8 +376,8 @@ build_set_execute_on_host(od_client_t *client, const od_query_ctx_t *ctx,
 		od_address_destroy(&client->execute_on_host);
 		od_address_init(&client->execute_on_host);
 
-		od_debug(&instance->logger, "virtual processing", client,
-			 client->server, "execute_on_host hint is reset");
+		od_debug(&instance->logger, client, client->server,
+			 "execute_on_host hint is reset");
 
 		if (virtual_portal_set_notice(portal) != 0) {
 			return OD_EOOM;
@@ -405,9 +405,8 @@ build_set_execute_on_host(od_client_t *client, const od_query_ctx_t *ctx,
 		}
 		od_free(addrs);
 
-		od_debug(&instance->logger, "virtual processing", client,
-			 client->server, "unknown execute_on_host %.*s",
-			 (int)value_len, value);
+		od_debug(&instance->logger, client, client->server,
+			 "unknown execute_on_host %.*s", (int)value_len, value);
 
 		if (virtual_portal_reject_guc(portal,
 					      ODYSSEY_EXECUTE_ON_HOST_STR,
@@ -421,9 +420,8 @@ build_set_execute_on_host(od_client_t *client, const od_query_ctx_t *ctx,
 	od_address_move(&client->execute_on_host, &addrs[0]);
 	od_free(addrs);
 
-	od_debug(&instance->logger, "virtual processing", client,
-		 client->server, "parsed execute_on_host hint %.*s",
-		 (int)value_len, value);
+	od_debug(&instance->logger, client, client->server,
+		 "parsed execute_on_host hint %.*s", (int)value_len, value);
 
 	if (virtual_portal_set_notice(portal) != 0) {
 		return OD_EOOM;
@@ -627,7 +625,7 @@ static od_frontend_status_t process_vdeallocate(od_client_t *client,
 	const char *command = NULL;
 
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL)) {
-		od_debug(&instance->logger, "main", client, server,
+		od_debug(&instance->logger, client, server,
 			 "DEALLOCATE ALL detected, remove from client hashmap");
 		od_client_pstmts_clear(client);
 		od_client_portals_clear(client);
@@ -636,7 +634,7 @@ static od_frontend_status_t process_vdeallocate(od_client_t *client,
 	} else {
 		od_assert(od_query_ctx_has(ctx,
 					   OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
-		od_debug(&instance->logger, "main", client, server,
+		od_debug(&instance->logger, client, server,
 			 "DEALLOCATE '%s' detected, remove from client hashmap",
 			 ctx->s1);
 		od_client_remove_pstmt(client, ctx->s1);

@@ -19,15 +19,13 @@
 #include <sql/full/parser.h>
 #include <sql/full/pg_constants.h>
 
-machine_msg_t *od_query_do(od_server_t *server, char *context,
-			   const char *query, char *param, uint32_t timeout_ms)
+machine_msg_t *od_query_do(od_server_t *server, const char *query, char *param,
+			   uint32_t timeout_ms)
 {
 	od_instance_t *instance = server->global->instance;
-	od_debug(&instance->logger, context, server->client, server, "%s",
-		 query);
+	od_debug(&instance->logger, server->client, server, "%s", query);
 
-	if (od_backend_query_send(server, context, query, param,
-				  strlen(query) + 1,
+	if (od_backend_query_send(server, query, param, strlen(query) + 1,
 				  timeout_ms) == NOT_OK_RESPONSE) {
 		return NULL;
 	}
@@ -40,9 +38,8 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 		msg = od_read(&server->io, timeout_ms, OD_READ_BE);
 		if (msg == NULL) {
 			if (!machine_timedout()) {
-				od_error(&instance->logger, context,
-					 server->client, server,
-					 "read error: %s",
+				od_error(&instance->logger, server->client,
+					 server, "read error: %s",
 					 od_io_error(&server->io));
 			}
 			if (ret_msg) {
@@ -55,12 +52,12 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 		kiwi_be_type_t type;
 		type = *(char *)machine_msg_data(msg);
 
-		od_debug(&instance->logger, context, server->client, server,
-			 "%s", kiwi_be_type_to_string(type));
+		od_debug(&instance->logger, server->client, server, "%s",
+			 kiwi_be_type_to_string(type));
 
 		switch (type) {
 		case KIWI_BE_ERROR_RESPONSE:
-			od_backend_error(server, context, machine_msg_data(msg),
+			od_backend_error(server, machine_msg_data(msg),
 					 machine_msg_size(msg));
 			goto error;
 		case KIWI_BE_ROW_DESCRIPTION:

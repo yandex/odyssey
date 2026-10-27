@@ -89,8 +89,7 @@ void od_backend_abort_connection(od_server_t *server)
 	od_backend_disconnect(server, 0);
 }
 
-void od_backend_error(od_server_t *server, char *context, char *data,
-		      uint32_t size)
+void od_backend_error(od_server_t *server, char *data, uint32_t size)
 {
 	od_route_t *route = server->route;
 	od_rule_t *rule = route->rule;
@@ -102,22 +101,22 @@ void od_backend_error(od_server_t *server, char *context, char *data,
 	int rc;
 	rc = kiwi_fe_read_error(data, size, &error);
 	if (rc == -1) {
-		od_error(&instance->logger, context, server->client, server,
+		od_error(&instance->logger, server->client, server,
 			 "failed to parse error message from server");
 		return;
 	}
 
-	od_error(&instance->logger, context, server->client, server, "%s %s %s",
+	od_error(&instance->logger, server->client, server, "%s %s %s",
 		 error.severity, error.code, error.message);
 
 	if (error.detail) {
-		od_error(&instance->logger, context, server->client, server,
+		od_error(&instance->logger, server->client, server,
 			 "DETAIL: %s", error.detail);
 	}
 
 	if (error.hint) {
-		od_error(&instance->logger, context, server->client, server,
-			 "HINT: %s", error.hint);
+		od_error(&instance->logger, server->client, server, "HINT: %s",
+			 error.hint);
 	}
 
 	if (strcmp(error.code, KIWI_OUT_OF_MEMORY) == 0) {
@@ -136,7 +135,7 @@ void od_backend_error(od_server_t *server, char *context, char *data,
 		}
 
 		od_error(
-			&instance->logger, context, server->client, server,
+			&instance->logger, server->client, server,
 			"catch broken cached plan, server connection will be dropped");
 
 		server->cached_plan_broken = 1;
@@ -280,7 +279,6 @@ static inline int od_backend_startup_error_allows_tls_retry(od_server_t *server,
  * TLS refuses the plaintext one only at startup, with an ErrorResponse.
  */
 static int od_backend_startup_with_tls_fallback(od_server_t *server,
-						char *context,
 						od_rule_storage_t *storage,
 						kiwi_params_t *route_params,
 						od_client_t *client)
@@ -305,14 +303,14 @@ static int od_backend_startup_with_tls_fallback(od_server_t *server,
 	const char *code = NULL;
 	if (!od_backend_startup_error_allows_tls_retry(server, &code)) {
 		od_debug(
-			&instance->logger, context, client, server,
+			&instance->logger, client, server,
 			"startup over a plaintext connection failed, not retrying with tls (allow), code=%s",
 			code ? code : "(null)");
 		return NOT_OK_RESPONSE;
 	}
 
 	od_debug(
-		&instance->logger, context, client, server,
+		&instance->logger, client, server,
 		"startup over a plaintext connection failed (code=%s), retrying with tls (allow)",
 		code ? code : "(null)");
 
@@ -327,9 +325,8 @@ static int od_backend_startup_with_tls_fallback(od_server_t *server,
 		kiwi_params_init(route_params);
 	}
 
-	rc = od_backend_connect_to(server, context,
-				   od_server_pool_address(server), tlsopts,
-				   OD_BACKEND_TLS_NEGOTIATE);
+	rc = od_backend_connect_to(server, od_server_pool_address(server),
+				   tlsopts, OD_BACKEND_TLS_NEGOTIATE);
 	if (rc != OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
@@ -350,8 +347,7 @@ int od_backend_startup_preallocated(od_server_t *server,
 	 * so this is where the "allow" mode learns that the server wants TLS.
 	 */
 	return od_backend_startup_with_tls_fallback(
-		server, "startup", server->route->rule->storage, route_params,
-		client);
+		server, server->route->rule->storage, route_params, client);
 }
 
 int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
@@ -374,7 +370,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 		{ NULL, 0 }
 	};
 
-	od_debug(&instance->logger, "startup", server->client, server,
+	od_debug(&instance->logger, server->client, server,
 		 "startup server connection with user %s & database %s",
 		 route->id.user, route->id.database);
 
@@ -414,8 +410,8 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 	int rc;
 	rc = od_write(&server->io, msg);
 	if (rc == -1) {
-		od_error(&instance->logger, "startup", NULL, server,
-			 "write error: %s", od_io_error(&server->io));
+		od_error(&instance->logger, NULL, server, "write error: %s",
+			 od_io_error(&server->io));
 		return -1;
 	}
 
@@ -428,13 +424,13 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 		msg = od_read(&server->io, UINT32_MAX, OD_READ_BE);
 		od_wait_event_end(OD_WAIT_AUTH_SERVER_READ);
 		if (msg == NULL) {
-			od_error(&instance->logger, "startup", client, server,
+			od_error(&instance->logger, client, server,
 				 "read error: %s", od_io_error(&server->io));
 			return -1;
 		}
 
 		kiwi_be_type_t type = *(char *)machine_msg_data(msg);
-		od_debug(&instance->logger, "startup", client, server,
+		od_debug(&instance->logger, client, server,
 			 "received packet type: %s",
 			 kiwi_be_type_to_string(type));
 
@@ -459,8 +455,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			machine_msg_free(msg);
 			if (rc == -1) {
 				od_error(
-					&instance->logger, "startup", client,
-					server,
+					&instance->logger, client, server,
 					"failed to parse BackendKeyData message");
 				return -1;
 			}
@@ -477,8 +472,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			if (rc == -1) {
 				machine_msg_free(msg);
 				od_error(
-					&instance->logger, "startup", client,
-					server,
+					&instance->logger, client, server,
 					"failed to parse ParameterStatus message");
 				return -1;
 			}
@@ -487,7 +481,7 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			if (kiwi_vars_update(&server->vars, name, name_len,
 					     value, value_len) == -1) {
 				od_gdebug(
-					"startup", client, server,
+					client, server,
 					"unexpected parameter for server: '%s', ignored",
 					name);
 			}
@@ -527,8 +521,8 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 				int rc = od_write(&client->io, msg);
 				if (rc != 0) {
 					od_error(
-						&instance->logger, "startup",
-						client, server,
+						&instance->logger, client,
+						server,
 						"write notice to client error error: %s",
 						od_io_error(&client->io));
 					return -1;
@@ -538,14 +532,13 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			}
 			break;
 		case KIWI_BE_ERROR_RESPONSE:
-			od_backend_error(server, "startup",
-					 machine_msg_data(msg),
+			od_backend_error(server, machine_msg_data(msg),
 					 machine_msg_size(msg));
 			server->error_connect = msg;
 			return -1;
 		default:
 			machine_msg_free(msg);
-			od_debug(&instance->logger, "startup", client, server,
+			od_debug(&instance->logger, client, server,
 				 "unexpected message: %s",
 				 kiwi_be_type_to_string(type));
 			return -1;
@@ -571,8 +564,8 @@ static inline int od_backend_tls_negotiate(od_tls_opts_t *tlsopts,
 	return tlsopts->tls_mode != OD_CONFIG_TLS_ALLOW;
 }
 
-int od_backend_connect_to(od_server_t *server, char *context,
-			  const od_address_t *address, od_tls_opts_t *tlsopts,
+int od_backend_connect_to(od_server_t *server, const od_address_t *address,
+			  od_tls_opts_t *tlsopts,
 			  od_backend_tls_attempt_t tls_attempt)
 {
 	od_instance_t *instance = server->global->instance;
@@ -654,8 +647,8 @@ int od_backend_connect_to(od_server_t *server, char *context,
 			rc = mm_getaddrinfo(address->host, rport, NULL, &ai, 0);
 			od_wait_event_end(OD_WAIT_CONNECT_TCP);
 			if (rc != 0) {
-				od_error(&instance->logger, context, NULL,
-					 server, "failed to resolve %s:%d",
+				od_error(&instance->logger, NULL, server,
+					 "failed to resolve %s:%d",
 					 address->host, address->port);
 				mm_io_close(io);
 				mm_io_free(io);
@@ -672,7 +665,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		saddr_un.sun_family = AF_UNIX;
 		saddr = (struct sockaddr *)&saddr_un;
 		if (strlen(address->host) >= sizeof(saddr_un.sun_path)) {
-			od_error(&instance->logger, context, NULL, server,
+			od_error(&instance->logger, NULL, server,
 				 "unix socket path '%s' is too long",
 				 address->host);
 			mm_io_close(io);
@@ -716,8 +709,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 
 			int err = mm_errno_get();
 			od_error(
-				&instance->logger, context, server->client,
-				server,
+				&instance->logger, server->client, server,
 				"failed to connect to %s:%d, errno=%d (%s), trying next address...",
 				addr_str, address->port, err, strerror(err));
 		}
@@ -732,14 +724,12 @@ int od_backend_connect_to(od_server_t *server, char *context,
 
 	if (rc == NOT_OK_RESPONSE) {
 		if (address->type == OD_ADDRESS_TYPE_TCP) {
-			od_error(&instance->logger, context, server->client,
-				 server,
+			od_error(&instance->logger, server->client, server,
 				 "failed to connect to %s:%d, errno=%d (%s)",
 				 address->host, address->port, machine_errno(),
 				 strerror(machine_errno()));
 		} else {
-			od_error(&instance->logger, context, server->client,
-				 server,
+			od_error(&instance->logger, server->client, server,
 				 "failed to connect to %s, errno=%d, (%s)",
 				 saddr_un.sun_path, machine_errno(),
 				 strerror(machine_errno()));
@@ -759,7 +749,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		od_route_unlock(server->route);
 	}
 	if (rc == -1) {
-		od_error(&instance->logger, context, NULL, server,
+		od_error(&instance->logger, NULL, server,
 			 "failed to set server io, errno = %d (%s)",
 			 machine_errno(), strerror(machine_errno()));
 		mm_io_close(io);
@@ -789,15 +779,13 @@ int od_backend_connect_to(od_server_t *server, char *context,
 					 sizeof(addr_buff));
 
 		if (address->type == OD_ADDRESS_TYPE_TCP) {
-			od_log(&instance->logger, context, server->client,
-			       server,
+			od_log(&instance->logger, server->client, server,
 			       "new server connection %s -> %s:%d (connect time: %d usec, "
 			       "resolve time: %d usec)",
 			       addr_buff, address->host, address->port,
 			       (int)time_connect, (int)time_resolve);
 		} else {
-			od_log(&instance->logger, context, server->client,
-			       server,
+			od_log(&instance->logger, server->client, server,
 			       "new server connection %s -> %s (connect time: %d usec, resolve "
 			       "time: %d usec)",
 			       addr_buff, saddr_un.sun_path, (int)time_connect,
@@ -919,7 +907,7 @@ error:
 
 int od_backend_update_endpoint_status(od_instance_t *instance,
 				      od_client_t *client, od_server_t *server,
-				      char *context, const char *lag_query,
+				      const char *lag_query,
 				      od_storage_endpoint_t *endpoint)
 {
 	char addr[256];
@@ -931,10 +919,10 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 	machine_msg_t *msg;
 
 	if (lag_query != NULL) {
-		msg = od_query_do(server, context, lag_query, NULL, 1000);
+		msg = od_query_do(server, lag_query, NULL, 1000);
 		if (msg == NULL) {
 			od_error(
-				&instance->logger, context, client, server,
+				&instance->logger, client, server,
 				"receive msg failed, closing backend connection");
 			return NOT_OK_RESPONSE;
 		}
@@ -952,27 +940,26 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 			status.repl_lag_sec = lag;
 
 			od_debug(
-				&instance->logger, context, client, server,
+				&instance->logger, client, server,
 				"replica lag time of %s is updated to %" PRId64,
 				addr, status.repl_lag_sec);
 		} else {
-			od_error(&instance->logger, context, client, server,
+			od_error(&instance->logger, client, server,
 				 "can't parse lag");
 			return NOT_OK_RESPONSE;
 		}
 	}
 
-	msg = od_query_do(server, context, "SELECT pg_is_in_recovery()", NULL,
-			  1000);
+	msg = od_query_do(server, "SELECT pg_is_in_recovery()", NULL, 1000);
 	if (msg == NULL) {
-		od_error(&instance->logger, context, client, server,
+		od_error(&instance->logger, client, server,
 			 "can't execute pg_is_in_recovery");
 		return NOT_OK_RESPONSE;
 	}
 
 	if (od_storage_parse_rw_check_response(msg, &status.is_read_write) !=
 	    OK_RESPONSE) {
-		od_error(&instance->logger, context, client, server,
+		od_error(&instance->logger, client, server,
 			 "can't parse pg_is_in_recovery result");
 		machine_msg_free(msg);
 		return NOT_OK_RESPONSE;
@@ -984,7 +971,7 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 
 	od_storage_endpoint_status_set(&endpoint->status, &status);
 
-	od_debug(&instance->logger, context, client, server,
+	od_debug(&instance->logger, client, server,
 		 "read-write status of '%s' is updated to '%s'", addr,
 		 status.is_read_write ? "true" : "false");
 
@@ -993,7 +980,7 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 
 od_tsa_check_result_t od_backend_check_tsa(od_rule_storage_t *storage,
 					   od_storage_endpoint_t *endpoint,
-					   char *context, od_server_t *server,
+					   od_server_t *server,
 					   od_client_t *client,
 					   od_target_session_attrs_t attrs)
 {
@@ -1009,8 +996,8 @@ od_tsa_check_result_t od_backend_check_tsa(od_rule_storage_t *storage,
 		    storage->endpoints_status_poll_interval_ms)) {
 		od_wait_event_start(OD_WAIT_CONNECT_TCP);
 		int status_rc = od_backend_update_endpoint_status(
-			instance, client, server, context,
-			NULL /* do not update lag */, endpoint);
+			instance, client, server, NULL /* do not update lag */,
+			endpoint);
 		od_wait_event_end(OD_WAIT_CONNECT_TCP);
 		if (status_rc != OK_RESPONSE) {
 			return OD_TSA_CHECK_BACKEND_ERROR;
@@ -1028,22 +1015,22 @@ od_tsa_check_result_t od_backend_check_tsa(od_rule_storage_t *storage,
 }
 
 static inline int od_backend_connect_on_server_address(
-	od_rule_storage_t *storage, od_server_t *server, char *context,
+	od_rule_storage_t *storage, od_server_t *server,
 	kiwi_params_t *route_params, od_client_t *client)
 {
 	const od_address_t *address = od_server_pool_address(server);
 
 	od_retcode_t rc;
 
-	rc = od_backend_connect_to(server, context, address, storage->tls_opts,
+	rc = od_backend_connect_to(server, address, storage->tls_opts,
 				   OD_BACKEND_TLS_DEFAULT);
 	if (rc == NOT_OK_RESPONSE) {
 		return rc;
 	}
 
 	/* send startup and do initial configuration */
-	rc = od_backend_startup_with_tls_fallback(server, context, storage,
-						  route_params, client);
+	rc = od_backend_startup_with_tls_fallback(server, storage, route_params,
+						  client);
 	if (rc == NOT_OK_RESPONSE) {
 		return rc;
 	}
@@ -1051,13 +1038,12 @@ static inline int od_backend_connect_on_server_address(
 	return OK_RESPONSE;
 }
 
-int od_backend_connect(od_server_t *server, char *context,
-		       kiwi_params_t *route_params, od_client_t *client,
-		       od_rule_storage_t *storage)
+int od_backend_connect(od_server_t *server, kiwi_params_t *route_params,
+		       od_client_t *client, od_rule_storage_t *storage)
 {
 	od_assert(server->route != NULL);
 
-	return od_backend_connect_on_server_address(storage, server, context,
+	return od_backend_connect_on_server_address(storage, server,
 						    route_params, client);
 }
 
@@ -1091,7 +1077,7 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	 * libpq does it.
 	 */
 	int rc;
-	rc = od_backend_connect_to(server, "cancel", address, storage->tls_opts,
+	rc = od_backend_connect_to(server, address, storage->tls_opts,
 				   OD_BACKEND_TLS_DEFAULT);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
@@ -1106,8 +1092,8 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 
 	rc = od_write2(&server->io, msg, cancel_timeout);
 	if (rc == -1) {
-		od_error(&instance->logger, "cancel", NULL, NULL,
-			 "write error: %s", od_io_error(&server->io));
+		od_error(&instance->logger, NULL, NULL, "write error: %s",
+			 od_io_error(&server->io));
 		return -1;
 	}
 
@@ -1131,8 +1117,8 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	return machine_errno() == 0 ? OK_RESPONSE : NOT_OK_RESPONSE;
 }
 
-int od_backend_update_parameter(od_server_t *server, char *context, char *data,
-				uint32_t size, int server_only)
+int od_backend_update_parameter(od_server_t *server, char *data, uint32_t size,
+				int server_only)
 {
 	od_instance_t *instance = server->global->instance;
 	od_client_t *client = server->client;
@@ -1146,14 +1132,14 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 	rc = kiwi_fe_read_parameter(data, size, &name, &name_len, &value,
 				    &value_len);
 	if (rc == -1) {
-		od_error(&instance->logger, context, NULL, server,
+		od_error(&instance->logger, NULL, server,
 			 "failed to parse ParameterStatus message");
 		return -1;
 	}
 
 	/* update server only or client and server parameter */
-	od_debug(&instance->logger, context, client, server, "%.*s = %.*s",
-		 name_len, name, value_len, value);
+	od_debug(&instance->logger, client, server, "%.*s = %.*s", name_len,
+		 name, value_len, value);
 
 	/* ttt reports temp-rel ownership via ParameterStatus */
 	if (client != NULL &&
@@ -1162,7 +1148,7 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 		   sizeof(TTT_SESSION_OWNS_TEMP_RELS_STR)) == 0) {
 		client->backend_pin =
 			value_len == 3 && memcmp(value, "on", 2) == 0;
-		od_debug(&instance->logger, context, client, server,
+		od_debug(&instance->logger, client, server,
 			 "ttt: backend_pin set to %d", client->backend_pin);
 	}
 
@@ -1177,11 +1163,11 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 	return 0;
 }
 
-int od_backend_ready_wait(od_server_t *server, char *ctx, uint32_t time_ms,
+int od_backend_ready_wait(od_server_t *server, uint32_t time_ms,
 			  od_wait_event_t wait_event)
 {
 	od_frontend_status_t st = od_service_stream_server_until_rfq(
-		ctx, server, 0 /* ignore_errors */, time_ms, wait_event);
+		server, 0 /* ignore_errors */, time_ms, wait_event);
 	if (st != OD_OK) {
 		return -1;
 	}
@@ -1189,9 +1175,8 @@ int od_backend_ready_wait(od_server_t *server, char *ctx, uint32_t time_ms,
 	return 0;
 }
 
-od_retcode_t od_backend_query_send(od_server_t *server, char *context,
-				   const char *query, char *param, int len,
-				   uint32_t timeout_ms)
+od_retcode_t od_backend_query_send(od_server_t *server, const char *query,
+				   char *param, int len, uint32_t timeout_ms)
 {
 	od_instance_t *instance = server->global->instance;
 
@@ -1209,7 +1194,7 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 	int rc;
 	rc = od_write2(&server->io, msg, timeout_ms);
 	if (rc == -1) {
-		od_error(&instance->logger, context, server->client, server,
+		od_error(&instance->logger, server->client, server,
 			 "write error: %s", od_io_error(&server->io));
 		return NOT_OK_RESPONSE;
 	}
@@ -1220,18 +1205,18 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 	return OK_RESPONSE;
 }
 
-od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
-			      char *param, int len, uint32_t timeout)
+od_retcode_t od_backend_query(od_server_t *server, char *query, char *param,
+			      int len, uint32_t timeout)
 {
 	od_wait_event_start(OD_WAIT_RESET_SERVER_WRITE);
-	od_retcode_t rc = od_backend_query_send(server, context, query, param,
-						len, timeout);
+	od_retcode_t rc =
+		od_backend_query_send(server, query, param, len, timeout);
 	od_wait_event_end(OD_WAIT_RESET_SERVER_WRITE);
 	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 
-	return od_backend_ready_wait(server, context, timeout,
+	return od_backend_ready_wait(server, timeout,
 				     OD_WAIT_RESET_SERVER_READ);
 }
 

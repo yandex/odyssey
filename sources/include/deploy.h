@@ -9,4 +9,4 @@
 #include <types.h>
 #include <common_const.h>
 
-int od_deploy(od_client_t *, char *);
+int od_deploy(od_client_t *);

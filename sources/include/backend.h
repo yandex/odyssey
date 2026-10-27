@@ -13,7 +13,7 @@
 #include <tsa.h>
 #include <tls_config.h>
 
-int od_backend_connect(od_server_t *, char *, kiwi_params_t *, od_client_t *,
+int od_backend_connect(od_server_t *, kiwi_params_t *, od_client_t *,
 		       od_rule_storage_t *);
 
 typedef enum {
@@ -23,7 +23,7 @@ typedef enum {
 } od_tsa_check_result_t;
 
 od_tsa_check_result_t od_backend_check_tsa(od_rule_storage_t *,
-					   od_storage_endpoint_t *, char *,
+					   od_storage_endpoint_t *,
 					   od_server_t *, od_client_t *,
 					   od_target_session_attrs_t);
 
@@ -38,8 +38,8 @@ typedef enum {
 } od_backend_tls_attempt_t;
 
 /* need perform startup after this */
-int od_backend_connect_to(od_server_t *, char *, const od_address_t *,
-			  od_tls_opts_t *, od_backend_tls_attempt_t);
+int od_backend_connect_to(od_server_t *, const od_address_t *, od_tls_opts_t *,
+			  od_backend_tls_attempt_t);
 
 int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 		       od_client_t *client);
@@ -55,18 +55,15 @@ int od_backend_startup_preallocated(od_server_t *server,
 void od_backend_close_connection(od_server_t *);
 void od_backend_abort_connection(od_server_t *);
 void od_backend_close(od_server_t *);
-void od_backend_error(od_server_t *, char *, char *, uint32_t);
+void od_backend_error(od_server_t *, char *, uint32_t);
 
-int od_backend_update_parameter(od_server_t *, char *, char *, uint32_t, int);
+int od_backend_update_parameter(od_server_t *, char *, uint32_t, int);
 int od_backend_ready(od_server_t *, char *, uint32_t);
-int od_backend_ready_wait(od_server_t *, char *, uint32_t,
-			  od_wait_event_t wait_event);
+int od_backend_ready_wait(od_server_t *, uint32_t, od_wait_event_t wait_event);
 
-od_retcode_t od_backend_query_send(od_server_t *server, char *context,
-				   const char *query, char *param, int len,
-				   uint32_t timeout_ms);
-od_retcode_t od_backend_query(od_server_t *, char *, char *, char *, int,
-			      uint32_t);
+od_retcode_t od_backend_query_send(od_server_t *server, const char *query,
+				   char *param, int len, uint32_t timeout_ms);
+od_retcode_t od_backend_query(od_server_t *, char *, char *, int, uint32_t);
 
 int od_backend_not_connected(od_server_t *);
 
@@ -74,5 +71,5 @@ int od_backend_need_startup(od_server_t *);
 
 int od_backend_update_endpoint_status(od_instance_t *instance,
 				      od_client_t *client, od_server_t *server,
-				      char *context, const char *lag_query,
+				      const char *lag_query,
 				      od_storage_endpoint_t *endpoint);

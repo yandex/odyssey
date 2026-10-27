@@ -18,12 +18,11 @@
 #include <stream.h>
 #include <wait_event.h>
 
-static inline int complete_deploy(od_instance_t *instance, od_server_t *server,
-				  char *context)
+static inline int complete_deploy(od_instance_t *instance, od_server_t *server)
 {
 	uint32_t timeout = instance->config.backend_connect_timeout_ms;
 
-	int rc = od_service_stream_server_until_rfq(context, server,
+	int rc = od_service_stream_server_until_rfq(server,
 						    0 /* ignore errors */,
 						    timeout,
 						    OD_WAIT_DEPLOY_SERVER_READ);
@@ -34,7 +33,7 @@ static inline int complete_deploy(od_instance_t *instance, od_server_t *server,
 	return OK_RESPONSE;
 }
 
-int od_deploy(od_client_t *client, char *context)
+int od_deploy(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
@@ -74,8 +73,8 @@ int od_deploy(od_client_t *client, char *context)
 		query_count++;
 		client->server->synced_settings = false;
 
-		od_debug(&instance->logger, context, client, server,
-			 "deploy: %s", query);
+		od_debug(&instance->logger, client, server, "deploy: %s",
+			 query);
 	} else {
 		client->server->synced_settings = true;
 	}
@@ -83,7 +82,7 @@ int od_deploy(od_client_t *client, char *context)
 	if (query_count > 0) {
 		od_server_sync_request(server, query_count);
 
-		return complete_deploy(instance, server, context);
+		return complete_deploy(instance, server);
 	}
 
 	return OK_RESPONSE;

@@ -194,7 +194,7 @@ static od_frontend_status_t process_possible_attach(handler_t handler,
 	od_frontend_status_t status = handler(relay, msg, timeout_ms);
 	if (status == OD_ATTACH) {
 		od_client_t *client = relay->client;
-		status = od_frontend_attach_and_deploy(client, "main");
+		status = od_frontend_attach_and_deploy(client);
 		if (status != OD_OK) {
 			return status;
 		}
@@ -218,7 +218,7 @@ static void process_discard(od_client_t *client, od_server_t *server)
 	}
 
 	if (od_query_ctx_has(&client->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL)) {
-		od_debug(&instance->logger, "main", client, server,
+		od_debug(&instance->logger, client, server,
 			 "DISCARD ALL detected, invalidate caches");
 
 		od_client_pstmts_clear(client);
@@ -241,7 +241,7 @@ static inline void process_unlisten(od_client_t *client, od_server_t *server)
 	if (od_query_ctx_has(&client->query_ctx,
 			     OD_QUERY_CTX_IS_UNLISTEN_ALL) &&
 	    client->backend_pin_listen) {
-		od_debug(&instance->logger, "main", client, server,
+		od_debug(&instance->logger, client, server,
 			 "UNLISTEN ALL detected, unpin client");
 
 		client->backend_pin = 0;
@@ -272,14 +272,13 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 			if (type == KIWI_BE_COMMAND_COMPLETE) {
 				const char *command_tag =
 					data + sizeof(kiwi_header_t);
-				od_debug(&instance->logger, "main", client,
-					 server, "%s - %s",
+				od_debug(&instance->logger, client, server,
+					 "%s - %s",
 					 kiwi_be_type_to_string(type),
 					 command_tag);
 			} else {
-				od_debug(&instance->logger, "main", client,
-					 server, "%s",
-					 kiwi_be_type_to_string(type));
+				od_debug(&instance->logger, client, server,
+					 "%s", kiwi_be_type_to_string(type));
 			}
 		}
 
@@ -289,11 +288,10 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 			machine_msg_free(msg);
 			break;
 		case KIWI_BE_PARAMETER_STATUS:
-			rc = od_backend_update_parameter(server, "main", data,
-							 size, 0);
+			rc = od_backend_update_parameter(server, data, size, 0);
 			if (rc == -1) {
 				machine_msg_free(msg);
-				od_gerror("main", client, server,
+				od_gerror(client, server,
 					  "can't update parameter");
 				return OD_ESERVER_READ;
 			}
@@ -325,7 +323,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	uint32_t query_len;
 	rc = kiwi_be_read_query(data, size, &query, &query_len);
 	if (rc != OK_RESPONSE) {
-		od_gerror("main", client, server, "can't parse query message");
+		od_gerror(client, server, "can't parse query message");
 		return OD_ESERVER_WRITE;
 	}
 
@@ -404,7 +402,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	uint64_t errors_before = server->error_responses;
 
-	status = od_stream_server_until_rfq("main", server, timeout_ms,
+	status = od_stream_server_until_rfq(server, timeout_ms,
 					    OD_WAIT_STREAM_SERVER_READ);
 
 	if (status == OD_COPY_IN_RECEIVED) {
@@ -413,7 +411,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		 */
 		machine_msg_t *add = od_relay_get_copy_additional(relay);
 		od_assert(add == NULL);
-		status = od_stream_copy_to_server("main", client, server, add,
+		status = od_stream_copy_to_server(client, server, add,
 						  timeout_ms);
 	}
 
@@ -738,7 +736,7 @@ process_fcall_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_stat_query_start(&server->stats_state);
 
-	return od_stream_server_until_rfq("main", server, timeout_ms,
+	return od_stream_server_until_rfq(server, timeout_ms,
 					  OD_WAIT_STREAM_SERVER_READ);
 }
 
