@@ -8,6 +8,7 @@ option(MM_MEM_PROF "Built-in memory profiling" off)
 option(USE_TCMALLOC "Use TCMalloc" off)
 option(USE_TCMALLOC_PROFILE "Use TCMalloc with profiling" off)
 option(ENABLE_SSL_KEYLOG "Enable OpenSSL TLS key logging support" off)
+option(ENABLE_INJECTION_POINTS "Enable test injection points" OFF)
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
@@ -104,7 +105,6 @@ set(od_src
     cancel.c
     client.c
     console.c
-    injection.c
     deploy.c
     reset.c
     pstmt.c
@@ -323,9 +323,14 @@ message(STATUS "USE_UCONTEXT:           ${USE_UCONTEXT}")
 message(STATUS "MM_MEM_PROF:            ${MM_MEM_PROF}")
 message(STATUS "USE_TCMALLOC:           ${USE_TCMALLOC}")
 message(STATUS "USE_TCMALLOC_PROFILE:   ${USE_TCMALLOC_PROFILE}")
+message(STATUS "ENABLE_INJECTION_POINTS: ${ENABLE_INJECTION_POINTS}")
 
 configure_file("include/build.h.cmake" "build.h")
 configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")
+
+if (ENABLE_INJECTION_POINTS)
+    list(APPEND od_src injection.c)
+endif()
 
 if (PAM_FOUND)
     list(APPEND od_src pam.c)
