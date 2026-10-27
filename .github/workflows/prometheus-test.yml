@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/prometheus-test.yml"
       - "sources/**"
       - "test/**"
       - "CMakeLists.txt"
@@ -26,4 +28,8 @@ jobs:
       with:
         submodules: recursive
     - name: Odyssey build with prometheus test
-      run: make prometheus-legacy-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}
+      shell: bash
+      run: make prometheus-legacy-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

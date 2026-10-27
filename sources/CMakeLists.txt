@@ -8,6 +8,7 @@ option(MM_MEM_PROF "Built-in memory profiling" off)
 option(USE_TCMALLOC "Use TCMalloc" off)
 option(USE_TCMALLOC_PROFILE "Use TCMalloc with profiling" off)
 option(ENABLE_SSL_KEYLOG "Enable OpenSSL TLS key logging support" off)
+option(ENABLE_INJECTION_POINTS "Enable test injection points" OFF)
 
 set(od_binary ${CMAKE_PROJECT_NAME})
 set(od_src
@@ -104,10 +105,10 @@ set(od_src
     cancel.c
     client.c
     console.c
-    injection.c
     deploy.c
     reset.c
     pstmt.c
+    sql_pstmt.c
     clients_map.c
     frontend.c
     backend.c
@@ -137,6 +138,7 @@ set(od_src
     tsa.c
     query.c
     storage.c
+    wait_event.c
     server.c
     shared_pool.c
     address.c
@@ -322,9 +324,14 @@ message(STATUS "USE_UCONTEXT:           ${USE_UCONTEXT}")
 message(STATUS "MM_MEM_PROF:            ${MM_MEM_PROF}")
 message(STATUS "USE_TCMALLOC:           ${USE_TCMALLOC}")
 message(STATUS "USE_TCMALLOC_PROFILE:   ${USE_TCMALLOC_PROFILE}")
+message(STATUS "ENABLE_INJECTION_POINTS: ${ENABLE_INJECTION_POINTS}")
 
 configure_file("include/build.h.cmake" "build.h")
 configure_file("include/machinarium/build.h.cmake" "machinarium/build.h")
+
+if (ENABLE_INJECTION_POINTS)
+    list(APPEND od_src injection.c)
+endif()
 
 if (PAM_FOUND)
     list(APPEND od_src pam.c)
@@ -466,6 +473,7 @@ set(od_test_src
     tests/machinarium/test_tls_read_var.c
     tests/machinarium/test_tsan_simple_race_example.c
     tests/machinarium/test_vrb.c
+    tests/machinarium/test_mutex_bench.c
     tests/machinarium/test_queue.c
     tests/machinarium/test_heap.c
     tests/machinarium/test_lf_stack.c
@@ -486,9 +494,12 @@ set(od_test_src
     tests/odyssey/test_scram.c
     tests/odyssey/test_sql_parser.c
     tests/odyssey/test_sql_full_parser.c
+    tests/odyssey/test_sql_pstmt.c
     tests/odyssey/test_console_parser.c
     tests/odyssey/test_config_field.c
-    tests/odyssey/test_autoconf.c)
+    tests/odyssey/test_autoconf.c
+    tests/odyssey/test_soft_oom.c
+    tests/odyssey/test_wait_event.c)
 
 include_directories("${PROJECT_SOURCE_DIR}/tests")
 include_directories("${PROJECT_BINARY_DIR}/tests")

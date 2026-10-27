@@ -45,6 +45,7 @@ curl tester:9876/metrics -s \
 	| grep -v 'odyssey_database_avg_sent_bytes_per_second{database="postgres"}' \
 	| grep -v 'odyssey_database_avg_wait_time_seconds{database="postgres"}' \
 	| grep -v 'odyssey_route_tcp_connections_total' \
+	| grep -v 'odyssey_wait_events_count' \
 	| grep -v 'odyssey_errors_total{type="OD_ECLIENT_READ"}' > result.out
 
 echo EXPECTED START

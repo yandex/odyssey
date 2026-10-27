@@ -6,6 +6,10 @@
  * Test injection points.
  */
 
+#include <build.h>
+
+#ifdef ENABLE_INJECTION_POINTS
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdatomic.h>
@@ -18,3 +22,9 @@ typedef struct {
 
 void od_injection_load(const char *name);
 void od_injection_wait(const char *name);
+
+#else
+
+#define od_injection_wait(name) ((void)0)
+
+#endif

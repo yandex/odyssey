@@ -11,6 +11,8 @@ PGDIRREPL2=/home/postgres/pgrepl2
 PGDIRREPL3=/home/postgres/pgrepl3
 PGDIRREPL4=/home/postgres/pgrepl4
 
+trap 'ody-stop || exit 1' EXIT
+
 # for test scripts that stop/start replicas
 export PGDIR PGDIRREPL1 PGDIRREPL2 PGDIRREPL3 PGDIRREPL4
 
@@ -21,15 +23,7 @@ do_test() {
 
     export ASAN_OPTIONS="log_path=/asan-output.log fast_unwind_on_malloc=0"
     export TSAN_OPTIONS="log_path=/tsan-output.log"
-    odyssey ${REGRESS_DIR}/conf/${name}
-
-    local it=0
-    until (( it == 50 )) || pg_isready -h localhost -p ${port} -U postgres -d postgres; do
-        echo "Wait for odyssey..."
-        echo "$(( it++ ))"
-        sleep 0.1
-    done
-    (( it < 50 ))
+    PGPORT="$port" ody-start "${REGRESS_DIR}/conf/${name}" postgres postgres
 
     PGTEST_PORT="${port}" PGTEST_DIR="${REGRESS_DIR}/tests/${name}" PGTEST_USER="${user}" PGTEST_DB=postgres PGTEST_CONF="${REGRESS_DIR}/conf/${name}" ${PG_REGRESS} \
         --debug \
@@ -47,6 +41,34 @@ do_test() {
             echo "====== OUT ======="
             cat ${REGRESS_DIR}/tests/${name}/regression.out || true
 
+            exit 1
+        }
+
+    ody-stop
+}
+
+# Run the native isolation suite in the same container as pg_regress.
+do_isolation_test() {
+    local port=6432
+
+    export ASAN_OPTIONS="log_path=/asan-output.log fast_unwind_on_malloc=0"
+    export TSAN_OPTIONS="log_path=/tsan-output.log"
+    odyssey ${REGRESS_DIR}/conf/isolation
+
+    local it=0
+    until (( it == 50 )) || pg_isready -h localhost -p ${port} -U postgres -d postgres; do
+        echo 'Wait for odyssey...'
+        echo "$(( it++ ))"
+        sleep 0.1
+    done
+    (( it < 50 ))
+
+    PG_ISOLATION_REGRESS=/postgres/src/test/isolation/pg_isolation_regress \
+    PGHOST=localhost PGPORT=${port} PGUSER=postgres PGDATABASE=postgres \
+        /home/postgres/isolation/run_tests.sh || {
+            echo '====== ISOLATION DIFFS ======='
+            cat /home/postgres/isolation/output/regression.diffs || true
+            cat /home/postgres/isolation/output/regression.out || true
             ody-stop
             exit 1
         }
@@ -116,3 +138,7 @@ do_test tsa 6432 postgres
 do_test tsa_5node 6432 postgres
 
 do_test az_aware 6432 postgres
+
+do_test tsa_promote 6432 postgres
+
+do_isolation_test

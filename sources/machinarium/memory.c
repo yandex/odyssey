@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdlib.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
@@ -181,6 +182,17 @@ void *mm_calloc(size_t nmemb, size_t size)
 	return malloc_internal(nmemb * size, 1 /* set_zero */);
 }
 #endif /* ifndef MM_MEM_PROF */
+
+void *mm_malloc_aligned(size_t size, size_t alignment)
+{
+	void *mem = NULL;
+
+	if (posix_memalign(&mem, alignment, size) != 0) {
+		mem = NULL;
+	}
+
+	return wrap_allocation(mem);
+}
 
 char *mm_strdup(const char *s)
 {

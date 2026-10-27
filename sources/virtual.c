@@ -677,7 +677,8 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
  * ever touches the client io.
  */
 static od_frontend_status_t write_virtual_portal(od_client_t *client,
-						 od_virtual_portal_t *portal)
+						 od_virtual_portal_t *portal,
+						 uint32_t timeout_ms)
 {
 	od_server_t *server = client->server;
 
@@ -689,65 +690,35 @@ static od_frontend_status_t write_virtual_portal(od_client_t *client,
 		txstatus = portal->txstatus_force;
 	}
 
-	/*
-	 * od_write takes the message ownership (frees it after the
-	 * write), so every field has to be detached right after its
-	 * write - virtual_portal_free() must not see it anymore
-	 */
-	if (portal->notice != NULL) {
-		int rc = od_write(&client->io, portal->notice);
-		portal->notice = NULL;
-		if (rc != 0) {
-			return OD_ECLIENT_WRITE;
+	machine_msg_t *messages[] = {
+		portal->notice,
+		portal->tts != NULL ? portal->tts->row_description : NULL,
+		portal->tts != NULL ? portal->tts->data_rows : NULL,
+		virtual_portal_is_error(portal) ? portal->error :
+						  portal->command_complete,
+	};
+	machine_msg_t *reply = machine_msg_create(0);
+	if (reply == NULL) {
+		return OD_EOOM;
+	}
+	for (size_t i = 0; i < sizeof(messages) / sizeof(messages[0]); ++i) {
+		if (messages[i] == NULL) {
+			continue;
+		}
+		if (machine_msg_write(reply, machine_msg_data(messages[i]),
+				      machine_msg_size(messages[i])) != 0) {
+			machine_msg_free(reply);
+			return OD_EOOM;
 		}
 	}
 
-	if (portal->tts != NULL) {
-		if (machine_msg_size(portal->tts->row_description) > 0) {
-			int rc = od_write(&client->io,
-					  portal->tts->row_description);
-			portal->tts->row_description = NULL;
-			if (rc != 0) {
-				return OD_ECLIENT_WRITE;
-			}
-		}
-
-		int rc = od_write(&client->io, portal->tts->data_rows);
-		portal->tts->data_rows = NULL;
-		if (rc != 0) {
-			return OD_ECLIENT_WRITE;
-		}
-	}
-
-	if (virtual_portal_is_error(portal)) {
-		/* the ErrorResponse is already assembled on the reject path */
-		int rc = od_write(&client->io, portal->error);
-		portal->error = NULL;
-		if (rc != 0) {
-			return OD_ECLIENT_WRITE;
-		}
-	} else {
-		/* so is the CommandComplete */
-		int rc = od_write(&client->io, portal->command_complete);
-		portal->command_complete = NULL;
-		if (rc != 0) {
-			return OD_ECLIENT_WRITE;
-		}
-	}
-
-	machine_msg_t *tail = machine_msg_create(0);
-	if (tail == NULL) {
+	if (kiwi_be_write_ready(reply, txstatus) == NULL) {
+		machine_msg_free(reply);
 		return OD_EOOM;
 	}
 
-	machine_msg_t *msg = kiwi_be_write_ready(tail, txstatus);
-	if (msg == NULL) {
-		machine_msg_free(tail);
-		return OD_EOOM;
-	}
-
-	int rc = od_write(&client->io, tail);
-	if (rc != 0) {
+	/* od_write2 consumes the reply; the portal keeps its own payloads. */
+	if (od_write2(&client->io, reply, timeout_ms) != 0) {
 		return OD_ECLIENT_WRITE;
 	}
 
@@ -812,8 +783,13 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 	}
 
 	if (status == OD_SKIP) {
-		/* the single client write of the virtual processing */
-		status = write_virtual_portal(client, &portal);
+		/* Preserve the write limit for virtual SET and error replies. */
+		uint32_t timeout_ms = UINT32_MAX;
+		if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET) ||
+		    virtual_portal_is_error(&portal)) {
+			timeout_ms = 1000;
+		}
+		status = write_virtual_portal(client, &portal, timeout_ms);
 	}
 
 	virtual_portal_free(&portal);

@@ -1863,7 +1863,7 @@ static inline int od_frontend_poll_catchup(od_client_t *client,
 		od_storage_endpoint_status_get(&server->endpoint->status,
 					       &status);
 
-		if (od_logger_debug_enabled(&instance->logger, client, NULL)) {
+		if (instance->config.log_debug) {
 			char addr[256];
 			od_address_to_str(&server->endpoint->address, addr,
 					  sizeof(addr));
@@ -1892,8 +1892,7 @@ static inline int od_frontend_poll_catchup(od_client_t *client,
 			od_storage_endpoint_status_t status;
 			od_storage_endpoint_status_get(&endp->status, &status);
 
-			if (od_logger_debug_enabled(&instance->logger, client,
-						    NULL)) {
+			if (instance->config.log_debug) {
 				char addr[256];
 				od_address_to_str(&endp->address, addr,
 						  sizeof(addr));
@@ -2055,8 +2054,10 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 
 	kiwi_fe_type_t type = *data;
 
-	od_debug(&instance->logger, "remote client", client, server, "%s",
-		 kiwi_fe_type_to_string(type));
+	if (instance->config.log_debug) {
+		od_debug(&instance->logger, "remote client", client, server,
+			 "%s", kiwi_fe_type_to_string(type));
+	}
 
 	switch (type) {
 	case KIWI_FE_TERMINATE:
@@ -2968,13 +2969,16 @@ static od_frontend_status_t process_server_async_msg(od_client_t *client,
 	kiwi_be_type_t type = *data;
 	od_instance_t *instance = client->global->instance;
 
-	if (type == KIWI_BE_COMMAND_COMPLETE) {
-		const char *command_tag = data + sizeof(kiwi_header_t);
-		od_debug(&instance->logger, "main", client, server, "%s - %s",
-			 kiwi_be_type_to_string(type), command_tag);
-	} else {
-		od_debug(&instance->logger, "main", client, server, "%s",
-			 kiwi_be_type_to_string(type));
+	if (instance->config.log_debug) {
+		if (type == KIWI_BE_COMMAND_COMPLETE) {
+			const char *command_tag = data + sizeof(kiwi_header_t);
+			od_debug(&instance->logger, "main", client, server,
+				 "%s - %s", kiwi_be_type_to_string(type),
+				 command_tag);
+		} else {
+			od_debug(&instance->logger, "main", client, server,
+				 "%s", kiwi_be_type_to_string(type));
+		}
 	}
 
 	if (type == KIWI_BE_PARAMETER_STATUS) {
@@ -3523,6 +3527,14 @@ void od_frontend(void *arg)
 			 "cancel request");
 
 		od_routing_slot_release(global);
+
+		if (instance->config.ignore_cancel) {
+			od_debug(
+				&instance->logger, "startup", client, NULL,
+				"cancel request ignored (ignore_cancel is on)");
+			od_frontend_close(client);
+			return;
+		}
 
 		uint32_t queue_timeout =
 			instance->config.cancel_queue_timeout_ms >= 0 ?

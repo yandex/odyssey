@@ -2,7 +2,7 @@
 
 set -ex
 
-ody-start2 /tests/client_max/odyssey.conf postgres postgres
+ody-start /tests/client_max/odyssey.conf postgres postgres
 
 psql 'host=localhost port=6432 user=postgres dbname=postgres sslmode=disable' -c 'select pg_sleep(10000)' &
 p=$!

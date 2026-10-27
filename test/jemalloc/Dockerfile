@@ -48,6 +48,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     build-essential \
     autoconf \
     postgresql-client postgresql-client-common postgresql-contrib \
+    procps \
     python3 \
     curl \
     graphviz ghostscript
@@ -66,6 +67,6 @@ COPY --from=odyssey-build /build_dir /build_dir
 
 COPY ./test/jemalloc/entrypoint.sh ./
 
-COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./test/bin/ody-stop /usr/bin/ody-stop
 
 ENTRYPOINT ["/jeamalloc-compat/entrypoint.sh"]

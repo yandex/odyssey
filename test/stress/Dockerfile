@@ -59,6 +59,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     openssh-server \
     vim \
     gdb \
+    procps \
     build-essential \
     strace ltrace \
     lsof \
@@ -87,7 +88,8 @@ WORKDIR /stress-test
 
 COPY ./sources/machinarium/gdb/machinarium-gdb.py /gdb.py
 
-COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./test/bin/ody-start /usr/bin/ody-start
+COPY ./test/bin/ody-stop /usr/bin/ody-stop
 
 COPY --from=odyssey-build /odyssey /odyssey
 COPY --from=odyssey-build /odyssey.conf /odyssey.conf

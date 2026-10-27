@@ -17,6 +17,9 @@
 #include <util.h>
 #include <worker.h>
 
+/* max plan entries sent without a heap-allocated iovec array */
+#define OD_XPLAN_IOVEC_INLINE_MAX 32
+
 static inline kiwi_be_type_t msg_be_type(machine_msg_t *msg)
 {
 	kiwi_be_type_t type = *(uint8_t *)machine_msg_data(msg);
@@ -923,8 +926,7 @@ static inline machine_msg_t *rewrite_bind_msg(char *data, int size,
 	/* packet header */
 	memcpy(rewrite_data, data, opname_start_offset);
 	/* prefix for opname */
-	od_snprintf(rewrite_data + opname_start_offset, opnamelen, "%s",
-		    opname);
+	memcpy(rewrite_data + opname_start_offset, opname, opnamelen);
 	/* rest of msg */
 	memcpy(rewrite_data + opname_start_offset + opnamelen,
 	       data + opname_start_offset + operator_name_len,
@@ -1526,14 +1528,19 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 		kiwi_be_type_t type = *data;
 		od_instance_t *instance = client->global->instance;
 
-		if (type == KIWI_BE_COMMAND_COMPLETE) {
-			const char *command_tag = data + sizeof(kiwi_header_t);
-			od_debug(&instance->logger, "main", client, server,
-				 "%s - %s", kiwi_be_type_to_string(type),
-				 command_tag);
-		} else {
-			od_debug(&instance->logger, "main", client, server,
-				 "%s", kiwi_be_type_to_string(type));
+		if (instance->config.log_debug) {
+			if (type == KIWI_BE_COMMAND_COMPLETE) {
+				const char *command_tag =
+					data + sizeof(kiwi_header_t);
+				od_debug(&instance->logger, "main", client,
+					 server, "%s - %s",
+					 kiwi_be_type_to_string(type),
+					 command_tag);
+			} else {
+				od_debug(&instance->logger, "main", client,
+					 server, "%s",
+					 kiwi_be_type_to_string(type));
+			}
 		}
 
 		switch (type) {
@@ -1589,6 +1596,7 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 	od_client_t *client = arg->client;
 	od_server_t *server = arg->server;
 	od_instance_t *instance = client->global->instance;
+	od_rule_t *rule = client->route->rule;
 	od_xplan_t *xp = arg->xp;
 	od_xplan_entry_t *entry = mm_vector_get(&xp->entries, arg->idx);
 	arg->idx++;
@@ -1601,7 +1609,7 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 		apply_delta = 1;
 	}
 
-	if (od_logger_debug_enabled(&instance->logger, client, server)) {
+	if (instance->config.log_debug || rule->log_debug) {
 		char buf[256];
 		plan_entry_description(entry, buf, sizeof(buf));
 		od_debug(
@@ -1713,6 +1721,7 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 
 	od_client_t *client = relay->client;
 	od_instance_t *instance = client->global->instance;
+	od_rule_t *rule = client->route->rule;
 	od_server_t *server = client->server;
 	od_frontend_status_t status = OD_OK;
 
@@ -1813,8 +1822,7 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 			status = delta_apply(&entry->delta, client, server);
 		}
 
-		if (od_logger_debug_enabled(&instance->logger, client,
-					    server)) {
+		if (instance->config.log_debug || rule->log_debug) {
 			char buf[256];
 			plan_entry_description(entry, buf, sizeof(buf));
 			od_debug(&instance->logger, "main", client, server,
@@ -1935,20 +1943,27 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 				  uint32_t timeout_ms)
 {
 	od_client_t *client = relay->client;
+	od_rule_t *rule = client->route->rule;
 	od_instance_t *instance = client->global->instance;
 
 	size_t count = mm_vector_size(&xp->entries);
 	od_assert(count > 0);
 
-	size_t niovecs = count;
-	struct iovec *iovecs = od_malloc(sizeof(struct iovec) * niovecs);
-	if (iovecs == NULL) {
-		return OD_EOOM;
+	/* most plans are small: avoid a heap round-trip per flush */
+	struct iovec stack_iovecs[OD_XPLAN_IOVEC_INLINE_MAX];
+	struct iovec *iovecs;
+	if (count <= OD_XPLAN_IOVEC_INLINE_MAX) {
+		iovecs = stack_iovecs;
+	} else {
+		iovecs = od_malloc(sizeof(struct iovec) * count);
+		if (iovecs == NULL) {
+			return OD_EOOM;
+		}
 	}
 
 	size_t written = prepare_send_iovecs(xp, iovecs);
 
-	if (od_logger_debug_enabled(&instance->logger, client, NULL)) {
+	if (instance->config.log_debug || rule->log_debug) {
 		log_xbuf(instance, client, &relay->xbuf);
 		log_plan_debug(instance, xp, client);
 		log_srv_send_buf(instance, client, iovecs, written);
@@ -1957,7 +1972,9 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 	od_frontend_status_t status =
 		send_buf_and_run_plan(xp, relay, iovecs, written, timeout_ms);
 
-	od_free(iovecs);
+	if (iovecs != stack_iovecs) {
+		od_free(iovecs);
+	}
 
 	return status;
 }

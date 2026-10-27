@@ -39,10 +39,8 @@ PGPASSWORD=not-password psql -h localhost -U test_scram -d testdb -c 'select 42'
     exit 1
 }
 
-odyssey /home/postgres/odyssey.conf || exit 1
-until pg_isready -h localhost -p 6432 >/dev/null 2>&1; do
-	sleep 0.2
-done
+trap 'ody-stop || exit 1' EXIT
+ody-start /home/postgres/odyssey.conf || exit 1
 
 PGPASSWORD=password psql -h localhost -p 6432 -U test_scram -d testdb -c 'select 42' || {
 	cat /home/postgres/odyssey.log

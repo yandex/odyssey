@@ -119,6 +119,7 @@ extern void machinarium_test_heap(void);
 extern void machinarium_test_lf_stack(void);
 extern void machinarium_test_queue(void);
 extern void machinarium_vrb_benchmark(void);
+extern void machinarium_mutex_benchmark(void);
 extern void machinarium_test_eventfd(void);
 extern void machinarium_test_sem(void);
 
@@ -143,9 +144,12 @@ extern void odyssey_test_linear_alloc(void);
 extern void odyssey_test_scram(void);
 extern void odyssey_test_sql_minimal_parser(void);
 extern void odyssey_test_sql_full_parser(void);
+extern void odyssey_test_sql_pstmt(void);
 extern void odyssey_test_console_parser(void);
 extern void odyssey_test_config_field(void);
 extern void odyssey_test_autoconf(void);
+extern void odyssey_test_soft_oom(void);
+extern void odyssey_test_wait_event(void);
 
 extern void machinarium_test_tsan_simple_race_example(void);
 
@@ -261,6 +265,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_heap);
 	odyssey_test(machinarium_test_lf_stack);
 	odyssey_playground_test(machinarium_vrb_benchmark);
+	odyssey_playground_test(machinarium_mutex_benchmark);
 	odyssey_test(machinarium_test_mutex_threads);
 	odyssey_test(machinarium_test_mutex_coroutines);
 	odyssey_test(machinarium_test_mutex_timeout);
@@ -283,9 +288,12 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_scram);
 	odyssey_test(odyssey_test_sql_minimal_parser);
 	odyssey_test(odyssey_test_sql_full_parser);
+	odyssey_test(odyssey_test_sql_pstmt);
 	odyssey_test(odyssey_test_console_parser);
 	odyssey_test(odyssey_test_config_field);
 	odyssey_test(odyssey_test_autoconf);
+	odyssey_test(odyssey_test_soft_oom);
+	odyssey_test(odyssey_test_wait_event);
 
 	odyssey_playground_test(machinarium_test_tsan_simple_race_example);
 

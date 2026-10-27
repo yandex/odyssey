@@ -1,0 +1,2 @@
+# Unified diffs prefix PostgreSQL's indentation with a context marker.
+*.patch -whitespace

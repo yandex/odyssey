@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/prom-exporter-test.yml"
       - "docker/prom-exporter/**"
       - "prometheus/**"
       - "test/prom-exporter/**"
@@ -17,4 +19,8 @@ jobs:
       with:
         submodules: recursive
     - name: Check prom exporter works
-      run: make prom-exporter-test
+      shell: bash
+      run: make prom-exporter-test 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

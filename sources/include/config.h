@@ -187,6 +187,12 @@ struct od_config {
 	int cancel_max_inflight;
 	int cancel_rate_limit;
 
+	/*
+	 * Ignore incoming client cancel requests entirely:
+	 * they are dropped without forwarding to the backend
+	 */
+	int ignore_cancel;
+
 	int virtual_processing; /* enables some cases for full-virtual query processing */
 	int virtual_transaction;
 

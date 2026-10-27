@@ -117,6 +117,17 @@ NOTICE:  select host tcp://localhost:5432
 
 SET odyssey.execute_on_host TO DEFAULT;
 NOTICE:  processed virtually by odyssey
+-- the watchdog-polled rw/ro classification is visible in the console
+\! psql 'host=localhost port=6432 user=postgres dbname=console' -c 'SHOW tsa_cache' 2>&1 | sed -E 's/[[:space:]]+[0-9]+$//'
+     storage     |   host    | port | alive |   state    | repl_lag_sec | last_update_ms 
+-----------------+-----------+------+-------+------------+--------------+----------------
+ postgres_server | localhost | 5432 | yes   | read-write | 0            |
+ postgres_server | localhost | 5433 | yes   | read-only  | 0            |
+ postgres_server | localhost | 5434 | yes   | read-only  | 0            |
+ postgres_server | localhost | 5435 | yes   | read-only  | 0            |
+ postgres_server | localhost | 5436 | yes   | read-only  | 0            |
+(5 rows)
+
 -- cut the replicas off: prefer-standby must fall back to the primary
 \! ${PGTEST_DIR}/sql/replicas.sh stop
 \! sleep 1

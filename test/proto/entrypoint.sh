@@ -7,13 +7,8 @@ until pg_isready -h primary -p 5432 -U postgres -d postgres; do
   sleep 0.1
 done
 
-/usr/bin/odyssey /etc/odyssey.conf &
-ODY_PID=$!
-
-until pg_isready -h 127.0.0.1 -p 6432 -U postgres -d postgres; do
-  echo "Wait for odyssey..."
-  sleep 0.1
-done
+trap 'ody-stop || exit 1' EXIT
+ody-start /etc/odyssey.conf console console
 
 do_test() {
   local user="$1"

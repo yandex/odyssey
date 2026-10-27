@@ -96,6 +96,7 @@ typedef struct od_cfg_global {
 	od_cfg_bool_field_t log_route_stats_prom;
 	od_cfg_bool_field_t replication_proxy_phys;
 	od_cfg_bool_field_t replication_proxy_logic;
+	od_cfg_bool_field_t ignore_cancel;
 
 	od_cfg_string_field_t pid_file;
 	od_cfg_string_field_t unix_socket_dir;
