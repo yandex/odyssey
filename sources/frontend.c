@@ -661,24 +661,6 @@ od_frontend_attach_to_endpoint(od_client_t *client, kiwi_params_t *route_params,
 			}
 		}
 
-		if (is_deploy &&
-		    client->rule->pool->reserve_prepared_statement) {
-			int rc = od_sql_pstmt_attach(
-				&client->sql_pstmt, &server->sql_pstmt, server,
-				instance->config.backend_connect_timeout_ms);
-			if (rc == -1) {
-				od_gerror(client, server,
-					  "prepared statements deploy failed");
-				return OD_ESERVER_WRITE;
-			}
-			if (rc == 1) {
-				od_log(&instance->logger, client, server,
-				       "server holds unknown prepared statements, close connection and retry attach");
-				od_router_close(router, client);
-				continue;
-			}
-		}
-
 		if (is_deploy && storage->balancing.debug_notice &&
 		    storage->endpoints_count > 1) {
 			od_address_to_str(&client->server->endpoint->address,
@@ -3202,7 +3184,8 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 		return;
 	}
 
-	if (force_server_close) {
+	/* An interrupted SQL query may have unrecorded prepared statements. */
+	if (force_server_close || client->sql_query.active) {
 		od_router_close(router, client);
 		return;
 	}

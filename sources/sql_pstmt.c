@@ -1,283 +1,54 @@
 /*
  * Odyssey.
  *
- * Scalable PostgreSQL connection pooler.
+ * SQL PREPARE creates ordinary protocol-level cached statements.
+ * Locations come from the minimal parser; PostgreSQL validates their bodies.
  */
-
 #include <odyssey.h>
-
+#include <kiwi/kiwi.h>
+#include <client.h>
+#include <server.h>
+#include <global.h>
+#include <instance.h>
+#include <worker.h>
+#include <backend.h>
+#include <stream.h>
+#include <sql_pstmt.h>
+#include <wait_event.h>
+#include <util.h>
+#include <sql/minimal/parser.h>
+#include <sql/full/parser.h>
 #include <ctype.h>
 #include <strings.h>
 
-#include <machinarium/machinarium.h>
-#include <kiwi/kiwi.h>
-
-#include <od_memory.h>
-#include <util.h>
-#include <server.h>
-#include <backend.h>
-#include <io.h>
-#include <pstmt.h>
-#include <sql_pstmt.h>
-#include <sql/full/parser.h>
-#include <wait_event.h>
-
-static const uint64_t hash_seed = 0;
-
-/*
- * name -> entry maps
- */
-
-static mm_hash_t name_hash(const void *key)
+static char *copy_text(const char *text, od_sql_location_t location)
 {
-	const char *name = *(const char **)key;
-
-	return mm_xxh64_hash(name, strlen(name), hash_seed);
-}
-
-static int name_cmp(const void *k1, const void *k2)
-{
-	return strcmp(*(const char **)k1, *(const char **)k2);
-}
-
-static void entry_free(od_sql_pstmt_t *e)
-{
-	od_free(e->name);
-	od_free(e->text);
-	od_free(e);
-}
-
-void od_sql_pstmt_map_init(od_sql_pstmt_map_t *map)
-{
-	map->hm = NULL;
-	od_list_init(&map->order);
-	map->count = 0;
-}
-
-void od_sql_pstmt_map_clear(od_sql_pstmt_map_t *map)
-{
-	if (map->hm != NULL) {
-		mm_hashmap_clear(map->hm);
+	int length = location.end - location.start;
+	char *copy = od_malloc((size_t)length + 1);
+	if (copy != NULL) {
+		memcpy(copy, text + location.start, (size_t)length);
+		copy[length] = 0;
 	}
-
-	od_list_t *i, *n;
-	od_list_foreach_safe (&map->order, i, n) {
-		od_sql_pstmt_t *e = od_container_of(i, od_sql_pstmt_t, link);
-		od_list_unlink(&e->link);
-		entry_free(e);
-	}
-
-	map->count = 0;
+	return copy;
 }
 
-void od_sql_pstmt_map_free(od_sql_pstmt_map_t *map)
+static void ignore_parse_error(const char *message, void *arg)
 {
-	od_sql_pstmt_map_clear(map);
-
-	if (map->hm != NULL) {
-		mm_hashmap_free(map->hm);
-		map->hm = NULL;
-	}
+	(void)message;
+	(void)arg;
 }
 
-od_sql_pstmt_t *od_sql_pstmt_map_get(od_sql_pstmt_map_t *map, const char *name)
+static const char *statement_name(Node *node)
 {
-	if (map->hm == NULL) {
-		return NULL;
-	}
-
-	mm_hashmap_keylock_t klock;
-	mm_hashmap_lock_key(map->hm, &klock, &name, 0 /* do not create */);
-	if (!klock.found) {
-		/* lock is not held if key not found */
-		return NULL;
-	}
-
-	od_sql_pstmt_t *e =
-		*(od_sql_pstmt_t **)mm_hashmap_kvp_val(map->hm, klock.kvp);
-	mm_hashmap_unlock_key(map->hm, &klock);
-
-	return e;
-}
-
-void od_sql_pstmt_map_remove(od_sql_pstmt_map_t *map, const char *name)
-{
-	if (map->hm == NULL) {
-		return;
-	}
-
-	mm_hashmap_keylock_t klock;
-	mm_hashmap_lock_key(map->hm, &klock, &name, 0 /* do not create */);
-	if (!klock.found) {
-		return;
-	}
-
-	od_sql_pstmt_t *e =
-		*(od_sql_pstmt_t **)mm_hashmap_kvp_val(map->hm, klock.kvp);
-	mm_hashmap_remove(map->hm, &klock);
-
-	od_list_unlink(&e->link);
-	map->count--;
-	entry_free(e);
-}
-
-od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
-				     const char *text, size_t text_len,
-				     uint64_t hash)
-{
-	if (map->hm == NULL) {
-		/* maps are owned by one client or server - no locks needed */
-		map->hm = mm_hashmap_create(64, 0 /* nlocks */, sizeof(char *),
-					    sizeof(od_sql_pstmt_t *), name_cmp,
-					    name_hash, NULL /* key dtor */,
-					    NULL /* value dtor */,
-					    NULL /* key copy */,
-					    0 /* nfree_max: default, capped
-					       * at nbuckets */);
-		if (map->hm == NULL) {
-			return NULL;
-		}
-	}
-
-	/* the hashmap key points to the entry name, so never reuse an entry */
-	od_sql_pstmt_map_remove(map, name);
-
-	od_sql_pstmt_t *e = od_malloc(sizeof(od_sql_pstmt_t));
-	if (e == NULL) {
-		return NULL;
-	}
-	memset(e, 0, sizeof(od_sql_pstmt_t));
-	od_list_init(&e->link);
-	e->hash = hash;
-
-	e->name = od_strdup(name);
-	if (e->name == NULL) {
-		entry_free(e);
-		return NULL;
-	}
-
-	if (text != NULL) {
-		e->text = od_malloc(text_len + 1);
-		if (e->text == NULL) {
-			entry_free(e);
-			return NULL;
-		}
-		memcpy(e->text, text, text_len);
-		e->text[text_len] = '\0';
-		e->text_len = text_len;
-	}
-
-	mm_hashmap_keylock_t klock;
-	const char *key = e->name;
-	if (mm_hashmap_lock_key(map->hm, &klock, &key, MM_HASHMAP_CREATE) ==
-	    -1) {
-		entry_free(e);
-		return NULL;
-	}
-	memcpy(mm_hashmap_kvp_val(map->hm, klock.kvp), &e, sizeof(e));
-	mm_hashmap_unlock_key(map->hm, &klock);
-
-	od_list_append(&map->order, &e->link);
-	map->count++;
-
-	return e;
-}
-
-void od_sql_pstmt_client_init(od_sql_pstmt_client_t *client)
-{
-	od_sql_pstmt_map_init(&client->stmts);
-	memset(&client->query, 0, sizeof(client->query));
-}
-
-void od_sql_pstmt_client_free(od_sql_pstmt_client_t *client)
-{
-	od_sql_pstmt_map_free(&client->stmts);
-	od_sql_pstmt_query_reset(&client->query);
-}
-
-void od_sql_pstmt_client_clear(od_sql_pstmt_client_t *client)
-{
-	od_sql_pstmt_map_clear(&client->stmts);
-}
-
-void od_sql_pstmt_server_init(od_sql_pstmt_server_t *server)
-{
-	od_sql_pstmt_map_init(&server->stmts);
-	server->unknown = 0;
-}
-
-void od_sql_pstmt_server_free(od_sql_pstmt_server_t *server)
-{
-	od_sql_pstmt_map_free(&server->stmts);
-}
-
-void od_sql_pstmt_server_clear(od_sql_pstmt_server_t *server)
-{
-	od_sql_pstmt_map_clear(&server->stmts);
-}
-
-/*
- * query inspection
- */
-
-/* case-insensitive search of an ASCII keyword */
-static int contains_keyword(const char *s, size_t len, const char *kw)
-{
-	size_t kwlen = strlen(kw);
-	char first = kw[0];
-
-	for (size_t i = 0; i + kwlen <= len; ++i) {
-		if (tolower((unsigned char)s[i]) != first) {
-			continue;
-		}
-		if (strncasecmp(s + i, kw, kwlen) == 0) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-static void ignore_parse_error(const char *msg, void *userdata)
-{
-	(void)msg;
-	(void)userdata;
-}
-
-void od_sql_pstmt_op_free(od_sql_pstmt_op_t *op)
-{
-	od_free(op->name);
-	od_free(op->text);
-	memset(op, 0, sizeof(od_sql_pstmt_op_t));
-}
-
-void od_sql_pstmt_query_reset(od_sql_pstmt_query_t *q)
-{
-	for (int i = 0; i < q->nops; ++i) {
-		od_sql_pstmt_op_free(&q->ops[i]);
-	}
-	od_free(q->ops);
-
-	memset(q, 0, sizeof(od_sql_pstmt_query_t));
-}
-
-/* the prepared statement a statement creates, executes or deallocates */
-static const char *stmt_pstmt_name(Node *node)
-{
-	/* EXPLAIN [ANALYZE] CREATE TABLE ... AS EXECUTE nests two levels */
 	while (node != NULL &&
 	       (IsA(node, ExplainStmt) || IsA(node, CreateTableAsStmt))) {
-		if (IsA(node, ExplainStmt)) {
-			node = castNode(ExplainStmt, node)->query;
-		} else {
-			node = castNode(CreateTableAsStmt, node)->query;
-		}
+		node = IsA(node, ExplainStmt) ?
+			       castNode(ExplainStmt, node)->query :
+			       castNode(CreateTableAsStmt, node)->query;
 	}
-
 	if (node == NULL) {
 		return NULL;
 	}
-
 	if (IsA(node, PrepareStmt)) {
 		return castNode(PrepareStmt, node)->name;
 	}
@@ -287,484 +58,689 @@ static const char *stmt_pstmt_name(Node *node)
 	if (IsA(node, DeallocateStmt)) {
 		return castNode(DeallocateStmt, node)->name;
 	}
-
 	return NULL;
 }
 
-static int is_reserved_name(const char *name)
+/* Skip parsing ordinary traffic that cannot affect prepared statements. */
+static int contains_keyword(const char *text, size_t len, const char *word)
 {
-	return name != NULL && strncmp(name, OD_PSTMT_NAME_PREFIX,
-				       sizeof(OD_PSTMT_NAME_PREFIX) - 1) == 0;
-}
-
-static int op_from_stmt(od_sql_pstmt_op_t *op, RawStmt *rs, const char *query,
-			size_t len)
-{
-	Node *node = rs->stmt;
-
-	if (IsA(node, DeallocateStmt)) {
-		DeallocateStmt *d = castNode(DeallocateStmt, node);
-		if (d->isall) {
-			op->type = OD_SQL_PSTMT_OP_DEALLOCATE_ALL;
-			return 0;
-		}
-
-		op->type = OD_SQL_PSTMT_OP_DEALLOCATE;
-		op->name = od_strdup(d->name);
-		return op->name == NULL ? -1 : 0;
-	}
-
-	PrepareStmt *p = castNode(PrepareStmt, node);
-	op->type = OD_SQL_PSTMT_OP_PREPARE;
-
-	/* stmt_len of 0 means the statement runs to the end of the query */
-	size_t start = rs->stmt_location > 0 ? (size_t)rs->stmt_location : 0;
-	if (start > len) {
-		start = len;
-	}
-	size_t stmt_len = rs->stmt_len > 0 ? (size_t)rs->stmt_len : len - start;
-	if (stmt_len > len - start) {
-		stmt_len = len - start;
-	}
-
-	op->name = od_strdup(p->name);
-	op->text = od_malloc(stmt_len + 1);
-	if (op->name == NULL || op->text == NULL) {
-		return -1;
-	}
-	memcpy(op->text, query + start, stmt_len);
-	op->text[stmt_len] = '\0';
-	op->text_len = stmt_len;
-	op->hash = mm_xxh64_hash(op->text, stmt_len, hash_seed);
-
-	return 0;
-}
-
-int od_sql_pstmt_query_analyze(od_sql_pstmt_query_t *q, const char *query,
-			       size_t len, od_linear_alloc_t *arena)
-{
-	q->analyzed = 1;
-
-	/* the worker arena is not allocated when query parsing is disabled */
-	if (arena == NULL || arena->buf == NULL) {
-		return 0;
-	}
-
-	/*
-	 * a name in odyssey's namespace either appears literally or is
-	 * spelled with escapes in a U&"..." identifier
-	 */
-	if (!contains_keyword(query, len, "prepare") &&
-	    !contains_keyword(query, len, "deallocate") &&
-	    !contains_keyword(query, len, OD_PSTMT_NAME_PREFIX) &&
-	    !contains_keyword(query, len, "u&")) {
-		return 0;
-	}
-
-	List *tree =
-		od_sql_full_parse(arena, query, len, ignore_parse_error, NULL);
-	if (tree == NIL) {
-		/* not a valid query or too big for the arena - not tracked */
-		return 0;
-	}
-
-	int nops = 0;
-	ListCell *lc;
-	foreach(lc, tree)
-	{
-		RawStmt *rs = lfirst_node(RawStmt, lc);
-		if (is_reserved_name(stmt_pstmt_name(rs->stmt))) {
-			/* the query is rejected, no need to track anything */
-			q->uses_reserved_name = 1;
-			return 0;
-		}
-		if (IsA(rs->stmt, PrepareStmt) ||
-		    IsA(rs->stmt, DeallocateStmt)) {
-			nops++;
-		}
-	}
-
-	if (nops == 0) {
-		return 0;
-	}
-
-	q->ops = od_malloc(sizeof(od_sql_pstmt_op_t) * nops);
-	if (q->ops == NULL) {
-		return -1;
-	}
-	memset(q->ops, 0, sizeof(od_sql_pstmt_op_t) * nops);
-
-	int idx = 0;
-	foreach(lc, tree)
-	{
-		RawStmt *rs = lfirst_node(RawStmt, lc);
-		if (IsA(rs->stmt, PrepareStmt) ||
-		    IsA(rs->stmt, DeallocateStmt)) {
-			od_sql_pstmt_op_t *op = &q->ops[q->nops];
-			/* count it before filling, so reset frees partial ops */
-			q->nops++;
-			op->stmt_idx = idx;
-			if (op_from_stmt(op, rs, query, len) != 0) {
-				od_sql_pstmt_query_reset(q);
-				q->analyzed = 1;
-				return -1;
-			}
-		}
-		idx++;
-	}
-
-	return 0;
-}
-
-int od_sql_pstmt_op_must_forward(od_sql_pstmt_client_t *client,
-				 const od_sql_pstmt_op_t *op)
-{
-	switch (op->type) {
-	case OD_SQL_PSTMT_OP_DEALLOCATE:
-		return od_sql_pstmt_map_get(&client->stmts, op->name) != NULL;
-	case OD_SQL_PSTMT_OP_DEALLOCATE_ALL:
-		return client->stmts.count > 0;
-	default:
-		return 0;
-	}
-}
-
-int od_sql_pstmt_query_must_forward(od_sql_pstmt_client_t *client)
-{
-	od_sql_pstmt_query_t *q = &client->query;
-
-	for (int i = 0; i < q->nops; ++i) {
-		if (od_sql_pstmt_op_must_forward(client, &q->ops[i])) {
+	size_t length = strlen(word);
+	for (size_t i = 0; i + length <= len; i++) {
+		if (tolower((unsigned char)text[i]) == word[0] &&
+		    strncasecmp(text + i, word, length) == 0) {
 			return 1;
 		}
 	}
-
 	return 0;
 }
 
-int od_sql_pstmt_apply(od_sql_pstmt_client_t *client,
-		       od_sql_pstmt_server_t *server,
-		       const od_sql_pstmt_op_t *op)
+void od_sql_pstmt_query_reset(od_sql_pstmt_query_t *q)
 {
-	switch (op->type) {
-	case OD_SQL_PSTMT_OP_PREPARE:
-		/*
-		 * the backend holds the statement already, so if it can not be
-		 * recorded the backend state is unknown
-		 */
-		if (od_sql_pstmt_map_set(&client->stmts, op->name, op->text,
-					 op->text_len, op->hash) == NULL) {
-			if (server != NULL) {
-				server->unknown = 1;
-			}
-			return -1;
+	for (int i = 0; i < q->nops; i++) {
+		od_sql_pstmt_op_t *op = &q->ops[i];
+		od_free(op->name);
+		od_free(op->query);
+		for (int j = 0; j < op->nargs; j++) {
+			od_free(op->args[j]);
 		}
-		if (server != NULL &&
-		    od_sql_pstmt_map_set(&server->stmts, op->name, NULL, 0,
-					 op->hash) == NULL) {
-			server->unknown = 1;
-			return -1;
+		od_free(op->args);
+		od_free(op->arg_lengths);
+		if (op->pstmt != NULL) {
+			od_pstmt_unref(op->pstmt);
 		}
-		break;
-	case OD_SQL_PSTMT_OP_DEALLOCATE:
-		od_sql_pstmt_map_remove(&client->stmts, op->name);
-		if (server != NULL) {
-			od_sql_pstmt_map_remove(&server->stmts, op->name);
-		}
-		break;
-	case OD_SQL_PSTMT_OP_DEALLOCATE_ALL:
-		od_sql_pstmt_client_clear(client);
-		if (server != NULL) {
-			od_sql_pstmt_server_clear(server);
-		}
-		break;
 	}
-
-	return 0;
+	od_free(q->ops);
+	od_free(q->text);
+	machine_msg_free_safe(q->rewritten);
+	memset(q, 0, sizeof(*q));
 }
 
-int od_sql_pstmt_query_finish(od_sql_pstmt_client_t *client,
-			      od_sql_pstmt_server_t *server,
-			      int *deallocated_all)
+int od_sql_pstmt_query_analyze(od_sql_pstmt_query_t *q, const char *text,
+			       size_t len, od_linear_alloc_t *arena)
 {
-	od_sql_pstmt_query_t *q = &client->query;
-
-	*deallocated_all = 0;
-
-	if (!q->counting) {
+	q->analyzed = 1;
+	if (arena == NULL || arena->buf == NULL) {
 		return 0;
 	}
-	q->counting = 0;
-
-	for (int i = 0; i < q->nops; ++i) {
-		od_sql_pstmt_op_t *op = &q->ops[i];
-
-		/*
-		 * statements run in order and execution stops at the first
-		 * error, so statement N succeeded iff more than N completed
-		 */
-		if (op->stmt_idx >= q->completes) {
-			break;
-		}
-
-		if (od_sql_pstmt_apply(client, server, op) != 0) {
-			return -1;
-		}
-
-		if (op->type == OD_SQL_PSTMT_OP_DEALLOCATE_ALL) {
-			*deallocated_all = 1;
-		}
+	if (!contains_keyword(text, len, "prepare") &&
+	    !contains_keyword(text, len, "execute") &&
+	    !contains_keyword(text, len, "deallocate") &&
+	    !contains_keyword(text, len, "discard")) {
+		return 0;
 	}
 
-	return 0;
-}
-
-/*
- * attach
- */
-
-static machine_msg_t *write_deallocate(machine_msg_t *stream, const char *name)
-{
-	/* DEALLOCATE "name" with embedded quotes doubled */
-	size_t len = strlen(name);
-	char *query = od_malloc(sizeof("DEALLOCATE \"\"") + 2 * len);
-	if (query == NULL) {
-		/* stream is NULL for the first query of a batch */
-		machine_msg_free_safe(stream);
-		return NULL;
-	}
-
-	char *pos = query;
-	pos += sprintf(pos, "DEALLOCATE \"");
-	for (size_t i = 0; i < len; ++i) {
-		if (name[i] == '"') {
-			*pos++ = '"';
+	/* Full grammar checks the batch; the minimal parser supplies byte ranges. */
+	List *tree =
+		od_sql_full_parse(arena, text, len, ignore_parse_error, NULL);
+	ListCell *cell;
+	foreach(cell, tree)
+	{
+		Node *node = lfirst_node(RawStmt, cell)->stmt;
+		const char *name = statement_name(node);
+		if (name != NULL &&
+		    strncmp(name, OD_PSTMT_NAME_PREFIX,
+			    sizeof(OD_PSTMT_NAME_PREFIX) - 1) == 0) {
+			q->uses_reserved_name = 1;
+			return 0;
 		}
-		*pos++ = name[i];
+		if (IsA(node, PrepareStmt) &&
+		    castNode(PrepareStmt, node)->argtypes != NIL) {
+			q->unsupported = 1;
+		}
+		if (name != NULL && !IsA(node, PrepareStmt) &&
+		    !IsA(node, ExecuteStmt) && !IsA(node, DeallocateStmt)) {
+			q->unsupported = 1;
+		}
 	}
-	*pos++ = '"';
-	*pos++ = '\0';
-
-	machine_msg_t *msg = kiwi_fe_write_query(stream, query, pos - query);
-	od_free(query);
-	if (msg == NULL) {
-		/* on failure the stream is left to the caller */
-		machine_msg_free_safe(stream);
+	if (tree == NIL || q->unsupported) {
+		return 0;
 	}
 
-	return msg;
-}
-
-/* SQLSTATE of a failed service query, empty if it succeeded */
-typedef char sqlstate_t[6];
-
-/*
- * sends count pipelined queries and waits for all of them, ignoring
- * errors; errors[i] is the SQLSTATE of query i, empty if it succeeded
- */
-static int run_service_queries(od_server_t *server, machine_msg_t *stream,
-			       int count, sqlstate_t *errors,
-			       uint32_t timeout_ms)
-{
-	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-	int rc = od_write2(&server->io, stream, timeout_ms);
-	od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
-	if (rc == -1) {
+	q->nops = list_length(tree);
+	q->ops = od_malloc(sizeof(*q->ops) * (size_t)q->nops);
+	q->text = od_malloc(len + 1);
+	if (q->ops == NULL || q->text == NULL) {
+		od_free(q->ops);
+		q->ops = NULL;
+		q->nops = 0;
 		return -1;
 	}
+	memset(q->ops, 0, sizeof(*q->ops) * (size_t)q->nops);
+	memcpy(q->text, text, len);
+	q->text[len] = 0;
 
-	od_server_sync_request(server, count);
-
-	for (int i = 0; i < count; ++i) {
-		errors[i][0] = '\0';
-
-		for (;;) {
-			machine_msg_t *msg =
-				od_read(&server->io, timeout_ms, OD_READ_BE);
-			if (msg == NULL) {
-				return -1;
+	/* Copy full-parser metadata before the minimal parser resets the arena. */
+	int index = 0;
+	int has_copy = 0;
+	foreach(cell, tree)
+	{
+		RawStmt *raw = lfirst_node(RawStmt, cell);
+		has_copy |= IsA(raw->stmt, CopyStmt);
+		od_sql_pstmt_op_t *op = &q->ops[index++];
+		op->location =
+			(od_sql_location_t){ raw->stmt_location,
+					     raw->stmt_len != 0 ?
+						     raw->stmt_location +
+							     raw->stmt_len :
+						     (int)len };
+		if (IsA(raw->stmt, PrepareStmt)) {
+			op->type = OD_SQL_PSTMT_PREPARE;
+		} else if (IsA(raw->stmt, ExecuteStmt)) {
+			op->type = OD_SQL_PSTMT_EXECUTE;
+			List *params = castNode(ExecuteStmt, raw->stmt)->params;
+			int nargs = list_length(params);
+			if (nargs > UINT16_MAX) {
+				q->unsupported = 1;
+				return 0;
 			}
-
-			char *data = machine_msg_data(msg);
-			uint32_t size = machine_msg_size(msg);
-			kiwi_be_type_t type = *data;
-
-			if (type == KIWI_BE_ERROR_RESPONSE) {
-				/* logs the error and updates server flags */
-				od_backend_error(server, data, size);
-
-				kiwi_fe_error_t error;
-				if (kiwi_fe_read_error(data, size, &error) ==
-				    0) {
-					od_snprintf(errors[i],
-						    sizeof(sqlstate_t), "%s",
-						    error.code);
-				} else {
-					od_snprintf(errors[i],
-						    sizeof(sqlstate_t), "?");
-				}
-			} else if (type == KIWI_BE_READY_FOR_QUERY) {
-				int rc = od_backend_ready(server, data, size);
-				machine_msg_free(msg);
-				if (rc == -1) {
+			if (nargs > 0) {
+				op->args = od_malloc(sizeof(*op->args) *
+						     (size_t)nargs);
+				if (op->args == NULL) {
 					return -1;
 				}
-				break;
+				memset(op->args, 0,
+				       sizeof(*op->args) * (size_t)nargs);
+				op->nargs = nargs;
+				op->arg_lengths =
+					od_malloc(sizeof(*op->arg_lengths) *
+						  (size_t)nargs);
+				if (op->arg_lengths == NULL) {
+					return -1;
+				}
 			}
-
-			machine_msg_free(msg);
+			ListCell *param;
+			int i = 0;
+			foreach(param, params)
+			{
+				Node *value = lfirst(param);
+				if (!IsA(value, A_Const)) {
+					q->unsupported = 1;
+					return 0;
+				}
+				A_Const *constant = castNode(A_Const, value);
+				if (constant->isnull) {
+					op->arg_lengths[i++] = -1;
+					continue;
+				}
+				char number[32];
+				const char *text;
+				value = &constant->val.node;
+				switch (nodeTag(value)) {
+				case T_Integer:
+					od_snprintf(number, sizeof(number),
+						    "%d", intVal(value));
+					text = number;
+					break;
+				case T_Float:
+					text = floatVal(value);
+					break;
+				case T_String:
+					text = strVal(value);
+					break;
+				case T_Boolean:
+					text = boolVal(value) ? "true" :
+								"false";
+					break;
+				default:
+					q->unsupported = 1;
+					return 0;
+				}
+				op->args[i] = od_strdup(text);
+				if (op->args[i] == NULL) {
+					return -1;
+				}
+				op->arg_lengths[i++] = (int)strlen(text);
+			}
+		} else if (IsA(raw->stmt, DeallocateStmt)) {
+			op->type = OD_SQL_PSTMT_DEALLOCATE;
 		}
 	}
-
+	for (int i = 0; i < q->nops; i++) {
+		od_sql_pstmt_op_t *op = &q->ops[i];
+		od_sql_minimal_node_t *node = od_sql_minimal_parse(
+			text + op->location.start,
+			(size_t)(op->location.end - op->location.start), arena,
+			NULL, NULL);
+		if (node == NULL) {
+			if (op->type != OD_SQL_PSTMT_OTHER) {
+				q->unsupported = 1;
+				break;
+			}
+			continue;
+		}
+		const char *name = NULL;
+		if (node->type == OD_SQL_MINIMAL_NODE_TYPE_PREPARE_STMT) {
+			od_sql_minimal_prepare_stmt_t *prepare = (void *)node;
+			name = prepare->name;
+			op->name_location = prepare->name_location;
+			op->query_location = prepare->query_location;
+			op->query_location.start += op->location.start;
+			op->query_location.end += op->location.start;
+		} else if (node->type ==
+			   OD_SQL_MINIMAL_NODE_TYPE_EXECUTE_STMT) {
+			od_sql_minimal_execute_stmt_t *execute = (void *)node;
+			name = execute->name;
+			op->name_location = execute->name_location;
+		} else if (node->type ==
+			   OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT) {
+			od_sql_minimal_deallocate_stmt_t *deallocate =
+				(void *)node;
+			op->type = deallocate->is_all ?
+					   OD_SQL_PSTMT_DEALLOCATE_ALL :
+					   OD_SQL_PSTMT_DEALLOCATE;
+			name = deallocate->name;
+		} else if (node->type ==
+				   OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT &&
+			   ((od_sql_minimal_discard_stmt_t *)node)->target ==
+				   OD_SQL_MINIMAL_DISCARD_ALL) {
+			op->type = OD_SQL_PSTMT_DISCARD_ALL;
+		}
+		if (name != NULL) {
+			/* PostgreSQL truncates longer identifiers; this subset rejects them. */
+			if (name[0] == 0 || strlen(name) >= OD_PG_NAMEDATALEN) {
+				q->unsupported = 1;
+				break;
+			}
+			op->name = od_strdup(name);
+			if (op->name == NULL) {
+				return -1;
+			}
+			op->name_location.start += op->location.start;
+			op->name_location.end += op->location.start;
+		}
+		q->active |= op->type != OD_SQL_PSTMT_OTHER;
+	}
+	/* COPY IN needs a client-driven Sync, unlike this complete batch. */
+	if (q->active && has_copy) {
+		q->unsupported = 1;
+	}
 	return 0;
 }
 
-typedef struct {
-	od_sql_pstmt_t *entry;
-	/* deallocate a server entry, otherwise prepare a client entry */
-	int is_deallocate;
-} attach_step_t;
-
-int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
-			od_sql_pstmt_server_t *srv, od_server_t *server,
-			uint32_t timeout_ms)
+static od_pstmt_t *client_statement(od_client_t *client, int before,
+				    const char *name)
 {
-	if (srv->unknown) {
-		return 1;
-	}
-
-	if (client->stmts.count == 0 && srv->stmts.count == 0) {
-		return 0;
-	}
-
-	size_t max_steps = client->stmts.count + srv->stmts.count;
-	attach_step_t *steps = od_malloc(sizeof(attach_step_t) * max_steps);
-	sqlstate_t *errors = od_malloc(sizeof(sqlstate_t) * max_steps);
-	machine_msg_t *stream = NULL;
-	int count = 0;
-	int rc = -1;
-
-	if (steps == NULL || errors == NULL) {
-		goto out;
-	}
-
-	od_list_t *i;
-
-	/* statements of other clients, or of this client with other text */
-	od_list_foreach (&srv->stmts.order, i) {
-		od_sql_pstmt_t *held = od_container_of(i, od_sql_pstmt_t, link);
-		od_sql_pstmt_t *own =
-			od_sql_pstmt_map_get(&client->stmts, held->name);
-
-		if (own != NULL && own->hash == held->hash) {
+	od_sql_pstmt_query_t *q = &client->sql_query;
+	for (int i = before - 1; i >= 0; i--) {
+		od_sql_pstmt_op_t *op = &q->ops[i];
+		if (op->type == OD_SQL_PSTMT_DEALLOCATE_ALL ||
+		    op->type == OD_SQL_PSTMT_DISCARD_ALL) {
+			return NULL;
+		}
+		if (op->name == NULL || strcmp(name, op->name) != 0) {
 			continue;
 		}
-
-		stream = write_deallocate(stream, held->name);
-		if (stream == NULL) {
-			goto out;
+		if (op->type == OD_SQL_PSTMT_DEALLOCATE) {
+			return NULL;
 		}
-		steps[count++] = (attach_step_t){ held, 1 };
-	}
-
-	/* statements of this client the backend does not hold */
-	od_list_foreach (&client->stmts.order, i) {
-		od_sql_pstmt_t *own = od_container_of(i, od_sql_pstmt_t, link);
-		od_sql_pstmt_t *held =
-			od_sql_pstmt_map_get(&srv->stmts, own->name);
-
-		if (held != NULL && held->hash == own->hash) {
-			continue;
+		if (op->type == OD_SQL_PSTMT_PREPARE) {
+			return op->pstmt;
 		}
+	}
+	return client->prep_stmt_ids != NULL ?
+		       od_client_get_pstmt(client, name) :
+		       NULL;
+}
 
-		machine_msg_t *msg = kiwi_fe_write_query(stream, own->text,
-							 own->text_len + 1);
-		if (msg == NULL) {
-			goto out;
+static int prepared_before(od_sql_pstmt_query_t *q, int before,
+			   od_server_t *server, od_pstmt_t *pstmt)
+{
+	for (int i = before - 1; i >= 0; i--) {
+		od_sql_pstmt_op_t *op = &q->ops[i];
+		if (op->type == OD_SQL_PSTMT_DISCARD_ALL) {
+			return 0;
 		}
-		stream = msg;
-		steps[count++] = (attach_step_t){ own, 0 };
-
-		od_gdebug(server->client, server,
-			  "deploy prepared statement \"%s\"", own->name);
-	}
-
-	if (count == 0) {
-		rc = 0;
-		goto out;
-	}
-
-	rc = run_service_queries(server, stream, count, errors, timeout_ms);
-	stream = NULL;
-	if (rc != 0) {
-		goto out;
-	}
-
-	/* deallocations go first, so a name is freed before it is prepared */
-	int unknown_state = 0;
-	for (int s = 0; s < count; ++s) {
-		od_sql_pstmt_t *e = steps[s].entry;
-		const char *code = errors[s];
-
-		if (steps[s].is_deallocate) {
-			if (code[0] == '\0' ||
-			    strcmp(code, KIWI_INVALID_SQL_STATEMENT_NAME) ==
-				    0) {
-				/* deallocated now, or already gone */
-				od_sql_pstmt_map_remove(&srv->stmts, e->name);
-			} else {
-				od_glog(server->client, server,
-					"failed to deallocate prepared statement \"%s\" (%s)",
-					e->name, code);
-				unknown_state = 1;
-			}
-			continue;
+		if ((op->type == OD_SQL_PSTMT_PREPARE ||
+		     op->type == OD_SQL_PSTMT_EXECUTE) &&
+		    op->pstmt == pstmt) {
+			return 1;
 		}
-
-		if (code[0] == '\0') {
-			if (od_sql_pstmt_map_set(&srv->stmts, e->name, NULL, 0,
-						 e->hash) == NULL) {
-				srv->unknown = 1;
-				rc = -1;
-				goto out;
-			}
-			continue;
-		}
-
-		if (strcmp(code, KIWI_DUPLICATE_PSTATEMENT) == 0) {
-			/*
-			 * the backend holds a statement under this name that
-			 * odyssey does not know about
-			 */
-			od_glog(server->client, server,
-				"prepared statement \"%s\" already exists on the server",
-				e->name);
-			unknown_state = 1;
-			continue;
-		}
-
-		/*
-		 * the statement can not be recreated (e.g. a referenced
-		 * table was dropped); forget it, so later EXECUTE reports
-		 * that it does not exist instead of retrying on every attach
-		 */
-		od_glog(server->client, server,
-			"failed to restore prepared statement \"%s\" on the server (%s), dropping it",
-			e->name, code);
-		od_sql_pstmt_map_remove(&client->stmts, e->name);
 	}
+	return od_server_has_pstmt(server, pstmt);
+}
 
-	if (unknown_state) {
-		srv->unknown = 1;
-		rc = 1;
+/* Use the same Parse representation as protocol-created cached statements. */
+static int append_parse(machine_msg_t *out, od_sql_pstmt_op_t *op,
+			od_pstmt_t *pstmt)
+{
+	machine_msg_t *parse = od_pstmt_parse_of(pstmt);
+	if (parse == NULL) {
+		return -1;
 	}
-
-out:
-	if (stream != NULL) {
-		machine_msg_free(stream);
+	int rc = machine_msg_write(out, machine_msg_data(parse),
+				   machine_msg_size(parse));
+	machine_msg_free(parse);
+	if (rc == 0) {
+		op->parses++;
 	}
-	od_free(steps);
-	od_free(errors);
-
 	return rc;
+}
+
+static int append_bind(machine_msg_t **out, char *name, int nargs, int *lengths,
+		       char **args)
+{
+	machine_msg_t *next =
+		kiwi_fe_write_bind(*out, "", 1, name, (int)strlen(name) + 1, 0,
+				   NULL, 0, NULL, nargs, lengths, args);
+	if (next == NULL) {
+		return -1;
+	}
+	*out = next;
+	next = kiwi_fe_write_describe(*out, 'P', "", 1);
+	if (next == NULL) {
+		return -1;
+	}
+	*out = next;
+	next = kiwi_fe_write_execute(*out, "", 1, 0);
+	if (next == NULL) {
+		return -1;
+	}
+	*out = next;
+	return 0;
+}
+
+/* Execute one ordinary statement without ending the surrounding batch. */
+static int append_command(machine_msg_t **out, const char *query)
+{
+	machine_msg_t *next = kiwi_fe_write_parse(
+		*out, "", 1, query, (int)strlen(query) + 1, 0, NULL);
+	if (next == NULL) {
+		return -1;
+	}
+	*out = next;
+	return append_bind(out, "", 0, NULL, NULL);
+}
+
+/* Force the usual backend error, including transaction abort, without SQL.
+ * This nonnumeric reserved name is never used by the statement cache. */
+static int append_missing(machine_msg_t **out)
+{
+	char *name = OD_PSTMT_NAME_PREFIX "missing";
+	machine_msg_t *next =
+		kiwi_fe_write_close(*out, 'S', name, (int)strlen(name) + 1);
+	if (next == NULL) {
+		return -1;
+	}
+	*out = next;
+	return append_bind(out, name, 0, NULL, NULL);
+}
+
+od_frontend_status_t od_sql_pstmt_query_rewrite(od_client_t *client)
+{
+	od_sql_pstmt_query_t *q = &client->sql_query;
+	if (!q->active || q->rewritten != NULL) {
+		return OD_OK;
+	}
+	od_server_t *server = client->server;
+	od_instance_t *instance = client->global->instance;
+	machine_msg_t *out = machine_msg_create(0);
+	if (out == NULL) {
+		return OD_EOOM;
+	}
+	q->pending_begin = client->pending_begin;
+	if (q->pending_begin) {
+		if (append_command(&out, "BEGIN") != 0) {
+			goto oom;
+		}
+	}
+	for (int i = 0; i < q->nops; i++) {
+		od_sql_pstmt_op_t *op = &q->ops[i];
+		od_pstmt_t *own =
+			op->name != NULL ?
+				client_statement(client, i, op->name) :
+				NULL;
+		if (op->type == OD_SQL_PSTMT_PREPARE) {
+			if (own != NULL) {
+				op->pstmt = own;
+				od_pstmt_ref(own);
+			} else {
+				char *body =
+					copy_text(q->text, op->query_location);
+				if (body == NULL) {
+					goto oom;
+				}
+				size_t length = strlen(body) + 1;
+				char *bytes = od_malloc(length + 2);
+				if (bytes == NULL) {
+					od_free(body);
+					goto oom;
+				}
+				memcpy(bytes, body, length);
+				bytes[length] = bytes[length + 1] = 0;
+				od_free(body);
+				od_pstmt_desc_t desc = {
+					.data = bytes,
+					.len = length + 2,
+				};
+				op->pstmt = od_pstmt_create_or_get(
+					od_instance_get_pstmts_map(instance),
+					desc,
+					od_worker_get_local_linear_alloc(),
+					&instance->config.query_parsing);
+				od_free(bytes);
+				if (op->pstmt == NULL) {
+					goto oom;
+				}
+			}
+			int prepared = prepared_before(q, i, server, op->pstmt);
+			if (own == NULL && prepared) {
+				op->dummy = 1;
+			} else {
+				/* Recreate an existing alias first so a duplicate still fails. */
+				if (own != NULL && !prepared &&
+				    append_parse(out, op, own) != 0) {
+					goto oom;
+				}
+				if (append_parse(out, op, op->pstmt) != 0) {
+					goto oom;
+				}
+				op->parse_body = 1;
+				op->dummy = 1;
+				op->query =
+					copy_text(q->text, op->query_location);
+				if (op->query == NULL) {
+					goto oom;
+				}
+			}
+		} else if (op->type == OD_SQL_PSTMT_EXECUTE) {
+			if (own == NULL) {
+				if (append_missing(&out) != 0) {
+					goto oom;
+				}
+			} else {
+				op->pstmt = own;
+				od_pstmt_ref(own);
+				if ((!prepared_before(q, i, server, own) &&
+				     append_parse(out, op, own) != 0) ||
+				    append_bind(&out, own->name, op->nargs,
+						op->arg_lengths,
+						op->args) != 0) {
+					goto oom;
+				}
+			}
+			continue;
+		} else if (op->type == OD_SQL_PSTMT_DEALLOCATE_ALL ||
+			   (op->type == OD_SQL_PSTMT_DEALLOCATE &&
+			    own != NULL)) {
+			op->dummy = 1;
+		} else if (op->type == OD_SQL_PSTMT_DEALLOCATE) {
+			if (append_missing(&out) != 0) {
+				goto oom;
+			}
+			continue;
+		}
+		if (op->dummy && !op->parse_body) {
+			op->query = od_strdup("SELECT WHERE false");
+		} else if (!op->parse_body) {
+			op->query = copy_text(q->text, op->location);
+		}
+		if (op->query == NULL) {
+			goto oom;
+		}
+		/* Execute a marker so PREPARE has ordinary batch transaction semantics. */
+		if (append_command(&out, op->dummy ? "SELECT WHERE false" :
+						     op->query) != 0) {
+			goto oom;
+		}
+		op->parses++;
+	}
+	q->rewritten = kiwi_fe_write_sync(out);
+	if (q->rewritten == NULL) {
+		goto oom;
+	}
+	return OD_OK;
+oom:
+	machine_msg_free(out);
+	return OD_EOOM;
+}
+
+static int original_position(od_sql_pstmt_query_t *q, od_sql_pstmt_op_t *op,
+			     int cursor)
+{
+	int byte = op->name_location.start;
+	if (op->query != NULL &&
+	    !(op->parses > 1 && (!op->parse_body || op->parses > 2))) {
+		const unsigned char *query = (const unsigned char *)op->query;
+		byte = 0;
+		for (int character = 1; query[byte] && character < cursor;) {
+			character++;
+			do {
+				byte++;
+			} while ((query[byte] & 0xc0) == 0x80);
+		}
+		byte += op->parse_body ? op->query_location.start :
+					 op->location.start;
+	}
+	int character = 1;
+	for (int i = 0; i < byte; i++) {
+		if (((unsigned char)q->text[i] & 0xc0) != 0x80) {
+			character++;
+		}
+	}
+	return character;
+}
+
+static machine_msg_t *rewrite_error(od_sql_pstmt_query_t *q,
+				    od_sql_pstmt_op_t *op,
+				    machine_msg_t *message)
+{
+	char *data = machine_msg_data(message);
+	uint32_t size = (uint32_t)machine_msg_size(message);
+	kiwi_fe_error_t error;
+	if (kiwi_fe_read_error(data, size, &error) != 0) {
+		return NULL;
+	}
+	machine_msg_t *out = machine_msg_create(sizeof(kiwi_header_t));
+	if (out == NULL) {
+		return NULL;
+	}
+	char replacement[OD_QRY_MAX_SZ];
+	size_t position = sizeof(kiwi_header_t);
+	while (position < size && data[position] != 0) {
+		char kind = data[position++];
+		size_t left = size - position;
+		size_t length = strnlen(data + position, left);
+		if (length == left) {
+			goto error;
+		}
+		char *value = data + position;
+		if (kind == 'P' && op != NULL) {
+			od_snprintf(replacement, sizeof(replacement), "%d",
+				    original_position(q, op, atoi(value)));
+			value = replacement;
+		} else if (kind == 'M' && op != NULL && op->name != NULL &&
+			   (strcmp(error.code, KIWI_DUPLICATE_PSTATEMENT) ==
+				    0 ||
+			    strcmp(error.code,
+				   KIWI_INVALID_SQL_STATEMENT_NAME) == 0)) {
+			od_snprintf(replacement, sizeof(replacement),
+				    "prepared statement \"%s\" %s", op->name,
+				    strcmp(error.code,
+					   KIWI_DUPLICATE_PSTATEMENT) == 0 ?
+					    "already exists" :
+					    "does not exist");
+			value = replacement;
+		} else if (kind == 'M' && op != NULL && op->pstmt != NULL &&
+			   strcmp(error.code, KIWI_PROTOCOL_VIOLATION) == 0) {
+			char *name = strstr(value, op->pstmt->name);
+			if (name != NULL) {
+				od_snprintf(replacement, sizeof(replacement),
+					    "%.*s%s%s", (int)(name - value),
+					    value, op->name,
+					    name + strlen(op->pstmt->name));
+				value = replacement;
+			}
+		}
+		if (machine_msg_write(out, &kind, 1) != 0 ||
+		    machine_msg_write(out, value, (int)strlen(value) + 1) !=
+			    0) {
+			goto error;
+		}
+		position += length + 1;
+	}
+	if (machine_msg_write(out, "", 1) != 0) {
+		goto error;
+	}
+	kiwi_header_t *header = machine_msg_data(out);
+	header->type = KIWI_BE_ERROR_RESPONSE;
+	kiwi_header_set_size(header, machine_msg_size(out));
+	return out;
+error:
+	machine_msg_free(out);
+	return NULL;
+}
+
+od_frontend_status_t od_sql_pstmt_query_response(od_client_t *client,
+						 machine_msg_t **message)
+{
+	od_sql_pstmt_query_t *q = &client->sql_query;
+	od_sql_pstmt_op_t *op =
+		q->completes < q->nops ? &q->ops[q->completes] : NULL;
+	kiwi_be_type_t type = *(uint8_t *)machine_msg_data(*message);
+	machine_msg_t *replacement = NULL;
+	if (q->pending_begin) {
+		if (type == KIWI_BE_COMMAND_COMPLETE) {
+			q->pending_begin = 0;
+			machine_msg_free(*message);
+			*message = NULL;
+			return OD_OK;
+		}
+		if (type == KIWI_BE_PARSE_COMPLETE ||
+		    type == KIWI_BE_BIND_COMPLETE || type == KIWI_BE_NO_DATA) {
+			machine_msg_free(*message);
+			*message = NULL;
+			return OD_OK;
+		}
+	} else if (type == KIWI_BE_PARSE_COMPLETE) {
+		if (op == NULL || op->parses == 0) {
+			return OD_ESERVER_READ;
+		}
+		if ((op->parses > 1 || op->type == OD_SQL_PSTMT_EXECUTE) &&
+		    od_server_add_pstmt(client->server, op->pstmt) < 0) {
+			return OD_EOOM;
+		}
+		if (op->parse_body && op->parses == 2) {
+			op->completed = 1;
+		}
+		op->parses--;
+		machine_msg_free(*message);
+		*message = NULL;
+		return OD_OK;
+	} else if (type == KIWI_BE_BIND_COMPLETE || type == KIWI_BE_NO_DATA ||
+		   type == KIWI_BE_CLOSE_COMPLETE) {
+		machine_msg_free(*message);
+		*message = NULL;
+		return OD_OK;
+	}
+	if (op != NULL && op->dummy && type == KIWI_BE_ROW_DESCRIPTION) {
+		machine_msg_free(*message);
+		*message = NULL;
+		return OD_OK;
+	}
+	if (type == KIWI_BE_COMMAND_COMPLETE) {
+		if (op == NULL) {
+			return OD_ESERVER_READ;
+		}
+		op->completed = 1;
+		q->completes++;
+		if (op->dummy) {
+			const char *tag =
+				op->type == OD_SQL_PSTMT_PREPARE ?
+					"PREPARE" :
+				op->type == OD_SQL_PSTMT_DEALLOCATE_ALL ?
+					"DEALLOCATE ALL" :
+					"DEALLOCATE";
+			replacement = kiwi_be_write_command_complete(NULL, tag);
+			if (replacement == NULL) {
+				return OD_EOOM;
+			}
+		}
+	} else if (type == KIWI_BE_ERROR_RESPONSE) {
+		replacement = rewrite_error(q, op, *message);
+		if (replacement == NULL) {
+			return OD_EOOM;
+		}
+	}
+	if (replacement != NULL) {
+		machine_msg_free(*message);
+		*message = replacement;
+	}
+	return OD_OK;
+}
+
+od_frontend_status_t od_sql_pstmt_query_finish(od_client_t *client)
+{
+	od_sql_pstmt_query_t *q = &client->sql_query;
+	od_server_t *server = client->server;
+	for (int i = 0; i < q->nops; i++) {
+		od_sql_pstmt_op_t *op = &q->ops[i];
+		if (!op->completed) {
+			break;
+		}
+		switch (op->type) {
+		case OD_SQL_PSTMT_PREPARE:
+			if (od_client_add_pstmt(client, op->name, op->pstmt) !=
+				    0 ||
+			    od_server_add_pstmt(server, op->pstmt) < 0) {
+				return OD_EOOM;
+			}
+			break;
+		case OD_SQL_PSTMT_DEALLOCATE:
+			od_client_remove_pstmt(client, op->name);
+			break;
+		case OD_SQL_PSTMT_DEALLOCATE_ALL:
+			od_client_pstmts_clear(client);
+			od_client_portals_clear(client);
+			break;
+		case OD_SQL_PSTMT_DISCARD_ALL:
+			od_client_pstmts_clear(client);
+			od_client_portals_clear(client);
+			od_server_pstmts_clear(server);
+			break;
+		default:
+			break;
+		}
+	}
+	return OD_OK;
 }

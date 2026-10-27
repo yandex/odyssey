@@ -715,17 +715,52 @@ SHOW odyssey.opportunistic_acquire;
 
 Enable support of prepared statements in transactional pooling.
 
-Both protocol-level prepared statements (Parse/Bind) and statements created
-with SQL `PREPARE` are supported. For SQL `PREPARE`, odyssey keeps the text of
-every successful statement per client. Whenever the client is attached to a
-server connection, the connection is made to hold exactly that client's
-statements: statements of other clients are deallocated and the client's
-missing statements are prepared again. `EXECUTE` and `DEALLOCATE` work as in a
-direct session.
+Protocol-level statements (Parse/Bind) and SQL `PREPARE` sent through the simple
+query protocol share a client namespace and backend statement cache. Odyssey
+uses protocol Parse to prepare query bodies under internal names, including
+when a client moves to another backend. SQL `EXECUTE` can use a protocol-created
+statement, and protocol Bind can use an SQL-created statement. Identical query
+bytes share one backend statement. Parameter types must be inferred from the
+query body; explicit SQL parameter type lists are not supported yet.
+SQL `EXECUTE` sends Bind/Execute for the cached statement directly. Arguments
+can be integer, decimal, string or boolean literals, or `NULL`; expressions,
+functions, arrays and argument casts are not supported. Literal values use text
+Bind input conversion for the parameter types inferred by PostgreSQL, rather
+than SQL expression coercion.
+`DEALLOCATE` removes the client's alias and keeps the cached backend statement
+available for reuse.
 
-- names starting with `odyssey_pstmt_` are reserved for odyssey's own statements; `PREPARE`, `EXECUTE` and `DEALLOCATE` of such names are rejected
-- statements created by dynamic SQL (e.g. `EXECUTE 'PREPARE ...'` in a function or `DO` block) are not visible to odyssey, they will continue to work until the frontend stick to the same backend and then you will see errors
-- requires `query_parsing` not to be disabled
+The minimal parser follows the `PREPARE name [(types)] AS query`,
+`EXECUTE name [(parameters)]` and `DEALLOCATE [PREPARE] {name | ALL}` forms from
+[PostgreSQL's grammar](https://github.com/postgres/postgres/blob/master/src/backend/parser/gram.y).
+It retains source ranges for query bodies, type lists and parameters rather
+than building their expression trees. Names can be ASCII unquoted identifiers
+or plain double-quoted identifiers with at most 63 raw bytes inside the quotes.
+
+The following forms are deliberately unsupported with statement caching:
+
+- explicit parameter type lists, such as `PREPARE p (int) AS SELECT $1`;
+- nonliteral `EXECUTE` arguments, including casts and bit-string literals;
+- `COPY` in a batch containing SQL prepared-statement commands;
+- Unicode-escaped statement names (`U&"..."`, with or without `UESCAPE`);
+- names with doubled quotes, non-ASCII unquoted names, and unquoted names
+  containing `$`;
+- names longer than 63 bytes (Odyssey does not reproduce PostgreSQL truncation);
+- nested block comments in statement headers;
+- `EXECUTE` nested under `EXPLAIN` or `CREATE TABLE ... AS`.
+
+These forms return SQLSTATE `0A000` before any statement in the simple-query
+batch is sent to PostgreSQL. Use an ordinary or double-quoted name and a
+standalone `EXECUTE` instead. Use casts in the query body when a parameter type
+cannot be inferred automatically.
+
+- Names starting with `odyssey_pstmt_` are reserved for Odyssey's own statements;
+  `PREPARE`, `EXECUTE` and `DEALLOCATE` of such names are rejected.
+- SQL `PREPARE` sent inside extended-protocol Parse/Execute is not tracked;
+  use simple-query SQL commands or protocol Parse/Bind directly.
+- Statements created by dynamic SQL in a function or `DO` block are not tracked
+  and may stop working when the client switches backend.
+- Requires `query_parsing` not to be disabled.
 
 `pool_reserve_prepared_statement yes`
 

@@ -1,0 +1,41 @@
+-- SQL PREPARE and protocol Parse share a statement namespace
+select 1 as v \parse shared_name
+prepare shared_name as select 2 as v;
+ERROR:  prepared statement "shared_name" already exists
+\bind_named shared_name
+\g
+ v 
+---
+ 1
+(1 row)
+
+-- DEALLOCATE frees the protocol name for SQL PREPARE
+deallocate shared_name;
+prepare shared_name as select 3 as v;
+select 4 as v \parse shared_name
+ERROR:  prepared statement "shared_name" already exists
+execute shared_name;
+ v 
+---
+ 3
+(1 row)
+
+-- SQL DEALLOCATE frees the name for protocol Parse too
+deallocate shared_name;
+select 5 as v \parse shared_name
+\bind_named shared_name
+\g
+ v 
+---
+ 5
+(1 row)
+
+-- DEALLOCATE ALL can free the name in the same simple query
+deallocate all \; prepare shared_name as select 6 as v;
+execute shared_name;
+ v 
+---
+ 6
+(1 row)
+
+deallocate all;

@@ -17,7 +17,6 @@
 #include <od_memory.h>
 #include <build.h>
 #include <pstmt.h>
-#include <sql_pstmt.h>
 #include <list.h>
 #include <scram.h>
 
@@ -84,9 +83,6 @@ struct od_server {
 	uint64_t error_responses;
 
 	int need_startup;
-
-	/* statements created by SQL PREPARE */
-	od_sql_pstmt_server_t sql_pstmt;
 };
 
 static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
@@ -131,7 +127,6 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->xproto_mode = 0;
 	server->xproto_err = 0;
 	server->cached_plan_broken = 0;
-	od_sql_pstmt_server_init(&server->sql_pstmt);
 	if (reserve_prep_stmts) {
 		server->prep_stmts = od_server_pstmt_hashmap_create();
 	} else {

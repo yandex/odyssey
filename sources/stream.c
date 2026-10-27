@@ -76,7 +76,7 @@ typedef struct {
 
 static int server_is_fully_handled(stream_t *stream, kiwi_be_type_t type)
 {
-	/* this are parsed so only full-mode handling */
+	/* these are parsed so only full-mode handling */
 	switch (type) {
 	case KIWI_BE_READY_FOR_QUERY:
 	case KIWI_BE_ERROR_RESPONSE:
@@ -308,11 +308,6 @@ stream_handle_message(stream_t *stream, od_server_t *server, char *data,
 			break;
 		}
 
-		if (client != NULL) {
-			od_sql_pstmt_query_on_complete(
-				&client->sql_pstmt.query);
-		}
-
 		if (!route->rule->pool->pin_on_listen) {
 			break;
 		}
@@ -520,6 +515,55 @@ static int readahead_empty(od_readahead_t *ra)
 	return od_readahead_unread(ra) == 0;
 }
 
+/* Preserve partial packets when client events interrupt the backend read. */
+static od_frontend_status_t
+sql_read_message(stream_t *stream, od_server_t *server, machine_msg_t **message,
+		 uint32_t timeout_ms, od_wait_event_t wait_event)
+{
+	od_readahead_t *ra = &server->io.readahead;
+	for (;;) {
+		struct iovec bytes = od_readahead_read_begin(ra);
+		if (stream->msg == NULL &&
+		    bytes.iov_len >= sizeof(kiwi_header_t)) {
+			uint32_t length;
+			if (kiwi_validate_be_header(bytes.iov_base,
+						    sizeof(kiwi_header_t),
+						    &length) != 0) {
+				return OD_ESERVER_READ;
+			}
+			stream->msg_left = length + 1;
+			stream->msg = machine_msg_create(stream->msg_left);
+			if (stream->msg == NULL) {
+				return OD_EOOM;
+			}
+		}
+		if (stream->msg != NULL) {
+			size_t count = od_min(bytes.iov_len, stream->msg_left);
+			memcpy((char *)machine_msg_data(stream->msg) +
+				       stream->msg_wpos,
+			       bytes.iov_base, count);
+			stream->msg_wpos += count;
+			stream->msg_left -= count;
+			od_readahead_read_commit(ra, count);
+			if (stream->msg_left == 0) {
+				*message = stream->msg;
+				stream->msg = NULL;
+				stream->msg_wpos = 0;
+				return OD_OK;
+			}
+		}
+		if (!od_io_connected(&server->client->io)) {
+			return OD_ECLIENT_READ;
+		}
+		od_wait_event_start(wait_event);
+		int rc = od_io_read_some(&server->io, timeout_ms);
+		od_wait_event_end(wait_event);
+		if (rc == -1 && machine_errno() != EAGAIN) {
+			return OD_ESERVER_READ;
+		}
+	}
+}
+
 static od_frontend_status_t
 od_stream_server_impl(od_server_t *server, int is_service, int ignore_errors,
 		      int nresponses, od_stream_on_responce_cb on_response,
@@ -542,6 +586,48 @@ od_stream_server_impl(od_server_t *server, int is_service, int ignore_errors,
 	int peering = !is_service && client != NULL;
 	if (peering) {
 		od_io_set_peer(&server->io, &client->io);
+	}
+
+	/* SQL aliases replace response tags and restore original error positions. */
+	if (!is_service && client != NULL && client->sql_query.active) {
+		while (!stream_must_stop(&stream)) {
+			machine_msg_t *msg = NULL;
+			status = sql_read_message(&stream, server, &msg,
+						  timeout_ms, wait_event);
+			if (status != OD_OK) {
+				break;
+			}
+			status = stream_handle_message(&stream, server,
+						       machine_msg_data(msg),
+						       machine_msg_size(msg), 0,
+						       0);
+			if (status != OD_OK && status != OD_COPY_IN_RECEIVED) {
+				machine_msg_free(msg);
+				break;
+			}
+			od_frontend_status_t transformed =
+				od_sql_pstmt_query_response(client, &msg);
+			if (transformed != OD_OK) {
+				machine_msg_free_safe(msg);
+				status = transformed;
+				break;
+			}
+			if (msg != NULL) {
+				od_wait_event_start(
+					OD_WAIT_STREAM_CLIENT_WRITE);
+				int rc =
+					od_write2(&client->io, msg, timeout_ms);
+				od_wait_event_end(OD_WAIT_STREAM_CLIENT_WRITE);
+				if (rc != 0) {
+					status = OD_ECLIENT_WRITE;
+					break;
+				}
+			}
+			if (status != OD_OK) {
+				break;
+			}
+		}
+		goto finished;
 	}
 
 	/* TODO: support more correct timeout */
@@ -590,6 +676,7 @@ od_stream_server_impl(od_server_t *server, int is_service, int ignore_errors,
 		}
 	}
 
+finished:
 	if (peering) {
 		od_io_remove_peer(&server->io, &client->io);
 	}

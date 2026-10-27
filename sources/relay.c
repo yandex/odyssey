@@ -223,34 +223,10 @@ static void process_discard(od_client_t *client, od_server_t *server)
 
 		od_client_pstmts_clear(client);
 		od_client_portals_clear(client);
-		od_sql_pstmt_client_clear(&client->sql_pstmt);
 		if (server != NULL) {
 			od_server_pstmts_clear(server);
-			od_sql_pstmt_server_clear(&server->sql_pstmt);
 		}
 	}
-}
-
-/* apply SQL PREPARE / DEALLOCATE statements the backend completed */
-static od_frontend_status_t process_sql_pstmts(od_client_t *client,
-					       od_server_t *server)
-{
-	int deallocated_all;
-	if (od_sql_pstmt_query_finish(&client->sql_pstmt, &server->sql_pstmt,
-				      &deallocated_all) != 0) {
-		od_gerror(client, server,
-			  "failed to track prepared statements of the query");
-		return OD_EOOM;
-	}
-
-	if (deallocated_all) {
-		/* DEALLOCATE ALL drops protocol-level statements too */
-		od_client_pstmts_clear(client);
-		od_client_portals_clear(client);
-		od_server_pstmts_clear(server);
-	}
-
-	return OD_OK;
 }
 
 static inline void process_unlisten(od_client_t *client, od_server_t *server)
@@ -355,7 +331,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_instance_t *instance = client->global->instance;
 
-	od_sql_pstmt_query_t *sql_query = &client->sql_pstmt.query;
+	od_sql_pstmt_query_t *sql_query = &client->sql_query;
 	if (client->rule->pool->reserve_prepared_statement &&
 	    !sql_query->analyzed) {
 		/* must run first: the full parser resets the arena */
@@ -394,9 +370,20 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			return OD_ATTACH;
 		}
 
-		if (client->pending_begin) {
+		status = od_sql_pstmt_query_rewrite(client);
+		if (status != OD_OK) {
+			return status;
+		}
+		machine_msg_t *forward = sql_query->rewritten != NULL ?
+						 sql_query->rewritten :
+						 msg;
+
+		if (client->pending_begin && !sql_query->active) {
 			machine_msg_t *rewritten = kiwi_fe_write_query_join(
-				NULL, "BEGIN;", query, NULL);
+				NULL, "BEGIN;",
+				(char *)machine_msg_data(forward) +
+					sizeof(kiwi_header_t),
+				NULL);
 			if (rewritten == NULL) {
 				return OD_EOOM;
 			}
@@ -407,7 +394,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			machine_msg_free(rewritten);
 		} else {
 			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-			rc = od_io_write(&server->io, msg, timeout_ms);
+			rc = od_io_write(&server->io, forward, timeout_ms);
 			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 		}
 
@@ -423,7 +410,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_stat_query_start(&server->stats_state);
 
-	if (client->pending_begin) {
+	if (client->pending_begin && !sql_query->active) {
 		/*
 		 * need to consume CommandComplete(BEGIN)
 		 * and maybe bypass some asynchronious messages
@@ -433,12 +420,10 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		if (status != OD_OK) {
 			return status;
 		}
-		client->pending_begin = 0;
 	}
+	client->pending_begin = 0;
 
 	uint64_t errors_before = server->error_responses;
-
-	od_sql_pstmt_query_start_counting(sql_query);
 
 	status = od_stream_server_until_rfq(server, timeout_ms,
 					    OD_WAIT_STREAM_SERVER_READ);
@@ -464,7 +449,9 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	if (status == OD_OK) {
 		/* checks by itself which statements of the query completed */
-		status = process_sql_pstmts(client, server);
+		if (sql_query->active) {
+			status = od_sql_pstmt_query_finish(client);
+		}
 	}
 
 	return status;
@@ -791,7 +778,9 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 		process_query_impl, relay, msg, timeout_ms);
 
 	od_query_ctx_reset(&relay->client->query_ctx);
-	od_sql_pstmt_query_reset(&relay->client->sql_pstmt.query);
+	if (status == OD_OK) {
+		od_sql_pstmt_query_reset(&relay->client->sql_query);
+	}
 
 	/*
 	 * in vanilla PG, executing simple query removes the

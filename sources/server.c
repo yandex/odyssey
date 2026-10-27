@@ -32,7 +32,6 @@ void od_server_free(od_server_t *server)
 	if (server->prep_stmts) {
 		od_server_pstmts_free(server);
 	}
-	od_sql_pstmt_server_free(&server->sql_pstmt);
 	od_scram_state_free(&server->scram_state);
 	od_free(server);
 }

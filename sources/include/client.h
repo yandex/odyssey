@@ -133,7 +133,7 @@ struct od_client {
 	od_query_ctx_t query_ctx;
 
 	/* statements created by SQL PREPARE */
-	od_sql_pstmt_client_t sql_pstmt;
+	od_sql_pstmt_query_t sql_query;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)

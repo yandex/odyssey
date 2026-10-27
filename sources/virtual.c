@@ -762,12 +762,19 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 	od_virtual_portal_t portal;
 
 	/* comes from the full parser, independent of ctx */
-	if (client->sql_pstmt.query.uses_reserved_name) {
+	if (client->sql_query.uses_reserved_name ||
+	    client->sql_query.unsupported) {
 		virtual_portal_init(&portal);
-		if (virtual_portal_set_errorf(
-			    &portal, KIWI_RESERVED_NAME,
-			    "prepared statement names starting with \"%s\" are reserved by odyssey",
-			    OD_PSTMT_NAME_PREFIX) != 0) {
+		int rc =
+			client->sql_query.uses_reserved_name ?
+				virtual_portal_set_errorf(
+					&portal, KIWI_RESERVED_NAME,
+					"prepared statement names starting with \"%s\" are reserved by odyssey",
+					OD_PSTMT_NAME_PREFIX) :
+				virtual_portal_set_errorf(
+					&portal, KIWI_FEATURE_NOT_SUPPORTED,
+					"SQL prepared statement syntax is not supported with pool_reserve_prepared_statement");
+		if (rc != 0) {
 			virtual_portal_free(&portal);
 			return OD_EOOM;
 		}
@@ -781,11 +788,6 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 	}
 
 	if (!virtual_query_supported(client, ctx)) {
-		return OD_OK;
-	}
-
-	if (od_sql_pstmt_query_must_forward(&client->sql_pstmt)) {
-		/* DEALLOCATE of statements created by SQL PREPARE */
 		return OD_OK;
 	}
 
