@@ -7,6 +7,7 @@
 #include <odyssey.h>
 
 #include <multi_pool.h>
+#include <wait_event.h>
 
 static inline void key_init(od_multi_pool_key_t *key)
 {
@@ -337,6 +338,10 @@ int od_multi_pool_wait(od_multi_pool_element_t *el, od_client_t *client,
 	server_awaiter_t awaiter;
 	awaiter.client = client;
 
-	return mm_wait_list_compare_wait(&el->wait_bus, &awaiter, version,
-					 timeout_ms);
+	od_wait_event_start(OD_WAIT_QUEUE);
+	int rc = mm_wait_list_compare_wait(&el->wait_bus, &awaiter, version,
+					   timeout_ms);
+	od_wait_event_end(OD_WAIT_QUEUE);
+
+	return rc;
 }

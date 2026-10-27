@@ -352,8 +352,10 @@ static inline void od_system_server(void *arg)
 				max_wait_ms = (uint32_t)server->config
 						      ->client_login_timeout_ms;
 			}
+			od_wait_event_start(OD_WAIT_RATELIMIT_ACCEPT);
 			int rc = od_rate_limiter_waitn(
 				&global->accept_rate_limiter, 1, max_wait_ms);
+			od_wait_event_end(OD_WAIT_RATELIMIT_ACCEPT);
 			if (rc != 0) {
 				mm_io_attach(client_io);
 				od_error(

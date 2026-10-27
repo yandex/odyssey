@@ -23,6 +23,7 @@
 #include <router.h>
 #include <instance.h>
 #include <query.h>
+#include <wait_event.h>
 
 static int od_auth_parse_passwd_from_datarow(od_logger_t *logger,
 					     machine_msg_t *msg,
@@ -160,8 +161,10 @@ static int do_auth_query(od_instance_t *instance, od_client_t *client,
 
 	uint32_t timeout_ms = (uint32_t)instance->config.auth_query_timeout_ms;
 
+	od_wait_event_start(OD_WAIT_AUTH_SERVER_READ);
 	machine_msg_t *msg =
 		od_query_do(server, "auth_query", query, user, timeout_ms);
+	od_wait_event_end(OD_WAIT_AUTH_SERVER_READ);
 	if (msg == NULL) {
 		od_error(&instance->logger, "auth_query", client, server,
 			 "auth query returned empty msg");

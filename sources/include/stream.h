@@ -13,22 +13,25 @@
 
 #include <status.h>
 #include <types.h>
+#include <wait_event.h>
 
 od_frontend_status_t od_stream_server_until_rfq(char *ctx, od_server_t *server,
-						uint32_t timeout_ms);
+						uint32_t timeout_ms,
+						od_wait_event_t wait_event);
 
 od_frontend_status_t od_stream_copy_to_server(char *ctx, od_client_t *client,
 					      od_server_t *server,
 					      machine_msg_t *additional,
 					      uint32_t timeout_ms);
 
-od_frontend_status_t od_service_stream_server_until_rfq(char *ctx,
-							od_server_t *server,
-							int ignore_errors,
-							uint32_t timeout_ms);
+od_frontend_status_t
+od_service_stream_server_until_rfq(char *ctx, od_server_t *server,
+				   int ignore_errors, uint32_t timeout_ms,
+				   od_wait_event_t wait_event);
 
 od_frontend_status_t od_stream_server_sync(char *ctx, od_server_t *server,
-					   uint32_t timeout_ms);
+					   uint32_t timeout_ms,
+					   od_wait_event_t wait_event);
 
 typedef od_frontend_status_t (*od_stream_on_responce_cb)(kiwi_be_type_t type,
 							 void *arg);
@@ -36,4 +39,5 @@ typedef od_frontend_status_t (*od_stream_on_responce_cb)(kiwi_be_type_t type,
 od_frontend_status_t
 od_stream_server_exact_completes(char *ctx, od_server_t *server, int n,
 				 od_stream_on_responce_cb on_response,
-				 void *arg, uint32_t timeout_ms);
+				 void *arg, uint32_t timeout_ms,
+				 od_wait_event_t wait_event);

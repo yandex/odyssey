@@ -20,6 +20,7 @@
 #include <pstmt.h>
 #include <sql_pstmt.h>
 #include <sql/full/parser.h>
+#include <wait_event.h>
 
 static const uint64_t hash_seed = 0;
 
@@ -565,7 +566,10 @@ static int run_service_queries(od_server_t *server, char *context,
 			       machine_msg_t *stream, int count,
 			       sqlstate_t *errors, uint32_t timeout_ms)
 {
-	if (od_write2(&server->io, stream, timeout_ms) == -1) {
+	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
+	int rc = od_write2(&server->io, stream, timeout_ms);
+	od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
+	if (rc == -1) {
 		return -1;
 	}
 

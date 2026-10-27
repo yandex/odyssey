@@ -12,6 +12,7 @@
 
 #include <rules.h>
 #include <route.h>
+#include <wait_event.h>
 #include <dns.h>
 #include <backend.h>
 #include <od_memory.h>
@@ -366,10 +367,14 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 				return OD_EOOM;
 			}
 
+			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 			rc = od_io_write(&server->io, rewritten, timeout_ms);
+			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 			machine_msg_free(rewritten);
 		} else {
+			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 			rc = od_io_write(&server->io, msg, timeout_ms);
+			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 		}
 
 		if (rc != 0) {
@@ -399,7 +404,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	uint64_t errors_before = server->error_responses;
 
-	status = od_stream_server_until_rfq("main", server, timeout_ms);
+	status = od_stream_server_until_rfq("main", server, timeout_ms,
+					    OD_WAIT_STREAM_SERVER_READ);
 
 	if (status == OD_COPY_IN_RECEIVED) {
 		/*
@@ -697,7 +703,9 @@ static od_frontend_status_t execute_xbuf(od_relay_t *relay, machine_msg_t *msg,
 		return OD_EOOM;
 	}
 
+	od_wait_event_start(OD_WAIT_QUERY_PLANNING);
 	status = od_xplan_make_from_xbuf(&relay->xplan, relay);
+	od_wait_event_end(OD_WAIT_QUERY_PLANNING);
 	if (status != OD_OK) {
 		return status;
 	}
@@ -719,7 +727,9 @@ process_fcall_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	/* no need special handling - just write call and wait for rfq */
 
+	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 	int rc = od_io_write(&server->io, msg, timeout_ms);
+	od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 	if (rc != 0) {
 		return OD_ESERVER_WRITE;
 	}
@@ -728,7 +738,8 @@ process_fcall_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_stat_query_start(&server->stats_state);
 
-	return od_stream_server_until_rfq("main", server, timeout_ms);
+	return od_stream_server_until_rfq("main", server, timeout_ms,
+					  OD_WAIT_STREAM_SERVER_READ);
 }
 
 od_frontend_status_t od_relay_process_query(od_relay_t *relay,

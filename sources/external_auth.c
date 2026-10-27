@@ -15,6 +15,7 @@
 #include <client.h>
 #include <util.h>
 #include <external_auth.h>
+#include <wait_event.h>
 
 #define AGENT_AUTH_OK 1
 #define MAX_MSG_BODY_SIZE (1024 * 1024)
@@ -37,8 +38,10 @@ static void read_header(uint64_t *header, const void *src)
 machine_msg_t *msg_read(mm_io_t *io)
 {
 	uint64_t body_size = 0;
+	od_wait_event_start(OD_WAIT_AUTH_EXTERNAL);
 	machine_msg_t *header = machine_read(io, sizeof(body_size), TIMEOUT_MS);
 	if (header == NULL) {
+		od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 		return NULL;
 	}
 
@@ -47,10 +50,14 @@ machine_msg_t *msg_read(mm_io_t *io)
 	machine_msg_free(header);
 
 	if (body_size > MAX_MSG_BODY_SIZE) {
+		od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 		return NULL;
 	}
 
-	return machine_read(io, body_size, TIMEOUT_MS);
+	machine_msg_t *body = machine_read(io, body_size, TIMEOUT_MS);
+	od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
+
+	return body;
 }
 
 od_external_auth_status_t msg_write(mm_io_t *io, machine_msg_t *msg)

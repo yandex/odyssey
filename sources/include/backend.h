@@ -8,6 +8,7 @@
 
 #include <kiwi/kiwi.h>
 #include <types.h>
+#include <wait_event.h>
 #include <storage.h>
 #include <tsa.h>
 #include <tls_config.h>
@@ -58,7 +59,8 @@ void od_backend_error(od_server_t *, char *, char *, uint32_t);
 
 int od_backend_update_parameter(od_server_t *, char *, char *, uint32_t, int);
 int od_backend_ready(od_server_t *, char *, uint32_t);
-int od_backend_ready_wait(od_server_t *, char *, uint32_t);
+int od_backend_ready_wait(od_server_t *, char *, uint32_t,
+			  od_wait_event_t wait_event);
 
 od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 				   const char *query, char *param, int len,

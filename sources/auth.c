@@ -25,6 +25,7 @@
 #include <extension.h>
 #include <external_auth.h>
 #include <mdb_iamproxy.h>
+#include <wait_event.h>
 
 static inline int od_auth_frontend_external_authentication(od_client_t *client)
 {
@@ -47,8 +48,10 @@ static inline int od_auth_frontend_external_authentication(od_client_t *client)
 
 	/* wait for password response */
 	for (;;) {
+		od_wait_event_start(OD_WAIT_AUTH_CLIENT_READ);
 		msg = od_read(&client->io, od_client_login_timeout(client),
 			      OD_READ_FE);
+		od_wait_event_end(OD_WAIT_AUTH_CLIENT_READ);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -135,8 +138,10 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 
 	/* wait for password response */
 	for (;;) {
+		od_wait_event_start(OD_WAIT_AUTH_CLIENT_READ);
 		msg = od_read(&client->io, od_client_login_timeout(client),
 			      OD_READ_FE);
+		od_wait_event_end(OD_WAIT_AUTH_CLIENT_READ);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -194,7 +199,9 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 			 "checking passwd against ldap endpoint %s",
 			 client->rule->ldap_endpoint_name);
 
+		od_wait_event_start(OD_WAIT_AUTH_LDAP);
 		rc = od_auth_ldap(client, &client_token);
+		od_wait_event_end(OD_WAIT_AUTH_LDAP);
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		if (rc != OK_RESPONSE) {
@@ -229,9 +236,11 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 		od_pam_convert_passwd(client->rule->auth_pam_data,
 				      client_token.password);
 
+		od_wait_event_start(OD_WAIT_AUTH_PAM);
 		rc = od_pam_auth(client->rule->auth_pam_service,
 				 client->startup.user.value,
 				 client->rule->auth_pam_data, client->io.io);
+		od_wait_event_end(OD_WAIT_AUTH_PAM);
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		if (rc == -1) {
@@ -323,8 +332,10 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 
 	/* wait for password response */
 	for (;;) {
+		od_wait_event_start(OD_WAIT_AUTH_CLIENT_READ);
 		msg = od_read(&client->io, od_client_login_timeout(client),
 			      OD_READ_FE);
+		od_wait_event_end(OD_WAIT_AUTH_CLIENT_READ);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -404,7 +415,9 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 			 "checking passwd against ldap endpoint %s",
 			 client->rule->ldap_endpoint_name);
 
+		od_wait_event_start(OD_WAIT_AUTH_LDAP);
 		rc = od_auth_ldap(client, &client_token);
+		od_wait_event_end(OD_WAIT_AUTH_LDAP);
 		kiwi_password_free(&client_token);
 		machine_msg_free(msg);
 		if (rc != OK_RESPONSE) {
@@ -493,8 +506,10 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 
 	/* wait for SASLInitialResponse */
 	for (;;) {
+		od_wait_event_start(OD_WAIT_AUTH_CLIENT_READ);
 		msg = od_read(&client->io, od_client_login_timeout(client),
 			      OD_READ_FE);
+		od_wait_event_end(OD_WAIT_AUTH_CLIENT_READ);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -644,8 +659,10 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 
 	/* wait for SASLResponse */
 	for (;;) {
+		od_wait_event_start(OD_WAIT_AUTH_CLIENT_READ);
 		msg = od_read(&client->io, od_client_login_timeout(client),
 			      OD_READ_FE);
+		od_wait_event_end(OD_WAIT_AUTH_CLIENT_READ);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", client, NULL,
 				 "read error: %s", od_io_error(&client->io));
@@ -1252,8 +1269,10 @@ int od_auth_backend(od_server_t *server, machine_msg_t *msg,
 
 	/* wait for authentication response */
 	for (;;) {
+		od_wait_event_start(OD_WAIT_AUTH_SERVER_READ);
 		msg = od_read(&server->io, od_client_login_timeout(client),
 			      OD_READ_BE);
+		od_wait_event_end(OD_WAIT_AUTH_SERVER_READ);
 		if (msg == NULL) {
 			od_error(&instance->logger, "auth", NULL, server,
 				 "read error: %s", od_io_error(&server->io));

@@ -29,6 +29,7 @@
 #include <query.h>
 #include <stream.h>
 #include <tls.h>
+#include <wait_event.h>
 
 #define TTT_SESSION_OWNS_TEMP_RELS_STR "ttt.owns_session_objs"
 
@@ -423,7 +424,9 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 	od_assert(server->client);
 
 	for (;;) {
+		od_wait_event_start(OD_WAIT_AUTH_SERVER_READ);
 		msg = od_read(&server->io, UINT32_MAX, OD_READ_BE);
+		od_wait_event_end(OD_WAIT_AUTH_SERVER_READ);
 		if (msg == NULL) {
 			od_error(&instance->logger, "startup", client, server,
 				 "read error: %s", od_io_error(&server->io));
@@ -647,7 +650,9 @@ int od_backend_connect_to(od_server_t *server, char *context,
 			char rport[16];
 			od_snprintf(rport, sizeof(rport), "%d", address->port);
 
+			od_wait_event_start(OD_WAIT_CONNECT_TCP);
 			rc = mm_getaddrinfo(address->host, rport, NULL, &ai, 0);
+			od_wait_event_end(OD_WAIT_CONNECT_TCP);
 			if (rc != 0) {
 				od_error(&instance->logger, context, NULL,
 					 server, "failed to resolve %s:%d",
@@ -687,9 +692,11 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	if (ai != NULL) {
 		for (mm_addrinfo_t *cur = ai; cur != NULL; cur = cur->ai_next) {
 			saddr = cur->ai_addr;
+			od_wait_event_start(OD_WAIT_CONNECT_TCP);
 			rc = mm_io_connect(io, saddr,
 					   (uint32_t)instance->config
 						   .backend_connect_timeout_ms);
+			od_wait_event_end(OD_WAIT_CONNECT_TCP);
 			if (rc == 0) {
 				break;
 			}
@@ -716,9 +723,11 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		}
 		mm_freeaddrinfo(ai);
 	} else {
+		od_wait_event_start(OD_WAIT_CONNECT_TCP);
 		rc = mm_io_connect(
 			io, saddr,
 			(uint32_t)instance->config.backend_connect_timeout_ms);
+		od_wait_event_end(OD_WAIT_CONNECT_TCP);
 	}
 
 	if (rc == NOT_OK_RESPONSE) {
@@ -760,7 +769,9 @@ int od_backend_connect_to(od_server_t *server, char *context,
 
 	/* do tls handshake */
 	if (negotiate_tls) {
+		od_wait_event_start(OD_WAIT_CONNECT_TLS);
 		rc = od_tls_backend_connect(server, &instance->logger, tlsopts);
+		od_wait_event_end(OD_WAIT_CONNECT_TLS);
 		if (rc == NOT_OK_RESPONSE) {
 			return NOT_OK_RESPONSE;
 		}
@@ -996,10 +1007,12 @@ od_tsa_check_result_t od_backend_check_tsa(od_rule_storage_t *storage,
 	if (od_storage_endpoint_status_is_outdated(
 		    &endpoint->status,
 		    storage->endpoints_status_poll_interval_ms)) {
-		if (od_backend_update_endpoint_status(
-			    instance, client, server, context,
-			    NULL /* do not update lag */,
-			    endpoint) != OK_RESPONSE) {
+		od_wait_event_start(OD_WAIT_CONNECT_TCP);
+		int status_rc = od_backend_update_endpoint_status(
+			instance, client, server, context,
+			NULL /* do not update lag */, endpoint);
+		od_wait_event_end(OD_WAIT_CONNECT_TCP);
+		if (status_rc != OK_RESPONSE) {
 			return OD_TSA_CHECK_BACKEND_ERROR;
 		}
 	}
@@ -1164,10 +1177,11 @@ int od_backend_update_parameter(od_server_t *server, char *context, char *data,
 	return 0;
 }
 
-int od_backend_ready_wait(od_server_t *server, char *ctx, uint32_t time_ms)
+int od_backend_ready_wait(od_server_t *server, char *ctx, uint32_t time_ms,
+			  od_wait_event_t wait_event)
 {
 	od_frontend_status_t st = od_service_stream_server_until_rfq(
-		ctx, server, 0 /* ignore_errors */, time_ms);
+		ctx, server, 0 /* ignore_errors */, time_ms, wait_event);
 	if (st != OD_OK) {
 		return -1;
 	}
@@ -1209,13 +1223,16 @@ od_retcode_t od_backend_query_send(od_server_t *server, char *context,
 od_retcode_t od_backend_query(od_server_t *server, char *context, char *query,
 			      char *param, int len, uint32_t timeout)
 {
-	if (od_backend_query_send(server, context, query, param, len,
-				  timeout) == NOT_OK_RESPONSE) {
+	od_wait_event_start(OD_WAIT_RESET_SERVER_WRITE);
+	od_retcode_t rc = od_backend_query_send(server, context, query, param,
+						len, timeout);
+	od_wait_event_end(OD_WAIT_RESET_SERVER_WRITE);
+	if (rc == NOT_OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 
-	od_retcode_t rc = od_backend_ready_wait(server, context, timeout);
-	return rc;
+	return od_backend_ready_wait(server, context, timeout,
+				     OD_WAIT_RESET_SERVER_READ);
 }
 
 int od_backend_not_connected(od_server_t *server)
