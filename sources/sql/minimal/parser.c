@@ -60,6 +60,7 @@ od_sql_minimal_node_t *od_sql_minimal_parse(const char *input, size_t input_len,
 		return NULL;
 	}
 
+	ctx.scanbuf = buf->yy_ch_buf;
 	int rc = od_sql_minimal_yyparse(scanner, &ctx);
 
 	od_sql_minimal_yy_delete_buffer(buf, scanner);
