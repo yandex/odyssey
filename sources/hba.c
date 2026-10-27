@@ -176,7 +176,7 @@ int od_hba_process(od_client_t *client)
 	od_hba_t *hba = client->global->hba;
 	od_list_t *i;
 	od_hba_rule_t *rule;
-	od_hba_rules_t *rules;
+	int rc = NOT_OK_RESPONSE;
 
 	if (instance->config.hba_file == NULL) {
 		return OK_RESPONSE;
@@ -185,16 +185,13 @@ int od_hba_process(od_client_t *client)
 	struct sockaddr_storage sa;
 	int salen = sizeof(sa);
 	struct sockaddr *saddr = (struct sockaddr *)&sa;
-	int rc = machine_getpeername(client->io.io, saddr, &salen);
-	if (rc == -1) {
+	int rc_getpeername = machine_getpeername(client->io.io, saddr, &salen);
+	if (rc_getpeername == -1) {
 		return -1;
 	}
 
 	od_hba_lock(hba);
-	rules = &hba->rules;
-	od_hba_unlock(hba);
-
-	od_list_foreach (rules, i) {
+	od_list_foreach (&hba->rules, i) {
 		rule = od_container_of(i, od_hba_rule_t, link);
 		if (sa.ss_family == AF_UNIX) {
 			if (rule->connection_type != OD_CONFIG_HBA_LOCAL) {
@@ -229,8 +226,10 @@ int od_hba_process(od_client_t *client)
 		rc = rule->auth_method == OD_CONFIG_HBA_ALLOW ? OK_RESPONSE :
 								NOT_OK_RESPONSE;
 
+		od_hba_unlock(hba);
 		return rc;
 	}
 
-	return NOT_OK_RESPONSE;
+	od_hba_unlock(hba);
+	return rc;
 }

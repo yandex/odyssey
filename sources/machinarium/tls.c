@@ -224,14 +224,6 @@ static void keylog_cb(const SSL *ssl, const char *line)
 			goto to_return;
 		}
 
-		int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0600);
-		if (fd == -1) {
-			failed = 1;
-			goto to_return;
-		}
-
-		file = fdopen(fd, "a");
-
 		file = fopen(path, "a");
 		if (file == NULL) {
 			failed = 1;

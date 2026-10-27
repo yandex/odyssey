@@ -110,7 +110,10 @@ void td_safe_free(td_histogram_t *h)
 void td_copy(td_histogram_t *dst, td_histogram_t *src)
 {
 	od_assert(dst->compression == src->compression);
+	mm_sleeplock_lock(&src->lock);
 	memcpy(dst, src, td_required_buf_size(src->compression));
+	mm_sleeplock_unlock(&src->lock);
+	atomic_store(&dst->lock, 0);
 }
 
 void td_free(td_histogram_t *h)

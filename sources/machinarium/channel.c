@@ -57,8 +57,8 @@ mm_retcode_t mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 		break;
 	case MM_CHANNEL_LIMIT_HARD: {
 		if (channel->msg_list_count >= channel->chan_limit) {
-			machine_msg_free((machine_msg_t *)msg);
 			mm_sleeplock_unlock(&channel->lock);
+			machine_msg_free((machine_msg_t *)msg);
 			return MM_NOTOK_RETCODE;
 		}
 	} break;
@@ -74,8 +74,8 @@ mm_retcode_t mm_channel_write(mm_channel_t *channel, mm_msg_t *msg)
 		    ((channel->msg_list_count >= channel->chan_limit) &&
 		     (machine_lrand48() % channel->chan_limit <
 		      channel->msg_list_count - channel->chan_limit))) {
-			machine_msg_free((machine_msg_t *)msg);
 			mm_sleeplock_unlock(&channel->lock);
+			machine_msg_free((machine_msg_t *)msg);
 			return MM_NOTOK_RETCODE;
 		}
 	} break;
