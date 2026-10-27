@@ -8,6 +8,8 @@
 #include <machinarium/memory.h>
 #include <machinarium/machine.h>
 
+#define HM_LOCK_AT(locks, i) mm_mutex_padded_at((mm_mutex_padded_t *)(locks), i)
+
 static size_t adjust_to_prime(size_t sz)
 {
 	static size_t primes[] = {
@@ -71,7 +73,7 @@ static void init_bucket(mm_hashmap_t *hm, mm_hashmap_bucket_t *b, size_t bix)
 
 	if (hm->nlocks > 0) {
 		size_t lix = lock_idx(hm, bix);
-		b->mu = &hm->locks[lix];
+		b->mu = HM_LOCK_AT(hm->locks, lix);
 	} else {
 		b->mu = NULL;
 	}
@@ -87,14 +89,14 @@ static void init_buckets(mm_hashmap_t *hm)
 static void init_locks(mm_hashmap_t *hm)
 {
 	for (size_t i = 0; i < hm->nlocks; ++i) {
-		mm_mutex_init(&hm->locks[i]);
+		mm_mutex_init(HM_LOCK_AT(hm->locks, i));
 	}
 }
 
 static void destroy_locks(mm_hashmap_t *hm)
 {
 	for (size_t i = 0; i < hm->nlocks; ++i) {
-		mm_mutex_destroy(&hm->locks[i]);
+		mm_mutex_destroy(HM_LOCK_AT(hm->locks, i));
 	}
 }
 
@@ -207,7 +209,9 @@ mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
 	}
 
 	if (nlocks > 0) {
-		hm->locks = mm_malloc(sizeof(mm_mutex_t) * nlocks);
+		hm->locks =
+			mm_malloc_aligned(sizeof(mm_mutex_padded_t) * nlocks,
+					  MM_MUTEX_PADDED_SIZE);
 		if (hm->locks == NULL) {
 			mm_free(hm->buckets);
 			mm_free(hm);
@@ -247,7 +251,7 @@ void mm_hashmap_clear(mm_hashmap_t *hm)
 	mm_list_init(&freelist);
 
 	for (size_t li = 0; li < hm->nlocks; ++li) {
-		mm_mutex_lock2(&hm->locks[li]);
+		mm_mutex_lock2(HM_LOCK_AT(hm->locks, li));
 	}
 
 	for (size_t bi = 0; bi < hm->nbuckets; ++bi) {
@@ -262,7 +266,7 @@ void mm_hashmap_clear(mm_hashmap_t *hm)
 	}
 
 	for (int li = (int)hm->nlocks - 1; li >= 0; --li) {
-		mm_mutex_unlock(&hm->locks[li]);
+		mm_mutex_unlock(HM_LOCK_AT(hm->locks, li));
 	}
 
 	mm_list_foreach_safe (&freelist, i, s) {
