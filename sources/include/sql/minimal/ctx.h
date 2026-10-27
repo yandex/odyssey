@@ -30,6 +30,10 @@ typedef struct od_sql_minimal_parse_ctx {
 
 	int had_error;
 
+	od_sql_location_t tail_location;
+	int tail_has_token;
+	int tail_depth;
+
 	/*
 	 * used to recover from flex YY_FATAL_ERROR
 	 * (which calls exit() by default)
