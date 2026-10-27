@@ -132,9 +132,16 @@ typedef int od_sql_minimal_yyltype_t;
 %token KW_OFF
 %token KW_BEGIN
 
-/* transaction control (only BEGIN) */
+/* transaction control and isolation levels */
 %token KW_WORK
 %token KW_TRANSACTION
+%token KW_ISOLATION
+%token KW_LEVEL
+%token KW_READ
+%token KW_UNCOMMITTED
+%token KW_COMMITTED
+%token KW_REPEATABLE
+%token KW_SERIALIZABLE
 
 /* prepared statements */
 %token KW_DEALLOCATE
@@ -158,9 +165,12 @@ typedef int od_sql_minimal_yyltype_t;
 %type <str>  var_name
 %type <str>  var_value
 %type <str>  col_id
+%type <str>  identifier
+%type <str>  unreserved_keyword
+%type <str>  iso_level
 %type <dtarget> discard_target
 
-%destructor { /* arena-allocated, no-op */ } <str>
+%destructor { /* arena-allocated or static, no-op */ } <str>
 %destructor { od_sql_minimal_node_free($$); } <node>
 
 %%
@@ -186,6 +196,7 @@ stmt:
 
 /*
  * SET [SESSION|LOCAL] name { TO | = } { value | DEFAULT }
+ * SET [SESSION|LOCAL] TRANSACTION ISOLATION LEVEL iso_level
  */
 set_stmt:
 	  KW_SET opt_set_scope var_name KW_TO var_value
@@ -224,6 +235,23 @@ set_stmt:
 			n->value = NULL;
 			$$ = (od_sql_minimal_node_t *)n;
 		}
+	| KW_SET opt_set_scope KW_TRANSACTION KW_ISOLATION KW_LEVEL iso_level
+		{
+			od_sql_minimal_set_transaction_stmt_t *n =
+				ALLOC_NODE(ctx, set_transaction,
+					OD_SQL_MINIMAL_NODE_TYPE_SET_TRANSACTION_STMT);
+			if (n == NULL) YYABORT;
+			n->isolation_level = arena_str(ctx, $6, strlen($6));
+			if (n->isolation_level == NULL) YYABORT;
+			$$ = (od_sql_minimal_node_t *)n;
+		}
+	;
+
+iso_level:
+	  KW_READ KW_UNCOMMITTED { $$ = "read uncommitted"; }
+	| KW_READ KW_COMMITTED   { $$ = "read committed"; }
+	| KW_REPEATABLE KW_READ  { $$ = "repeatable read"; }
+	| KW_SERIALIZABLE        { $$ = "serializable"; }
 	;
 
 opt_set_scope:
@@ -266,7 +294,7 @@ opt_transaction:
  * DEALLOCATE [PREPARE] { name | ALL }
  */
 deallocate_stmt:
-	  KW_DEALLOCATE IDENT
+	  KW_DEALLOCATE identifier
 		{
 			od_sql_minimal_deallocate_stmt_t *n = ALLOC_NODE(ctx, deallocate,
 				OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT);
@@ -275,7 +303,7 @@ deallocate_stmt:
 			n->is_all = 0;
 			$$ = (od_sql_minimal_node_t *)n;
 		}
-	| KW_DEALLOCATE KW_PREPARE IDENT
+	| KW_DEALLOCATE KW_PREPARE identifier
 		{
 			od_sql_minimal_deallocate_stmt_t *n = ALLOC_NODE(ctx, deallocate,
 				OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT);
@@ -416,12 +444,38 @@ var_value:
 		}
 	;
 
-col_id:
+identifier:
 	  IDENT
 		{
 			$$ = $1;
 			$1 = NULL;
 		}
+	| unreserved_keyword
+		{
+			$$ = arena_str(ctx, $1, strlen($1));
+			if ($$ == NULL) {
+				od_sql_minimal_yyerror(&yylloc, scanner, ctx,
+					       "out of memory");
+				YYABORT;
+			}
+		}
+	;
+
+/*
+ * Keep the isolation-level keywords usable as identifiers, like the full parser.
+ */
+unreserved_keyword:
+	  KW_ISOLATION    { $$ = "isolation"; }
+	| KW_LEVEL        { $$ = "level"; }
+	| KW_READ         { $$ = "read"; }
+	| KW_UNCOMMITTED  { $$ = "uncommitted"; }
+	| KW_COMMITTED    { $$ = "committed"; }
+	| KW_REPEATABLE   { $$ = "repeatable"; }
+	| KW_SERIALIZABLE { $$ = "serializable"; }
+	;
+
+col_id:
+	  identifier { $$ = $1; $1 = NULL; }
 	| KW_ALL
 		{
 			$$ = arena_str(ctx, "all", 3);

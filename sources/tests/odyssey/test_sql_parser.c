@@ -206,6 +206,86 @@ static void test_set_with_semicolon(void)
 		    "(set search_path=public)") == 0);
 }
 
+static void test_set_transaction_isolation(void)
+{
+	static const struct {
+		const char *query;
+		const char *level;
+	} cases[] = {
+		{ "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED",
+		  "read uncommitted" },
+		{ "SET TRANSACTION ISOLATION LEVEL READ COMMITTED;",
+		  "read committed" },
+		{ "SET LOCAL TRANSACTION ISOLATION LEVEL REPEATABLE READ",
+		  "repeatable read" },
+		{ "SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE",
+		  "serializable" },
+		{ "set transaction isolation level read uncommitted;",
+		  "read uncommitted" },
+		{ "SeT /* scope */ TrAnSaCtIoN IsOlAtIoN\nLeVeL ReAd -- level\nUnCoMmItTeD",
+		  "read uncommitted" },
+	};
+
+	od_linear_alloc_init(&s_full_arena, s_full_arena_buf,
+			     sizeof(s_full_arena_buf));
+
+	for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		char expected[128];
+		snprintf(expected, sizeof(expected),
+			 "(set transaction isolation level %s)",
+			 cases[i].level);
+		test(strcmp(parse_ok(cases[i].query), expected) == 0);
+
+		od_query_ctx_t minimal = { 0 };
+		od_query_ctx_t full = { 0 };
+		od_query_parse_fill_ctx(cases[i].query, strlen(cases[i].query),
+					&s_arena, &minimal, &s_minimal_parsing);
+		od_query_parse_fill_ctx(cases[i].query, strlen(cases[i].query),
+					&s_full_arena, &full, &s_full_parsing);
+		/* VAR_SET_MULTI is forwarded, rather than virtualized as a GUC. */
+		test(full.flags == 0);
+		test(minimal.flags == full.flags);
+		test(minimal.s1[0] == '\0');
+		test(minimal.s2[0] == '\0');
+		od_query_ctx_reset(&minimal);
+		od_query_ctx_reset(&full);
+	}
+
+	parse_fail("SET TRANSACTION ISOLATION LEVEL READ");
+	parse_fail("SET TRANSACTION ISOLATION LEVEL UNKNOWN");
+	parse_fail("SET TRANSACTION ISOLATION LEVEL 'read uncommitted'");
+	parse_fail("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED extra");
+}
+
+static void test_isolation_keywords_as_identifiers(void)
+{
+	static const char *names[] = { "isolation",   "level",	   "read",
+				       "uncommitted", "committed", "repeatable",
+				       "serializable" };
+	for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+		char query[128];
+		char expected[128];
+		snprintf(query, sizeof(query), "SHOW %s", names[i]);
+		snprintf(expected, sizeof(expected), "(show %s)", names[i]);
+		test(strcmp(parse_ok(query), expected) == 0);
+		snprintf(query, sizeof(query), "SET %s = %s", names[i],
+			 names[i]);
+		snprintf(expected, sizeof(expected), "(set %s=%s)", names[i],
+			 names[i]);
+		test(strcmp(parse_ok(query), expected) == 0);
+		snprintf(query, sizeof(query), "DEALLOCATE %s", names[i]);
+		snprintf(expected, sizeof(expected), "(deallocate %s)",
+			 names[i]);
+		test(strcmp(parse_ok(query), expected) == 0);
+		snprintf(query, sizeof(query), "DEALLOCATE PREPARE %s",
+			 names[i]);
+		test(strcmp(parse_ok(query), expected) == 0);
+		snprintf(query, sizeof(query), "UNLISTEN %s", names[i]);
+		snprintf(expected, sizeof(expected), "(unlisten %s)", names[i]);
+		test(strcmp(parse_ok(query), expected) == 0);
+	}
+}
+
 static void test_begin_basic(void)
 {
 	test(strcmp(parse_ok("BEGIN"), "(begin)") == 0);
@@ -1215,6 +1295,8 @@ void odyssey_test_sql_minimal_parser(void)
 	test_set_boolean_values();
 	test_set_integer();
 	test_set_with_semicolon();
+	test_set_transaction_isolation();
+	test_isolation_keywords_as_identifiers();
 
 	test_begin_basic();
 	test_begin_work();

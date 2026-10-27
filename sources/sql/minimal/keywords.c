@@ -9,8 +9,8 @@
 #include <sql/minimal/keywords.h>
 #include <sql/minimal/parse.tab.h>
 
-/* length of the longest keyword, "transaction" */
-#define OD_SQL_MINIMAL_KEYWORD_MAX_LEN 11
+/* length of the longest keyword, "serializable" */
+#define OD_SQL_MINIMAL_KEYWORD_MAX_LEN 12
 
 static inline int od_sql_minimal_keyword_eq(const char *kw, const char *str,
 					    size_t len)
@@ -46,6 +46,9 @@ int od_sql_minimal_keyword_lookup(const char *str, size_t len)
 	case 'b':
 		KW("begin", KW_BEGIN);
 		break;
+	case 'c':
+		KW("committed", KW_COMMITTED);
+		break;
 	case 'd':
 		KW("deallocate", KW_DEALLOCATE);
 		KW("default", KW_DEFAULT);
@@ -54,7 +57,11 @@ int od_sql_minimal_keyword_lookup(const char *str, size_t len)
 	case 'f':
 		KW("false", KW_FALSE);
 		break;
+	case 'i':
+		KW("isolation", KW_ISOLATION);
+		break;
 	case 'l':
+		KW("level", KW_LEVEL);
 		KW("local", KW_LOCAL);
 		break;
 	case 'o':
@@ -65,7 +72,12 @@ int od_sql_minimal_keyword_lookup(const char *str, size_t len)
 		KW("plans", KW_PLANS);
 		KW("prepare", KW_PREPARE);
 		break;
+	case 'r':
+		KW("read", KW_READ);
+		KW("repeatable", KW_REPEATABLE);
+		break;
 	case 's':
+		KW("serializable", KW_SERIALIZABLE);
 		KW("sequences", KW_SEQUENCES);
 		KW("session", KW_SESSION);
 		KW("set", KW_SET);
@@ -79,6 +91,7 @@ int od_sql_minimal_keyword_lookup(const char *str, size_t len)
 		KW("true", KW_TRUE);
 		break;
 	case 'u':
+		KW("uncommitted", KW_UNCOMMITTED);
 		KW("unlisten", KW_UNLISTEN);
 		break;
 	case 'w':

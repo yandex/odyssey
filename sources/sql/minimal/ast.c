@@ -56,6 +56,14 @@ int od_sql_minimal_node_print(const od_sql_minimal_node_t *node, char *buf,
 				n->key ? n->key : "");
 	}
 
+	case OD_SQL_MINIMAL_NODE_TYPE_SET_TRANSACTION_STMT: {
+		const od_sql_minimal_set_transaction_stmt_t *n =
+			(const od_sql_minimal_set_transaction_stmt_t *)node;
+		return snprintf(buf, buflen,
+				"(set transaction isolation level %s)",
+				n->isolation_level);
+	}
+
 	case OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT:
 		return snprintf(buf, buflen, "(begin)");
 
@@ -140,6 +148,9 @@ void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 		}
 		break;
 	}
+	case OD_SQL_MINIMAL_NODE_TYPE_SET_TRANSACTION_STMT:
+		/* Like VAR_SET_MULTI in the full parser, forward to the backend. */
+		break;
 	case OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT:
 		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_BEGIN);
 		break;
