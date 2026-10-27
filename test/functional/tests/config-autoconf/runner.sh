@@ -13,14 +13,12 @@ CONF=/tests/config-autoconf/main.conf
 BAD_CONF=/tests/config-autoconf/bad_include.conf
 
 # 1. Override global option in autoconf
-/usr/bin/odyssey "$CONF"
-sleep 1
+ody-start "$CONF" console
 
 psql -h 127.0.0.1 -p 6432 -U console -d console \
 	--quiet --no-align --tuples-only -F '|' -c 'show config' |
 	grep -E '^availability_zone\|' | grep -q '^availability_zone|b' || {
 	echo "expected availability_zone 'b' overridden by autoconf" >&2
-	cat /var/log/odyssey.log >&2 || true
 	exit 1
 }
 

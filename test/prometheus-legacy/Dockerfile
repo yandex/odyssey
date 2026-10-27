@@ -17,6 +17,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     cmake \
     libmicrohttpd-dev \
     postgresql-client-common postgresql-client \
+    procps \
     python3 \
     wget \
     net-tools \
@@ -35,7 +36,8 @@ RUN mkdir /odyssey
 WORKDIR /odyssey
 
 COPY . ./
-COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./test/bin/ody-start /usr/bin/ody-start
+COPY ./test/bin/ody-stop /usr/bin/ody-stop
 
 WORKDIR /odyssey
 

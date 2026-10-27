@@ -127,6 +127,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     cmake \
     clang \
     gdb \
+    procps \
     strace \
     ltrace \
     bpftrace \
@@ -171,9 +172,8 @@ COPY ./test/functional/tests/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.
 COPY ./test/functional/odyssey.conf /etc/odyssey/odyssey.conf
 
 COPY ./test/functional/bin/ody-restart /usr/bin/ody-restart
-COPY ./test/functional/bin/ody-start  /usr/bin/ody-start
-COPY ./test/functional/bin/ody-start2  /usr/bin/ody-start2
-COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./test/bin/ody-start  /usr/bin/ody-start
+COPY ./test/bin/ody-stop /usr/bin/ody-stop
 COPY ./test/functional/bin/start-pg /usr/bin/start-pg
 
 COPY ./test/functional/tests /tests

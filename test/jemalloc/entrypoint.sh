@@ -7,6 +7,9 @@ until pg_isready -h postgres -p 5432 -U postgres -d postgres; do
   sleep 1
 done
 
+trap 'ody-stop || exit 1' EXIT
+
+# Keep allocator settings scoped to Odyssey so helper processes do not produce profiles.
 MALLOC_CONF=prof_leak:true,lg_prof_sample:0,prof_final:true LD_PRELOAD=${JEMALLOC_PATH}/lib/libjemalloc.so.2 /odyssey /odyssey.conf
 sleep 1
 

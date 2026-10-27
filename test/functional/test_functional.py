@@ -43,6 +43,14 @@ def prepare_postgres():
     subprocess.check_output([TEARDOWN_PG_PATH], timeout=2 * 60)
 
 
+@pytest.fixture(autouse=True)
+def stop_odyssey():
+    yield
+    result = subprocess.run(['/usr/bin/ody-stop'])
+    if result.returncode != 0:
+        pytest.fail(f"Failed to stop Odyssey, code {result.returncode}\n")
+
+
 @pytest.mark.parametrize('folder', list(get_test_folders()))
 def test_odyssey_functional(folder):
     clear_log_file()
