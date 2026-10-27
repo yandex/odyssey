@@ -68,7 +68,7 @@ void od_client_init(od_client_t *client)
 
 	memset(&client->query_ctx, 0, sizeof(client->query_ctx));
 	client->parser_mode = -1;
-	od_sql_pstmt_client_init(&client->sql_pstmt);
+	memset(&client->sql_query, 0, sizeof(client->sql_query));
 
 	client->pending_begin = 0;
 	client->debug_log_sampled = -1;
@@ -113,7 +113,7 @@ void od_client_free(od_client_t *client)
 	if (client->portals) {
 		od_client_portal_map_free(client->portals);
 	}
-	od_sql_pstmt_client_free(&client->sql_pstmt);
+	od_sql_pstmt_query_reset(&client->sql_query);
 	if (client->external_id) {
 		od_free(client->external_id);
 	}

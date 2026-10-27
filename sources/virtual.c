@@ -840,11 +840,6 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 		goto done;
 	}
 
-	if (od_sql_pstmt_query_must_forward(&client->sql_pstmt)) {
-		/* DEALLOCATE of statements created by SQL PREPARE */
-		goto done;
-	}
-
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SHOW)) {
 		status = process_vshow(client, ctx, &portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET)) {

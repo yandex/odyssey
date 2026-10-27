@@ -135,7 +135,7 @@ struct od_client {
 	int parser_mode;
 
 	/* statements created by SQL PREPARE */
-	od_sql_pstmt_client_t sql_pstmt;
+	od_sql_pstmt_query_t sql_query;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)
