@@ -166,6 +166,53 @@ func TestSendPoolsExtendedMetricsExportsClientLifetimeQuantiles(t *testing.T) {
 	}
 }
 
+func TestSendPoolsExtendedMetricsExportsConnectionCounters(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	columns := []string{"database", "user", "client_connections", "client_disconnections",
+		"server_connections", "server_disconnections", "server_detaches"}
+	rows := sqlmock.NewRows(columns).
+		AddRow("db1", "user1", 2, 1, 3, 0, []byte("4294967296")).
+		AddRow("aggregated", "aggregated", nil, nil, nil, nil, nil)
+	mock.ExpectQuery(regexp.QuoteMeta(showPoolsExtendedCommand)).WillReturnRows(rows)
+	ch := make(chan prometheus.Metric, 32)
+	exporter := &Exporter{}
+	if err := exporter.sendPoolsExtendedMetrics(context.Background(), ch, db, nil); err != nil {
+		t.Fatal(err)
+	}
+	close(ch)
+	want := map[string]float64{
+		"client_connections_created_total": 2, "client_connections_closed_total": 1,
+		"server_connections_created_total": 3, "server_connections_closed_total": 0,
+		"server_connections_returned_total": 4294967296,
+	}
+	for metric := range ch {
+		for name, value := range want {
+			if !strings.Contains(metric.Desc().String(), `fqName: "odyssey_route_`+name+`"`) {
+				continue
+			}
+			var written dto.Metric
+			if err := metric.Write(&written); err != nil {
+				t.Fatal(err)
+			}
+			if written.Counter == nil || written.GetCounter().GetValue() != value ||
+				len(written.Label) != 2 || written.Label[0].GetValue() != "db1" || written.Label[1].GetValue() != "user1" {
+				t.Fatalf("unexpected %s: %v", name, &written)
+			}
+			delete(want, name)
+		}
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing connection counters: %v", want)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestSendPoolsExtendedMetricsExportsQueueColumn(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	exporter := &Exporter{

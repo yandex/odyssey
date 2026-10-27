@@ -58,6 +58,7 @@ static inline int od_backend_terminate(od_server_t *server)
 static void od_backend_disconnect(od_server_t *server, int graceful)
 {
 	od_assert(server != NULL);
+	od_server_stat_close(server);
 	if (!od_backend_not_connected(server)) {
 		if (graceful && mm_io_connected(server->io.io)) {
 			od_backend_terminate(server);
@@ -752,6 +753,11 @@ int od_backend_connect_to(od_server_t *server, char *context,
 	/* publish server io after successful connect (stable fd), under
 	 * route lock: console readers traverse the pool under the same lock */
 	if (server->route != NULL) {
+		/* The event loop may already have consumed a failed connect's SO_ERROR. */
+		if (io->error == 0) {
+			od_stat_server_connect(&server->route->stats);
+			server->stats_connected = true;
+		}
 		od_route_lock(server->route);
 	}
 	rc = od_io_prepare(&server->io, io);
@@ -762,6 +768,7 @@ int od_backend_connect_to(od_server_t *server, char *context,
 		od_error(&instance->logger, context, NULL, server,
 			 "failed to set server io, errno = %d (%s)",
 			 machine_errno(), strerror(machine_errno()));
+		od_server_stat_close(server);
 		mm_io_close(io);
 		mm_io_free(io);
 		return -1;
