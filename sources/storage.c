@@ -20,6 +20,7 @@
 #include <router.h>
 #include <auth_query.h>
 #include <internal_client.h>
+#include <injection.h>
 
 void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status)
 {
@@ -409,7 +410,9 @@ od_storage_watchdog_do_polling_loop(od_storage_watchdog_t *watchdog)
 	}
 
 	while (1) {
+		od_injection_wait("watchdog_before_poll");
 		od_storage_watchdog_do_polling_step(watchdog);
+		od_injection_wait("watchdog_after_poll");
 
 		int rc = machine_wait_flag_wait(watchdog->online, poll_ms);
 		if (rc == 0) {

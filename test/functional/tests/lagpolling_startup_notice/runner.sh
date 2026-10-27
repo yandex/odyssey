@@ -7,40 +7,14 @@
 
 set -eux
 
-reset_replica_lag() {
-	psql 'host=localhost port=5433 user=postgres dbname=postgres' -c "ALTER SYSTEM RESET recovery_min_apply_delay;" || true
-	psql 'host=localhost port=5433 user=postgres dbname=postgres' -c "SELECT pg_reload_conf();" || true
-}
-
-enable_replica_lag() {
-	psql 'host=localhost port=5433 user=postgres dbname=postgres' -c "ALTER SYSTEM SET recovery_min_apply_delay = '15s'"
-	psql 'host=localhost port=5433 user=postgres dbname=postgres' -c "SELECT pg_reload_conf();"
-
-	trap reset_replica_lag EXIT
-}
+source /tests/__helpers/watchdog.sh
 
 psql 'host=localhost port=5433 user=postgres dbname=broken_collation' -c 'select 1' 2>&1 | grep -q 'WARNING' || {
 	echo 'precondition failed: broken_collation must emit a startup WARNING on the replica'
 	exit 1
 }
 
-psql 'host=localhost port=5432 user=postgres dbname=postgres' -c 'DROP TABLE IF EXISTS wal_bump_data' 2>&1 || {
-	exit 1
-}
-
-psql 'host=localhost port=5432 user=postgres dbname=postgres' -c 'CREATE TABLE IF NOT EXISTS wal_bump_data(num int)' 2>&1 || {
-	exit 1
-}
-
-enable_replica_lag
-
-psql 'host=localhost port=5432 user=postgres dbname=postgres' -c 'INSERT INTO wal_bump_data VALUES(42)' 2>&1 || {
-	exit 1
-}
-
-psql 'host=localhost port=5432 user=postgres dbname=postgres' -c 'INSERT INTO wal_bump_data VALUES(43)' 2>&1 || {
-	exit 1
-}
+watchdog_prepare broken_collation
 
 /usr/bin/odyssey /tests/lagpolling_startup_notice/lag-conf.conf
 timeout 5 bash -c '
@@ -57,6 +31,8 @@ done
 
 odyssey_pid=$(cat /var/run/odyssey.pid)
 
+watchdog_pause
+
 for _ in $(seq 1 3); do
 	psql -h localhost -p6432 -dpostgres -Uuser1 -c 'select 3' || {
 		sleep 1
@@ -65,9 +41,7 @@ for _ in $(seq 1 3); do
 	}
 done
 
-sleep 8
-
-psql 'host=localhost port=5433 user=postgres dbname=postgres' -c 'SELECT TRUNC(EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp()))'
+watchdog_set_lag 10
 
 # the replica lags more than catchup_timeout, so clients must be rejected
 for _ in $(seq 1 3); do
@@ -96,4 +70,5 @@ if grep -q 'attach failed with status' /var/log/odyssey.log; then
 	exit 1
 fi
 
+watchdog_resume
 ody-stop
