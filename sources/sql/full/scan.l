@@ -770,7 +770,8 @@ other			.
 					ident = litbufdup(yyscanner);
 					if (yyextra->literallen >= NAMEDATALEN)
 						truncate_identifier(ident, yyextra->literallen);
-					yylval->str = ident;
+					yylval->identifier.str = ident;
+					yylval->identifier.end_location = yytext + yyleng - yyextra->scanbuf;
 					return IDENT;
 				}
 <xui>{dquote}	{
@@ -778,7 +779,8 @@ other			.
 					if (yyextra->literallen == 0)
 						yyerror("zero-length delimited identifier");
 					/* can't truncate till after we de-escape the ident */
-					yylval->str = litbufdup(yyscanner);
+					yylval->identifier.str = litbufdup(yyscanner);
+					yylval->identifier.end_location = yytext + yyleng - yyextra->scanbuf;
 					return UIDENT;
 				}
 <xd,xui>{xddouble}	{
@@ -797,7 +799,8 @@ other			.
 					yyless(1);
 					/* and treat it as {identifier} */
 					ident = downcase_truncate_identifier(yytext, yyleng);
-					yylval->str = ident;
+					yylval->identifier.str = ident;
+					yylval->identifier.end_location = yytext + yyleng - yyextra->scanbuf;
 					return IDENT;
 				}
 
@@ -1055,7 +1058,8 @@ other			.
 					 * if necessary.
 					 */
 					ident = downcase_truncate_identifier(yytext, yyleng);
-					yylval->str = ident;
+					yylval->identifier.str = ident;
+					yylval->identifier.end_location = yytext + yyleng - yyextra->scanbuf;
 					return IDENT;
 				}
 
@@ -1085,6 +1089,7 @@ other			.
 /* Likewise for a couple of other things we need. */
 #undef yylloc
 #define yylloc	(((struct yyguts_t *) yyscanner)->yylloc_r)
+
 #undef yyleng
 #define yyleng	(((struct yyguts_t *) yyscanner)->yyleng_r)
 

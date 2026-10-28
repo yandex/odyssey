@@ -23,8 +23,8 @@ Selects the SQL parsing mode:
 * `disabled` — queries are not parsed at all.
 * `minimal` — a lightweight parser recognizes a small subset of
   statements (`SHOW`, `SET`, `BEGIN`, `DEALLOCATE`, `DISCARD`,
-  `UNLISTEN`). All other statements, including plain `SELECT`, are not
-  classified and are treated as read-write.
+  `UNLISTEN`, `PREPARE`, `EXECUTE`). All other statements, including plain
+  `SELECT`, are not classified and are treated as read-write.
 * `full` — the complete PostgreSQL grammar is used. Queries which can
   not be parsed or can not be classified as read-only require the
   primary.

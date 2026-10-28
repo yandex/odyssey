@@ -326,6 +326,9 @@ base_yylex(BASE_YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 					scanner_yyerror("UESCAPE must be followed by a simple string literal",
 									yyscanner);
 
+				if (cur_token == UIDENT)
+					lvalp->core_yystype.identifier.end_location =
+						*llocp + strlen(yyextra->core_yy_extra.scanbuf + *llocp);
 				escstr = yyextra->lookahead_yylval.str;
 				if (strlen(escstr) != 1 || !check_uescapechar(escstr[0]))
 					scanner_yyerror("invalid Unicode escape character",
@@ -335,7 +338,7 @@ base_yylex(BASE_YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 				*llocp = cur_yylloc;
 
 				/* Apply Unicode conversion */
-				lvalp->core_yystype.str =
+				lvalp->core_yystype.identifier.str =
 					str_udeescape(lvalp->core_yystype.str,
 								  escstr[0],
 								  *llocp,
@@ -351,7 +354,7 @@ base_yylex(BASE_YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 			else
 			{
 				/* No UESCAPE, so convert using default escape character */
-				lvalp->core_yystype.str =
+				lvalp->core_yystype.identifier.str =
 					str_udeescape(lvalp->core_yystype.str,
 								  '\\',
 								  *llocp,
