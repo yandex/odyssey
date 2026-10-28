@@ -155,6 +155,52 @@ static void test_format_buffer_bounds(void)
 	format_fail("availability_zone", "b", 5);
 }
 
+static void test_format_duration(void)
+{
+	const char *keys[] = {
+		"stats_interval",
+		"graceful_shutdown_timeout_ms",
+		"keepalive",
+		"keepalive_keep_interval",
+		"keepalive_usr_timeout",
+		"server_login_retry",
+		"dns_cache_ttl",
+		"group_checker_interval",
+		"auth_query_cache_ttl",
+		"auth_query_cache_ttl_jitter",
+		"auth_query_cache_error_retry",
+		"auth_query_timeout",
+		"backend_connect_timeout_ms",
+		"cancel_timeout_ms",
+		"cancel_queue_timeout_ms",
+	};
+	for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); i++) {
+		char expected[FORMAT_BUF_SIZE];
+		snprintf(expected, sizeof(expected), "%s \"10s\"", keys[i]);
+		test(strcmp(format_ok(keys[i], "10s", FORMAT_BUF_SIZE),
+			    expected) == 0);
+	}
+	test(strcmp(format_ok("stats_interval", "10", FORMAT_BUF_SIZE),
+		    "stats_interval \"10\"") == 0);
+	test(strcmp(format_ok("stats_interval", "1.5 min", FORMAT_BUF_SIZE),
+		    "stats_interval \"1.5 min\"") == 0);
+	test(strcmp(format_ok("cancel_queue_timeout_ms", "-1", FORMAT_BUF_SIZE),
+		    "cancel_queue_timeout_ms \"-1\"") == 0);
+	test(strcmp(format_ok("stats_interval", "10s", 21),
+		    "stats_interval \"10s\"") == 0);
+	format_fail("stats_interval", "10s", 20);
+	format_fail("stats_interval", "oops", FORMAT_BUF_SIZE);
+	format_fail("stats_interval", "10S", FORMAT_BUF_SIZE);
+	format_fail("stats_interval", "1h30m", FORMAT_BUF_SIZE);
+	format_fail("stats_interval", "10s\nlog_debug yes", FORMAT_BUF_SIZE);
+	format_fail("stats_interval", "10s\n", FORMAT_BUF_SIZE);
+	format_fail("stats_interval", "10s\r", FORMAT_BUF_SIZE);
+	format_fail("stats_interval", "10s\"", FORMAT_BUF_SIZE);
+	format_fail("cancel_queue_timeout_ms", "-9223372036854775809",
+		    FORMAT_BUF_SIZE);
+	format_fail("workers", "10s", FORMAT_BUF_SIZE);
+}
+
 void odyssey_test_config_field(void)
 {
 	test_field_by_key();
@@ -164,4 +210,5 @@ void odyssey_test_config_field(void)
 	test_format_bool();
 	test_format_string();
 	test_format_buffer_bounds();
+	test_format_duration();
 }

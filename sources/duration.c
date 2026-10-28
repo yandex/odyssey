@@ -186,7 +186,7 @@ static const char *time_units_hint_or(const int flags, const char **hintmsg)
  * header (64-bit result, exact integer scaling, no octal).
  */
 static bool parse_int64(const char *value, int64_t *result, int flags,
-			const char **hintmsg)
+			const char **hintmsg, od_duration_value_t *parsed)
 {
 	/*
 	 * We assume here that double is wide enough to represent any integer
@@ -205,6 +205,9 @@ static bool parse_int64(const char *value, int64_t *result, int flags,
 	if (hintmsg) {
 		*hintmsg = NULL;
 	}
+	if (parsed) {
+		*parsed = (od_duration_value_t){ 0 };
+	}
 
 	/*
 	 * Try to parse as an integer (decimal or 0x-hexadecimal input; no
@@ -217,6 +220,9 @@ static bool parse_int64(const char *value, int64_t *result, int flags,
 		const char *digits = value;
 		int base = 10;
 
+		while (isspace((unsigned char)*digits)) {
+			digits++;
+		}
 		if (*digits == '+' || *digits == '-') {
 			digits++;
 		}
@@ -227,6 +233,20 @@ static bool parse_int64(const char *value, int64_t *result, int flags,
 
 		errno = 0;
 		ll = strtoll(value, &endptr, base);
+		if (errno == ERANGE) {
+			const char *tail = endptr;
+			while (isspace((unsigned char)*tail)) {
+				tail++;
+			}
+			/* Do not round an overflowing bare integer back into range. */
+			if (*tail == '\0') {
+				if (hintmsg) {
+					*hintmsg =
+						"Value exceeds integer range.";
+				}
+				return false;
+			}
+		}
 	}
 
 	is_integer = !(endptr == value || errno == ERANGE || *endptr == '.' ||
@@ -254,6 +274,15 @@ static bool parse_int64(const char *value, int64_t *result, int flags,
 	/* allow whitespace between number and unit */
 	while (isspace((unsigned char)*endptr)) {
 		endptr++;
+	}
+
+	if (parsed) {
+		parsed->has_unit = *endptr != '\0';
+		if (!parsed->has_unit) {
+			parsed->is_real = !is_integer;
+			parsed->bare = is_integer ? ll : 0;
+			parsed->real = is_integer ? 0 : val;
+		}
 	}
 
 	/* Handle possible unit */
@@ -324,5 +353,11 @@ static bool parse_int64(const char *value, int64_t *result, int flags,
 bool od_duration_parse_ms(const char *value, int64_t *out_ms,
 			  const char **hintmsg)
 {
-	return parse_int64(value, out_ms, GUC_UNIT_MS, hintmsg);
+	return parse_int64(value, out_ms, GUC_UNIT_MS, hintmsg, NULL);
+}
+
+bool od_duration_parse_value(const char *value, od_duration_value_t *out,
+			     const char **hintmsg)
+{
+	return parse_int64(value, &out->ms, GUC_UNIT_MS, hintmsg, out);
 }

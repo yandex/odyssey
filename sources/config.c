@@ -20,6 +20,7 @@
 #include <tls.h>
 #include <od_memory.h>
 #include <util.h>
+#include <duration.h>
 
 void od_config_init(od_config_t *config)
 {
@@ -503,7 +504,7 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, log_syslog_ident), 0 },
 	{ "log_syslog_facility", OD_CONFIG_FIELD_STRING,
 	  offsetof(od_config_t, log_syslog_facility), 0 },
-	{ "stats_interval", OD_CONFIG_FIELD_INT,
+	{ "stats_interval", OD_CONFIG_FIELD_DURATION_INT,
 	  offsetof(od_config_t, stats_interval), 1 },
 	{ "pid_file", OD_CONFIG_FIELD_STRING, offsetof(od_config_t, pid_file),
 	  0 },
@@ -517,7 +518,7 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, external_auth_socket_path), 0 },
 	{ "graceful_die_on_errors", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, graceful_die_on_errors), 0 },
-	{ "graceful_shutdown_timeout_ms", OD_CONFIG_FIELD_U64,
+	{ "graceful_shutdown_timeout_ms", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, graceful_shutdown_timeout_ms), 1 },
 	{ "enable_online_restart", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, enable_online_restart_feature), 0 },
@@ -528,13 +529,13 @@ static const od_config_field_t od_config_fields[] = {
 	{ "nodelay", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, nodelay), 0 },
 	{ "disable_nolinger", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, disable_nolinger), 1 },
-	{ "keepalive", OD_CONFIG_FIELD_INT, offsetof(od_config_t, keepalive),
-	  1 },
-	{ "keepalive_keep_interval", OD_CONFIG_FIELD_INT,
+	{ "keepalive", OD_CONFIG_FIELD_DURATION_INT,
+	  offsetof(od_config_t, keepalive), 1 },
+	{ "keepalive_keep_interval", OD_CONFIG_FIELD_DURATION_INT,
 	  offsetof(od_config_t, keepalive_keep_interval), 1 },
 	{ "keepalive_probes", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, keepalive_probes), 1 },
-	{ "keepalive_usr_timeout", OD_CONFIG_FIELD_I64,
+	{ "keepalive_usr_timeout", OD_CONFIG_FIELD_DURATION_I64,
 	  offsetof(od_config_t, keepalive_usr_timeout_ms), 1 },
 	{ "workers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, workers), 0 },
 	{ "resolvers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, resolvers),
@@ -545,7 +546,7 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, client_max_routing), 1 },
 	{ "accept_rate_limit", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, accept_rate_limit), 1 },
-	{ "server_login_retry", OD_CONFIG_FIELD_U64,
+	{ "server_login_retry", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, server_login_retry_ms), 1 },
 	{ "cache_coroutine", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, cache_coroutine), 0 },
@@ -557,27 +558,27 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, coroutine_stack_size), 0 },
 	{ "system_coroutine_stack_size", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, system_coroutine_stack_size), 0 },
-	{ "dns_cache_ttl", OD_CONFIG_FIELD_INT,
+	{ "dns_cache_ttl", OD_CONFIG_FIELD_DURATION_INT,
 	  offsetof(od_config_t, dns_cache_ttl_ms), 0 },
 	{ "hba_file", OD_CONFIG_FIELD_STRING, offsetof(od_config_t, hba_file),
 	  0 },
-	{ "group_checker_interval", OD_CONFIG_FIELD_U64,
+	{ "group_checker_interval", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, group_checker_interval_ms), 0 },
-	{ "auth_query_cache_ttl", OD_CONFIG_FIELD_U64,
+	{ "auth_query_cache_ttl", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, auth_query_cache_ttl_ms), 1 },
-	{ "auth_query_cache_ttl_jitter", OD_CONFIG_FIELD_U64,
+	{ "auth_query_cache_ttl_jitter", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, auth_query_cache_ttl_jitter_ms), 1 },
-	{ "auth_query_cache_error_retry", OD_CONFIG_FIELD_U64,
+	{ "auth_query_cache_error_retry", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, auth_query_cache_error_retry_ms), 1 },
 	{ "auth_query_cache_stale_on_error", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, auth_query_cache_stale_on_error), 1 },
-	{ "auth_query_timeout", OD_CONFIG_FIELD_U64,
+	{ "auth_query_timeout", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, auth_query_timeout_ms), 1 },
-	{ "backend_connect_timeout_ms", OD_CONFIG_FIELD_U64,
+	{ "backend_connect_timeout_ms", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, backend_connect_timeout_ms), 1 },
-	{ "cancel_timeout_ms", OD_CONFIG_FIELD_U64,
+	{ "cancel_timeout_ms", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, cancel_timeout_ms), 1 },
-	{ "cancel_queue_timeout_ms", OD_CONFIG_FIELD_I64,
+	{ "cancel_queue_timeout_ms", OD_CONFIG_FIELD_DURATION_I64,
 	  offsetof(od_config_t, cancel_queue_timeout_ms), 0 },
 	{ "cancel_max_inflight", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, cancel_max_inflight), 0 },
@@ -707,6 +708,17 @@ int od_config_field_format(const od_config_field_t *field, const char *value,
 	int n;
 
 	switch (field->type) {
+	case OD_CONFIG_FIELD_DURATION_INT:
+	case OD_CONFIG_FIELD_DURATION_I64:
+	case OD_CONFIG_FIELD_DURATION_U64: {
+		od_duration_value_t parsed;
+		if (!od_duration_parse_value(value, &parsed, NULL)) {
+			return -1;
+		}
+		/* Keep the text: the config grammar applies the option's unit/range. */
+		return od_config_field_format_string(field->key, value, buf,
+						     size);
+	}
 	case OD_CONFIG_FIELD_INT:
 		/* workers "auto" means half of the CPUs, see cfg/parse.y */
 		if (strcmp(field->key, "workers") == 0 &&
@@ -750,12 +762,15 @@ void od_config_field_value(od_config_t *config, const od_config_field_t *field,
 
 	switch (field->type) {
 	case OD_CONFIG_FIELD_INT:
+	case OD_CONFIG_FIELD_DURATION_INT:
 		od_snprintf(buf, size, "%d", *(int *)at);
 		break;
 	case OD_CONFIG_FIELD_I64:
+	case OD_CONFIG_FIELD_DURATION_I64:
 		od_snprintf(buf, size, "%" PRId64, *(int64_t *)at);
 		break;
 	case OD_CONFIG_FIELD_U64:
+	case OD_CONFIG_FIELD_DURATION_U64:
 		od_snprintf(buf, size, "%" PRIu64, *(uint64_t *)at);
 		break;
 	case OD_CONFIG_FIELD_BOOL:
