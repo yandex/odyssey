@@ -3496,7 +3496,7 @@ static void od_frontend_cancel_close(od_client_t *client)
 			(uint32_t)instance->config.cancel_timeout_ms :
 			UINT32_MAX;
 	if (mm_tls_shutdown(client->io.io, timeout) == -1) {
-		od_debug(&instance->logger, "cancel", client, NULL,
+		od_debug(&instance->logger, client, NULL,
 			 "TLS shutdown failed: %s", od_io_error(&client->io));
 	}
 	od_frontend_close(client);
@@ -3547,7 +3547,7 @@ void od_frontend(void *arg)
 		od_routing_slot_release(global);
 		/* libpq's PQcancelPoll requires EOF rather than a TCP reset. */
 		if (mm_io_set_nolinger(client->io.io, 0) == -1) {
-			od_error(&instance->logger, "cancel", client, NULL,
+			od_error(&instance->logger, client, NULL,
 				 "failed to disable reset on close: %s",
 				 strerror(machine_errno()));
 			od_frontend_close(client);
