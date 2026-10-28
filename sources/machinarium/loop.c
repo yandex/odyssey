@@ -5,10 +5,18 @@
  * cooperative multitasking engine.
  */
 
-#include <limits.h>
+#include <string.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/loop.h>
+
+/*
+ * Do not sleep longer than one second even if the next timer is far away.
+ * This keeps the value safely within epoll_wait()/kevent() int timeout and
+ * bounds the loop reaction to a clock jump. One extra wakeup per second is
+ * negligible for the Odyssey event loop.
+ */
+#define MM_LOOP_MAX_SLEEP_MS 1000
 
 #if defined(__linux__)
 #include <machinarium/epoll.h>
@@ -73,17 +81,16 @@ int mm_loop_step(mm_loop_t *loop)
 	 */
 	int timeout_ms = 0;
 	if (fired == 0) {
-		timeout_ms = 1000;
+		timeout_ms = MM_LOOP_MAX_SLEEP_MS;
 
 		uint64_t next = mm_clock_next_timeout(&loop->clock);
 		if (next != UINT64_MAX) {
 			uint64_t now = loop->clock.time_ms;
 			uint64_t diff = next > now ? next - now : 0;
 
-			if (diff > (uint64_t)INT_MAX) {
-				diff = (uint64_t)INT_MAX;
+			if (diff < MM_LOOP_MAX_SLEEP_MS) {
+				timeout_ms = (int)diff;
 			}
-			timeout_ms = (int)diff;
 		}
 	}
 

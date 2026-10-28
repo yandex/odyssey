@@ -14,20 +14,49 @@
 #include <machinarium/timer.h>
 #include <machinarium/clock.h>
 
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
+#include <intrin.h>
+#endif
+
+static inline int mm_clock_ctz64(uint64_t bits)
+{
+	assert(bits != 0);
+
+#if defined(__GNUC__) || defined(__clang__)
+	return __builtin_ctzll(bits);
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
+	unsigned long index;
+
+	_BitScanForward64(&index, bits);
+	return (int)index;
+#else
+	int index = 0;
+
+	while ((bits & 1) == 0) {
+		bits >>= 1;
+		index++;
+	}
+	return index;
+#endif
+}
+
 static inline int mm_clock_mask_test(const mm_clock_t *clock, int level, int slot)
 {
-	uint64_t mask = clock->wheel_mask[level][slot >> 6];
-	return (mask & (1ULL << (slot & 63))) != 0;
+	uint64_t mask = clock->wheel_mask[level][slot >> MM_WHEEL_MASK_SHIFT];
+
+	return (mask & (1ULL << (slot & MM_WHEEL_MASK_BIT_MASK))) != 0;
 }
 
 static inline void mm_clock_mask_set(mm_clock_t *clock, int level, int slot)
 {
-	clock->wheel_mask[level][slot >> 6] |= 1ULL << (slot & 63);
+	clock->wheel_mask[level][slot >> MM_WHEEL_MASK_SHIFT] |=
+		1ULL << (slot & MM_WHEEL_MASK_BIT_MASK);
 }
 
 static inline void mm_clock_mask_clear(mm_clock_t *clock, int level, int slot)
 {
-	clock->wheel_mask[level][slot >> 6] &= ~(1ULL << (slot & 63));
+	clock->wheel_mask[level][slot >> MM_WHEEL_MASK_SHIFT] &=
+		~(1ULL << (slot & MM_WHEEL_MASK_BIT_MASK));
 }
 
 /*
@@ -35,15 +64,16 @@ static inline void mm_clock_mask_clear(mm_clock_t *clock, int level, int slot)
  */
 static int mm_clock_mask_first(const uint64_t *mask, int from)
 {
-	for (int word = from >> 6; word < MM_WHEEL_MASK_WORDS; word++) {
+	int first_word = from >> MM_WHEEL_MASK_SHIFT;
+
+	for (int word = first_word; word < MM_WHEEL_MASK_WORDS; word++) {
 		uint64_t bits = mask[word];
 
-		if (word == (from >> 6)) {
-			bits &= ~0ULL << (from & 63);
+		if (word == first_word) {
+			bits &= ~0ULL << (from & MM_WHEEL_MASK_BIT_MASK);
 		}
 		if (bits != 0) {
-			return word * 64 +
-			       __builtin_ctzll((unsigned long long)bits);
+			return word * MM_WHEEL_MASK_BITS + mm_clock_ctz64(bits);
 		}
 	}
 	return -1;
@@ -57,12 +87,12 @@ static inline uint64_t mm_clock_bucket_start(const mm_timer_t *timer, int level)
 }
 
 /*
- * Pick a wheel level and a bucket for the timer. A bucket is allowed to
- * contain timers with the same bucket start only, so an occupied bucket
- * from another window forces the timer up to the next level. Returns -1
- * when the timer has to be put into the overflow list.
+ * Pick a wheel level and a bucket for a future timer. The deadline may
+ * cross the current window of the selected level, in which case the timer
+ * is promoted to the next level. Returns -1 when the timer does not fit
+ * into the wheel and has to be put into the overflow list.
  */
-static int mm_clock_link_level(mm_clock_t *clock, uint64_t timeout, uint64_t now, int *slot_out)
+static int mm_clock_link_level(uint64_t timeout, uint64_t now, int *slot_out)
 {
 	uint64_t delta = timeout - now;
 	int level = 0;
@@ -78,7 +108,6 @@ static int mm_clock_link_level(mm_clock_t *clock, uint64_t timeout, uint64_t now
 		uint64_t step = 1ULL << shift;
 		uint64_t start = timeout & ~(step - 1);
 		int slot;
-		mm_list_t *bucket;
 
 		if ((start >> window_shift) != (now >> window_shift)) {
 			if (level == MM_WHEEL_LEVELS - 1) {
@@ -89,46 +118,17 @@ static int mm_clock_link_level(mm_clock_t *clock, uint64_t timeout, uint64_t now
 		}
 
 		slot = (int)((timeout >> shift) & MM_WHEEL_SLOT_MASK);
-		bucket = &clock->wheel[level][slot];
-		if (!mm_list_empty(bucket)) {
-			mm_timer_t *head =
-				mm_container_of(bucket->next, mm_timer_t, link);
-			uint64_t head_start = head->timeout & ~(step - 1);
-
-			if (head_start != start) {
-				/*
-				 * A bucket which is already due will be
-				 * collected before any future timer is
-				 * re-linked. It is safe to append to it: the
-				 * two-phase collection sorts timers out after
-				 * the bucket is emptied.
-				 */
-				if (head_start > now) {
-					if (level == MM_WHEEL_LEVELS - 1) {
-						return -1;
-					}
-					level++;
-					continue;
-				}
-			}
-		}
-
 		*slot_out = slot;
 
-		/*
-		 * A future timer may only be placed into an already due
-		 * bucket when that bucket is about to be collected and
-		 * emptied by mm_clock_step().
-		 */
-		assert(start > now || !mm_list_empty(bucket));
+		assert(start > now);
 		return level;
 	}
 }
 
 static void mm_clock_link(mm_clock_t *clock, mm_timer_t *timer, uint64_t now)
 {
-	int level;
-	int slot;
+	int level = -1;
+	int slot = 0;
 
 	if (timer->timeout <= now) {
 		/*
@@ -148,7 +148,7 @@ static void mm_clock_link(mm_clock_t *clock, mm_timer_t *timer, uint64_t now)
 		mm_list_append(&clock->overflow_list, &timer->link);
 		return;
 	} else {
-		level = mm_clock_link_level(clock, timer->timeout, now, &slot);
+		level = mm_clock_link_level(timer->timeout, now, &slot);
 		if (level < 0) {
 			timer->level = -1;
 			timer->slot = 0;
@@ -189,20 +189,21 @@ static void mm_clock_collect_bucket(mm_clock_t *clock, int level, int slot,
 static int mm_clock_fire_pending(mm_clock_t *clock, mm_list_t *pending,
 				 uint64_t now)
 {
-	mm_list_t *i = pending->next;
 	int fired = 0;
 
-	while (i != pending) {
-		mm_timer_t *timer = mm_container_of(i, mm_timer_t, link);
+	/*
+	 * Pop the timer before its callback. A callback may stop and
+	 * restart another timer from the same pending list; without the
+	 * pop, a saved "next" pointer could point into the wheel after
+	 * such a restart. Popping keeps the pending list correct because
+	 * mm_clock_timer_del() unlinks a stopped timer by itself.
+	 */
+	while (!mm_list_empty(pending)) {
+		mm_timer_t *timer =
+			mm_container_of(mm_list_pop(pending), mm_timer_t, link);
 
-		i = i->next;
+		assert(timer->active);
 
-		/* The callback of a previous timer could stop this one. */
-		if (!timer->active) {
-			continue;
-		}
-
-		mm_list_unlink(&timer->link);
 		if (timer->timeout <= now) {
 			timer->active = 0;
 			timer->level = -1;
@@ -233,20 +234,30 @@ static void mm_clock_collect_level(mm_clock_t *clock, int level, uint64_t last,
 		 * can be due as well. Check the actual bucket start to skip
 		 * timers that are still in the future.
 		 */
-		for (int slot = 0; slot < MM_WHEEL_SLOTS; slot++) {
-			mm_list_t *bucket = &clock->wheel[level][slot];
-			mm_timer_t *timer;
-			uint64_t start;
+		for (int word = 0; word < MM_WHEEL_MASK_WORDS; word++) {
+			uint64_t bits = clock->wheel_mask[level][word];
 
-			if (mm_list_empty(bucket)) {
-				continue;
+			while (bits != 0) {
+				int bit = mm_clock_ctz64(bits);
+				int slot = word * MM_WHEEL_MASK_BITS + bit;
+				mm_list_t *bucket = &clock->wheel[level][slot];
+				mm_timer_t *timer;
+				uint64_t start;
+
+				bits &= bits - 1;
+				if (mm_list_empty(bucket)) {
+					mm_clock_mask_clear(clock, level, slot);
+					continue;
+				}
+				timer = mm_container_of(bucket->next,
+							mm_timer_t, link);
+				start = mm_clock_bucket_start(timer, level);
+				if (start > now) {
+					continue;
+				}
+				mm_clock_collect_bucket(clock, level, slot,
+							pending);
 			}
-			timer = mm_container_of(bucket->next, mm_timer_t, link);
-			start = mm_clock_bucket_start(timer, level);
-			if (start > now) {
-				continue;
-			}
-			mm_clock_collect_bucket(clock, level, slot, pending);
 		}
 		return;
 	}
@@ -274,7 +285,6 @@ static void mm_clock_collect_level(mm_clock_t *clock, int level, uint64_t last,
 static int mm_clock_advance_overflow(mm_clock_t *clock, uint64_t now)
 {
 	mm_list_t pending;
-	mm_list_t *i;
 	int fired = 0;
 
 	if (mm_list_empty(&clock->overflow_list)) {
@@ -282,8 +292,9 @@ static int mm_clock_advance_overflow(mm_clock_t *clock, uint64_t now)
 	}
 
 	/*
-	 * Splice the overflow list into a local list, so a timer that is
-	 * re-linked back into overflow is not visited twice.
+	 * Splice the overflow list into a local list. Then pop timers one
+	 * by one: a callback may stop and restart another overflow timer,
+	 * and a saved "next" pointer would become invalid.
 	 */
 	mm_list_init(&pending);
 	while (!mm_list_empty(&clock->overflow_list)) {
@@ -293,35 +304,23 @@ static int mm_clock_advance_overflow(mm_clock_t *clock, uint64_t now)
 		mm_list_append(&pending, node);
 	}
 
-	i = pending.next;
-	while (i != &pending) {
-		mm_timer_t *timer = mm_container_of(i, mm_timer_t, link);
+	while (!mm_list_empty(&pending)) {
+		mm_timer_t *timer = mm_container_of(mm_list_pop(&pending),
+						    mm_timer_t, link);
 
-		i = i->next;
-
-		if (!timer->active) {
-			continue;
-		}
+		assert(timer->active);
 
 		if (timer->timeout <= now) {
-			mm_list_unlink(&timer->link);
 			timer->active = 0;
 			timer->level = -1;
 			clock->timers_count--;
 			timer->callback(timer);
 			fired++;
 		} else if (timer->timeout - now < MM_WHEEL_MAX_TIMEOUT) {
-			mm_list_unlink(&timer->link);
 			mm_clock_link(clock, timer, now);
+		} else {
+			mm_list_append(&clock->overflow_list, &timer->link);
 		}
-	}
-
-	/* Return timers that still do not fit into the wheel. */
-	while (!mm_list_empty(&pending)) {
-		mm_list_t *node = pending.next;
-
-		mm_list_unlink(node);
-		mm_list_append(&clock->overflow_list, node);
 	}
 
 	return fired;
@@ -338,7 +337,6 @@ void mm_clock_init(mm_clock_t *clock)
 	mm_list_init(&clock->overflow_list);
 	clock->wheel_last_ms = 0;
 	clock->timers_count = 0;
-	clock->timers_seq = 0;
 	clock->active = 0;
 	clock->time_ms = 0;
 	clock->time_ns = 0;
@@ -356,7 +354,6 @@ int mm_clock_timer_add(mm_clock_t *clock, mm_timer_t *timer)
 {
 	uint64_t now = clock->time_ms;
 
-	timer->seq = clock->timers_seq++;
 	if (timer->interval > UINT64_MAX - now) {
 		/* Do not wrap the deadline around and fire it early. */
 		timer->timeout = UINT64_MAX;
@@ -413,6 +410,15 @@ int mm_clock_step(mm_clock_t *clock)
 
 		mm_list_init(&pending);
 
+		/*
+		 * Due buckets are collected from the highest level to the
+		 * lowest one. Timers with the same deadline keep FIFO order,
+		 * but timers with different deadlines that expire within the
+		 * same clock step are not guaranteed to fire in deadline
+		 * order. This is acceptable for timer callbacks which only
+		 * wake coroutines, but should be kept in mind by future
+		 * callbacks.
+		 */
 		for (int level = MM_WHEEL_LEVELS - 1; level > 0; level--) {
 			mm_clock_collect_level(clock, level, last, now,
 					       &pending);
@@ -443,6 +449,13 @@ int mm_clock_step(mm_clock_t *clock)
 	return total_fired;
 }
 
+/*
+ * Return the absolute lower bound of the next timer deadline. Level zero
+ * returns the exact millisecond, while higher levels return the start of
+ * the next bucket. A bucket may start before its earliest timer, so the
+ * event loop can wake up a few times while a long timer is cascaded down.
+ * Timers still fire only once their deadline is reached.
+ */
 uint64_t mm_clock_next_timeout(mm_clock_t *clock)
 {
 	uint64_t now = clock->time_ms;

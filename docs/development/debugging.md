@@ -101,7 +101,7 @@ scheduler = 0x55555557d898
 clock = 0x55555557da50
 coroutine = 0x7fffe0000b70
 #3  0x0000555555558a03 in machine_sleep (time_ms=0) at /home/rkhapov/odyssey/build/third_party/machinarium/sources/machine.c:201
-call = {type = MM_CALL_SLEEP, coroutine = 0x7fffe0000b70, timer = {active = 1, timeout = 181455347, interval = 0, seq = 248, callback = 0x55555555dece <mm_call_timer_cb>, arg = 0x7ffff7ef4ec0, clock = 0x55555557da50}, cancel_function = 0x55555555df3f <mm_call_cancel_cb>, arg = 0x7ffff7ef4ec0, data = 0x0, timedout = 0, status = 0}
+call = {type = MM_CALL_SLEEP, coroutine = 0x7fffe0000b70, timer = {active = 1, timeout = 181455347, interval = 0, callback = 0x55555555dece <mm_call_timer_cb>, arg = 0x7ffff7ef4ec0, clock = 0x55555557da50}, cancel_function = 0x55555555df3f <mm_call_cancel_cb>, arg = 0x7ffff7ef4ec0, data = 0x0, timedout = 0, status = 0}
 #4  0x00005555555580b7 in do_smt2 (arg=0x0) at benchmark_csw.c:71
 c = 103 'g'
 #5  0x000055555555810e in do_smt (arg=0x0) at benchmark_csw.c:79

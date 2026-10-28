@@ -25,7 +25,10 @@
 #define MM_WHEEL_SLOTS 256
 #define MM_WHEEL_SLOT_BITS 8
 #define MM_WHEEL_SLOT_MASK (MM_WHEEL_SLOTS - 1)
-#define MM_WHEEL_MASK_WORDS (MM_WHEEL_SLOTS / 64)
+#define MM_WHEEL_MASK_SHIFT 6
+#define MM_WHEEL_MASK_BITS (1 << MM_WHEEL_MASK_SHIFT)
+#define MM_WHEEL_MASK_BIT_MASK (MM_WHEEL_MASK_BITS - 1)
+#define MM_WHEEL_MASK_WORDS (MM_WHEEL_SLOTS / MM_WHEEL_MASK_BITS)
 #define MM_WHEEL_TIMEOUT_BITS (MM_WHEEL_SLOT_BITS * MM_WHEEL_LEVELS)
 #define MM_WHEEL_MAX_TIMEOUT (1ULL << MM_WHEEL_TIMEOUT_BITS)
 
@@ -44,7 +47,6 @@ struct mm_clock {
 	mm_list_t overflow_list;
 	uint64_t wheel_last_ms;
 	uint64_t timers_count;
-	uint32_t timers_seq;
 };
 
 void mm_clock_init(mm_clock_t *);
