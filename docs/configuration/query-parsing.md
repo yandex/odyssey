@@ -42,6 +42,15 @@ needed.
 
 `query_parsing_mode full`
 
+`SET odyssey.parser_mode = 'full'` or `'mini'` overrides simple-query parsing
+for this session. It requires `virtual_processing` and query parsing to be enabled.
+`SHOW odyssey.parser_mode` reports the effective mode;
+`SET odyssey.parser_mode = DEFAULT` restores the configuration.
+
+`disabled` is only available through `query_parsing_mode`. With parsing disabled,
+virtual `SET`/`SHOW` reach PostgreSQL. PostgreSQL may accept `SET odyssey.parser_mode`
+as a custom GUC, but it cannot enable Odyssey's parser.
+
 ## **query_parsing_max_query_len**
 
 *integer*
