@@ -309,6 +309,71 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 }
 
 static od_frontend_status_t
+rewrite_sql_execute(od_client_t *client, const char *query, uint32_t query_len,
+		    machine_msg_t **rewritten, uint32_t timeout_ms)
+{
+	od_query_ctx_t *ctx = &client->query_ctx;
+	if (!client->rule->pool->reserve_prepared_statement ||
+	    !od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EXECUTE)) {
+		return OD_OK;
+	}
+
+	od_pstmt_t *pstmt = od_client_get_pstmt(client, ctx->s1);
+	if (pstmt == NULL) {
+		/* Keep native SQL PREPARE/EXECUTE behavior for other names. */
+		return OD_OK;
+	}
+
+	od_server_t *server = client->server;
+	if (!od_server_has_pstmt(server, pstmt)) {
+		machine_msg_t *parse = od_pstmt_parse_of(pstmt);
+		if (parse == NULL) {
+			return OD_EOOM;
+		}
+		machine_msg_t *sync = kiwi_fe_write_sync(parse);
+		if (sync == NULL) {
+			machine_msg_free(parse);
+			return OD_EOOM;
+		}
+		od_wait_event_start(OD_WAIT_DEPLOY_SERVER_WRITE);
+		int rc = od_write2(&server->io, sync, timeout_ms);
+		od_wait_event_end(OD_WAIT_DEPLOY_SERVER_WRITE);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		od_server_sync_request(server, 1);
+		od_frontend_status_t status =
+			od_service_stream_server_until_rfq(
+				server, 0 /* ignore errors */, timeout_ms,
+				OD_WAIT_DEPLOY_SERVER_READ);
+		if (status != OD_OK) {
+			return status;
+		}
+		if (od_server_add_pstmt(server, pstmt) == -1) {
+			return OD_EOOM;
+		}
+	}
+
+	/* Only the name changes: PostgreSQL evaluates the argument SQL. */
+	size_t start = ctx->name_location.start;
+	size_t end = ctx->name_location.end;
+	size_t name_len = strlen(pstmt->name);
+	size_t size =
+		sizeof(kiwi_header_t) + query_len - (end - start) + name_len;
+	*rewritten = machine_msg_create(size);
+	if (*rewritten == NULL) {
+		return OD_EOOM;
+	}
+	char *pos = machine_msg_data(*rewritten);
+	kiwi_write8(&pos, KIWI_FE_QUERY);
+	kiwi_write32(&pos, size - 1);
+	kiwi_write(&pos, query, start);
+	kiwi_write(&pos, pstmt->name, name_len);
+	kiwi_write(&pos, query + end, query_len - end);
+	return OD_OK;
+}
+
+static od_frontend_status_t
 process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 {
 	od_client_t *client = relay->client;
@@ -350,10 +415,23 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			return OD_ATTACH;
 		}
 
+		machine_msg_t *execute = NULL;
+		status = rewrite_sql_execute(client, query, query_len, &execute,
+					     timeout_ms);
+		if (status != OD_OK) {
+			return status;
+		}
+		if (execute != NULL) {
+			msg = execute;
+			query = (char *)machine_msg_data(execute) +
+				sizeof(kiwi_header_t);
+		}
+
 		if (client->pending_begin) {
 			machine_msg_t *rewritten = kiwi_fe_write_query_join(
 				NULL, "BEGIN;", query, NULL);
 			if (rewritten == NULL) {
+				machine_msg_free_safe(execute);
 				return OD_EOOM;
 			}
 
@@ -366,6 +444,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			rc = od_io_write(&server->io, msg, timeout_ms);
 			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 		}
+		machine_msg_free_safe(execute);
 
 		if (rc != 0) {
 			return OD_ESERVER_WRITE;

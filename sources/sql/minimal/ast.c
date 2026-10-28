@@ -170,6 +170,14 @@ void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 		}
 		break;
 	}
+	case OD_SQL_MINIMAL_NODE_TYPE_EXECUTE_STMT: {
+		const od_sql_minimal_execute_stmt_t *n =
+			(const od_sql_minimal_execute_stmt_t *)ast;
+		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_EXECUTE);
+		od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", n->name);
+		ctx->name_location = n->name_location;
+		break;
+	}
 	default:
 		break;
 	}

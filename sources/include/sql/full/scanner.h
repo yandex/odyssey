@@ -7,6 +7,11 @@ typedef union core_YYSTYPE
 	int			ival;
 	char	   *str;
 	const char *keyword;
+	/* Bison's default reductions preserve the identifier's raw extent. */
+	struct {
+		char *str;
+		int end_location;
+	} identifier;
 } core_YYSTYPE;
 
 #ifndef YYLTYPE

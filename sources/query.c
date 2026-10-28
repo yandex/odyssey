@@ -943,6 +943,12 @@ static void parse_full(const char *query, uint32_t query_len,
 			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s",
 				    dstmt->name);
 		}
+	} else if (IsA(node, ExecuteStmt)) {
+		ExecuteStmt *estmt = castNode(ExecuteStmt, node);
+		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_EXECUTE);
+		od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", estmt->name);
+		ctx->name_location.start = estmt->name_location;
+		ctx->name_location.end = estmt->name_end_location;
 	} else if (IsA(node, SelectStmt)) {
 		/* inspired by https://github.com/pgpool/pgpool2/blob/91c8522/src/protocol/pool_process_query.c#L1140 */
 		SelectStmt *sstmt = castNode(SelectStmt, node);
