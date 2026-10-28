@@ -91,19 +91,15 @@ INTEGER     -?{DIGIT}+
     SET_YYLLOC();
     TAIL_TOUCH(0);
 }
-"/*"         { SET_YYLLOC();
-               int c;
-               while ((c = input(yyscanner)) != 0) {
-                   if (c == '*') {
-                       int next = input(yyscanner);
-                       if (next == 0) break;
-                       if (next == '/') goto comment_done;
-                       unput(next);
-                   }
-               }
-               comment_done:;
-               /* skip block comment */
-             }
+"/*"([^*]|\*+[^*/])*\*+"/" { SET_YYLLOC(); /* skip block comment */ }
+
+ /*
+  * unterminated block comment. Do not try to consume it with input(): on
+  * EOF flex falls into yyrestart(yyin) with yyin == NULL, which re-enables
+  * buffer filling, and the next scan step crashes in fread(). Report an
+  * error instead, same as postgres does
+  */
+"/*"         { SET_YYLLOC(); return ERROR_TOKEN; }
 
 <TAIL>"/*" {
     SET_YYLLOC();

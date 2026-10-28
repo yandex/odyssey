@@ -392,6 +392,32 @@ static void test_empty_input(void)
 	test(node == NULL);
 }
 
+/*
+ * an unterminated block comment used to crash the scanner: the comment
+ * rule consumed it with input() up to EOF, which made flex re-enable
+ * buffer filling and read from yyin == NULL on the next token
+ */
+static void test_unterminated_block_comment(void)
+{
+	parse_fail("/*");
+	parse_fail("/* SHOW x");
+	parse_fail("/* SHOW x *");
+	parse_fail("/* SHOW x */ SHOW y /*");
+	parse_fail("SHOW /* x");
+	parse_fail("SHOW x /*");
+	parse_fail("SHOW x /* ... */ /*");
+	/* same thing in the opaque-tail scanner state */
+	parse_fail("PREPARE p AS SELECT /* x");
+	parse_fail("PREPARE p AS SELECT /* /* x */");
+	parse_fail("EXECUTE p (/* x");
+
+	/* terminated ones are fine, including ones with stars inside */
+	test(strcmp(parse_ok("/* ** * */ SHOW x"), "(show x)") == 0);
+	test(strcmp(parse_ok("/***/ SHOW x"), "(show x)") == 0);
+	test(strcmp(parse_ok("/* a *//* b */SHOW x"), "(show x)") == 0);
+	test(strcmp(parse_ok("SHOW x /* a */"), "(show x)") == 0);
+}
+
 static void test_parse_errors(void)
 {
 	parse_fail("SELECT 1");
@@ -1290,6 +1316,7 @@ void odyssey_test_sql_minimal_parser(void)
 	test_unlisten_with_semicolon();
 
 	test_empty_input();
+	test_unterminated_block_comment();
 	test_parse_errors();
 
 	test_long_query_oom();
