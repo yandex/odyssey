@@ -1191,7 +1191,7 @@ scanner_yyerror(const char *message, core_yyscan_t yyscanner)
 
 	/* Return control to od_sql_full_raw_parse() if it expects us to. */
 	if (yyext->error_set)
-		longjmp(yyext->error_jmp, 1);
+		mm_longjmp(yyext->error_jmp, 1);
 
 	abort();
 }

@@ -45,7 +45,7 @@
 		if (_ctx->error_cb) { \
 			_ctx->error_cb(msg, _ctx->error_cb_userdata); \
 		} \
-		longjmp(_ctx->fatal_jmp, 1); \
+		mm_longjmp(_ctx->fatal_jmp, 1); \
 	} \
 	fprintf(stderr, "%s\n", msg); \
 	od_assert(0); \
@@ -250,8 +250,13 @@ INTEGER     -?{DIGIT}+
 		return ERROR_TOKEN;
 	}
 
+	/* IDENT is pure ASCII, no need for the locale-aware tolower() */
 	for (int _i = 0; _i < yyleng; _i++) {
-		s[_i] = (char)tolower(yytext[_i]);
+		char _c = yytext[_i];
+		if (_c >= 'A' && _c <= 'Z') {
+			_c += 'a' - 'A';
+		}
+		s[_i] = _c;
 	}
 
 	s[yyleng] = '\0';

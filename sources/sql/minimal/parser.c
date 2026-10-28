@@ -34,7 +34,7 @@ od_sql_minimal_node_t *od_sql_minimal_parse(const char *input, size_t input_len,
 	 * instead of calling exit(1). We treat it as a normal parse error
 	 */
 	ctx.fatal_set = 1;
-	if (setjmp(ctx.fatal_jmp) != 0) {
+	if (mm_setjmp(ctx.fatal_jmp) != 0) {
 		/*
 		 * scanner hit a fatal error (most likely OOM in arena)
 		 * return NULL as a normal parse failure
