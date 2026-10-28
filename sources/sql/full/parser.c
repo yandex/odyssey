@@ -54,7 +54,7 @@ full_parse_oom_handler(void)
 	if (yyext->error_cb)
 		yyext->error_cb("out of memory", yyext->error_cb_userdata);
 
-	longjmp(yyext->error_jmp, 1);
+	mm_longjmp(yyext->error_jmp, 1);
 }
 
 
@@ -81,7 +81,7 @@ od_sql_full_raw_parse(const char *str,
 	yyextra.error_cb = error_cb;
 	yyextra.error_cb_userdata = error_userdata;
 
-	if (setjmp(yyextra.error_jmp) != 0)
+	if (mm_setjmp(yyextra.error_jmp) != 0)
 	{
 		/*
 		 * Syntax error or out of memory.  The scanner may not have been

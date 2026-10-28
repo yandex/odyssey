@@ -2,7 +2,14 @@
 
 %define api.pure full
 %define api.prefix {od_sql_minimal_yy}
-%define parse.error verbose
+/*
+ * NB: not "verbose". Most of the traffic (SELECT/INSERT/...) is rejected by
+ * this grammar on the very first token, and with verbose errors bison would
+ * compute the set of expected tokens and format a message on every such
+ * query, only for od_sql_minimal_yyerror() to drop it (error_cb is NULL in
+ * production). "simple" keeps the error path to a single yyerror() call
+ */
+%define parse.error simple
 %locations
 
 %parse-param { yyscan_t scanner }

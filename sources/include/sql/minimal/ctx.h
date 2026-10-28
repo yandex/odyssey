@@ -10,8 +10,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <setjmp.h>
 
+#include <machinarium/setjmp.h>
 #include <sql/minimal/ast.h>
 
 typedef void (*od_sql_minimal_error_cb_t)(const char *msg, void *userdata);
@@ -38,7 +38,7 @@ typedef struct od_sql_minimal_parse_ctx {
 	 * used to recover from flex YY_FATAL_ERROR
 	 * (which calls exit() by default)
 	 */
-	jmp_buf fatal_jmp;
+	mm_jmp_buf_t fatal_jmp;
 	int fatal_set;
 } od_sql_minimal_parse_ctx_t;
 
