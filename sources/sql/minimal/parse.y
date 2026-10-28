@@ -191,6 +191,11 @@ opt_semicolon:
 	| ';'
 	;
 
+/*
+ * every statement starts with a keyword; od_sql_minimal_parse() relies on
+ * that to reject other input before running the scanner, so when adding a
+ * statement here also update od_sql_minimal_keyword_starts_stmt()
+ */
 stmt:
 	  set_stmt
 	| show_stmt
