@@ -2,3 +2,4 @@ test: switch_backend
 test: close_across_switch
 test: deallocate_across_switch
 test: shared_backend
+test: sql_reserved_names

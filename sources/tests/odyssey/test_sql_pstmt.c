@@ -167,10 +167,23 @@ static void test_reserved_names(void)
 		 "WHERE name LIKE 'odyssey_pstmt_%'"),
 		"PREPARE odyssey_pstm AS SELECT 1",
 		"EXECUTE my_odyssey_pstmt_1",
+		"PREPARE \"na\"\"me\" AS SELECT 1",
+		"PREPARE U&\"na\\006de\" AS SELECT 1",
+		"EXECUTE U&\"na!006de\" UESCAPE '!'(1)",
+		"DEALLOCATE U&\"na\\006de\"",
+		"EXPLAIN EXECUTE name(1)",
+		"CREATE TEMP TABLE result AS EXECUTE name(1)",
+		"PREPARE ok AS SELECT 1; EXECUTE U&\"na\\006de\"",
+		"DEALLOCATE ALL",
+		"-- odyssey_pstmt_1\nSELECT 1",
 	};
 	od_sql_pstmt_query_t q;
 
 	for (size_t i = 0; i < sizeof(rejected) / sizeof(rejected[0]); ++i) {
+		od_linear_alloc_init(&s_arena, s_arena_buf,
+				     sizeof(s_arena_buf));
+		test(od_sql_pstmt_query_uses_reserved_name(
+			rejected[i], strlen(rejected[i]), &s_arena));
 		analyze(&q, rejected[i]);
 		test(q.uses_reserved_name);
 		test(q.nops == 0);
@@ -178,6 +191,10 @@ static void test_reserved_names(void)
 	}
 
 	for (size_t i = 0; i < sizeof(allowed) / sizeof(allowed[0]); ++i) {
+		od_linear_alloc_init(&s_arena, s_arena_buf,
+				     sizeof(s_arena_buf));
+		test(!od_sql_pstmt_query_uses_reserved_name(
+			allowed[i], strlen(allowed[i]), &s_arena));
 		analyze(&q, allowed[i]);
 		test(!q.uses_reserved_name);
 		od_sql_pstmt_query_reset(&q);

@@ -111,6 +111,15 @@ od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
 void od_sql_pstmt_map_remove(od_sql_pstmt_map_t *map, const char *name);
 
 /*
+ * Detect SQL PREPARE/EXECUTE/DEALLOCATE names in Odyssey's namespace,
+ * including wrapped EXECUTE and Unicode-escaped identifiers. The whole
+ * NUL-terminated query is inspected without allocating tracking state.
+ * Uses and resets arena; returns 0 if parsing is disabled or fails.
+ */
+int od_sql_pstmt_query_uses_reserved_name(const char *query, size_t len,
+					  od_linear_alloc_t *arena);
+
+/*
  * query inspection
  *
  * od_sql_pstmt_query_analyze finds PREPARE and DEALLOCATE statements in the

@@ -49,4 +49,5 @@ void virtual_portal_init(od_virtual_portal_t *portal);
 void virtual_portal_free(od_virtual_portal_t *portal);
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
-					       const od_query_ctx_t *ctx);
+					       const od_query_ctx_t *ctx,
+					       bool uses_reserved_name);

@@ -297,6 +297,38 @@ static int is_reserved_name(const char *name)
 				       sizeof(OD_PSTMT_NAME_PREFIX) - 1) == 0;
 }
 
+/* Check the whole batch before any of its statements reaches a backend. */
+static int tree_uses_reserved_name(List *tree)
+{
+	ListCell *lc;
+	foreach(lc, tree)
+	{
+		RawStmt *rs = lfirst_node(RawStmt, lc);
+		if (is_reserved_name(stmt_pstmt_name(rs->stmt))) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int od_sql_pstmt_query_uses_reserved_name(const char *query, size_t len,
+					  od_linear_alloc_t *arena)
+{
+	if (arena == NULL || arena->buf == NULL) {
+		return 0;
+	}
+
+	/* Unicode identifiers may spell the prefix entirely with escapes. */
+	if (!contains_keyword(query, len, OD_PSTMT_NAME_PREFIX) &&
+	    !contains_keyword(query, len, "u&")) {
+		return 0;
+	}
+
+	List *tree =
+		od_sql_full_parse(arena, query, len, ignore_parse_error, NULL);
+	return tree_uses_reserved_name(tree);
+}
+
 static int op_from_stmt(od_sql_pstmt_op_t *op, RawStmt *rs, const char *query,
 			size_t len)
 {
@@ -368,16 +400,17 @@ int od_sql_pstmt_query_analyze(od_sql_pstmt_query_t *q, const char *query,
 		return 0;
 	}
 
+	if (tree_uses_reserved_name(tree)) {
+		/* the query is rejected, no need to track anything */
+		q->uses_reserved_name = 1;
+		return 0;
+	}
+
 	int nops = 0;
 	ListCell *lc;
 	foreach(lc, tree)
 	{
 		RawStmt *rs = lfirst_node(RawStmt, lc);
-		if (is_reserved_name(stmt_pstmt_name(rs->stmt))) {
-			/* the query is rejected, no need to track anything */
-			q->uses_reserved_name = 1;
-			return 0;
-		}
 		if (IsA(rs->stmt, PrepareStmt) ||
 		    IsA(rs->stmt, DeallocateStmt)) {
 			nops++;

@@ -1,0 +1,94 @@
+-- names starting with odyssey_pstmt_ belong to odyssey's own statements
+-- on backends and are rejected
+prepare odyssey_pstmt_1 as select 1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+\echo :SQLSTATE
+42939
+execute odyssey_pstmt_1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+execute U&"odyssey\005fpstmt_1";
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+explain analyze create table sql_reserved as execute odyssey_pstmt_1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+deallocate odyssey_pstmt_1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+-- not a statement name: allowed
+select 'odyssey_pstmt_1' as v;
+        v        
+-----------------
+ odyssey_pstmt_1
+(1 row)
+
+-- quoted names are case-sensitive: this one is not reserved, while the
+-- same name unquoted folds to lower case and is
+prepare "ODYSSEY_PSTMT_1" as select 'quoted' as v;
+execute "ODYSSEY_PSTMT_1";
+   v    
+--------
+ quoted
+(1 row)
+
+execute ODYSSEY_PSTMT_1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+deallocate "ODYSSEY_PSTMT_1";
+-- A whole batch must be rejected before its first side effect. A sequence
+-- change would survive the implicit transaction rollback after an error.
+create sequence sql_reserved_batch;
+select nextval('sql_reserved_batch') \; execute odyssey_pstmt_1;
+NOTICE:  processed virtually by odyssey
+ERROR:  prepared statement names starting with "odyssey_pstmt_" are reserved by odyssey
+\echo :SQLSTATE
+42939
+select is_called from sql_reserved_batch;
+ is_called 
+-----------
+ f
+(1 row)
+
+drop sequence sql_reserved_batch;
+-- Valid quoted/Unicode names and wrapped EXECUTE still reach PostgreSQL.
+begin;
+prepare U&"na\006de" as select 'unicode' as v;
+execute U&"na!006de" UESCAPE '!';
+    v    
+---------
+ unicode
+(1 row)
+
+explain (costs off) execute name;
+ QUERY PLAN 
+------------
+ Result
+(1 row)
+
+create temp table sql_reserved_valid as execute name;
+select * from sql_reserved_valid;
+    v    
+---------
+ unicode
+(1 row)
+
+prepare "na""me" as select 'quoted identifier' as v;
+execute "na""me";
+         v         
+-------------------
+ quoted identifier
+(1 row)
+
+rollback;
+-- The namespace is only reserved when prepared statement reservation is on.
+\connect 'host=localhost port=6432 user=tuser_unreserved dbname=postgres'
+prepare odyssey_pstmt_1 as select 'not reserved' as v;
+execute odyssey_pstmt_1;
+      v       
+--------------
+ not reserved
+(1 row)
+
+deallocate odyssey_pstmt_1;

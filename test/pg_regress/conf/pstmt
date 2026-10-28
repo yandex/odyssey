@@ -35,4 +35,16 @@ database "postgres" {
 		client_fwd_error yes
 		client_show_id no
 	}
+
+	user "tuser_unreserved" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "session"
+		pool_size 1
+		pool_timeout 0
+		pool_reserve_prepared_statement no
+		client_fwd_error yes
+		client_show_id no
+	}
 }
