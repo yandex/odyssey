@@ -1,139 +1,105 @@
 #include <odyssey.h>
 #include <tests/odyssey_test.h>
-#include <string.h>
-
 #include <sql_pstmt.h>
 #include <alloc/linear.h>
 
-#define OD_TEST_SQL_PSTMT_ARENA_SIZE (1024 * 1024)
-
-static _Alignas(max_align_t) uint8_t s_arena_buf[OD_TEST_SQL_PSTMT_ARENA_SIZE];
-static od_linear_alloc_t s_arena;
+static _Alignas(max_align_t) uint8_t buffer[1024 * 1024];
+static od_linear_alloc_t arena;
 
 static void analyze(od_sql_pstmt_query_t *q, const char *query)
 {
-	memset(q, 0, sizeof(od_sql_pstmt_query_t));
-	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
-	test(od_sql_pstmt_query_analyze(q, query, strlen(query), &s_arena) ==
-	     0);
+	memset(q, 0, sizeof(*q));
+	od_linear_alloc_init(&arena, buffer, sizeof(buffer));
+	test(od_sql_pstmt_query_analyze(q, query, strlen(query), &arena) == 0);
 	test(q->analyzed);
 }
 
-static void test_no_keyword(void)
+static void test_locations(void)
 {
+	const char *sql =
+		"SELECT ';'; PREPARE \"Ab\" AS SELECT $1::numeric, $2::text[]; EXECUTE \"Ab\"(1, 'a;b'); DEALLOCATE ALL";
 	od_sql_pstmt_query_t q;
-	analyze(&q, "EXECUTE foo(1); EXECUTE foo(2)");
-	test(q.nops == 0);
+	analyze(&q, sql);
+	test(q.active);
+	test(q.nops == 4);
+	test(q.ops[0].type == OD_SQL_PSTMT_OTHER);
+	test(q.ops[1].type == OD_SQL_PSTMT_PREPARE);
+	test(strcmp(q.ops[1].name, "Ab") == 0);
+	test(q.ops[1].query_location.start == strstr(sql, "SELECT $1") - sql);
+	test(q.ops[1].query_location.end - q.ops[1].query_location.start ==
+	     (int)strlen("SELECT $1::numeric, $2::text[]"));
+	test(q.ops[2].type == OD_SQL_PSTMT_EXECUTE);
+	test(strcmp(q.ops[2].name, q.ops[1].name) == 0);
+	test(q.ops[3].type == OD_SQL_PSTMT_DEALLOCATE_ALL);
 	od_sql_pstmt_query_reset(&q);
 }
 
-static void test_keyword_in_literal(void)
+static void test_identifier_forms(void)
 {
-	od_sql_pstmt_query_t q;
-	analyze(&q, "SELECT 'prepare deallocate'");
-	test(q.nops == 0);
-	od_sql_pstmt_query_reset(&q);
+	const char *inputs[] = {
+		"PREPARE prepare AS SELECT 'a; b'",
+		"PREPARE \"name\" AS SELECT 'a; b'",
+		"PREPARE name AS SELECT $1::numeric, $2::text[]",
+		"EXECUTE name(1)",
+	};
+	for (size_t i = 0; i < sizeof(inputs) / sizeof(inputs[0]); i++) {
+		od_sql_pstmt_query_t q;
+		analyze(&q, inputs[i]);
+		test(q.nops == 1 && q.active && !q.unsupported);
+		test(strcmp(q.ops[0].name, i == 0 ? "prepare" : "name") == 0);
+		test(q.ops[0].name_location.start >= 0);
+		od_sql_pstmt_query_reset(&q);
+	}
 }
 
-static void test_single_prepare(void)
+static void test_unsupported_syntax(void)
 {
-	const char *query = "PREPARE foo AS SELECT $1::int";
-	od_sql_pstmt_query_t q;
-	analyze(&q, query);
-	test(q.nops == 1);
-	test(q.ops[0].type == OD_SQL_PSTMT_OP_PREPARE);
-	test(q.ops[0].stmt_idx == 0);
-	test(strcmp(q.ops[0].name, "foo") == 0);
-	test(strcmp(q.ops[0].text, query) == 0);
-	test(q.ops[0].text_len == strlen(query));
-	od_sql_pstmt_query_reset(&q);
+	const char *inputs[] = {
+		"PREPARE typed (int) AS SELECT $1",
+		"PREPARE typed (numeric(10, 2), text[]) AS SELECT $1, $2",
+		"SELECT 1; PREPARE typed (int) AS SELECT $1",
+		"PREPARE p AS SELECT 1; COPY t FROM STDIN",
+		"EXECUTE p(1 + 2)",
+		"EXECUTE p('1'::int)",
+		"EXECUTE p(length('a'))",
+		"EXECUTE p(ARRAY[1, 2])",
+		"EXECUTE p(B'101')",
+		"PREPARE \"na\"\"me\" AS SELECT 1",
+		"PREPARE U&\"na\\006de\" AS SELECT 1",
+		"EXECUTE U&\"na!006de\" UESCAPE '!'(1)",
+		"DEALLOCATE U&\"na\\006de\"",
+		"EXPLAIN EXECUTE name(1)",
+		"CREATE TEMP TABLE result AS EXECUTE name(1)",
+		"PREPARE ok AS SELECT 1; EXECUTE U&\"na\\006de\"",
+		"PREPARE abcdefghijklmnopqrstuvwxyz_abcdefghijklmnopqrstuvwxyz_0123456789_x AS SELECT 1",
+	};
+	for (size_t i = 0; i < sizeof(inputs) / sizeof(inputs[0]); i++) {
+		od_sql_pstmt_query_t q;
+		analyze(&q, inputs[i]);
+		test(q.unsupported && !q.uses_reserved_name);
+		od_sql_pstmt_query_reset(&q);
+	}
 }
 
-static void test_prepare_with_types_and_case(void)
+static void test_execute_arguments(void)
 {
 	od_sql_pstmt_query_t q;
-	analyze(&q, "prepare FOO (int, text) as select $1, $2");
-	test(q.nops == 1);
-	/* unquoted names are folded to lower case, as PostgreSQL does */
-	test(strcmp(q.ops[0].name, "foo") == 0);
-	od_sql_pstmt_query_reset(&q);
-
-	analyze(&q, "PREPARE \"Mixed\"\"Name\" AS SELECT 1");
-	test(q.nops == 1);
-	test(strcmp(q.ops[0].name, "Mixed\"Name") == 0);
-	od_sql_pstmt_query_reset(&q);
-}
-
-static void test_prepare_with_comments(void)
-{
-	od_sql_pstmt_query_t q;
-	analyze(&q, "/* app */ PREPARE foo AS SELECT 1 -- trailing");
-	test(q.nops == 1);
-	test(strcmp(q.ops[0].name, "foo") == 0);
-	od_sql_pstmt_query_reset(&q);
-}
-
-static void test_multi_statement(void)
-{
-	const char *query =
-		"BEGIN; PREPARE a AS SELECT 1; SELECT 2; PREPARE b AS SELECT 3; EXECUTE a";
-	od_sql_pstmt_query_t q;
-	analyze(&q, query);
-	test(q.nops == 2);
-
-	test(q.ops[0].stmt_idx == 1);
-	test(strcmp(q.ops[0].name, "a") == 0);
-	test(strstr(q.ops[0].text, "PREPARE a AS SELECT 1") != NULL);
-	test(strchr(q.ops[0].text, ';') == NULL);
-
-	test(q.ops[1].stmt_idx == 3);
-	test(strcmp(q.ops[1].name, "b") == 0);
-	test(strstr(q.ops[1].text, "PREPARE b AS SELECT 3") != NULL);
-	test(strchr(q.ops[1].text, ';') == NULL);
-
-	/* the same statement text gives the same hash wherever it appears */
-	od_sql_pstmt_query_t single;
-	uint64_t hash_b = q.ops[1].hash;
-	od_sql_pstmt_query_reset(&q);
-
-	analyze(&single, "PREPARE b AS SELECT 3");
-	test(single.ops[0].hash == hash_b);
-	od_sql_pstmt_query_reset(&single);
-}
-
-static void test_deallocate(void)
-{
-	od_sql_pstmt_query_t q;
-
-	analyze(&q, "DEALLOCATE foo");
-	test(q.nops == 1);
-	test(q.ops[0].type == OD_SQL_PSTMT_OP_DEALLOCATE);
-	test(strcmp(q.ops[0].name, "foo") == 0);
-	od_sql_pstmt_query_reset(&q);
-
-	analyze(&q, "DEALLOCATE PREPARE \"Foo\"");
-	test(q.nops == 1);
-	test(q.ops[0].type == OD_SQL_PSTMT_OP_DEALLOCATE);
-	test(strcmp(q.ops[0].name, "Foo") == 0);
-	od_sql_pstmt_query_reset(&q);
-
-	analyze(&q, "DEALLOCATE ALL");
-	test(q.nops == 1);
-	test(q.ops[0].type == OD_SQL_PSTMT_OP_DEALLOCATE_ALL);
-	test(q.ops[0].name == NULL);
-	od_sql_pstmt_query_reset(&q);
-
-	analyze(&q, "deallocate prepare all");
-	test(q.nops == 1);
-	test(q.ops[0].type == OD_SQL_PSTMT_OP_DEALLOCATE_ALL);
-	od_sql_pstmt_query_reset(&q);
-}
-
-static void test_invalid_query(void)
-{
-	od_sql_pstmt_query_t q;
-	analyze(&q, "PREPARE foo AS");
-	test(q.nops == 0);
+	analyze(&q,
+		"EXECUTE p(-42, 2147483648, -12.34, 'a''b', E'a\\nb', true, false, NULL, $$a;b$$)");
+	test(q.active && !q.unsupported && q.nops == 1);
+	od_sql_pstmt_op_t *op = &q.ops[0];
+	test(op->nargs == 9);
+	const char *values[] = { "-42",	 "2147483648", "-12.34", "a'b", "a\nb",
+				 "true", "false",      NULL,	 "a;b" };
+	memset(buffer, 0x5a, sizeof(buffer));
+	for (int i = 0; i < op->nargs; i++) {
+		if (values[i] == NULL) {
+			test(op->args[i] == NULL && op->arg_lengths[i] == -1);
+		} else {
+			test(strcmp(op->args[i], values[i]) == 0);
+			test(op->arg_lengths[i] == (int)strlen(values[i]));
+		}
+	}
 	od_sql_pstmt_query_reset(&q);
 }
 
@@ -184,72 +150,11 @@ static void test_reserved_names(void)
 	}
 }
 
-static void test_map(void)
-{
-	od_sql_pstmt_map_t map;
-	od_sql_pstmt_map_init(&map);
-
-	test(od_sql_pstmt_map_get(&map, "a") == NULL);
-	od_sql_pstmt_map_remove(&map, "a");
-
-	test(od_sql_pstmt_map_set(&map, "a", "PREPARE a AS SELECT 1", 21, 1) !=
-	     NULL);
-	test(od_sql_pstmt_map_set(&map, "b", NULL, 0, 2) != NULL);
-	test(map.count == 2);
-
-	od_sql_pstmt_t *a = od_sql_pstmt_map_get(&map, "a");
-	test(a != NULL);
-	test(a->hash == 1);
-	test(strcmp(a->text, "PREPARE a AS SELECT 1") == 0);
-	test(od_sql_pstmt_map_get(&map, "b")->text == NULL);
-
-	/* replacing moves the entry to the end of the insertion order */
-	test(od_sql_pstmt_map_set(&map, "a", NULL, 0, 3) != NULL);
-	test(map.count == 2);
-	test(od_sql_pstmt_map_get(&map, "a")->hash == 3);
-	od_sql_pstmt_t *first =
-		od_container_of(map.order.next, od_sql_pstmt_t, link);
-	test(strcmp(first->name, "b") == 0);
-
-	od_sql_pstmt_map_remove(&map, "b");
-	test(map.count == 1);
-	test(od_sql_pstmt_map_get(&map, "b") == NULL);
-
-	od_sql_pstmt_map_clear(&map);
-	test(map.count == 0);
-	test(od_sql_pstmt_map_get(&map, "a") == NULL);
-
-	test(od_sql_pstmt_map_set(&map, "c", NULL, 0, 4) != NULL);
-	od_sql_pstmt_map_free(&map);
-}
-
-static void test_attach_refuses_unknown_server(void)
-{
-	od_sql_pstmt_client_t client;
-	od_sql_pstmt_server_t srv;
-
-	od_sql_pstmt_client_init(&client);
-	od_sql_pstmt_server_init(&srv);
-	srv.unknown = 1;
-
-	/* refused before any io, so no server connection is needed */
-	test(od_sql_pstmt_attach(&client, &srv, NULL, 0) == 1);
-
-	od_sql_pstmt_client_free(&client);
-	od_sql_pstmt_server_free(&srv);
-}
-
 void odyssey_test_sql_pstmt(void)
 {
-	test_no_keyword();
-	test_keyword_in_literal();
-	test_single_prepare();
-	test_prepare_with_types_and_case();
-	test_prepare_with_comments();
-	test_multi_statement();
-	test_deallocate();
-	test_invalid_query();
+	test_locations();
+	test_identifier_forms();
+	test_unsupported_syntax();
+	test_execute_arguments();
 	test_reserved_names();
-	test_map();
-	test_attach_refuses_unknown_server();
 }

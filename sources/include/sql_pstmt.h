@@ -1,190 +1,53 @@
 #pragma once
 
-/*
- * Odyssey.
- *
- * Scalable PostgreSQL connection pooler.
- */
-
-/*
- * SQL PREPARE support for reserved prepared statements
- *
- * The text of every successful SQL PREPARE is kept per client. Whenever the
- * client is attached to a backend, the backend is made to hold exactly the
- * client's statements under the same names: statements left by previous
- * clients are deallocated (so no client can see or execute another client's
- * statements) and missing ones are prepared again. EXECUTE is passed through
- * unchanged. PREPARE is not transactional in PostgreSQL, so a statement is
- * recorded on its CommandComplete regardless of how the transaction ends.
- *
- * state, kept in od_sql_pstmt_client_t and od_sql_pstmt_server_t:
- * 	client: name -> PREPARE text and its hash
- * 	server: name -> hash of the PREPARE text the backend holds
- */
-
-#include <stdint.h>
-#include <stddef.h>
-
-#include <machinarium/ds/hm.h>
-
-#include <types.h>
-#include <list.h>
-
-typedef struct {
-	/* insertion order, the oldest first */
-	od_list_t link;
-	char *name;
-	/* NUL-terminated PREPARE statement; NULL in server maps */
-	char *text;
-	/* length of text without the terminating NUL */
-	size_t text_len;
-	uint64_t hash;
-} od_sql_pstmt_t;
-
-typedef struct {
-	/* name -> od_sql_pstmt_t *, created on first insert */
-	mm_hashmap_t *hm;
-	od_list_t order;
-	size_t count;
-} od_sql_pstmt_map_t;
+/* SQL PREPARE/EXECUTE use the same client and backend maps as Parse/Bind. */
+#include <pstmt.h>
+#include <status.h>
+#include <sql/minimal/ast.h>
 
 typedef enum {
-	OD_SQL_PSTMT_OP_PREPARE,
-	OD_SQL_PSTMT_OP_DEALLOCATE,
-	OD_SQL_PSTMT_OP_DEALLOCATE_ALL,
+	OD_SQL_PSTMT_OTHER,
+	OD_SQL_PSTMT_PREPARE,
+	OD_SQL_PSTMT_EXECUTE,
+	OD_SQL_PSTMT_DEALLOCATE,
+	OD_SQL_PSTMT_DEALLOCATE_ALL,
+	OD_SQL_PSTMT_DISCARD_ALL,
 } od_sql_pstmt_op_type_t;
 
-/* PREPARE or DEALLOCATE statement found in a client query */
 typedef struct {
 	od_sql_pstmt_op_type_t type;
-	/* position of the statement in the query, starting from 0 */
-	int stmt_idx;
-	/* NULL for DEALLOCATE ALL */
+	od_sql_location_t location;
+	od_sql_location_t name_location;
+	od_sql_location_t query_location;
 	char *name;
-	/* PREPARE only */
-	char *text;
-	size_t text_len;
-	uint64_t hash;
+	od_pstmt_t *pstmt;
+	int completed;
+	int dummy;
+	int parses;
+	int parse_body;
+	char *query;
+	int nargs;
+	char **args;
+	int *arg_lengths;
 } od_sql_pstmt_op_t;
 
-/* state of the simple query being processed */
 typedef struct {
-	/* the query was already inspected (the handler can run twice) */
 	int analyzed;
-	/* count CommandComplete messages of the query */
-	int counting;
+	int active;
+	int uses_reserved_name;
+	int unsupported;
 	int completes;
+	int pending_begin;
+	char *text;
+	machine_msg_t *rewritten;
 	od_sql_pstmt_op_t *ops;
 	int nops;
-	/*
-	 * a statement name in the query starts with OD_PSTMT_NAME_PREFIX,
-	 * which odyssey uses for its own prepared statements on backends
-	 */
-	int uses_reserved_name;
 } od_sql_pstmt_query_t;
 
-/* per client: its statements and the simple query being processed */
-typedef struct {
-	od_sql_pstmt_map_t stmts;
-	od_sql_pstmt_query_t query;
-} od_sql_pstmt_client_t;
-
-/* per server connection */
-typedef struct {
-	od_sql_pstmt_map_t stmts;
-	/*
-	 * the backend may hold statements created by SQL PREPARE that are not
-	 * in stmts (recording one failed): it must not be reused
-	 */
-	int unknown;
-} od_sql_pstmt_server_t;
-
-/* maps */
-void od_sql_pstmt_map_init(od_sql_pstmt_map_t *map);
-void od_sql_pstmt_map_free(od_sql_pstmt_map_t *map);
-void od_sql_pstmt_map_clear(od_sql_pstmt_map_t *map);
-od_sql_pstmt_t *od_sql_pstmt_map_get(od_sql_pstmt_map_t *map, const char *name);
-/* adds or replaces the entry; text may be NULL */
-od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
-				     const char *text, size_t text_len,
-				     uint64_t hash);
-void od_sql_pstmt_map_remove(od_sql_pstmt_map_t *map, const char *name);
-
-/*
- * query inspection
- *
- * od_sql_pstmt_query_analyze finds PREPARE and DEALLOCATE statements in the
- * query text (query must be NUL-terminated at query[len]) and detects
- * prepared statement names reserved by odyssey. Returns -1 on out of
- * memory, otherwise 0; queries that can't be parsed are not tracked.
- */
 int od_sql_pstmt_query_analyze(od_sql_pstmt_query_t *q, const char *query,
 			       size_t len, od_linear_alloc_t *arena);
 void od_sql_pstmt_query_reset(od_sql_pstmt_query_t *q);
-void od_sql_pstmt_op_free(od_sql_pstmt_op_t *op);
-
-void od_sql_pstmt_client_init(od_sql_pstmt_client_t *client);
-void od_sql_pstmt_client_free(od_sql_pstmt_client_t *client);
-void od_sql_pstmt_server_init(od_sql_pstmt_server_t *server);
-void od_sql_pstmt_server_free(od_sql_pstmt_server_t *server);
-
-/* the client or backend dropped all its prepared statements */
-void od_sql_pstmt_client_clear(od_sql_pstmt_client_t *client);
-void od_sql_pstmt_server_clear(od_sql_pstmt_server_t *server);
-
-/*
- * the statement must reach the backend instead of being answered by
- * odyssey: DEALLOCATE of a statement created by SQL PREPARE
- */
-int od_sql_pstmt_op_must_forward(od_sql_pstmt_client_t *client,
-				 const od_sql_pstmt_op_t *op);
-int od_sql_pstmt_query_must_forward(od_sql_pstmt_client_t *client);
-
-static inline void od_sql_pstmt_query_start_counting(od_sql_pstmt_query_t *q)
-{
-	if (q->nops > 0) {
-		q->completes = 0;
-		q->counting = 1;
-	}
-}
-
-static inline void od_sql_pstmt_query_on_complete(od_sql_pstmt_query_t *q)
-{
-	if (q->counting) {
-		q->completes++;
-	}
-}
-
-/*
- * the backend completed the statement: update client and server state
- * (server may be NULL). Returns -1 on out of memory; if a completed
- * PREPARE could not be recorded, server->unknown is set.
- *
- * DEALLOCATE ALL drops protocol-level prepared statements too; the caller
- * must forget those itself.
- */
-int od_sql_pstmt_apply(od_sql_pstmt_client_t *client,
-		       od_sql_pstmt_server_t *server,
-		       const od_sql_pstmt_op_t *op);
-
-/*
- * after a simple query: apply the statements the backend completed.
- * Sets *deallocated_all if a DEALLOCATE ALL completed (see
- * od_sql_pstmt_apply). Returns -1 on out of memory.
- */
-int od_sql_pstmt_query_finish(od_sql_pstmt_client_t *client,
-			      od_sql_pstmt_server_t *server,
-			      int *deallocated_all);
-
-/*
- * on attach of a client to a server connection: make the backend hold
- * exactly the statements of the client.
- *
- * Returns 0 on success, -1 on io error, 1 when the backend holds prepared
- * statements odyssey does not know about (srv->unknown is set, or a
- * DEALLOCATE failed for another reason than a missing statement, or a
- * name to prepare is already taken): the caller must not use this backend.
- */
-int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
-			od_sql_pstmt_server_t *srv, od_server_t *server,
-			uint32_t timeout_ms);
+od_frontend_status_t od_sql_pstmt_query_rewrite(od_client_t *client);
+od_frontend_status_t od_sql_pstmt_query_response(od_client_t *client,
+						 machine_msg_t **msg);
+od_frontend_status_t od_sql_pstmt_query_finish(od_client_t *client);

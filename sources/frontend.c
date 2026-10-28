@@ -3184,7 +3184,8 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 		return;
 	}
 
-	if (force_server_close) {
+	/* An interrupted SQL query may have unrecorded prepared statements. */
+	if (force_server_close || client->sql_query.active) {
 		od_router_close(router, client);
 		return;
 	}

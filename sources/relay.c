@@ -331,6 +331,18 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_instance_t *instance = client->global->instance;
 
+	od_sql_pstmt_query_t *sql_query = &client->sql_query;
+	if (client->rule->pool->reserve_prepared_statement &&
+	    !sql_query->analyzed) {
+		/* must run first: the full parser resets the arena */
+		rc = od_sql_pstmt_query_analyze(
+			sql_query, query, query_len - 1 /* zero included */,
+			arena);
+		if (rc != 0) {
+			return OD_EOOM;
+		}
+	}
+
 	od_config_query_parsing_t parsing = instance->config.query_parsing;
 	if (parsing.mode == OD_CONFIG_QUERY_PARSING_MODE_FULL &&
 	    !od_tsa_auto_route_ro_enabled(client)) {
@@ -358,9 +370,20 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			return OD_ATTACH;
 		}
 
-		if (client->pending_begin) {
+		status = od_sql_pstmt_query_rewrite(client);
+		if (status != OD_OK) {
+			return status;
+		}
+		machine_msg_t *forward = sql_query->rewritten != NULL ?
+						 sql_query->rewritten :
+						 msg;
+
+		if (client->pending_begin && !sql_query->active) {
 			machine_msg_t *rewritten = kiwi_fe_write_query_join(
-				NULL, "BEGIN;", query, NULL);
+				NULL, "BEGIN;",
+				(char *)machine_msg_data(forward) +
+					sizeof(kiwi_header_t),
+				NULL);
 			if (rewritten == NULL) {
 				return OD_EOOM;
 			}
@@ -371,7 +394,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			machine_msg_free(rewritten);
 		} else {
 			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-			rc = od_io_write(&server->io, msg, timeout_ms);
+			rc = od_io_write(&server->io, forward, timeout_ms);
 			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 		}
 
@@ -387,7 +410,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_stat_query_start(&server->stats_state);
 
-	if (client->pending_begin) {
+	if (client->pending_begin && !sql_query->active) {
 		/*
 		 * need to consume CommandComplete(BEGIN)
 		 * and maybe bypass some asynchronious messages
@@ -397,8 +420,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		if (status != OD_OK) {
 			return status;
 		}
-		client->pending_begin = 0;
 	}
+	client->pending_begin = 0;
 
 	uint64_t errors_before = server->error_responses;
 
@@ -422,6 +445,13 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		 */
 		process_discard(client, server);
 		process_unlisten(client, server);
+	}
+
+	if (status == OD_OK) {
+		/* checks by itself which statements of the query completed */
+		if (sql_query->active) {
+			status = od_sql_pstmt_query_finish(client);
+		}
 	}
 
 	return status;
@@ -748,6 +778,9 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 		process_query_impl, relay, msg, timeout_ms);
 
 	od_query_ctx_reset(&relay->client->query_ctx);
+	if (status == OD_OK) {
+		od_sql_pstmt_query_reset(&relay->client->sql_query);
+	}
 
 	/*
 	 * in vanilla PG, executing simple query removes the

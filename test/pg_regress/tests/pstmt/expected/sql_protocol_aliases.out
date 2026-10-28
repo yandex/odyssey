@@ -1,0 +1,236 @@
+-- SQL and protocol aliases of identical query bytes share one backend statement
+begin;
+select 72631 as alias_value\parse proto_alias
+prepare sql_alias as select 72631 as alias_value;
+execute proto_alias;
+ alias_value 
+-------------
+       72631
+(1 row)
+
+execute sql_alias;
+ alias_value 
+-------------
+       72631
+(1 row)
+
+\bind_named sql_alias
+\g
+ alias_value 
+-------------
+       72631
+(1 row)
+
+select count(*) as backend_copies, bool_and(not from_sql) as protocol_deploy
+from pg_prepared_statements where statement like '%72631%';
+ backend_copies | protocol_deploy 
+----------------+-----------------
+              1 | t
+(1 row)
+
+commit;
+-- Reuse works in the other order as well
+begin;
+prepare sql_first as select 72632 as alias_value;
+select 72632 as alias_value\parse proto_second
+execute proto_second;
+ alias_value 
+-------------
+       72632
+(1 row)
+
+select count(*) as backend_copies, bool_and(not from_sql) as protocol_deploy
+from pg_prepared_statements where statement like '%72632%';
+ backend_copies | protocol_deploy 
+----------------+-----------------
+              1 | t
+(1 row)
+
+commit;
+-- A duplicate SQL name reports the original name and aborts the transaction
+begin;
+select 1;
+ ?column? 
+----------
+        1
+(1 row)
+
+prepare sql_alias as select 0;
+ERROR:  prepared statement "sql_alias" already exists
+select 2;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+rollback;
+execute sql_alias;
+ alias_value 
+-------------
+       72631
+(1 row)
+
+-- Parameter types are inferred from the body for Bind and backend redeploy
+prepare sql_typed as select $1::numeric as amount, $2::text[] as labels;
+\bind_named sql_typed 12.34 '{a,b}'
+\g
+ amount | labels 
+--------+--------
+  12.34 | {a,b}
+(1 row)
+
+select pg_backend_pid() as old_pid \gset
+\setenv OLD_PID :old_pid
+\! psql "host=localhost port=5432 user=postgres dbname=postgres" -Atqc "select pg_terminate_backend($OLD_PID, 10000)"
+t
+select pg_backend_pid() <> :old_pid as switched;
+ switched 
+----------
+ t
+(1 row)
+
+\bind_named sql_typed 56.78 '{c,d}'
+\g
+ amount | labels 
+--------+--------
+  56.78 | {c,d}
+(1 row)
+
+execute sql_typed(90.12, '{e,f}');
+ amount | labels 
+--------+--------
+  90.12 | {e,f}
+(1 row)
+
+-- SQL EXECUTE binds the cached body directly, without an SQL EXECUTE wrapper
+prepare direct_execute as select current_query() like 'select %' as protocol_execute;
+execute direct_execute;
+ protocol_execute 
+------------------
+ t
+(1 row)
+
+-- Literal values are sent as text Bind parameters; NULL keeps its protocol marker
+prepare literal_args as select $1::int as i, $2::numeric as n, $3::text as v,
+    $4::boolean as b, $5::text is null as was_null;
+execute literal_args(-42, 12.34, 'a''b; --', true, NULL);
+  i  |   n   |    v    | b | was_null 
+-----+-------+---------+---+----------
+ -42 | 12.34 | a'b; -- | t | t
+(1 row)
+
+execute literal_args(42, -12.34, $$a;b$$, false, '');
+ i  |   n    |  v  | b | was_null 
+----+--------+-----+---+----------
+ 42 | -12.34 | a;b | f | f
+(1 row)
+
+begin;
+execute literal_args(42);
+ERROR:  bind message supplies 1 parameters, but prepared statement "literal_args" requires 5
+select 1;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+rollback;
+execute direct_execute;
+ protocol_execute 
+------------------
+ t
+(1 row)
+
+-- Expressions are rejected before any preceding statement is executed
+create sequence execute_batch_effect;
+select nextval('execute_batch_effect') \; execute literal_args(1 + 2, 0, '', false, NULL);
+NOTICE:  processed virtually by odyssey
+ERROR:  SQL prepared statement syntax is not supported with pool_reserve_prepared_statement
+\echo :SQLSTATE
+0A000
+select is_called from execute_batch_effect;
+ is_called 
+-----------
+ f
+(1 row)
+
+drop sequence execute_batch_effect;
+-- Completed PREPARE survives a later failure in the same simple-query batch
+prepare batch_ok as select 'prefix' as v \; select 1/0 \; prepare batch_not_run as select 0;
+ERROR:  division by zero
+execute batch_ok;
+   v    
+--------
+ prefix
+(1 row)
+
+execute batch_not_run;
+ERROR:  prepared statement "batch_not_run" does not exist
+-- Parse must run after preceding DDL in the same simple-query batch
+create table prepare_batch_table (v int) \; prepare batch_schema as select * from prepare_batch_table \; execute batch_schema;
+ v 
+---
+(0 rows)
+
+drop table prepare_batch_table;
+-- PREPARE participates in the surrounding implicit transaction block
+prepare implicit_keep as select 72633 as v \; discard all;
+ERROR:  DISCARD ALL cannot run inside a transaction block
+execute implicit_keep;
+   v   
+-------
+ 72633
+(1 row)
+
+-- Ordinary quoted names preserve case
+prepare "Name" as select 7 as v;
+execute "Name";
+ v 
+---
+ 7
+(1 row)
+
+-- An explicit parameter type list is unsupported, including inside a batch
+prepare explicit_types (int) as select $1;
+NOTICE:  processed virtually by odyssey
+ERROR:  SQL prepared statement syntax is not supported with pool_reserve_prepared_statement
+\echo :SQLSTATE
+0A000
+execute explicit_types(1);
+ERROR:  prepared statement "explicit_types" does not exist
+create sequence typed_batch_effect;
+select nextval('typed_batch_effect') \; prepare explicit_types (int) as select $1;
+NOTICE:  processed virtually by odyssey
+ERROR:  SQL prepared statement syntax is not supported with pool_reserve_prepared_statement
+select is_called from typed_batch_effect;
+ is_called 
+-----------
+ f
+(1 row)
+
+drop sequence typed_batch_effect;
+-- Unsupported forms are rejected before any part of the batch is sent
+prepare U&"na!006de" UESCAPE '!' as select 8 as v;
+NOTICE:  processed virtually by odyssey
+ERROR:  SQL prepared statement syntax is not supported with pool_reserve_prepared_statement
+execute U&"na\006de";
+NOTICE:  processed virtually by odyssey
+ERROR:  SQL prepared statement syntax is not supported with pool_reserve_prepared_statement
+deallocate U&"na!006de" UESCAPE '!';
+NOTICE:  processed virtually by odyssey
+ERROR:  SQL prepared statement syntax is not supported with pool_reserve_prepared_statement
+explain execute "Name";
+NOTICE:  processed virtually by odyssey
+ERROR:  SQL prepared statement syntax is not supported with pool_reserve_prepared_statement
+create table sql_alias_result as execute "Name";
+NOTICE:  processed virtually by odyssey
+ERROR:  SQL prepared statement syntax is not supported with pool_reserve_prepared_statement
+prepare rejected_batch as select 9 \; execute U&"na\006de";
+NOTICE:  processed virtually by odyssey
+ERROR:  SQL prepared statement syntax is not supported with pool_reserve_prepared_statement
+execute rejected_batch;
+ERROR:  prepared statement "rejected_batch" does not exist
+execute "Name";
+ v 
+---
+ 7
+(1 row)
+
+-- Large backend packets pass through the SQL alias response path intact
+prepare sql_large as select length(repeat('v', 100000)) as payload_length, repeat('v', 100000) as payload;
+execute sql_large \gset
+\echo :payload_length
+100000
+deallocate all;

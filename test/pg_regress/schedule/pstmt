@@ -2,3 +2,11 @@ test: switch_backend
 test: close_across_switch
 test: deallocate_across_switch
 test: shared_backend
+test: sql_switch_backend
+test: sql_rollback_and_errors
+test: sql_deallocate
+test: sql_reserved_names
+test: sql_shared_backend
+test: sql_unknown_statement
+test: sql_namespace
+test: sql_protocol_aliases
