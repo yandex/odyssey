@@ -40,7 +40,21 @@ storage "only_rw_alive" {
 	}
 }
 
+storage "startup_params" {
+	type "remote"
+	host "127.0.0.1"
+	port 5432
+}
+
 database "postgres" {
+	user "startup_params" {
+		authentication "none"
+		storage "startup_params"
+		storage_user "postgres"
+		pool "transaction"
+		client_show_id no
+	}
+
 	user "postgres" {
 		authentication "none"
 		storage "postgres_server"
