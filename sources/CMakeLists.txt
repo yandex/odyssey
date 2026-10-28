@@ -474,6 +474,7 @@ set(od_test_src
     tests/machinarium/test_mutex_bench.c
     tests/machinarium/test_queue.c
     tests/machinarium/test_heap.c
+    tests/machinarium/test_clock.c
     tests/machinarium/test_lf_stack.c
     tests/machinarium/test_sem.c
     tests/odyssey/test_attribute.c
