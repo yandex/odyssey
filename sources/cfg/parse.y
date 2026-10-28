@@ -2900,7 +2900,24 @@ size_value:
  * od_duration_parse_ms().
  */
 time_value:
-	NUMBER
+	STRING
+		{
+			int64_t ms;
+			if (od_duration_parse_ms($1, &ms, NULL)) {
+				od_cfg_diag_error_with_hint(
+					ctx->diags, @1,
+					"Use a duration without quotes, for example: 10s.",
+					"quoted duration value '%s' is not supported",
+					$1);
+			} else {
+				od_cfg_diag_error(ctx->diags, @1,
+						  "invalid duration value '%s'", $1);
+			}
+			od_free($1);
+			$1 = NULL;
+			YYERROR;
+		}
+	| NUMBER
 		{
 			$$.has_unit = 0;
 			$$.is_real = 0;
