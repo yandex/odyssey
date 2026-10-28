@@ -22,6 +22,8 @@ void od_query_parse_fill_ctx(const char *query, uint32_t query_len,
 			     od_linear_alloc_t *arena, od_query_ctx_t *ctx,
 			     const od_config_query_parsing_t *parsing);
 
+od_config_query_parsing_mode_t od_query_parser_mode(od_client_t *client);
+
 __attribute__((hot)) extern int od_query_format(char *format_pos,
 						char *format_end,
 						kiwi_var_t *user, char *peer,

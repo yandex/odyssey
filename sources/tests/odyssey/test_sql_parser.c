@@ -729,10 +729,10 @@ static void test_parse_fill_ctx_full(void)
 		test(ctx.s2_long == NULL);
 	}
 
-	/* SET ... DEFAULT — not VAR_SET_VALUE, no IS_SET, no parse error */
+	/* DEFAULT uses the same empty value as the minimal parser. */
 	fill_ctx_full("SET application_name TO DEFAULT", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
-	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
 	od_query_ctx_reset(&ctx);
 
 	/* SET with multiple values — no IS_SET, no parse error */

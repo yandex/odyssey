@@ -130,6 +130,8 @@ struct od_client {
 	machine_msg_t *read_msg;
 
 	od_query_ctx_t query_ctx;
+	/* -1 inherits the configured mode. */
+	int parser_mode;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)

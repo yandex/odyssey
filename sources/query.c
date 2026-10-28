@@ -14,10 +14,32 @@
 #include <global.h>
 #include <instance.h>
 #include <backend.h>
+#include <client.h>
+#include <tsa.h>
 #include <util.h>
 #include <sql/minimal/parser.h>
 #include <sql/full/parser.h>
 #include <sql/full/pg_constants.h>
+
+od_config_query_parsing_mode_t od_query_parser_mode(od_client_t *client)
+{
+	if (client->parser_mode >= 0) {
+		return client->parser_mode;
+	}
+	od_instance_t *instance = client->global->instance;
+	od_config_query_parsing_mode_t mode =
+		instance->config.query_parsing.mode;
+	if (mode == OD_CONFIG_QUERY_PARSING_MODE_FULL &&
+	    !od_tsa_auto_route_ro_enabled(client)) {
+		/*
+		 * auto routing is the only consumer of the full-parser-only
+		 * results (is_select) - for clients without it the cheaper
+		 * minimal parser is enough
+		 */
+		mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
+	}
+	return mode;
+}
 
 machine_msg_t *od_query_do(od_server_t *server, const char *query, char *param,
 			   uint32_t timeout_ms)
@@ -866,11 +888,15 @@ static void parse_full(const char *query, uint32_t query_len,
 		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SELECT);
 	} else if (IsA(node, VariableSetStmt)) {
 		VariableSetStmt *vsstmt = castNode(VariableSetStmt, node);
-		if (vsstmt->kind == VAR_SET_VALUE && vsstmt->args != NULL &&
-		    list_length(vsstmt->args) == 1) {
+		if (vsstmt->kind == VAR_SET_DEFAULT ||
+		    (vsstmt->kind == VAR_SET_VALUE && vsstmt->args != NULL &&
+		     list_length(vsstmt->args) == 1)) {
 			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SET);
 			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s",
 				    vsstmt->name);
+			if (vsstmt->kind == VAR_SET_DEFAULT) {
+				return;
+			}
 
 			Node *arg = linitial(vsstmt->args);
 			if (!IsA(arg, A_Const)) {
