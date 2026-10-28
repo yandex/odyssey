@@ -198,7 +198,7 @@ BISON_TARGET(sql_parser
 FLEX_TARGET(sql_scanner
     sql/minimal/scan.l
     ${SQL_MINIMAL_GEN_DIR}/scan.c
-    COMPILE_FLAGS "--header-file=${SQL_MINIMAL_GEN_DIR}/scan.h"
+    COMPILE_FLAGS "--header-file=${SQL_MINIMAL_GEN_DIR}/scan.h -CF -8"
 )
 ADD_FLEX_BISON_DEPENDENCY(sql_scanner sql_parser)
 set_source_files_properties(${FLEX_sql_scanner_OUTPUTS} PROPERTIES
