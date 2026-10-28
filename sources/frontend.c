@@ -1237,12 +1237,12 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 	if (instance->config.log_session) {
 		client->time_setup = machine_time_us();
 		od_log(&instance->logger, client, NULL,
-		       "login time: %" PRIu64 " microseconds",
-		       (client->time_setup - client->time_accept));
-		od_log(&instance->logger, client, NULL,
-		       "client connection from %s to route %s.%s accepted",
-		       client->peer, route->rule->db_name,
-		       route->rule->user_name);
+		       "client '%s.%s' from '%s' to route %s.%s accepted"
+		       " login time: %" PRIu64 " microseconds",
+		       client->startup.database.value,
+		       client->startup.user.value, client->peer,
+		       route->rule->db_name, route->rule->user_name,
+		       client->time_setup - client->time_accept);
 	}
 
 	return OD_OK;
@@ -3159,15 +3159,15 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	if (instance->config.log_session) {
 		if (route != NULL) {
 			od_log(&instance->logger, client, server,
-			       "client disconnected addr '%s', io error = %s, status %s, route %s.%s, working time: %" PRIu64
+			       "client disconnected route %s.%s, addr '%s', io error = %s, status %s, working time: %" PRIu64
 			       "us",
+			       route->rule->db_name, route->rule->user_name,
 			       client->peer, od_io_error(&client->io),
 			       od_frontend_status_to_str(status),
-			       route->rule->db_name, route->rule->user_name,
 			       working_time_us);
 		} else {
 			od_log(&instance->logger, client, server,
-			       "client disconnected, addr '%s', io error = %s, status %s, working time %" PRIu64
+			       "client disconnected addr '%s', io error = %s, status %s, working time: %" PRIu64
 			       "us",
 			       client->peer, od_io_error(&client->io),
 			       od_frontend_status_to_str(status),
@@ -3187,8 +3187,6 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	rc = od_reset(server);
 	if (rc != 1) {
 		/* close backend connection */
-		od_log(&instance->logger, client, server,
-		       "reset unsuccessful, closing server connection");
 		od_router_close(router, client);
 		return;
 	}
@@ -3510,9 +3508,9 @@ void od_frontend(void *arg)
 		       1);
 
 	/* log client connection */
-	if (instance->config.log_session) {
-		od_log(&instance->logger, client, NULL,
-		       "new client connection %s", client->peer);
+	if (instance->config.log_session && instance->config.log_debug) {
+		od_debug(&instance->logger, client, NULL,
+			 "new client connection %s", client->peer);
 	}
 
 	/* attach client io to worker machine event loop */
@@ -3651,14 +3649,6 @@ void od_frontend(void *arg)
 					    rule->keepalive_keep_interval,
 					    rule->keepalive_probes,
 					    rule->keepalive_usr_timeout);
-		}
-
-		if (instance->config.log_session) {
-			od_log(&instance->logger, client, NULL,
-			       "route '%s.%s' to '%s.%s'",
-			       client->startup.database.value,
-			       client->startup.user.value, route->rule->db_name,
-			       route->rule->user_name);
 		}
 	} else {
 		if (od_router_status_is_err(router_status)) {
