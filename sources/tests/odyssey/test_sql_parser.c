@@ -398,8 +398,10 @@ static void test_parse_errors(void)
 	parse_fail("SHOW");
 	parse_fail("SET foo =");
 	parse_fail("DEALLOCATE");
-	parse_fail("DEALLOCATE PREPARE");
-	parse_fail("DEALLOCATE PREPARE;");
+	test(strcmp(parse_ok("DEALLOCATE PREPARE"), "(deallocate prepare)") ==
+	     0);
+	test(strcmp(parse_ok("DEALLOCATE PREPARE;"), "(deallocate prepare)") ==
+	     0);
 	parse_fail("DEALLOCATE PREPARE prepared pst");
 	parse_fail("DEALLOCATE PREPARED pst");
 	parse_fail("DEALLOCATE ALL pst");
@@ -1191,9 +1193,51 @@ static void test_parse_fill_ctx_modes(void)
 	}
 }
 
+static void test_prepare_locations(void)
+{
+	const char *sql =
+		" /* leading */ PREPARE \"Ab\" (numeric(10, 2), text[]) AS SELECT $1, ';', $$a;b$$ /* tail */;";
+	od_sql_minimal_prepare_stmt_t *node = (void *)od_sql_minimal_parse(
+		sql, strlen(sql), &s_arena, NULL, NULL);
+	test(node != NULL);
+	test(node->type == OD_SQL_MINIMAL_NODE_TYPE_PREPARE_STMT);
+	test(strcmp(node->name, "Ab") == 0);
+	test(node->name_location.start == strstr(sql, "\"A") - sql);
+	test(node->name_location.end == node->name_location.start + 4);
+	test(node->types_location.start == strstr(sql, "numeric") - sql);
+	test(node->types_location.end == strstr(sql, ") AS") - sql);
+	test(node->query_location.start == strstr(sql, "SELECT") - sql);
+	test(node->query_location.end == (int)strlen(sql) - 1);
+
+	sql = "PREPARE foo AS select 1";
+	node = (void *)od_sql_minimal_parse(sql, strlen(sql), &s_arena, NULL,
+					    NULL);
+	test(node != NULL);
+	test(node->types_location.start == -1);
+	test(node->query_location.start == 15);
+	test(node->query_location.end == (int)strlen(sql));
+
+	sql = " EXECUTE \"Ab\"(1, 'a;b');";
+	od_sql_minimal_execute_stmt_t *execute = (void *)od_sql_minimal_parse(
+		sql, strlen(sql), &s_arena, NULL, NULL);
+	test(execute != NULL);
+	test(execute->type == OD_SQL_MINIMAL_NODE_TYPE_EXECUTE_STMT);
+	test(strcmp(execute->name, "Ab") == 0);
+	test(execute->name_location.start == 9);
+	test(execute->name_location.end == 13);
+	test(execute->args_location.start == 13);
+	test(execute->args_location.end == (int)strlen(sql) - 1);
+
+	parse_fail("PREPARE foo$bar AS SELECT 1");
+	parse_fail("PREPARE \"A\"\"B\" AS SELECT 1");
+	parse_fail("PREPARE канал AS SELECT 1");
+	parse_fail("PREPARE U&\"name\" AS SELECT 1");
+}
+
 void odyssey_test_sql_minimal_parser(void)
 {
 	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
+	test_prepare_locations();
 
 	test_parse_fill_ctx_modes();
 
