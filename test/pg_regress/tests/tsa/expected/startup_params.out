@@ -2,7 +2,7 @@
 \! psql 'host=127.0.0.1 port=7432 user=startup_params dbname=postgres' -c 'select 1' 2>&1
 psql: error: connection to server at "127.0.0.1", port 7432 failed: FATAL:  odyssey: can't find suitable host for tsa 'read-only' of user postgres.startup_params
 -- The next login must receive startup parameters, even after that TSA mismatch.
-\connect 'host=127.0.0.1 port=8432 user=startup_params dbname=postgres'
+\connect 'host=127.0.0.1 port=8432 user=startup_params dbname=postgres client_encoding=UTF8'
 SELECT :'SERVER_VERSION_NAME' <> '0.0.0' AS has_server_version,
        :'ENCODING' = 'UTF8' AS has_client_encoding;
  has_server_version | has_client_encoding 
