@@ -602,6 +602,7 @@ static void test_parse_fill_ctx(void)
 				strlen("SET application_name TO DEFAULT"),
 				&s_arena, &ctx, &s_minimal_parsing);
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET_TO_DEFAULT));
 	test(ctx.s2[0] == '\0');
 	test(ctx.s2_long == NULL);
 	od_query_ctx_reset(&ctx);
@@ -726,12 +727,6 @@ static void test_parse_fill_ctx_full(void)
 		od_query_ctx_reset(&ctx);
 		test(ctx.s2_long == NULL);
 	}
-
-	/* SET ... DEFAULT — not VAR_SET_VALUE, no IS_SET, no parse error */
-	fill_ctx_full("SET application_name TO DEFAULT", &ctx);
-	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
-	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
-	od_query_ctx_reset(&ctx);
 
 	/* SET with multiple values — no IS_SET, no parse error */
 	fill_ctx_full("SET x = 1, 2", &ctx);
@@ -1109,6 +1104,70 @@ static void test_parse_fill_ctx_full(void)
 	od_query_ctx_reset(&ctx);
 }
 
+static void test_parse_fill_ctx_set_default(void)
+{
+	const struct {
+		const char *query;
+		const char *key;
+		const char *value;
+		bool is_default;
+	} cases[] = {
+		{ "SET application_name TO DEFAULT", "application_name", "",
+		  true },
+		{ "SET LOCAL application_name = DEFAULT", "application_name",
+		  "", true },
+		{ "SET SESSION application_name TO DEFAULT", "application_name",
+		  "", true },
+		{ "SET odyssey.execute_on_host TO DEFAULT",
+		  "odyssey.execute_on_host", "", true },
+		{ "SET odyssey.execute_on_host = DEFAULT",
+		  "odyssey.execute_on_host", "", true },
+		{ "SET odyssey.pin_backend TO DEFAULT", "odyssey.pin_backend",
+		  "", true },
+		{ "SET odyssey.opportunistic_acquire TO DEFAULT",
+		  "odyssey.opportunistic_acquire", "", true },
+		{ "SET odyssey.target_session_attrs TO DEFAULT",
+		  "odyssey.target_session_attrs", "", true },
+		{ "SET application_name TO ''", "application_name", "", false },
+		{ "SET odyssey.execute_on_host TO ''",
+		  "odyssey.execute_on_host", "", false },
+		{ "SET application_name TO 'default'", "application_name",
+		  "default", false },
+		{ "SET application_name TO 'foo'", "application_name", "foo",
+		  false },
+	};
+	const od_config_query_parsing_t *parsers[] = { &s_minimal_parsing,
+						       &s_full_parsing };
+	od_linear_alloc_init(&s_full_arena, s_full_arena_buf,
+			     sizeof(s_full_arena_buf));
+	od_query_ctx_t ctx = { 0 };
+	for (size_t p = 0; p < sizeof(parsers) / sizeof(parsers[0]); ++p) {
+		for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+			od_linear_alloc_reset(&s_full_arena, 0);
+			od_query_parse_fill_ctx(cases[i].query,
+						strlen(cases[i].query),
+						&s_full_arena, &ctx,
+						parsers[p]);
+			uint64_t flags = OD_QUERY_CTX_IS_SET;
+			if (cases[i].is_default) {
+				flags |= OD_QUERY_CTX_IS_SET_TO_DEFAULT;
+			}
+			test(ctx.flags == flags);
+			test(strcmp(ctx.s1, cases[i].key) == 0);
+			test(strcmp(ctx.s2, cases[i].value) == 0);
+			test(ctx.s2_long == NULL);
+		}
+		od_linear_alloc_reset(&s_full_arena, 0);
+		const char *query = "RESET application_name";
+		od_query_parse_fill_ctx(query, strlen(query), &s_full_arena,
+					&ctx, parsers[p]);
+		/* RESET remains a backend command in both modes. */
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET_TO_DEFAULT));
+	}
+	od_query_ctx_reset(&ctx);
+}
+
 static void test_parse_fill_ctx_modes(void)
 {
 	od_query_ctx_t ctx;
@@ -1254,4 +1313,5 @@ void odyssey_test_sql_minimal_parser(void)
 	test_extract_query_ctx();
 	test_parse_fill_ctx();
 	test_parse_fill_ctx_full();
+	test_parse_fill_ctx_set_default();
 }

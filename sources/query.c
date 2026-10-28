@@ -892,6 +892,12 @@ static void parse_full(const char *query, uint32_t query_len,
 			} else {
 				goto error;
 			}
+		} else if (vsstmt->kind == VAR_SET_DEFAULT &&
+			   vsstmt->name != NULL) {
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SET);
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SET_TO_DEFAULT);
+			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s",
+				    vsstmt->name);
 		}
 	} else if (IsA(node, TransactionStmt)) {
 		TransactionStmt *tstmt = castNode(TransactionStmt, node);

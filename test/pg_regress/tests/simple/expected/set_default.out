@@ -1,0 +1,110 @@
+-- Save the server-side reset value before application_name is rewritten.
+SELECT reset_val AS application_name FROM pg_settings WHERE name = 'application_name' \gset reset_
+SET application_name TO 'changed';
+SET application_name TO DEFAULT;
+SELECT current_setting('application_name') = :'reset_application_name' AS restored;
+ restored 
+----------
+ t
+(1 row)
+
+SET application_name TO '';
+SELECT current_setting('application_name') LIKE ' - %' AS empty_is_rewritten;
+ empty_is_rewritten 
+--------------------
+ t
+(1 row)
+
+SET application_name = DEFAULT;
+SELECT current_setting('application_name') = :'reset_application_name' AS restored;
+ restored 
+----------
+ t
+(1 row)
+
+-- Ordinary GUCs still use the backend's default.
+SHOW statement_timeout \gset reset_
+SET statement_timeout TO '100s';
+SET statement_timeout TO DEFAULT;
+SELECT current_setting('statement_timeout') = :'reset_statement_timeout' AS restored;
+ restored 
+----------
+ t
+(1 row)
+
+-- Only execute_on_host accepts both DEFAULT and an empty string as a reset.
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.execute_on_host;
+NOTICE:  processed virtually by odyssey
+ odyssey.execute_on_host 
+-------------------------
+ tcp://localhost:5432
+(1 row)
+
+SET odyssey.execute_on_host TO DEFAULT;
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.execute_on_host;
+NOTICE:  processed virtually by odyssey
+ odyssey.execute_on_host 
+-------------------------
+ 
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+SET odyssey.execute_on_host TO '';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.execute_on_host;
+NOTICE:  processed virtually by odyssey
+ odyssey.execute_on_host 
+-------------------------
+ 
+(1 row)
+
+-- Rejected values must leave the previous virtual GUC value intact.
+SET odyssey.pin_backend TO 'on';
+NOTICE:  processed virtually by odyssey
+SET odyssey.pin_backend TO DEFAULT;
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.pin_backend": ""
+SET odyssey.pin_backend TO '';
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.pin_backend": ""
+SHOW odyssey.pin_backend;
+NOTICE:  processed virtually by odyssey
+ odyssey.pin_backend 
+---------------------
+ on
+(1 row)
+
+SET odyssey.opportunistic_acquire TO 'off';
+NOTICE:  processed virtually by odyssey
+SET odyssey.opportunistic_acquire TO DEFAULT;
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.opportunistic_acquire": ""
+SET odyssey.opportunistic_acquire TO '';
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.opportunistic_acquire": ""
+SHOW odyssey.opportunistic_acquire;
+NOTICE:  processed virtually by odyssey
+ odyssey.opportunistic_acquire 
+-------------------------------
+ off
+(1 row)
+
+SET odyssey.target_session_attrs TO 'read-write';
+NOTICE:  processed virtually by odyssey
+SET odyssey.target_session_attrs TO DEFAULT;
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.target_session_attrs": ""
+SET odyssey.target_session_attrs TO '';
+NOTICE:  processed virtually by odyssey
+ERROR:  invalid value for parameter "odyssey.target_session_attrs": ""
+SHOW odyssey.target_session_attrs;
+NOTICE:  processed virtually by odyssey
+ odyssey.target_session_attrs 
+------------------------------
+ read-write
+(1 row)
+

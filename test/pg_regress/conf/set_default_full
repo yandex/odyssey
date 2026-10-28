@@ -1,0 +1,13 @@
+include "/home/postgres/regress/conf/simple"
+
+query_parsing_mode full
+
+# Leave room for the instrumented Bison parser in sanitizer builds.
+coroutine_stack_size 256
+
+# Enable auto routing so simple queries actually use the full parser.
+listen {
+	host "*"
+	port 7432
+	auto_route_ro_on_standby yes
+}

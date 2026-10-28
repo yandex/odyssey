@@ -77,6 +77,7 @@ typedef enum {
 	OD_QUERY_CTX_IS_DEALLOCATE_ALL = 1 << 7,
 	OD_QUERY_CTX_HAS_DEALLOCATE_NAME = 1 << 8,
 	OD_QUERY_CTX_TOO_LONG = 1 << 9,
+	OD_QUERY_CTX_IS_SET_TO_DEFAULT = 1 << 10,
 } od_query_ctx_flags_t;
 
 typedef struct {
@@ -84,6 +85,8 @@ typedef struct {
 	/*
 	 *   OD_QUERY_CTX_IS_SHOW               s1 = guc name
 	 *   OD_QUERY_CTX_IS_SET                s1 = guc key, s2 = guc value
+	 *   OD_QUERY_CTX_IS_SET_TO_DEFAULT     SET guc TO DEFAULT: s2 is empty;
+	 *                                     consumers distinguish it from ''
 	 *   OD_QUERY_CTX_HAS_DEALLOCATE_NAME   s1 = prepared statement name
 	 */
 	char s1[OD_PG_NAMEDATALEN];

@@ -200,6 +200,11 @@ static int virtual_portal_set_str_column(od_virtual_portal_t *portal,
 static od_frontend_status_t process_set_appname(od_client_t *client,
 						const od_query_ctx_t *ctx)
 {
+	/* Let PostgreSQL restore its default without the peer-name suffix. */
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET_TO_DEFAULT)) {
+		return OD_OK;
+	}
+
 	int rc;
 	char original_appname[64];
 	size_t len = od_min(strlen(ctx->s2), sizeof(original_appname));

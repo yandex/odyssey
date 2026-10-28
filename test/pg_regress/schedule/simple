@@ -1,5 +1,6 @@
 test: startup_notice
 test: application_name
+test: set_default
 test: broken_cached_plan
 test: idle_in_transaction
 test: virtual_show

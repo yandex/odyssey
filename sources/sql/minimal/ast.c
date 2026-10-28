@@ -129,6 +129,10 @@ void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SET);
 		od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", n->key);
 
+		if (n->value == NULL) {
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SET_TO_DEFAULT);
+		}
+
 		const char *value = n->value != NULL ? n->value : "";
 		od_snprintf(ctx->s2, sizeof(ctx->s2), "%s", value);
 		size_t len = strlen(value);
