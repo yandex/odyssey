@@ -741,6 +741,29 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 			goto error;
 		}
 
+		uint64_t connections[] = {
+			atomic_load_explicit(&route->stats.client_connections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.client_disconnections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.server_connections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.server_disconnections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.server_detaches,
+					     memory_order_relaxed),
+		};
+		for (size_t i = 0;
+		     i < sizeof(connections) / sizeof(connections[0]); i++) {
+			data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+					       connections[i]);
+			rc = kiwi_be_write_data_row_add(stream, offset, data,
+							data_len);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+		}
+
 		transactions_hgram = td_new(QUANTILES_COMPRESSION);
 		queries_hgram = td_new(QUANTILES_COMPRESSION);
 		client_lifetime_hgram = td_new(QUANTILES_COMPRESSION);
@@ -1001,6 +1024,21 @@ static inline int od_console_show_pools(od_client_t *client,
 			return NOT_OK_RESPONSE;
 		}
 
+		char *connections[] = {
+			"client_connections", "client_disconnections",
+			"server_connections", "server_disconnections",
+			"server_detaches",
+		};
+		for (size_t i = 0;
+		     i < sizeof(connections) / sizeof(connections[0]); i++) {
+			rc = kiwi_be_write_row_description_add(
+				msg, 0, connections[i], strlen(connections[i]),
+				0, 0, PG_INT8OID, PG_INT8_LEN, 0, 0);
+			if (rc == NOT_OK_RESPONSE) {
+				return NOT_OK_RESPONSE;
+			}
+		}
+
 		for (int i = 0; i < quantiles_count; i++) {
 			char caption[KIWI_MAX_VAR_SIZE];
 			int caption_len;
@@ -1074,7 +1112,7 @@ static inline int od_console_show_pools(od_client_t *client,
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
-		const size_t rest_columns_count = 14;
+		const size_t rest_columns_count = 19;
 		for (size_t i = 0; i < rest_columns_count; ++i) {
 			rc = kiwi_be_write_data_row_add(stream, offset, NULL,
 							NULL_MSG_LEN);

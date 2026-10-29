@@ -795,6 +795,9 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	/* add client to route client pool */
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 	client->route = route;
+	if (client->type == OD_POOL_CLIENT_EXTERNAL) {
+		od_stat_client_connect(&route->stats);
+	}
 
 	od_route_unlock(route);
 	return OD_ROUTER_OK;
@@ -811,6 +814,9 @@ void od_router_unroute(od_router_t *router, od_client_t *client)
 	od_route_t *route = client->route;
 	od_route_lock(route);
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_UNDEF);
+	if (client->type == OD_POOL_CLIENT_EXTERNAL) {
+		od_stat_client_disconnect(&route->stats);
+	}
 	client->route = NULL;
 	od_route_unlock(route);
 }
@@ -1185,10 +1191,12 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	od_server_detach_client(server);
 
 	if (offline || is_repl) {
-		server->route = NULL;
 		od_server_set_pool_state(server, OD_SERVER_UNDEF);
+		server->route = NULL;
 		to_close = server;
 		server = NULL;
+	} else if (server->stats_connected) {
+		od_stat_server_detach(&route->stats);
 	}
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);

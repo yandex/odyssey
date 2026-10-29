@@ -12,9 +12,21 @@
 #include <server.h>
 #include <pstmt.h>
 #include <multi_pool.h>
+#include <route.h>
+
+void od_server_stat_close(od_server_t *server)
+{
+	if (!server->stats_connected) {
+		return;
+	}
+	od_assert(server->route != NULL);
+	od_stat_server_disconnect(&server->route->stats);
+	server->stats_connected = false;
+}
 
 void od_server_free(od_server_t *server)
 {
+	od_server_stat_close(server);
 	kiwi_vars_free(&server->vars);
 
 	od_io_close(&server->io);
@@ -92,6 +104,8 @@ void od_server_set_pool_state(od_server_t *server, od_server_state_t state)
 	od_pg_server_pool_set(pool, server, state);
 
 	if (state == OD_SERVER_UNDEF) {
+		/* Account before removal can make the owning route eligible for GC. */
+		od_server_stat_close(server);
 		server->pool_element = NULL;
 		if (server->endpoint != NULL) {
 			od_rules_storage_unref(server->endpoint->storage);

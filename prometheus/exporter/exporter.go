@@ -160,6 +160,31 @@ var (
 		"Total TCP connections established for the route",
 		[]string{"user", "database"}, nil,
 	)
+	routeClientConnectionsCreatedTotalDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "route", "client_connections_created_total"),
+		"Total external client connections accepted into the route",
+		[]string{"user", "database"}, nil,
+	)
+	routeClientConnectionsClosedTotalDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "route", "client_connections_closed_total"),
+		"Total external client connections removed from the route",
+		[]string{"user", "database"}, nil,
+	)
+	routeServerConnectionsCreatedTotalDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "route", "server_connections_created_total"),
+		"Total backend transport connections established for the route",
+		[]string{"user", "database"}, nil,
+	)
+	routeServerConnectionsClosedTotalDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "route", "server_connections_closed_total"),
+		"Total backend connections closed or removed for closure from the route",
+		[]string{"user", "database"}, nil,
+	)
+	routeServerConnectionsReturnedTotalDescription = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "route", "server_connections_returned_total"),
+		"Total backend connections returned by clients to the pool",
+		[]string{"user", "database"}, nil,
+	)
 
 	routeQueryDurationSecondsDescription = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "route", "query_duration_seconds"),
@@ -256,6 +281,11 @@ var (
 		routeBytesReceivedTotalDescription,
 		routeBytesSentTotalDescription,
 		routeTCPConnectionsTotalDescription,
+		routeClientConnectionsCreatedTotalDescription,
+		routeClientConnectionsClosedTotalDescription,
+		routeServerConnectionsCreatedTotalDescription,
+		routeServerConnectionsClosedTotalDescription,
+		routeServerConnectionsReturnedTotalDescription,
 		routeQueryDurationSecondsDescription,
 		routeTransactionDurationSecondsDescription,
 		routeClientLifetimeSecondsDescription,
@@ -362,6 +392,26 @@ var poolsExtendedColumnToMetric = map[string]poolColumnMetricDesc{
 	},
 	"tcp_conn_count": {
 		desc:      routeTCPConnectionsTotalDescription,
+		valueType: prometheus.CounterValue,
+	},
+	"client_connections": {
+		desc:      routeClientConnectionsCreatedTotalDescription,
+		valueType: prometheus.CounterValue,
+	},
+	"client_disconnections": {
+		desc:      routeClientConnectionsClosedTotalDescription,
+		valueType: prometheus.CounterValue,
+	},
+	"server_connections": {
+		desc:      routeServerConnectionsCreatedTotalDescription,
+		valueType: prometheus.CounterValue,
+	},
+	"server_disconnections": {
+		desc:      routeServerConnectionsClosedTotalDescription,
+		valueType: prometheus.CounterValue,
+	},
+	"server_detaches": {
+		desc:      routeServerConnectionsReturnedTotalDescription,
 		valueType: prometheus.CounterValue,
 	},
 }
