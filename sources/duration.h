@@ -30,6 +30,25 @@
 #include <stdint.h>
 
 /*
+ * A bare number or a PostgreSQL GUC-style duration ("500ms", "30 min",
+ * "1.5h").  Unitless values retain the literal (possibly negative) number
+ * in bare or real, selected by is_real.  The caller applies the option's
+ * historic base unit before rounding to milliseconds.  Values with an
+ * explicit unit have has_unit set and are already converted to ms.
+ */
+typedef struct {
+	int has_unit;
+	int is_real;
+	int64_t bare;
+	double real;
+	int64_t ms;
+} od_duration_value_t;
+
+/* Explicit units use ms; otherwise bare or real retains the input value. */
+bool od_duration_parse_value(const char *value, od_duration_value_t *out,
+			     const char **hintmsg);
+
+/*
  * Parse a PostgreSQL-style duration into whole milliseconds.
  *
  * The base unit is milliseconds (GUC_UNIT_MS), so a bare number means

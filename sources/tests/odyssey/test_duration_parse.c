@@ -7,9 +7,11 @@
 #include <odyssey.h>
 
 #include <duration.h>
+#include <cfg/reader.h>
 #include <tests/odyssey_test.h>
 
 #include <string.h>
+#include <unistd.h>
 
 /*
  * The duration parser is ported from PostgreSQL guc.c (parse_int +
@@ -156,6 +158,8 @@ static void test_invalid_rejected(void)
 	test(!try_parse_ms("99999999999999999999d", &ms, &hint));
 	test(!try_parse_ms("1e30s", &ms, &hint));
 	test(!try_parse_ms("9223372036854775808ms", &ms, &hint));
+	test(!try_parse_ms("-9223372036854775809", &ms, &hint));
+	test(!try_parse_ms(" -9223372036854776000 ", &ms, &hint));
 }
 
 static void test_boundary(void)
@@ -163,6 +167,76 @@ static void test_boundary(void)
 	test(parse_ms("9223372036854775807ms") ==
 	     INT64_MAX); /* exact int64 max */
 	test(parse_ms("-9223372036854775808ms") == INT64_MIN);
+	od_duration_value_t parsed;
+	test(od_duration_parse_value("-9223372036854775808", &parsed, NULL));
+	test(!parsed.has_unit && !parsed.is_real);
+	test(parsed.bare == INT64_MIN);
+	test(!od_duration_parse_value("-9223372036854775809", &parsed, NULL));
+	test(!od_duration_parse_value("9223372036854775808", &parsed, NULL));
+}
+
+static void test_config_duration_strings(void)
+{
+	const struct {
+		const char *value;
+		int64_t seconds_ms;
+		int64_t milliseconds;
+	} cases[] = {
+		{ "10", 10000, 10 },
+		{ "\"10\"", 10000, 10 },
+		{ "10s", 10000, 10000 },
+		{ "\"10s\"", 10000, 10000 },
+		{ "\"1.5s\"", 1500, 1500 },
+		{ "1.5", 1500, 2 },
+		{ "\"1.5\"", 1500, 2 },
+		{ "\" 0x10 \"", 16000, 16 },
+		{ "\"010\"", 10000, 10 },
+		{ "\"1e3\"", 1000000, 1000 },
+		{ "\"30 min\"", 1800000, 1800000 },
+		{ "\"1000us\"", 1, 1 },
+		{ "\"oops\"", -1, -1 },
+		{ "\"10S\"", -1, -1 },
+		{ "\"1h30m\"", -1, -1 },
+		{ "\"-1s\"", -1, -1 },
+		{ "\"9223372036854775808ms\"", -1, -1 },
+		{ "\"2147483648ms\"", -1, -1 },
+		{ "\"nan\"", -1, -1 },
+		{ "\"inf\"", -1, -1 },
+	};
+	for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		char path[] = "/tmp/odyssey_duration_XXXXXX";
+		int fd = mkstemp(path);
+		test(fd != -1);
+		FILE *file = fdopen(fd, "w");
+		test(file != NULL);
+		fprintf(file,
+			"stats_interval %s\nbackend_connect_timeout_ms %s\n"
+			"cancel_queue_timeout_ms \"-1\"\n",
+			cases[i].value, cases[i].value);
+		test(fclose(file) == 0);
+		od_cfg_model_t model;
+		od_cfg_diag_list_t diags;
+		od_cfg_model_init(&model);
+		od_cfg_diag_list_init(&diags);
+		int rc = od_cfg_parse_autoconf(path, &model, &diags);
+		test(unlink(path) == 0);
+		if (cases[i].seconds_ms >= 0) {
+			if (rc != 0) {
+				od_cfg_diag_dumpf(stderr, &diags);
+			}
+			test(rc == 0);
+			test(!od_cfg_diag_has_errors(&diags));
+			test(model.global.stats_interval_ms.value ==
+			     (uint64_t)cases[i].seconds_ms);
+			test(model.global.backend_connect_timeout_ms.value ==
+			     (uint64_t)cases[i].milliseconds);
+			test(model.global.cancel_queue_timeout_ms.value == -1);
+		} else {
+			test(rc != 0 || od_cfg_diag_has_errors(&diags));
+		}
+		od_cfg_diag_list_free(&diags);
+		od_cfg_model_free(&model);
+	}
 }
 
 void odyssey_test_duration_parse(void)
@@ -179,4 +253,5 @@ void odyssey_test_duration_parse(void)
 	test_exponent();
 	test_invalid_rejected();
 	test_boundary();
+	test_config_duration_strings();
 }
