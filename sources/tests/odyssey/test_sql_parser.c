@@ -392,6 +392,32 @@ static void test_empty_input(void)
 	test(node == NULL);
 }
 
+/*
+ * an unterminated block comment used to crash the scanner: the comment
+ * rule consumed it with input() up to EOF, which made flex re-enable
+ * buffer filling and read from yyin == NULL on the next token
+ */
+static void test_unterminated_block_comment(void)
+{
+	parse_fail("/*");
+	parse_fail("/* SHOW x");
+	parse_fail("/* SHOW x *");
+	parse_fail("/* SHOW x */ SHOW y /*");
+	parse_fail("SHOW /* x");
+	parse_fail("SHOW x /*");
+	parse_fail("SHOW x /* ... */ /*");
+	/* same thing in the opaque-tail scanner state */
+	parse_fail("PREPARE p AS SELECT /* x");
+	parse_fail("PREPARE p AS SELECT /* /* x */");
+	parse_fail("EXECUTE p (/* x");
+
+	/* terminated ones are fine, including ones with stars inside */
+	test(strcmp(parse_ok("/* ** * */ SHOW x"), "(show x)") == 0);
+	test(strcmp(parse_ok("/***/ SHOW x"), "(show x)") == 0);
+	test(strcmp(parse_ok("/* a *//* b */SHOW x"), "(show x)") == 0);
+	test(strcmp(parse_ok("SHOW x /* a */"), "(show x)") == 0);
+}
+
 static void test_parse_errors(void)
 {
 	parse_fail("SELECT 1");
@@ -414,6 +440,64 @@ static void test_parse_errors(void)
 	parse_fail("END");
 	parse_fail("ALLOCATE foo");
 	parse_fail("PREPARE foo");
+}
+
+/*
+ * od_sql_minimal_parse() rejects input whose first word can not start a
+ * statement before running the scanner; make sure this shortcut agrees
+ * with the grammar on leading whitespace/comments, reports the error the
+ * same way and does not swallow valid statements
+ */
+static void test_fast_reject(void)
+{
+	static char err[PRINT_BUF_SIZE];
+
+	/* first word is not a statement keyword */
+	parse_fail("SELECT 1");
+	parse_fail("select 1");
+	parse_fail("  \t\r\n SELECT 1");
+	parse_fail("-- comment\nSELECT 1");
+	parse_fail("/* comment */ SELECT 1");
+	parse_fail("/* a */ -- b\n /* c */ INSERT INTO t VALUES (1)");
+	parse_fail("_private_fn()");
+	parse_fail("setting = 1");
+	parse_fail("set_config('a', 'b', false)");
+	parse_fail("all");
+	parse_fail("work");
+	parse_fail("to");
+
+	/* statement keyword after whitespace/comments is still parsed */
+	test(strcmp(parse_ok("  \t\r\n SHOW search_path"),
+		    "(show search_path)") == 0);
+	test(strcmp(parse_ok("-- comment\nSHOW search_path"),
+		    "(show search_path)") == 0);
+	test(strcmp(parse_ok("/* a */ -- b\n /* c */ show search_path"),
+		    "(show search_path)") == 0);
+	test(strcmp(parse_ok("/* no space after comment */BEGIN"), "(begin)") ==
+	     0);
+	test(strcmp(parse_ok("/* a *//* b */DISCARD ALL"), "(discard all)") ==
+	     0);
+
+	/* the shortcut reports the error the same way bison would */
+	memset(err, 0, sizeof(err));
+	od_linear_alloc_reset(&s_arena, 0);
+	od_sql_minimal_node_t *node =
+		od_sql_minimal_parse("SELECT 1", 0, &s_arena, on_error, err);
+	test(node == NULL);
+	test(strcmp(err, "syntax error") == 0);
+
+	memset(err, 0, sizeof(err));
+	od_linear_alloc_reset(&s_arena, 0);
+	node = od_sql_minimal_parse("SHOW", 0, &s_arena, on_error, err);
+	test(node == NULL);
+	test(strcmp(err, "syntax error") == 0);
+
+	/* not handled by the shortcut, still rejected by the scanner */
+	parse_fail("1");
+	parse_fail("'x'");
+	parse_fail("(SHOW x)");
+	parse_fail("\f");
+	parse_fail("\xd1\x81\xd0\xb5\xd1\x82 x = 1");
 }
 
 /*
@@ -1290,7 +1374,9 @@ void odyssey_test_sql_minimal_parser(void)
 	test_unlisten_with_semicolon();
 
 	test_empty_input();
+	test_unterminated_block_comment();
 	test_parse_errors();
+	test_fast_reject();
 
 	test_long_query_oom();
 	test_long_set_value();

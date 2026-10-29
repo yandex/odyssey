@@ -94,3 +94,21 @@ int od_sql_minimal_keyword_lookup(const char *str, size_t len)
 
 	return 0;
 }
+
+int od_sql_minimal_keyword_starts_stmt(int token)
+{
+	/* keep in sync with the 'stmt' rule in parse.y */
+	switch (token) {
+	case KW_SET:
+	case KW_SHOW:
+	case KW_BEGIN:
+	case KW_DEALLOCATE:
+	case KW_DISCARD:
+	case KW_UNLISTEN:
+	case KW_PREPARE:
+	case KW_EXECUTE:
+		return 1;
+	default:
+		return 0;
+	}
+}
