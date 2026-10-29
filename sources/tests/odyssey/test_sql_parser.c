@@ -1234,6 +1234,41 @@ static void test_prepare_locations(void)
 	parse_fail("PREPARE U&\"name\" AS SELECT 1");
 }
 
+static void test_execute_query_ctx(void)
+{
+	const char *sql =
+		"/* before */ EXECUTE \"Mixed\" /* args */ (1 + 2, upper('я'));";
+	od_query_ctx_t ctx = { 0 };
+	const od_config_query_parsing_t *modes[] = { &s_minimal_parsing,
+						     &s_full_parsing };
+	for (size_t i = 0; i < sizeof(modes) / sizeof(modes[0]); i++) {
+		od_linear_alloc_reset(&s_full_arena, 0);
+		od_query_parse_fill_ctx(sql, strlen(sql), &s_full_arena, &ctx,
+					modes[i]);
+		test(ctx.flags == OD_QUERY_CTX_IS_EXECUTE);
+		test(strcmp(ctx.s1, "Mixed") == 0);
+		test(ctx.name_location.start == 21);
+		test(ctx.name_location.end == 28);
+		od_query_ctx_reset(&ctx);
+
+		const char *batch = "EXECUTE p(1); SELECT 2";
+		od_linear_alloc_reset(&s_full_arena, 0);
+		od_query_parse_fill_ctx(batch, strlen(batch), &s_full_arena,
+					&ctx, modes[i]);
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_EXECUTE));
+		od_query_ctx_reset(&ctx);
+	}
+
+	const char *full_only =
+		"/* я */ EXECUTE U&\"A!0042\" UESCAPE '!' /* keep */ (1+2)";
+	fill_ctx_full(full_only, &ctx);
+	test(ctx.flags == OD_QUERY_CTX_IS_EXECUTE);
+	test(strcmp(ctx.s1, "AB") == 0);
+	test(ctx.name_location.start == 17);
+	test(ctx.name_location.end == 39);
+	od_query_ctx_reset(&ctx);
+}
+
 void odyssey_test_sql_minimal_parser(void)
 {
 	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
@@ -1298,4 +1333,5 @@ void odyssey_test_sql_minimal_parser(void)
 	test_extract_query_ctx();
 	test_parse_fill_ctx();
 	test_parse_fill_ctx_full();
+	test_execute_query_ctx();
 }

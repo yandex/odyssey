@@ -1,0 +1,25 @@
+\pset format unaligned
+\set VERBOSITY sqlstate
+select $1::int as v \parse x
+-- Arguments are opaque SQL to the minimal parser.
+SET odyssey.parser_mode = 'mini';
+NOTICE:  processed virtually by odyssey
+EXECUTE x(1+2);
+v
+3
+(1 row)
+SET odyssey.parser_mode = 'full';
+NOTICE:  processed virtually by odyssey
+EXECUTE x(1+2);
+v
+3
+(1 row)
+-- Unicode-escaped names require the full parser.
+EXECUTE U&"\0078"(1+2);
+v
+3
+(1 row)
+SET odyssey.parser_mode = 'mini';
+NOTICE:  processed virtually by odyssey
+EXECUTE U&"\0078"(1+2);
+ERROR:  26000

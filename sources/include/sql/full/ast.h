@@ -1337,6 +1337,8 @@ typedef struct ExecuteStmt
 NodeTag		type;
 	char	   *name;			
 	List	   *params;
+	ParseLoc	name_location;
+	ParseLoc	name_end_location;
 } ExecuteStmt;
 
 typedef struct ExplainStmt
