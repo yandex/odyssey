@@ -403,6 +403,8 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 	}
 
 	machine_msg_t *msg;
+	/* Offer the maximum version; PostgreSQL may negotiate down to 3.0. */
+	server->proto_version = PG_PROTOCOL_LATEST;
 	msg = kiwi_fe_write_startup_message(NULL, argc, argv);
 	if (msg == NULL) {
 		return -1;
@@ -448,10 +450,28 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 				return -1;
 			}
 			break;
+		case KIWI_BE_NEGOTIATE_PROTOCOL_VERSION:
+			rc = kiwi_fe_read_protocol_negotiation(
+				machine_msg_data(msg), machine_msg_size(msg),
+				&server->proto_version);
+			machine_msg_free(msg);
+			if (rc == -1) {
+				od_error(
+					&instance->logger, "startup", client,
+					server,
+					"invalid protocol negotiation message");
+				return -1;
+			}
+			od_debug(&instance->logger, "startup", client, server,
+				 "server negotiated protocol %d.%d",
+				 PG_PROTOCOL_MAJOR(server->proto_version),
+				 PG_PROTOCOL_MINOR(server->proto_version));
+			break;
 		case KIWI_BE_BACKEND_KEY_DATA:
 			rc = kiwi_fe_read_key(machine_msg_data(msg),
 					      machine_msg_size(msg),
-					      &server->key);
+					      &server->key,
+					      server->proto_version);
 			machine_msg_free(msg);
 			if (rc == -1) {
 				od_error(
@@ -1085,7 +1105,7 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 
 	/* send cancel request */
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_cancel(NULL, key->key_pid, key->key);
+	msg = kiwi_fe_write_cancel(NULL, key);
 	if (msg == NULL) {
 		return -1;
 	}

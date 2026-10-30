@@ -7,6 +7,8 @@
 
 #include <odyssey.h>
 
+#include <openssl/rand.h>
+
 #include <machinarium/machinarium.h>
 
 #include <status.h>
@@ -278,7 +280,7 @@ static int send_negotiate(od_client_t *client)
 	}
 
 	machine_msg_t *msg = kiwi_be_write_protocol_negotiation(
-		NULL, PG_PROTOCOL_LATEST, unsupported, nunsupported);
+		NULL, client->startup.proto_version, unsupported, nunsupported);
 	if (msg == NULL) {
 		return -1;
 	}
@@ -405,8 +407,11 @@ static int od_frontend_startup(od_client_t *client)
 		return 0;
 	}
 
-	if (PG_PROTOCOL_MINOR(client->startup.proto_version) >
-		    PG_PROTOCOL_MINOR(PG_PROTOCOL_LATEST) ||
+	uint32_t requested_version = client->startup.proto_version;
+	if (client->startup.proto_version > PG_PROTOCOL_LATEST) {
+		client->startup.proto_version = PG_PROTOCOL_LATEST;
+	}
+	if (requested_version > client->startup.proto_version ||
 	    has_unsupported_features(client)) {
 		int rc = send_negotiate(client);
 		if (rc != 0) {
@@ -1217,8 +1222,7 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 	/* write key data message */
 	machine_msg_t *stream;
 	machine_msg_t *msg;
-	msg = kiwi_be_write_backend_key_data(NULL, client->key.key_pid,
-					     client->key.key);
+	msg = kiwi_be_write_backend_key_data(NULL, &client->key);
 	if (msg == NULL) {
 		return OD_EOOM;
 	}
@@ -3604,16 +3608,24 @@ void od_frontend(void *arg)
 		return;
 	}
 
-	/* Use client id as backend key for the client.
-	 *
-	 * This key will be used to identify a server by
-	 * user cancel requests. The key must be regenerated
-	 * for each new client-server assignment, to avoid
-	 * possibility of cancelling requests by a previous
-	 * server owners.
+	/* The client-visible key identifies this connection. The router resolves
+	 * cancellation to its currently assigned backend, which has its own key.
 	 */
-	client->key.key_pid = client->id.id_a;
-	client->key.key = client->id.id_b;
+	kiwi_key_set32(&client->key, client->id.id_a, client->id.id_b);
+	if (client->startup.proto_version >= PG_PROTOCOL(3, 2)) {
+		client->key.key_len = KIWI_CANCEL_KEY_DEFAULT_LEN;
+		if (RAND_bytes((unsigned char *)client->key.key,
+			       client->key.key_len) != 1) {
+			od_error(&instance->logger, "startup", client, NULL,
+				 "could not generate random cancel key");
+			od_frontend_error(
+				client, KIWI_INTERNAL_ERROR,
+				"could not generate random cancel key");
+			od_frontend_close(client);
+			od_routing_slot_release(global);
+			return;
+		}
+	}
 
 	rc = od_global_clients_map_add(instance->clients_by_key, client);
 	if (rc == -1) {
