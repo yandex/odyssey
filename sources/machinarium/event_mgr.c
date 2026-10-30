@@ -112,6 +112,23 @@ void mm_eventmgr_add(mm_eventmgr_t *mgr, mm_event_t *event)
 	mm_sleeplock_unlock(&mgr->lock);
 }
 
+void mm_eventmgr_remove(mm_eventmgr_t *mgr, mm_event_t *event)
+{
+	mm_sleeplock_lock(&mgr->lock);
+
+	/*
+	 * The event is expected to be in WAIT state here: it was added
+	 * via mm_eventmgr_add() and was neither waited upon nor signaled.
+	 */
+	assert(event->state == MM_EVENT_WAIT);
+
+	mm_list_unlink(&event->link);
+	mgr->count_wait--;
+	event->state = MM_EVENT_NONE;
+
+	mm_sleeplock_unlock(&mgr->lock);
+}
+
 int mm_eventmgr_wait(mm_eventmgr_t *mgr, mm_event_t *event, uint32_t time_ms)
 {
 	/* wait for event */

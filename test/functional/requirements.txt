@@ -1,1 +1,2 @@
 pytest
+psycopg[binary]>=3.2.3,<4

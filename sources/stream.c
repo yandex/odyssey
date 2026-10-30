@@ -12,6 +12,7 @@
 #include <client.h>
 #include <server.h>
 #include <io.h>
+#include <wait_event.h>
 #include <list.h>
 #include <backend.h>
 #include <instance.h>
@@ -164,7 +165,7 @@ static inline void handle_server_command_complete(od_client_t *client,
 	const char *command_tag = data + sizeof(kiwi_header_t);
 
 	if (strcmp(command_tag, "LISTEN") == 0) {
-		od_glog("main", client, server,
+		od_glog(client, server,
 			"LISTEN protocol detected, pin client to server");
 		if (!client->backend_pin) {
 			/* do not steal a manually set pin */
@@ -174,11 +175,9 @@ static inline void handle_server_command_complete(od_client_t *client,
 	}
 }
 
-static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
-						  od_server_t *server,
-						  char *data, size_t size,
-						  int is_service,
-						  int ignore_errors)
+static od_frontend_status_t
+stream_handle_message(stream_t *stream, od_server_t *server, char *data,
+		      size_t size, int is_service, int ignore_errors)
 {
 	if (od_unlikely(size < sizeof(kiwi_header_t))) {
 		/*
@@ -207,19 +206,21 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 		}
 	}
 
-	if (type == KIWI_BE_COMMAND_COMPLETE) {
-		const char *command_tag = data + sizeof(kiwi_header_t);
-		od_debug(&instance->logger, ctx, client, server, "%s - %s",
-			 kiwi_be_type_to_string(type), command_tag);
-	} else {
-		od_debug(&instance->logger, ctx, client, server, "%s",
-			 kiwi_be_type_to_string(type));
+	if (instance->config.log_debug) {
+		if (type == KIWI_BE_COMMAND_COMPLETE) {
+			const char *command_tag = data + sizeof(kiwi_header_t);
+			od_debug(&instance->logger, client, server, "%s - %s",
+				 kiwi_be_type_to_string(type), command_tag);
+		} else {
+			od_debug(&instance->logger, client, server, "%s",
+				 kiwi_be_type_to_string(type));
+		}
 	}
 
 	switch (type) {
 	case KIWI_BE_ERROR_RESPONSE:
 		/* we expect stream will accumulate this type of message fully */
-		od_backend_error(server, ctx, data, size);
+		od_backend_error(server, data, size);
 
 		if (server->xproto_mode) {
 			/*
@@ -242,11 +243,10 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 
 	case KIWI_BE_PARAMETER_STATUS:
 		/* we expect stream will accumulate this type of message fully */
-		rc = od_backend_update_parameter(server, ctx, data, size,
+		rc = od_backend_update_parameter(server, data, size,
 						 is_service);
 		if (rc == -1) {
-			od_gerror(ctx, client, server,
-				  "can't update parameter");
+			od_gerror(client, server, "can't update parameter");
 			return OD_ESERVER_READ;
 		}
 		break;
@@ -297,8 +297,8 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 		int64_t query_time = 0;
 		od_stat_query_end(&route->stats, &server->stats_state,
 				  server->is_transaction, &query_time);
-		if (query_time > 0) {
-			od_debug(&instance->logger, ctx, server->client, server,
+		if (instance->config.log_debug && query_time > 0) {
+			od_debug(&instance->logger, server->client, server,
 				 "query time: %" PRIi64 " microseconds",
 				 query_time);
 		}
@@ -338,10 +338,10 @@ static od_frontend_status_t stream_handle_message(stream_t *stream, char *ctx,
 	return OD_OK;
 }
 
-static od_frontend_status_t stream_eat(char *ctx, stream_t *stream,
-				       od_server_t *server, int is_service,
-				       int ignore_errors, char *data,
-				       size_t size, size_t *processed)
+static od_frontend_status_t stream_eat(stream_t *stream, od_server_t *server,
+				       int is_service, int ignore_errors,
+				       char *data, size_t size,
+				       size_t *processed)
 {
 	*processed = 0;
 
@@ -366,7 +366,7 @@ static od_frontend_status_t stream_eat(char *ctx, stream_t *stream,
 		if (stream->msg_left == 0) {
 			/* message was accumulated fully - must handle it */
 			od_frontend_status_t st = stream_handle_message(
-				stream, ctx, server, dest,
+				stream, server, dest,
 				machine_msg_size(stream->msg), is_service,
 				ignore_errors);
 			if (st != OD_OK) {
@@ -391,7 +391,7 @@ static od_frontend_status_t stream_eat(char *ctx, stream_t *stream,
 	uint32_t body;
 	int rc = kiwi_validate_be_header(data, sizeof(kiwi_header_t), &body);
 	if (rc != 0) {
-		od_gerror(ctx, server->client, server,
+		od_gerror(server->client, server,
 			  "invalid package header from server ('%c', size=%u)",
 			  hdr->type, hdr->len);
 		return OD_ESERVER_READ;
@@ -404,9 +404,8 @@ static od_frontend_status_t stream_eat(char *ctx, stream_t *stream,
 
 		/* there are enough bytes to process packet */
 		od_frontend_status_t st =
-			stream_handle_message(stream, ctx, server, data,
-					      packet_size, is_service,
-					      ignore_errors);
+			stream_handle_message(stream, server, data, packet_size,
+					      is_service, ignore_errors);
 		if (st != OD_OK) {
 			return st;
 		}
@@ -441,7 +440,7 @@ static void stream_destroy(stream_t *stream)
 	stream_msg_free(stream);
 }
 
-static od_frontend_status_t process_readahead(char *ctx, stream_t *stream,
+static od_frontend_status_t process_readahead(stream_t *stream,
 					      od_server_t *server,
 					      int is_service, int ignore_errors,
 					      uint32_t timeout_ms)
@@ -456,8 +455,8 @@ static od_frontend_status_t process_readahead(char *ctx, stream_t *stream,
 
 	while (!stream_must_stop(stream) && left > 0) {
 		size_t processed = 0;
-		status = stream_eat(ctx, stream, server, is_service,
-				    ignore_errors, pos, left, &processed);
+		status = stream_eat(stream, server, is_service, ignore_errors,
+				    pos, left, &processed);
 		total_processed += processed;
 		pos += processed;
 		left -= processed;
@@ -494,9 +493,11 @@ static od_frontend_status_t process_readahead(char *ctx, stream_t *stream,
 
 	if (total_processed > 0 && !is_service) {
 		size_t unused;
+		od_wait_event_start(OD_WAIT_STREAM_CLIENT_WRITE);
 		int rc = od_io_write_raw(&client->io, rvec.iov_base,
 					 total_processed, &unused, timeout_ms,
 					 OD_IO_WRITE_DUPLEX);
+		od_wait_event_end(OD_WAIT_STREAM_CLIENT_WRITE);
 		if (rc != 0) {
 			status = mm_errno_get() == ENOBUFS ?
 					 OD_ECLIENT_READAHEAD_FULL :
@@ -515,10 +516,10 @@ static int readahead_empty(od_readahead_t *ra)
 }
 
 static od_frontend_status_t
-od_stream_server_impl(char *ctx, od_server_t *server, int is_service,
-		      int ignore_errors, int nresponses,
-		      od_stream_on_responce_cb on_response, void *arg,
-		      uint32_t timeout_ms)
+od_stream_server_impl(od_server_t *server, int is_service, int ignore_errors,
+		      int nresponses, od_stream_on_responce_cb on_response,
+		      void *arg, uint32_t timeout_ms,
+		      od_wait_event_t wait_event)
 {
 	od_frontend_status_t status = OD_OK;
 	int rc;
@@ -540,7 +541,7 @@ od_stream_server_impl(char *ctx, od_server_t *server, int is_service,
 
 	/* TODO: support more correct timeout */
 	while (!stream_must_stop(&stream)) {
-		status = process_readahead(ctx, &stream, server, is_service,
+		status = process_readahead(&stream, server, is_service,
 					   ignore_errors, timeout_ms);
 		if (status != OD_OK && status != OD_UNDEF) {
 			break;
@@ -568,7 +569,9 @@ od_stream_server_impl(char *ctx, od_server_t *server, int is_service,
 			continue;
 		}
 
+		od_wait_event_start(wait_event);
 		rc = od_io_read_some(&server->io, timeout_ms);
+		od_wait_event_end(wait_event);
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == EAGAIN) {
@@ -601,40 +604,41 @@ od_stream_server_impl(char *ctx, od_server_t *server, int is_service,
 	return status;
 }
 
-od_frontend_status_t od_stream_server_until_rfq(char *ctx, od_server_t *server,
-						uint32_t timeout_ms)
+od_frontend_status_t od_stream_server_until_rfq(od_server_t *server,
+						uint32_t timeout_ms,
+						od_wait_event_t wait_event)
 {
-	return od_stream_server_impl(ctx, server, 0 /* is_service */,
+	return od_stream_server_impl(server, 0 /* is_service */,
 				     0 /* ignore_errors */, 0 /* nresponses */,
-				     NULL, NULL, timeout_ms);
-}
-
-od_frontend_status_t od_service_stream_server_until_rfq(char *ctx,
-							od_server_t *server,
-							int ignore_errors,
-							uint32_t timeout_ms)
-{
-	return od_stream_server_impl(ctx, server, 1 /* is_service */,
-				     ignore_errors, 0 /* nresponses */, NULL,
-				     NULL, timeout_ms);
+				     NULL, NULL, timeout_ms, wait_event);
 }
 
 od_frontend_status_t
-od_stream_server_exact_completes(char *ctx, od_server_t *server, int n,
-				 od_stream_on_responce_cb on_response,
-				 void *arg, uint32_t timeout_ms)
+od_service_stream_server_until_rfq(od_server_t *server, int ignore_errors,
+				   uint32_t timeout_ms,
+				   od_wait_event_t wait_event)
 {
-	return od_stream_server_impl(ctx, server, 0 /* is_service */,
-				     0 /* ignore_errors */, n /* nresponses */,
-				     on_response, arg, timeout_ms);
+	return od_stream_server_impl(server, 1 /* is_service */, ignore_errors,
+				     0 /* nresponses */, NULL, NULL, timeout_ms,
+				     wait_event);
 }
 
-od_frontend_status_t od_stream_server_sync(char *ctx, od_server_t *server,
-					   uint32_t timeout_ms)
+od_frontend_status_t od_stream_server_exact_completes(
+	od_server_t *server, int n, od_stream_on_responce_cb on_response,
+	void *arg, uint32_t timeout_ms, od_wait_event_t wait_event)
 {
-	return od_stream_server_impl(ctx, server, 0 /* is_service */,
+	return od_stream_server_impl(server, 0 /* is_service */,
+				     0 /* ignore_errors */, n /* nresponses */,
+				     on_response, arg, timeout_ms, wait_event);
+}
+
+od_frontend_status_t od_stream_server_sync(od_server_t *server,
+					   uint32_t timeout_ms,
+					   od_wait_event_t wait_event)
+{
+	return od_stream_server_impl(server, 0 /* is_service */,
 				     0 /* ignore_errors */, 0 /* nresponses */,
-				     NULL, NULL, timeout_ms);
+				     NULL, NULL, timeout_ms, wait_event);
 }
 
 /*
@@ -687,7 +691,7 @@ copy_handle_msg(copy_stream_t *cs, od_client_t *client, kiwi_fe_type_t type)
 	return OD_OK;
 }
 
-static od_frontend_status_t copy_stream_eat(copy_stream_t *cs, char *ctx,
+static od_frontend_status_t copy_stream_eat(copy_stream_t *cs,
 					    od_client_t *client, char *data,
 					    size_t size, size_t *processed)
 {
@@ -713,7 +717,7 @@ static od_frontend_status_t copy_stream_eat(copy_stream_t *cs, char *ctx,
 	uint32_t body;
 	int rc = kiwi_validate_fe_header(data, sizeof(kiwi_header_t), &body);
 	if (rc != 0) {
-		od_gerror(ctx, client, client->server,
+		od_gerror(client, client->server,
 			  "invalid package header from client ('%c', size=%u)",
 			  hdr->type, hdr->len);
 		return OD_ECLIENT_PROTOCOL_ERROR;
@@ -748,9 +752,10 @@ static int copy_stream_stop(copy_stream_t *cs)
 	return cs->left == 0 && cs->done_fail_met;
 }
 
-static od_frontend_status_t
-copy_process_readahead(char *ctx, copy_stream_t *stream, od_client_t *client,
-		       int stop_on_bound, uint32_t timeout_ms)
+static od_frontend_status_t copy_process_readahead(copy_stream_t *stream,
+						   od_client_t *client,
+						   int stop_on_bound,
+						   uint32_t timeout_ms)
 {
 	od_server_t *server = client->server;
 	od_readahead_t *readahead = &client->io.readahead;
@@ -762,8 +767,7 @@ copy_process_readahead(char *ctx, copy_stream_t *stream, od_client_t *client,
 
 	while (!copy_stream_stop(stream) && left > 0) {
 		size_t processed = 0;
-		status = copy_stream_eat(stream, ctx, client, pos, left,
-					 &processed);
+		status = copy_stream_eat(stream, client, pos, left, &processed);
 		od_assert(processed <= left);
 		total_processed += processed;
 		pos += processed;
@@ -802,9 +806,11 @@ copy_process_readahead(char *ctx, copy_stream_t *stream, od_client_t *client,
 
 	if (total_processed > 0) {
 		size_t unused;
+		od_wait_event_start(OD_WAIT_STREAM_SERVER_WRITE);
 		int rc = od_io_write_raw(&server->io, rvec.iov_base,
 					 total_processed, &unused, timeout_ms,
 					 0);
+		od_wait_event_end(OD_WAIT_STREAM_SERVER_WRITE);
 		od_assert((rc == 0 && (total_processed == unused)) ||
 			  ((total_processed != unused) && rc != 0));
 		if (rc != 0) {
@@ -816,8 +822,7 @@ copy_process_readahead(char *ctx, copy_stream_t *stream, od_client_t *client,
 	return status;
 }
 
-static od_frontend_status_t stream_copy_from_client(char *ctx,
-						    od_client_t *client,
+static od_frontend_status_t stream_copy_from_client(od_client_t *client,
 						    machine_msg_t *additional,
 						    uint32_t timeout_ms)
 {
@@ -839,7 +844,9 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 			return st;
 		}
 
+		od_wait_event_start(OD_WAIT_STREAM_SERVER_WRITE);
 		rc = od_io_write(&server->io, additional, timeout_ms);
+		od_wait_event_end(OD_WAIT_STREAM_SERVER_WRITE);
 		if (rc != 0) {
 			return OD_ESERVER_WRITE;
 		}
@@ -866,8 +873,8 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 			break;
 		}
 
-		status = copy_process_readahead(ctx, &stream, client,
-						server_event, timeout_ms);
+		status = copy_process_readahead(&stream, client, server_event,
+						timeout_ms);
 		if (status != OD_OK && status != OD_UNDEF) {
 			break;
 		}
@@ -889,7 +896,9 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 		od_assert(od_readahead_unread(&client->io.readahead) <
 			  (int)sizeof(kiwi_header_t));
 
+		od_wait_event_start(OD_WAIT_STREAM_CLIENT_READ);
 		rc = od_io_read_some(&client->io, timeout_ms);
+		od_wait_event_end(OD_WAIT_STREAM_CLIENT_READ);
 		if (rc == -1) {
 			int errno_ = machine_errno();
 			if (errno_ == EAGAIN) {
@@ -920,7 +929,7 @@ static od_frontend_status_t stream_copy_from_client(char *ctx,
 	return status;
 }
 
-od_frontend_status_t od_stream_copy_to_server(char *ctx, od_client_t *client,
+od_frontend_status_t od_stream_copy_to_server(od_client_t *client,
 					      od_server_t *server,
 					      machine_msg_t *additional,
 					      uint32_t timeout_ms)
@@ -931,7 +940,7 @@ od_frontend_status_t od_stream_copy_to_server(char *ctx, od_client_t *client,
 	 */
 
 	od_frontend_status_t status =
-		stream_copy_from_client(ctx, client, additional, timeout_ms);
+		stream_copy_from_client(client, additional, timeout_ms);
 
 	if (status != OD_OK) {
 		return status;
@@ -943,7 +952,8 @@ od_frontend_status_t od_stream_copy_to_server(char *ctx, od_client_t *client,
 	}
 
 	/* server->copy_mode=0 will be set on RFQ */
-	status = od_stream_server_until_rfq(ctx, server, timeout_ms);
+	status = od_stream_server_until_rfq(server, timeout_ms,
+					    OD_WAIT_STREAM_SERVER_READ);
 
 	return status;
 }

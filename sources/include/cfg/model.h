@@ -98,6 +98,7 @@ typedef struct od_cfg_global {
 	od_cfg_bool_field_t log_route_stats_prom;
 	od_cfg_bool_field_t replication_proxy_phys;
 	od_cfg_bool_field_t replication_proxy_logic;
+	od_cfg_bool_field_t ignore_cancel;
 
 	od_cfg_string_field_t pid_file;
 	od_cfg_string_field_t unix_socket_dir;
@@ -144,6 +145,12 @@ typedef struct od_cfg_global {
 	od_cfg_int_field_t workers;
 	/* OD_CFG_TLS_WORKERS_AUTO for "auto", resolved in convert */
 	od_cfg_int_field_t tls_workers;
+
+	od_cfg_u64_field_t auth_query_cache_ttl_ms;
+	od_cfg_u64_field_t auth_query_cache_ttl_jitter_ms;
+	od_cfg_u64_field_t auth_query_cache_error_retry_ms;
+	od_cfg_bool_field_t auth_query_cache_stale_on_error;
+	od_cfg_u64_field_t auth_query_timeout_ms;
 
 } od_cfg_global_t;
 
@@ -378,6 +385,7 @@ struct od_cfg_route {
 	od_cfg_string_field_t auth_query_user;
 	od_cfg_bool_field_t password_passthrough;
 	od_cfg_string_field_t password;
+	od_cfg_string_field_t password_pgpass;
 	od_cfg_string_field_t role;
 	od_cfg_int_field_t client_max;
 	od_cfg_bool_field_t client_fwd_error;

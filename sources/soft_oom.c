@@ -10,12 +10,15 @@
 #include <dirent.h>
 #include <signal.h>
 
+#include <machinarium/file.h>
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
+#include <machinarium/memory.h>
 
 #include <soft_oom.h>
 #include <config.h>
 #include <od_memory.h>
+#include <util.h>
 
 #define SOFT_OOM_LOG_CONTEXT "soft-oom"
 #define PROC_DIR_PATH "/proc"
@@ -26,46 +29,62 @@
 
 static inline int od_soft_oom_get_system_memory_consumption(uint64_t *result)
 {
-	FILE *fp = fopen(PROC_MEMINFO, "re");
-	if (!fp) {
-		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			  "can't open '%s': %s", PROC_MEMINFO, strerror(errno));
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(PROC_MEMINFO, &buf, &size) != 0) {
+		od_gerror(NULL, NULL, "can't open '%s': %s", PROC_MEMINFO,
+			  strerror(errno));
 		return NOT_OK_RESPONSE;
 	}
 
-	char line[256];
-	int64_t mem_available = 0, mem_total = 0;
+	int64_t mem_available, mem_total;
 
-	while (fgets(line, sizeof(line), fp)) {
-		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
-			   &mem_available) == 1) {
-			continue;
-		}
+	od_soft_oom_get_system_memory_consumption_from_meminfo(
+		buf, &mem_available, &mem_total);
 
-		if (sscanf(line, "MemTotal: %" PRId64 " kB", &mem_total) == 1) {
-			continue;
-		}
-	}
-
-	fclose(fp);
+	mm_free(buf);
 
 	int64_t mem_used = mem_total - mem_available;
 
 	if (mem_used >= 0) {
-		*result = ((uint64_t)mem_used);
+		*result = (uint64_t)mem_used;
 
-		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			"updated memory consumption for system: %" PRIu64 " KB",
+		od_glog(NULL, NULL,
+			"updated memory consumption for system: %" PRIu64
+			" bytes",
 			*result);
 	} else {
-		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			"got negative mem used: total = %" PRId64
-			", available = %" PRId64,
+		od_glog(NULL, NULL,
+			"got negative mem used: total = %" PRId64 " bytes"
+			", available = %" PRId64 " bytes",
 			mem_total, mem_available);
 		*result = 0;
 	}
 
 	return OK_RESPONSE;
+}
+
+void od_soft_oom_get_system_memory_consumption_from_meminfo(
+	char *meminfo, int64_t *mem_available, int64_t *mem_total)
+{
+	*mem_available = 0;
+	*mem_total = 0;
+
+	char *cursor = meminfo;
+	char *line;
+	while ((line = od_next_line(&cursor)) != NULL) {
+		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
+			   mem_available) == 1) {
+			continue;
+		}
+
+		if (sscanf(line, "MemTotal: %" PRId64 " kB", mem_total) == 1) {
+			continue;
+		}
+	}
+
+	*mem_available *= 1024;
+	*mem_total *= 1024;
 }
 
 static inline void strstrip_right(char *s)
@@ -88,17 +107,19 @@ static inline int od_soft_oom_is_target_process(const char *target_comm,
 						int *result)
 {
 	char comm_path[256];
-	char comm[32];
 
 	snprintf(comm_path, sizeof(comm_path), PROC_COMM_FMT, pid);
 
-	FILE *fp = fopen(comm_path, "re");
-	if (fp == NULL) {
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(comm_path, &buf, &size) != 0) {
 		return NOT_OK_RESPONSE;
 	}
 
-	if (fgets(comm, sizeof(comm), fp) == NULL) {
-		fclose(fp);
+	char *cursor = buf;
+	char *comm = od_next_line(&cursor);
+	if (comm == NULL) {
+		mm_free(buf);
 		return NOT_OK_RESPONSE;
 	}
 
@@ -107,10 +128,11 @@ static inline int od_soft_oom_is_target_process(const char *target_comm,
 	if (strstr(comm, target_comm) != NULL) {
 		*result = 1;
 		strstrip_right(comm);
-		strcpy(pid_comm, comm);
+		strncpy(pid_comm, comm, 32 - 1);
+		pid_comm[32 - 1] = '\0';
 	}
 
-	fclose(fp);
+	mm_free(buf);
 
 	return OK_RESPONSE;
 }
@@ -121,19 +143,21 @@ static inline int od_soft_oom_accumulate_process_pss(pid_t pid,
 	char smaps_path[256];
 	snprintf(smaps_path, sizeof(smaps_path), PROC_SMAPS_ROLLUP, pid);
 
-	FILE *smaps = fopen(smaps_path, "re");
-	if (smaps == NULL) {
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(smaps_path, &buf, &size) != 0) {
 		return NOT_OK_RESPONSE;
 	}
 
-	char line[256];
 	size_t pss_kb = 0;
-	while (fgets(line, sizeof(line), smaps)) {
+	char *cursor = buf;
+	char *line;
+	while ((line = od_next_line(&cursor)) != NULL) {
 		if (sscanf(line, "Pss:%zu", &pss_kb) == 1) {
 			break;
 		}
 	}
-	fclose(smaps);
+	mm_free(buf);
 
 	*result += (pss_kb * 1024);
 
@@ -148,8 +172,8 @@ static inline int od_soft_oom_iterate_procs_by_comm(const char *comm,
 {
 	DIR *proc_dir = opendir(PROC_DIR_PATH);
 	if (proc_dir == NULL) {
-		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			  "can't open " PROC_DIR_PATH ": %s", strerror(errno));
+		od_gerror(NULL, NULL, "can't open " PROC_DIR_PATH ": %s",
+			  strerror(errno));
 		return NOT_OK_RESPONSE;
 	}
 
@@ -174,8 +198,7 @@ static inline int od_soft_oom_iterate_procs_by_comm(const char *comm,
 		char pid_comm[32];
 		if (od_soft_oom_is_target_process(comm, pid, pid_comm,
 						  &is_target) != OK_RESPONSE) {
-			od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-				  "can't check pid %d: %s", pid,
+			od_gerror(NULL, NULL, "can't check pid %d: %s", pid,
 				  strerror(errno));
 			continue;
 		}
@@ -208,7 +231,7 @@ od_soft_oom_aggregate_consumption_cb(pid_t pid, const char *comm, void *arg)
 
 	if (od_soft_oom_accumulate_process_pss(pid, carg->result) !=
 	    OK_RESPONSE) {
-		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
+		od_gerror(NULL, NULL,
 			  "can't accumulate pss from pid %d (%s): %s", pid,
 			  comm, strerror(errno));
 		/* return ok in order to not stop on errors */
@@ -291,9 +314,8 @@ static inline int od_soft_oom_list_procs_cb(pid_t pid, const char *comm,
 	uint64_t pss = 0;
 
 	if (od_soft_oom_accumulate_process_pss(pid, &pss) != OK_RESPONSE) {
-		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			  "can't accumulate pss from pid %d: %s", pid,
-			  strerror(errno));
+		od_gerror(NULL, NULL, "can't accumulate pss from pid %d: %s",
+			  pid, strerror(errno));
 		/* return ok in order to not stop on errors of pss accumulate */
 		return OK_RESPONSE;
 	}
@@ -311,7 +333,7 @@ od_soft_oom_get_mem_consumption_from_processes(od_config_soft_oom_t *config,
 	int rc = od_soft_oom_iterate_procs_by_comm(
 		config->process, od_soft_oom_aggregate_consumption_cb, &arg);
 
-	od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
+	od_glog(NULL, NULL,
 		"updated memory consumption for '%s' (%d pids): %" PRIu64
 		" bytes",
 		config->process, arg.npids, *result);
@@ -344,7 +366,7 @@ static inline void od_soft_oom_signal_postgres(od_soft_oom_checker_t *checker)
 		return;
 	}
 
-	od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
+	od_glog(NULL, NULL,
 		"used memory (%" PRIu64 ") >= limit (%" PRIu64
 		"), need to signal %d to top %d pss consumers",
 		used_bytes, config->limit_bytes, drop->signal, drop->max_rate);
@@ -355,8 +377,7 @@ static inline void od_soft_oom_signal_postgres(od_soft_oom_checker_t *checker)
 	int rc = od_soft_oom_iterate_procs_by_comm(
 		POSTGRES_COMM, od_soft_oom_list_procs_cb, &arg);
 	if (rc != OK_RESPONSE) {
-		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			  "fail to build pss list");
+		od_gerror(NULL, NULL, "fail to build pss list");
 		list_procs_arg_destroy(&arg);
 		return;
 	}
@@ -367,13 +388,11 @@ static inline void od_soft_oom_signal_postgres(od_soft_oom_checker_t *checker)
 	for (size_t i = 0; i < arg.count && i < (size_t)drop->max_rate; ++i) {
 		proc_pss_info_t *info = &arg.infos[i];
 
-		od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-			"sending %d signal to %d (%s)...", drop->signal,
-			info->pid, info->comm);
+		od_glog(NULL, NULL, "sending %d signal to %d (%s)...",
+			drop->signal, info->pid, info->comm);
 		if (kill(info->pid, drop->signal) == -1) {
-			od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-				  "can't send signal to %d: %s", info->pid,
-				  strerror(errno));
+			od_gerror(NULL, NULL, "can't send signal to %d: %s",
+				  info->pid, strerror(errno));
 		}
 	}
 
@@ -388,15 +407,14 @@ static inline void od_soft_oom_checker(void *arg)
 		int rc = machine_wait_flag_wait(
 			checker->stop_flag, checker->config->check_interval_ms);
 		if (rc == 0) {
-			od_glog(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
+			od_glog(NULL, NULL,
 				"stop flag is set, exiting soft oom checker");
 			break;
 		}
 
 		int errno_ = mm_errno_get();
 		if (rc == -1 && errno_ != ETIMEDOUT) {
-			od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-				  "stop flag wait failed: %s (%d)",
+			od_gerror(NULL, NULL, "stop flag wait failed: %s (%d)",
 				  strerror(errno_), errno_);
 			machine_sleep(checker->config->check_interval_ms);
 			continue;
@@ -405,8 +423,7 @@ static inline void od_soft_oom_checker(void *arg)
 		uint64_t used_mem = 0;
 		if (od_soft_oom_get_mem_consumption(checker->config,
 						    &used_mem) != OK_RESPONSE) {
-			od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
-				  "memory state update failed");
+			od_gerror(NULL, NULL, "memory state update failed");
 			continue;
 		}
 
@@ -435,7 +452,7 @@ int od_soft_oom_start_checker(od_config_soft_oom_t *config,
 	checker->machine_id =
 		machine_create("soft-oom-worker", od_soft_oom_checker, checker);
 	if (checker->machine_id == -1) {
-		od_gerror(SOFT_OOM_LOG_CONTEXT, NULL, NULL,
+		od_gerror(NULL, NULL,
 			  "can't create machine for soft oom checks");
 		machine_wait_flag_destroy(checker->stop_flag);
 		return NOT_OK_RESPONSE;

@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/prometheus-test.yml"
       - "sources/**"
       - "test/**"
       - "CMakeLists.txt"
@@ -14,6 +16,10 @@ on:
       - "!docker/prom-exporter/**"
       - "!test/prom-exporter/**"
       - "!sources/machinarium/gdb/**"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   prom:
     name: prom
@@ -26,4 +32,8 @@ jobs:
       with:
         submodules: recursive
     - name: Odyssey build with prometheus test
-      run: make prometheus-legacy-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }}
+      shell: bash
+      run: make prometheus-legacy-test ODYSSEY_BUILD_TYPE=${{ matrix.build-type }} 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

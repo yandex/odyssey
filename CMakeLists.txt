@@ -109,6 +109,15 @@ if(MM_HAVE_SYNC_CAS_16)
     add_definitions(-DMM_HAVE_SYNC_CAS_16)
 endif()
 
+# sigsetjmp(env, 0) lets us skip saving the signal mask, which plain setjmp()
+# does on macOS/BSD at the cost of a couple of syscalls per call. It is POSIX,
+# but check anyway and fall back to setjmp() (see machinarium/setjmp.h).
+include(CheckSymbolExists)
+check_symbol_exists(sigsetjmp "setjmp.h" MM_HAVE_SIGSETJMP)
+if(MM_HAVE_SIGSETJMP)
+    add_definitions(-DMM_HAVE_SIGSETJMP)
+endif()
+
 # WORDS_BIGENDIAN is expected by the code borrowed from postgres
 # (sources/common/md5.c, port/pg_bswap.h)
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.20)

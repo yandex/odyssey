@@ -13,10 +13,12 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdatomic.h>
 
 #include <machinarium/mutex.h>
 #include <machinarium/list.h>
 #include <machinarium/ds/hash.h>
+#include <machinarium/ds/intrusive/lf-stack.h>
 
 typedef struct mm_hashmap mm_hashmap_t;
 
@@ -27,7 +29,12 @@ typedef void (*mm_hm_value_dtor_fn)(void *value);
 typedef int (*mm_hm_key_copy_fn)(void *dst, const void *src);
 
 typedef struct {
-	mm_list_t link;
+	/* while pooled in the freelist the kvp is not linked into any
+	 * bucket, so the link storage may serve as the lf-stack entry */
+	union {
+		mm_list_t link;
+		mm_lf_stack_entry_t stack;
+	};
 	mm_hash_t hash;
 	uint8_t keyval[];
 } mm_hashmap_kvp_t;
@@ -70,6 +77,11 @@ struct mm_hashmap {
 
 	size_t nlocks;
 	mm_mutex_t *locks;
+
+	mm_lf_stack_t freelist;
+
+	atomic_size_t nfree;
+	size_t nfree_max;
 };
 
 void *mm_hashmap_kvp_key(const mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp);
@@ -80,12 +92,13 @@ const void *mm_hashmap_kvp_key_const(const mm_hashmap_t *hm,
 const void *mm_hashmap_kvp_val_const(const mm_hashmap_t *hm,
 				     const mm_hashmap_kvp_t *kvp);
 
+/* nfree_max: freelist capacity in kvps; 0 = nbuckets (map-sized default) */
 mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
 				size_t valsz, mm_hm_key_cmp_fn kcmp,
 				mm_hm_key_hash_fn khash,
 				mm_hm_key_dtor_fn kdtor,
 				mm_hm_value_dtor_fn vdtor,
-				mm_hm_key_copy_fn kcopy);
+				mm_hm_key_copy_fn kcopy, size_t nfree_max);
 void mm_hashmap_free(mm_hashmap_t *hm);
 void mm_hashmap_clear(mm_hashmap_t *hm);
 int mm_hashmap_foreach(mm_hashmap_t *hm, mm_hm_kvp_cb_fn cb, void **argv);

@@ -2,7 +2,14 @@
 
 %define api.pure full
 %define api.prefix {od_sql_minimal_yy}
-%define parse.error verbose
+/*
+ * NB: not "verbose". Most of the traffic (SELECT/INSERT/...) is rejected by
+ * this grammar on the very first token, and with verbose errors bison would
+ * compute the set of expected tokens and format a message on every such
+ * query, only for od_sql_minimal_yyerror() to drop it (error_cb is NULL in
+ * production). "simple" keeps the error path to a single yyerror() call
+ */
+%define parse.error simple
 %locations
 
 %parse-param { yyscan_t scanner }
@@ -12,7 +19,10 @@
 %code top {
 #undef  YYLLOC_DEFAULT
 #define YYLLOC_DEFAULT(cur, rhs, n) \
-    ((cur) = (n) ? YYRHSLOC(rhs, 1) : YYRHSLOC(rhs, 0))
+    do { \
+        (cur).start = (n) ? YYRHSLOC(rhs, 1).start : YYRHSLOC(rhs, 0).end; \
+        (cur).end = YYRHSLOC(rhs, n).end; \
+    } while (0)
 }
 
 %code requires {
@@ -33,29 +43,30 @@
 
 /*
  * Override bison's default YYLTYPE (struct with first_line/column etc.)
- * with a simple int (byte offset).  This goes into parse.tab.h and is
+ * with a pair of byte offsets.  This goes into parse.tab.h and is
  * visible to both bison (.tab.c) and flex (scan.c via scan.h).
  */
 #undef  YYLTYPE
-typedef int od_sql_minimal_yyltype_t;
+typedef od_sql_location_t od_sql_minimal_yyltype_t;
 #define YYLTYPE od_sql_minimal_yyltype_t
 }
 
 %code {
 	/* Bison defines #define YYLTYPE OD_SQL_MINIMAL_YYLTYPE above this
-	 * block.  Override it with our int type after the fact.
+	 * block.  Override it with our byte range type after the fact.
 	 * Also disable YYLTYPE_IS_TRIVIAL so bison doesn't emit
-	 * struct-style { 1,1,1,1 } initializers for an int. */
+	 * line/column initializers for byte ranges. */
 #undef  YYLTYPE
 #undef  OD_SQL_MINIMAL_YYLTYPE_IS_TRIVIAL
 #define OD_SQL_MINIMAL_YYLTYPE_IS_TRIVIAL 0
-typedef int od_sql_minimal_yyltype_t;
+typedef od_sql_location_t od_sql_minimal_yyltype_t;
 #define YYLTYPE od_sql_minimal_yyltype_t
 
 	#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 
 	#include <sql/minimal/ctx.h>
 	#include <sql/minimal/scan.h>
+	void od_sql_minimal_scan_tail(yyscan_t scanner);
 
 	static void od_sql_minimal_yyerror(YYLTYPE *loc,
 					   yyscan_t scanner,
@@ -108,6 +119,7 @@ typedef int od_sql_minimal_yyltype_t;
 %union {
 	char *str;
 	int64_t ival;
+	od_sql_location_t location;
 	od_sql_minimal_node_t *node;
 	od_sql_minimal_discard_target_t dtarget;
 }
@@ -119,34 +131,37 @@ typedef int od_sql_minimal_yyltype_t;
 %token <str>  IDENT
 
 /* session / admin */
-%token KW_SET
-%token KW_SHOW
-%token KW_LOCAL
-%token KW_SESSION
-%token KW_TO
-%token KW_DEFAULT
-%token KW_ALL
-%token KW_TRUE
-%token KW_FALSE
-%token KW_ON
-%token KW_OFF
-%token KW_BEGIN
+%token <str> KW_SET
+%token <str> KW_SHOW
+%token <str> KW_LOCAL
+%token <str> KW_SESSION
+%token <str> KW_TO
+%token <str> KW_DEFAULT
+%token <str> KW_ALL
+%token <str> KW_TRUE
+%token <str> KW_FALSE
+%token <str> KW_ON
+%token <str> KW_OFF
+%token <str> KW_BEGIN
 
 /* transaction control (only BEGIN) */
-%token KW_WORK
-%token KW_TRANSACTION
+%token <str> KW_WORK
+%token <str> KW_TRANSACTION
 
 /* prepared statements */
-%token KW_DEALLOCATE
-%token KW_PREPARE
+%token <str> KW_DEALLOCATE
+%token <str> KW_PREPARE
+%token <str> KW_EXECUTE
+%token <str> KW_AS
+%token RAW_SQL
 
 /* discard */
-%token KW_DISCARD
-%token KW_TEMP
-%token KW_TEMPORARY
-%token KW_PLANS
-%token KW_SEQUENCES
-%token KW_UNLISTEN
+%token <str> KW_DISCARD
+%token <str> KW_TEMP
+%token <str> KW_TEMPORARY
+%token <str> KW_PLANS
+%token <str> KW_SEQUENCES
+%token <str> KW_UNLISTEN
 
 %type <node> stmt
 %type <node> set_stmt
@@ -155,12 +170,13 @@ typedef int od_sql_minimal_yyltype_t;
 %type <node> deallocate_stmt
 %type <node> discard_stmt
 %type <node> unlisten_stmt
+%type <node> prepare_stmt execute_stmt
 %type <str>  var_name
 %type <str>  var_value
-%type <str>  col_id
+%type <str>  col_id name unreserved_keyword
+%type <location> prep_type_clause execute_param_clause
 %type <dtarget> discard_target
 
-%destructor { /* arena-allocated, no-op */ } <str>
 %destructor { od_sql_minimal_node_free($$); } <node>
 
 %%
@@ -182,7 +198,74 @@ stmt:
 	| deallocate_stmt
 	| discard_stmt
 	| unlisten_stmt
+	| prepare_stmt
+	| execute_stmt
 	;
+
+/* Follow PostgreSQL's statement forms; retain ranges for opaque SQL tails. */
+name:
+      IDENT
+    | unreserved_keyword
+    ;
+
+unreserved_keyword:
+      KW_BEGIN
+    | KW_DEALLOCATE
+    | KW_DISCARD
+    | KW_EXECUTE
+    | KW_LOCAL
+    | KW_OFF
+    | KW_PLANS
+    | KW_PREPARE
+    | KW_SEQUENCES
+    | KW_SESSION
+    | KW_SET
+    | KW_SHOW
+    | KW_TEMP
+    | KW_TEMPORARY
+    | KW_TRANSACTION
+    | KW_UNLISTEN
+    | KW_WORK
+    ;
+
+prepare_stmt:
+      KW_PREPARE name prep_type_clause KW_AS
+        { od_sql_minimal_scan_tail(scanner); }
+      RAW_SQL
+        {
+            od_sql_minimal_prepare_stmt_t *n = ALLOC_NODE(ctx, prepare,
+                OD_SQL_MINIMAL_NODE_TYPE_PREPARE_STMT);
+            if (n == NULL) YYABORT;
+            n->name = $2;
+            n->name_location = @2;
+            n->types_location = $3;
+            n->query_location = @6;
+            $$ = (od_sql_minimal_node_t *)n;
+        }
+    ;
+
+prep_type_clause:
+      '(' { od_sql_minimal_scan_tail(scanner); } RAW_SQL ')' { $$ = @3; }
+    | %empty { $$ = (od_sql_location_t){ -1, -1 }; }
+    ;
+
+execute_stmt:
+      KW_EXECUTE name execute_param_clause
+        {
+            od_sql_minimal_execute_stmt_t *n = ALLOC_NODE(ctx, execute,
+                OD_SQL_MINIMAL_NODE_TYPE_EXECUTE_STMT);
+            if (n == NULL) YYABORT;
+            n->name = $2;
+            n->name_location = @2;
+            n->args_location = $3;
+            $$ = (od_sql_minimal_node_t *)n;
+        }
+    ;
+
+execute_param_clause:
+      '(' { od_sql_minimal_scan_tail(scanner); } RAW_SQL ')' { $$ = @$; }
+    | %empty { $$ = (od_sql_location_t){ -1, -1 }; }
+    ;
 
 /*
  * SET [SESSION|LOCAL] name { TO | = } { value | DEFAULT }
@@ -266,7 +349,7 @@ opt_transaction:
  * DEALLOCATE [PREPARE] { name | ALL }
  */
 deallocate_stmt:
-	  KW_DEALLOCATE IDENT
+	  KW_DEALLOCATE name
 		{
 			od_sql_minimal_deallocate_stmt_t *n = ALLOC_NODE(ctx, deallocate,
 				OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT);
@@ -275,7 +358,7 @@ deallocate_stmt:
 			n->is_all = 0;
 			$$ = (od_sql_minimal_node_t *)n;
 		}
-	| KW_DEALLOCATE KW_PREPARE IDENT
+	| KW_DEALLOCATE KW_PREPARE name
 		{
 			od_sql_minimal_deallocate_stmt_t *n = ALLOC_NODE(ctx, deallocate,
 				OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT);

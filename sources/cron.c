@@ -82,14 +82,12 @@ static int od_cron_stat_cb(od_route_t *route, od_stat_t *current,
 		if (instance->config.log_route_stats_prom) {
 			char *prom_log =
 				(char *)od_prom_metrics_get_stat_cb(metrics);
-			va_list empty_va = { 0 };
-			od_logger_write(&instance->logger, OD_LOG, "stats",
-					NULL, NULL, prom_log, empty_va);
+			od_log(&instance->logger, NULL, NULL, "%s", prom_log);
 			od_free(prom_log);
 		}
 	}
 #endif
-	od_log(&instance->logger, "stats", NULL, NULL,
+	od_log(&instance->logger, NULL, NULL,
 	       "[%.*s.%.*s%s] %d clients, "
 	       "%d active servers, "
 	       "%d idle servers, "
@@ -159,13 +157,11 @@ static inline void od_cron_stat(od_cron_t *cron)
 				count_coroutine, count_coroutine_cache);
 			char *prom_log =
 				(char *)od_prom_metrics_get_stat(cron->metrics);
-			va_list empty_va = { 0 };
-			od_logger_write(&instance->logger, OD_LOG, "stats",
-					NULL, NULL, prom_log, empty_va);
+			od_log(&instance->logger, NULL, NULL, "%s", prom_log);
 			od_free(prom_log);
 		}
 #endif
-		od_log(&instance->logger, "stats", NULL, NULL,
+		od_log(&instance->logger, NULL, NULL,
 		       "system worker: msg (%" PRIu64 " allocated, %" PRIu64
 		       " cached, %" PRIu64 " freed, %" PRIu64 " cache_size), "
 		       "coroutines (%" PRIu64 " active, %" PRIu64
@@ -179,7 +175,7 @@ static inline void od_cron_stat(od_cron_t *cron)
 
 		request_logger_stats(&instance->logger);
 
-		od_log(&instance->logger, "stats", NULL, NULL, "clients %d",
+		od_log(&instance->logger, NULL, NULL, "clients %d",
 		       (int)atomic_load_explicit(&router->clients,
 						 memory_order_relaxed));
 	}
@@ -230,7 +226,7 @@ static inline void od_cron_expire(od_cron_t *cron)
 		od_list_foreach_safe (&expire_list, i, n) {
 			od_server_t *server;
 			server = od_container_of(i, od_server_t, link);
-			od_debug(&instance->logger, "expire", NULL, server,
+			od_debug(&instance->logger, NULL, server,
 				 "closing idle server connection (%d secs)",
 				 server->idle_time);
 			server->route = NULL;
@@ -304,13 +300,13 @@ static void od_cron(void *arg)
 
 		int rc = machine_wait_flag_wait(cron->online, 1000);
 		if (rc == 0) {
-			od_log(&instance->logger, "cron", NULL, NULL,
+			od_log(&instance->logger, NULL, NULL,
 			       "cron online is set, exiting");
 			break;
 		}
 
 		if (rc == -1 && machine_errno() != ETIMEDOUT) {
-			od_error(&instance->logger, "cron", NULL, NULL,
+			od_error(&instance->logger, NULL, NULL,
 				 "can't wait online flag: %s (%d)",
 				 strerror(machine_errno()), machine_errno());
 			break;
@@ -357,7 +353,7 @@ int od_cron_start(od_cron_t *cron, od_global_t *global)
 	int64_t coroutine_id;
 	coroutine_id = machine_coroutine_create(od_cron, cron);
 	if (coroutine_id == INVALID_COROUTINE_ID) {
-		od_error(&instance->logger, "cron", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "failed to start cron coroutine");
 		return NOT_OK_RESPONSE;
 	}

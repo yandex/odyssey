@@ -303,12 +303,12 @@ int mm_io_set_nodelay(mm_io_t *io, int enable)
 	return 0;
 }
 
-int mm_io_set_nolinger(mm_io_t *io)
+int mm_io_set_nolinger(mm_io_t *io, int enable)
 {
 	mm_errno_set(0);
 
 	int rc;
-	rc = mm_socket_set_nolinger(io->fd);
+	rc = mm_socket_set_nolinger(io->fd, enable);
 	if (rc == -1) {
 		mm_errno_set(errno);
 		return -1;

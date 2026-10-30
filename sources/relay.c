@@ -12,6 +12,7 @@
 
 #include <rules.h>
 #include <route.h>
+#include <wait_event.h>
 #include <dns.h>
 #include <backend.h>
 #include <od_memory.h>
@@ -28,15 +29,7 @@
 #include <option.h>
 #include <worker.h>
 #include <query.h>
-
-#define APPLICATION_NAME_STR "application_name"
-#define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
-#define ODYSSEY_EXECUTE_ON_HOST_STR "odyssey.execute_on_host"
-#define ODYSSEY_PIN_BACKEND "odyssey.pin_backend"
-#define ODYSSEY_OPPORTUNISTIC_ACQUIRE "odyssey.opportunistic_acquire"
-#define ODYSSEY_POOLING_MODE "odyssey.pooling_mode"
-#define ODYSSEY_VERSION_STR "odyssey.version"
-#define PROCESSED_BY_ODYSSEY_STR "processed virtually by odyssey"
+#include <virtual.h>
 
 /*
  * relay - client messages handling subsystem
@@ -190,646 +183,6 @@ void od_relay_destroy(od_relay_t *relay)
 	xbuf_destroy(&relay->xbuf);
 }
 
-static od_frontend_status_t reply_error_guc(od_client_t *client,
-					    const char *sqlstate,
-					    const char *buf, int len)
-{
-	od_server_t *server;
-
-	server = client->server;
-
-	machine_msg_t *m =
-		kiwi_be_write_notice(NULL, 'M', PROCESSED_BY_ODYSSEY_STR);
-	if (m == NULL) {
-		return OD_EOOM;
-	}
-
-	m = kiwi_be_write_error_as(m, "ERROR", sqlstate, NULL, 0, NULL, 0, buf,
-				   len, 0);
-	if (m == NULL) {
-		return OD_EOOM;
-	}
-
-	int rc;
-	rc = od_write2(&client->io, m, 1000);
-	if (rc != 0) {
-		return OD_ECLIENT_WRITE;
-	}
-
-	uint8_t txstatus = 'I';
-	if (server != NULL) {
-		txstatus = server->is_transaction ? 'T' : 'I';
-	}
-
-	m = kiwi_be_write_ready(NULL, txstatus);
-
-	rc = od_write2(&client->io, m, 1000);
-	if (rc != 0) {
-		return OD_ECLIENT_WRITE;
-	}
-
-	return OD_SKIP;
-}
-
-static od_frontend_status_t reply_reject_guc(od_client_t *client,
-					     const char *guc_name,
-					     const char *option_value,
-					     size_t option_value_len)
-{
-	char buf[128];
-	int len = od_snprintf(buf, sizeof(buf),
-			      "invalid value for parameter \"%s\": \"%.*s\"",
-			      guc_name, (int)option_value_len, option_value);
-
-	return reply_error_guc(client, KIWI_INVALID_PARAMETER_VALUE, buf, len);
-}
-
-static od_frontend_status_t reply_cant_change_guc(od_client_t *client,
-						  const char *guc_name)
-{
-	char buf[128];
-	int len =
-		od_snprintf(buf, sizeof(buf),
-			    "parameter \"%s\" cannot be changed now", guc_name);
-
-	return reply_error_guc(client, KIWI_CANT_CHANGE_RUNTIME_PARAM, buf,
-			       len);
-}
-
-/*
- * reply to a virtually processed SET: NOTICE + CommandComplete + ReadyForQuery
- */
-static od_frontend_status_t reply_set_ok(od_client_t *client)
-{
-	od_server_t *server = client->server;
-
-	uint8_t txstatus = 'I';
-	if (server != NULL) {
-		txstatus = server->is_transaction ? 'T' : 'I';
-	}
-
-	char msg[128 /* message below is ~ 60 bytes */];
-	int rc;
-	char *out = msg;
-	char *end = msg + sizeof(msg);
-	rc = kiwi_be_format_notice(out, end - out, 'M',
-				   PROCESSED_BY_ODYSSEY_STR);
-	od_assert(rc != -1);
-	out += rc;
-
-	rc = kiwi_be_format_command_complete(out, end - out, "SET");
-	od_assert(rc != -1);
-	out += rc;
-
-	rc = kiwi_be_format_ready(out, end - out, txstatus);
-	od_assert(rc != -1);
-	out += rc;
-
-	size_t unused;
-	rc = od_io_write_raw(&client->io, msg, out - msg, &unused, 1000, 0);
-	if (rc != 0) {
-		return OD_ECLIENT_WRITE;
-	}
-
-	return OD_SKIP;
-}
-
-static od_frontend_status_t process_set_generic_bool(od_client_t *client,
-						     const od_query_ctx_t *ctx,
-						     bool *guc_val_ptr,
-						     bool *origin_to_reset)
-{
-	const char *option_value;
-	size_t option_value_len;
-
-	od_instance_t *instance = client->global->instance;
-
-	option_value = ctx->s2;
-	option_value_len = strlen(option_value);
-
-	bool value;
-	if (!parse_bool_with_len(option_value, option_value_len, &value)) {
-		/* Reject this */
-		return reply_reject_guc(client, ctx->s1, option_value,
-					option_value_len);
-	}
-
-	*guc_val_ptr = value;
-	if (origin_to_reset != NULL) {
-		*origin_to_reset = 0;
-	}
-
-	od_debug(&instance->logger, "virtual processing", client,
-		 client->server, "processed virtual bool GUC %.*s",
-		 (int)option_value_len, option_value);
-
-	return reply_set_ok(client);
-}
-
-static od_frontend_status_t process_set_tsa(od_client_t *client,
-					    const od_query_ctx_t *ctx)
-{
-	const char *option_value;
-	size_t option_value_len;
-	od_server_t *server;
-	od_instance_t *instance = client->global->instance;
-
-	server = client->server;
-
-	option_value = ctx->s2;
-	option_value_len = strlen(option_value);
-
-	/* for now, very straightforward logic, as there is only one supported param */
-	if (option_value_len == strlen("read-only") &&
-	    strncasecmp(option_value, "read-only", option_value_len) == 0) {
-		kiwi_vars_set(&client->vars,
-			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
-			      "read-only", strlen("read-only"));
-	} else if (option_value_len == strlen("read-write") &&
-		   strncasecmp(option_value, "read-write", option_value_len) ==
-			   0) {
-		kiwi_vars_set(&client->vars,
-			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
-			      "read-write", strlen("read-write"));
-	} else if (option_value_len == strlen("any") &&
-		   strncasecmp(option_value, "any", option_value_len) == 0) {
-		kiwi_vars_set(&client->vars,
-			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS, "any",
-			      strlen("any"));
-	} else if (option_value_len == strlen("prefer-standby") &&
-		   strncasecmp(option_value, "prefer-standby",
-			       option_value_len) == 0) {
-		kiwi_vars_set(&client->vars,
-			      KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
-			      "prefer-standby", strlen("prefer-standby"));
-	} else {
-		od_debug(&instance->logger, "virtual processing", client,
-			 server, "unsupported tsa hint %.*s",
-			 (int)option_value_len, option_value);
-
-		return reply_reject_guc(client,
-					ODYSSEY_TARGET_SESSION_ATTRS_STR,
-					option_value, option_value_len);
-	}
-
-	od_debug(&instance->logger, "virtual processing", client, server,
-		 "parsed tsa hint %.*s", (int)option_value_len, option_value);
-
-	return reply_set_ok(client);
-}
-
-/*
- * SET odyssey.execute_on_host TO 'host[:port]' - attach only to this storage
- * host, bypassing balancing; empty value (or DEFAULT) resets the hint
- */
-static od_frontend_status_t
-process_set_execute_on_host(od_client_t *client, const od_query_ctx_t *ctx)
-{
-	od_instance_t *instance = client->global->instance;
-	const char *value = ctx->s2;
-	size_t value_len = strlen(value);
-
-	if (value_len == 0) {
-		od_address_destroy(&client->execute_on_host);
-		od_address_init(&client->execute_on_host);
-
-		od_debug(&instance->logger, "virtual processing", client,
-			 client->server, "execute_on_host hint is reset");
-
-		return reply_set_ok(client);
-	}
-
-	od_address_t *addrs = NULL;
-	size_t count = 0;
-	if (od_parse_addresses(value, &addrs, &count) != OK_RESPONSE) {
-		return reply_reject_guc(client, ODYSSEY_EXECUTE_ON_HOST_STR,
-					value, value_len);
-	}
-
-	if (count != 1 || !od_frontend_host_is_known(client, &addrs[0])) {
-		for (size_t i = 0; i < count; ++i) {
-			od_address_destroy(&addrs[i]);
-		}
-		od_free(addrs);
-
-		od_debug(&instance->logger, "virtual processing", client,
-			 client->server, "unknown execute_on_host %.*s",
-			 (int)value_len, value);
-
-		return reply_reject_guc(client, ODYSSEY_EXECUTE_ON_HOST_STR,
-					value, value_len);
-	}
-
-	/* od_address_move destroys the previous value */
-	od_address_move(&client->execute_on_host, &addrs[0]);
-	od_free(addrs);
-
-	od_debug(&instance->logger, "virtual processing", client,
-		 client->server, "parsed execute_on_host hint %.*s",
-		 (int)value_len, value);
-
-	return reply_set_ok(client);
-}
-
-static od_frontend_status_t process_set_appname(od_client_t *client,
-						const od_query_ctx_t *ctx)
-{
-	int rc;
-	char original_appname[64];
-	size_t len = od_min(strlen(ctx->s2), sizeof(original_appname));
-	snprintf(original_appname, sizeof(original_appname), "%s", ctx->s2);
-
-	char peer_name[KIWI_MAX_VAR_SIZE];
-	rc = od_getpeername(client->io.io, peer_name, sizeof(peer_name), 1, 0);
-	if (rc != 0) {
-		od_gerror("query", client, client->server,
-			  "can't get peer name, errno = %d (%s)",
-			  mm_errno_get(), strerror(mm_errno_get()));
-		goto error;
-	}
-
-	if (client->server == NULL) {
-		/* we will write to server - need to attach if not yet */
-		return OD_ATTACH;
-	}
-
-	char suffix[KIWI_MAX_VAR_SIZE];
-	od_snprintf(suffix, sizeof(suffix), " - %s", peer_name);
-
-	char appname[64];
-	int appname_len = od_concat_prefer_right(appname, sizeof(appname),
-						 original_appname, len, suffix,
-						 strlen(suffix));
-
-	char query[128];
-	od_snprintf(query, sizeof(query), "set application_name to '%.*s';",
-		    appname_len, appname);
-
-	machine_msg_t *msg;
-	msg = kiwi_fe_write_query(NULL, query, strlen(query) + 1);
-	if (msg == NULL) {
-		od_gerror("query", client, client->server,
-			  "can't create message to send \"%s\"", query);
-		return OD_EOOM;
-	}
-
-	rc = od_write(&client->server->io, msg);
-	if (rc != 0) {
-		od_gerror("query", client, client->server,
-			  "can't write \"%s\", rc = %d, errno = %d", query, rc,
-			  machine_errno());
-		return OD_ESERVER_WRITE;
-	}
-
-	od_server_sync_request(client->server, 1);
-
-	return OD_REPLACED;
-
-error:
-	/* can't handle, let pg do plain version of the query */
-	return OD_OK;
-}
-
-static od_frontend_status_t process_vset(od_client_t *client,
-					 const od_query_ctx_t *ctx)
-{
-	od_instance_t *instance = od_global_get_instance();
-
-	if (strcmp(ctx->s1, APPLICATION_NAME_STR) == 0) {
-		if (client->rule->application_name_add_host) {
-			return process_set_appname(client, ctx);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_set_tsa(client, ctx);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_EXECUTE_ON_HOST_STR) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_set_execute_on_host(client, ctx);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_PIN_BACKEND) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_set_generic_bool(
-				client, ctx, &client->backend_pin,
-				&client->backend_pin_listen);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_set_generic_bool(
-				client, ctx, &client->opportunistic_acquire,
-				NULL);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_POOLING_MODE) == 0) {
-		if (instance->config.virtual_processing) {
-			return reply_cant_change_guc(client, ctx->s1);
-		}
-	}
-
-	return OD_OK;
-}
-
-static od_frontend_status_t virtual_str_ans(od_client_t *client,
-					    const char *name, const char *value)
-{
-	machine_msg_t *stream = NULL;
-	machine_msg_t *msg = NULL;
-	int rc;
-	int offset;
-	uint8_t txstatus;
-	od_server_t *server = client->server;
-
-	stream = machine_msg_create(0);
-	if (stream == NULL) {
-		goto fail_oom;
-	}
-
-	msg = kiwi_be_write_notice(stream, 'M', PROCESSED_BY_ODYSSEY_STR);
-	if (msg == NULL) {
-		goto fail_oom;
-	}
-
-	msg = kiwi_be_write_row_descriptionf(stream, "s", name);
-	if (msg == NULL) {
-		goto fail_oom;
-	}
-
-	msg = kiwi_be_write_data_row(stream, &offset);
-	if (msg == NULL) {
-		goto fail_oom;
-	}
-
-	rc = kiwi_be_write_data_row_add(stream, offset, value, strlen(value));
-	if (rc != 0) {
-		goto fail_oom;
-	}
-
-	rc = kiwi_be_write_complete(stream, "SHOW", 5);
-	if (rc != 0) {
-		goto fail_oom;
-	}
-
-	txstatus = 'I';
-	if (server != NULL) {
-		txstatus = server->is_transaction ? 'T' : 'I';
-	}
-
-	msg = kiwi_be_write_ready(stream, txstatus);
-	if (msg == NULL) {
-		goto fail_oom;
-	}
-
-	rc = od_write(&client->io, stream);
-	if (rc != 0) {
-		return OD_ECLIENT_WRITE;
-	}
-
-	return OD_SKIP;
-
-fail_oom:
-	machine_msg_free(stream);
-	return OD_EOOM;
-}
-
-static od_frontend_status_t process_show_tsa(od_client_t *client)
-{
-	od_target_session_attrs_t tsa = od_tsa_get_effective(client);
-	const char *val = od_target_session_attrs_to_str(tsa);
-
-	return virtual_str_ans(client, ODYSSEY_TARGET_SESSION_ATTRS_STR, val);
-}
-
-static od_frontend_status_t process_show_execute_on_host(od_client_t *client)
-{
-	char addr[256] = "";
-
-	if (client->execute_on_host.host != NULL) {
-		od_address_to_str(&client->execute_on_host, addr,
-				  sizeof(addr) - 1);
-	}
-
-	return virtual_str_ans(client, ODYSSEY_EXECUTE_ON_HOST_STR, addr);
-}
-
-static od_frontend_status_t process_show_bool_guc(od_client_t *client,
-						  const char *name, bool val)
-{
-	return virtual_str_ans(client, name, val ? "on" : "off");
-}
-
-static od_frontend_status_t process_show_pooling_mode(od_client_t *client)
-{
-	const char *mode;
-
-	switch (client->rule->pool->pool_type) {
-	case OD_RULE_POOL_SESSION:
-		mode = "session";
-		break;
-	case OD_RULE_POOL_TRANSACTION:
-		mode = "transaction";
-		break;
-	case OD_RULE_POOL_STATEMENT:
-		mode = "statement";
-		break;
-	default:
-		mode = "unknown";
-		break;
-	}
-
-	return virtual_str_ans(client, ODYSSEY_POOLING_MODE, mode);
-}
-
-static od_frontend_status_t process_show_version(od_client_t *client)
-{
-	char data[128];
-	od_format_version_string(data, sizeof(data));
-	return virtual_str_ans(client, ODYSSEY_VERSION_STR, data);
-}
-
-static od_frontend_status_t process_vshow(od_client_t *client,
-					  const od_query_ctx_t *ctx)
-{
-	od_instance_t *instance = od_global_get_instance();
-
-	if (strcmp(ctx->s1, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_show_tsa(client);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_EXECUTE_ON_HOST_STR) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_show_execute_on_host(client);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_PIN_BACKEND) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_show_bool_guc(client, ctx->s1,
-						     client->backend_pin);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_show_bool_guc(
-				client, ctx->s1, client->opportunistic_acquire);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_POOLING_MODE) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_show_pooling_mode(client);
-		}
-	}
-
-	if (strcmp(ctx->s1, ODYSSEY_VERSION_STR) == 0) {
-		if (instance->config.virtual_processing) {
-			return process_show_version(client);
-		}
-	}
-
-	return OD_OK;
-}
-
-static od_frontend_status_t process_vdeallocate(od_client_t *client,
-						const od_query_ctx_t *ctx)
-{
-	od_instance_t *instance = client->global->instance;
-	od_server_t *server = client->server;
-	const char *command = NULL;
-
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL)) {
-		od_debug(&instance->logger, "main", client, server,
-			 "DEALLOCATE ALL detected, remove from client hashmap");
-		od_client_pstmts_clear(client);
-		od_client_portals_clear(client);
-
-		command = "DEALLOCATE ALL";
-	} else {
-		od_assert(od_query_ctx_has(ctx,
-					   OD_QUERY_CTX_HAS_DEALLOCATE_NAME));
-		od_debug(&instance->logger, "main", client, server,
-			 "DEALLOCATE '%s' detected, remove from client hashmap",
-			 ctx->s1);
-		od_client_remove_pstmt(client, ctx->s1);
-
-		command = "DEALLOCATE";
-	}
-
-	machine_msg_t *msg = kiwi_be_write_command_complete(NULL, command);
-	if (msg == NULL) {
-		return OD_EOOM;
-	}
-
-	uint8_t txstatus = 'I';
-	if (server != NULL) {
-		txstatus = server->is_transaction ? 'T' : 'I';
-	}
-
-	msg = kiwi_be_write_ready(msg, txstatus);
-	if (msg == NULL) {
-		return OD_EOOM;
-	}
-
-	if (od_write(&client->io, msg) != 0) {
-		return OD_ECLIENT_WRITE;
-	}
-
-	return OD_SKIP;
-}
-
-static od_frontend_status_t process_vbegin(od_client_t *client)
-{
-	od_server_t *server = client->server;
-	int in_tx = (server != NULL && server->is_transaction);
-
-	if (client->pending_begin || in_tx) {
-		/* pass to pg and let it generate warning/error itself */
-		return OD_OK;
-	}
-
-	machine_msg_t *msg = kiwi_be_write_command_complete(NULL, "BEGIN");
-	if (msg == NULL) {
-		return OD_EOOM;
-	}
-
-	msg = kiwi_be_write_ready(msg, 'T');
-	if (msg == NULL) {
-		return OD_EOOM;
-	}
-
-	if (od_write(&client->io, msg) != 0) {
-		return OD_ECLIENT_WRITE;
-	}
-
-	client->pending_begin = 1;
-
-	return OD_SKIP;
-}
-
-static od_frontend_status_t try_virtual_process_query(od_client_t *client,
-						      const od_query_ctx_t *ctx)
-{
-	od_instance_t *instance = od_global_get_instance();
-
-	int need_process;
-
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
-		return OD_OK;
-	}
-
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SHOW)) {
-		need_process = instance->config.virtual_processing;
-		if (!need_process) {
-			return OD_OK;
-		}
-
-		return process_vshow(client, ctx);
-	}
-
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET)) {
-		need_process = client->rule->application_name_add_host ||
-			       instance->config.virtual_processing;
-		if (!need_process) {
-			return OD_OK;
-		}
-
-		return process_vset(client, ctx);
-	}
-
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_BEGIN)) {
-		need_process = instance->config.virtual_transaction;
-		if (!need_process) {
-			return OD_OK;
-		}
-
-		return process_vbegin(client);
-	}
-
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL) ||
-	    od_query_ctx_has(ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME)) {
-		need_process = client->rule->pool->reserve_prepared_statement;
-		if (!need_process) {
-			return OD_OK;
-		}
-
-		return process_vdeallocate(client, ctx);
-	}
-
-	/* discard / unlisten / everything else - let the backend execute */
-	return OD_OK;
-}
-
 typedef od_frontend_status_t (*handler_t)(od_relay_t *relay, machine_msg_t *msg,
 					  uint32_t timeout_ms);
 
@@ -841,7 +194,7 @@ static od_frontend_status_t process_possible_attach(handler_t handler,
 	od_frontend_status_t status = handler(relay, msg, timeout_ms);
 	if (status == OD_ATTACH) {
 		od_client_t *client = relay->client;
-		status = od_frontend_attach_and_deploy(client, "main");
+		status = od_frontend_attach_and_deploy(client);
 		if (status != OD_OK) {
 			return status;
 		}
@@ -865,7 +218,7 @@ static void process_discard(od_client_t *client, od_server_t *server)
 	}
 
 	if (od_query_ctx_has(&client->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL)) {
-		od_debug(&instance->logger, "main", client, server,
+		od_debug(&instance->logger, client, server,
 			 "DISCARD ALL detected, invalidate caches");
 
 		od_client_pstmts_clear(client);
@@ -888,7 +241,7 @@ static inline void process_unlisten(od_client_t *client, od_server_t *server)
 	if (od_query_ctx_has(&client->query_ctx,
 			     OD_QUERY_CTX_IS_UNLISTEN_ALL) &&
 	    client->backend_pin_listen) {
-		od_debug(&instance->logger, "main", client, server,
+		od_debug(&instance->logger, client, server,
 			 "UNLISTEN ALL detected, unpin client");
 
 		client->backend_pin = 0;
@@ -915,14 +268,18 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 		kiwi_be_type_t type = *data;
 		od_instance_t *instance = client->global->instance;
 
-		if (type == KIWI_BE_COMMAND_COMPLETE) {
-			const char *command_tag = data + sizeof(kiwi_header_t);
-			od_debug(&instance->logger, "main", client, server,
-				 "%s - %s", kiwi_be_type_to_string(type),
-				 command_tag);
-		} else {
-			od_debug(&instance->logger, "main", client, server,
-				 "%s", kiwi_be_type_to_string(type));
+		if (instance->config.log_debug) {
+			if (type == KIWI_BE_COMMAND_COMPLETE) {
+				const char *command_tag =
+					data + sizeof(kiwi_header_t);
+				od_debug(&instance->logger, client, server,
+					 "%s - %s",
+					 kiwi_be_type_to_string(type),
+					 command_tag);
+			} else {
+				od_debug(&instance->logger, client, server,
+					 "%s", kiwi_be_type_to_string(type));
+			}
 		}
 
 		switch (type) {
@@ -931,11 +288,10 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 			machine_msg_free(msg);
 			break;
 		case KIWI_BE_PARAMETER_STATUS:
-			rc = od_backend_update_parameter(server, "main", data,
-							 size, 0);
+			rc = od_backend_update_parameter(server, data, size, 0);
 			if (rc == -1) {
 				machine_msg_free(msg);
-				od_gerror("main", client, server,
+				od_gerror(client, server,
 					  "can't update parameter");
 				return OD_ESERVER_READ;
 			}
@@ -967,7 +323,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	uint32_t query_len;
 	rc = kiwi_be_read_query(data, size, &query, &query_len);
 	if (rc != OK_RESPONSE) {
-		od_gerror("main", client, server, "can't parse query message");
+		od_gerror(client, server, "can't parse query message");
 		return OD_ESERVER_WRITE;
 	}
 
@@ -976,15 +332,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	od_instance_t *instance = client->global->instance;
 
 	od_config_query_parsing_t parsing = instance->config.query_parsing;
-	if (parsing.mode == OD_CONFIG_QUERY_PARSING_MODE_FULL &&
-	    !od_tsa_auto_route_ro_enabled(client)) {
-		/*
-		 * auto routing is the only consumer of the full-parser-only
-		 * results (is_select) - for clients without it the cheaper
-		 * minimal parser is enough
-		 */
-		parsing.mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
-	}
+	parsing.mode = od_query_parser_mode(client);
 
 	od_query_parse_fill_ctx(query, query_len - 1 /* zero included */, arena,
 				&client->query_ctx, &parsing);
@@ -1009,10 +357,14 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 				return OD_EOOM;
 			}
 
+			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 			rc = od_io_write(&server->io, rewritten, timeout_ms);
+			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 			machine_msg_free(rewritten);
 		} else {
+			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 			rc = od_io_write(&server->io, msg, timeout_ms);
+			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 		}
 
 		if (rc != 0) {
@@ -1042,7 +394,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	uint64_t errors_before = server->error_responses;
 
-	status = od_stream_server_until_rfq("main", server, timeout_ms);
+	status = od_stream_server_until_rfq(server, timeout_ms,
+					    OD_WAIT_STREAM_SERVER_READ);
 
 	if (status == OD_COPY_IN_RECEIVED) {
 		/*
@@ -1050,7 +403,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		 */
 		machine_msg_t *add = od_relay_get_copy_additional(relay);
 		od_assert(add == NULL);
-		status = od_stream_copy_to_server("main", client, server, add,
+		status = od_stream_copy_to_server(client, server, add,
 						  timeout_ms);
 	}
 
@@ -1340,7 +693,9 @@ static od_frontend_status_t execute_xbuf(od_relay_t *relay, machine_msg_t *msg,
 		return OD_EOOM;
 	}
 
+	od_wait_event_start(OD_WAIT_QUERY_PLANNING);
 	status = od_xplan_make_from_xbuf(&relay->xplan, relay);
+	od_wait_event_end(OD_WAIT_QUERY_PLANNING);
 	if (status != OD_OK) {
 		return status;
 	}
@@ -1362,7 +717,9 @@ process_fcall_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	/* no need special handling - just write call and wait for rfq */
 
+	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 	int rc = od_io_write(&server->io, msg, timeout_ms);
+	od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 	if (rc != 0) {
 		return OD_ESERVER_WRITE;
 	}
@@ -1371,7 +728,8 @@ process_fcall_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_stat_query_start(&server->stats_state);
 
-	return od_stream_server_until_rfq("main", server, timeout_ms);
+	return od_stream_server_until_rfq(server, timeout_ms,
+					  OD_WAIT_STREAM_SERVER_READ);
 }
 
 od_frontend_status_t od_relay_process_query(od_relay_t *relay,

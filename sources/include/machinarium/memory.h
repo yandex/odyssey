@@ -14,6 +14,7 @@ void *mm_malloc(size_t size);
 void mm_free(void *ptr);
 void *mm_calloc(size_t nmemb, size_t size);
 void *mm_realloc(void *ptr, size_t size);
+void *mm_malloc_aligned(size_t size, size_t alignment);
 
 char *mm_strdup(const char *s);
 char *mm_strndup(const char *s, size_t n);

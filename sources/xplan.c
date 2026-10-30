@@ -16,6 +16,10 @@
 #include <misc.h>
 #include <util.h>
 #include <worker.h>
+#include <wait_event.h>
+
+/* max plan entries sent without a heap-allocated iovec array */
+#define OD_XPLAN_IOVEC_INLINE_MAX 32
 
 static inline kiwi_be_type_t msg_be_type(machine_msg_t *msg)
 {
@@ -923,8 +927,7 @@ static inline machine_msg_t *rewrite_bind_msg(char *data, int size,
 	/* packet header */
 	memcpy(rewrite_data, data, opname_start_offset);
 	/* prefix for opname */
-	od_snprintf(rewrite_data + opname_start_offset, opnamelen, "%s",
-		    opname);
+	memcpy(rewrite_data + opname_start_offset, opname, opnamelen);
 	/* rest of msg */
 	memcpy(rewrite_data + opname_start_offset + opnamelen,
 	       data + opname_start_offset + operator_name_len,
@@ -1058,7 +1061,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 	 */
 	const od_query_ctx_t *qctx = &pstmt->query_ctx;
 	if (od_query_ctx_has(qctx, OD_QUERY_CTX_IS_DISCARD_ALL)) {
-		od_debug(&instance->logger, "rewrite execute", client, server,
+		od_debug(&instance->logger, client, server,
 			 "DISCARD ALL detected via portal, invalidate caches");
 
 		return xplan_append_fwd(
@@ -1068,7 +1071,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 
 	if (od_query_ctx_has(qctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL)) {
 		od_debug(
-			&instance->logger, "rewrite execute", client, server,
+			&instance->logger, client, server,
 			"DEALLOCATE ALL detected via portal, invalidate client caches");
 		return xplan_append_virtual_command_complete(
 			xp, msg, OD_XPLAN_DELTA_REMOVE_CLIENT_ALL, NULL, NULL,
@@ -1077,7 +1080,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 
 	/* DEALLOCATE name */
 	if (od_query_ctx_has(qctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME)) {
-		od_debug(&instance->logger, "rewrite execute", client, server,
+		od_debug(&instance->logger, client, server,
 			 "DEALLOCATE '%s' detected via portal", qctx->s1);
 		/*
 		 * TODO: PG returns ERROR 26000 if the statement does not
@@ -1479,15 +1482,15 @@ static od_frontend_status_t run_parse_shadow(od_xplan_entry_t *ps,
 		 * i think this ErrorResponse is nearly impossible on shadow parsing
 		 * but lets handle it, just in case
 		 */
-		od_backend_error(server, "main", machine_msg_data(msg),
+		od_backend_error(server, machine_msg_data(msg),
 				 machine_msg_size(msg));
-		od_error(&instance->logger, "main", client, server,
+		od_error(&instance->logger, client, server,
 			 "run_parse_shadow: ErrorResponse met");
 		status = OD_ESERVER_READ;
 		break;
 	default:
 		od_error(
-			&instance->logger, "main", client, server,
+			&instance->logger, client, server,
 			"run_parse_shadow: unexpected msg type from server '%c'",
 			type);
 		status = OD_ESERVER_READ;
@@ -1526,14 +1529,18 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 		kiwi_be_type_t type = *data;
 		od_instance_t *instance = client->global->instance;
 
-		if (type == KIWI_BE_COMMAND_COMPLETE) {
-			const char *command_tag = data + sizeof(kiwi_header_t);
-			od_debug(&instance->logger, "main", client, server,
-				 "%s - %s", kiwi_be_type_to_string(type),
-				 command_tag);
-		} else {
-			od_debug(&instance->logger, "main", client, server,
-				 "%s", kiwi_be_type_to_string(type));
+		if (instance->config.log_debug) {
+			if (type == KIWI_BE_COMMAND_COMPLETE) {
+				const char *command_tag =
+					data + sizeof(kiwi_header_t);
+				od_debug(&instance->logger, client, server,
+					 "%s - %s",
+					 kiwi_be_type_to_string(type),
+					 command_tag);
+			} else {
+				od_debug(&instance->logger, client, server,
+					 "%s", kiwi_be_type_to_string(type));
+			}
 		}
 
 		switch (type) {
@@ -1544,11 +1551,10 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 			machine_msg_free(msg);
 			break;
 		case KIWI_BE_PARAMETER_STATUS:
-			rc = od_backend_update_parameter(server, "main", data,
-							 size, 0);
+			rc = od_backend_update_parameter(server, data, size, 0);
 			if (rc == -1) {
 				machine_msg_free(msg);
-				od_gerror("main", client, server,
+				od_gerror(client, server,
 					  "can't update parameter");
 				return OD_ESERVER_READ;
 			}
@@ -1571,9 +1577,10 @@ static od_frontend_status_t run_parse(od_xplan_entry_t *ps, od_client_t *client,
 	(void)ps;
 	(void)client;
 
-	return od_stream_server_exact_completes("main", server,
+	return od_stream_server_exact_completes(server,
 						1 /* one complete for parse */,
-						NULL, NULL, timeout_ms);
+						NULL, NULL, timeout_ms,
+						OD_WAIT_STREAM_SERVER_READ);
 }
 
 typedef struct {
@@ -1589,6 +1596,7 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 	od_client_t *client = arg->client;
 	od_server_t *server = arg->server;
 	od_instance_t *instance = client->global->instance;
+	od_rule_t *rule = client->route->rule;
 	od_xplan_t *xp = arg->xp;
 	od_xplan_entry_t *entry = mm_vector_get(&xp->entries, arg->idx);
 	arg->idx++;
@@ -1601,11 +1609,11 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 		apply_delta = 1;
 	}
 
-	if (od_logger_debug_enabled(&instance->logger, client, server)) {
+	if (instance->config.log_debug || rule->log_debug) {
 		char buf[256];
 		plan_entry_description(entry, buf, sizeof(buf));
 		od_debug(
-			&instance->logger, "main", client, server,
+			&instance->logger, client, server,
 			"%s entry finished, response type = %c, apply_delta = %d",
 			buf, type, apply_delta);
 	}
@@ -1653,17 +1661,16 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 	while (arg.idx < end && !server->xproto_err) {
 		size_t left = end - arg.idx;
 
-		status =
-			od_stream_server_exact_completes("main", server, left,
-							 forward_apply_delta_cb,
-							 &arg, timeout_ms);
+		status = od_stream_server_exact_completes(
+			server, left, forward_apply_delta_cb, &arg, timeout_ms,
+			OD_WAIT_STREAM_SERVER_READ);
 
 		if (status == OD_COPY_IN_RECEIVED) {
 			machine_msg_t *add =
 				od_relay_get_copy_additional(&client->relay);
 
-			status = od_stream_copy_to_server(
-				"main", client, server, add, timeout_ms);
+			status = od_stream_copy_to_server(client, server, add,
+							  timeout_ms);
 
 			od_relay_set_copy_additional(&client->relay, NULL);
 
@@ -1698,7 +1705,8 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 	 * on ErrorResponse, RFQ is still pending and must be drained
 	 */
 	if (has_sync && server->xproto_err) {
-		status = od_stream_server_sync("main", server, timeout_ms);
+		status = od_stream_server_sync(server, timeout_ms,
+					       OD_WAIT_STREAM_SERVER_READ);
 	}
 
 	return status;
@@ -1713,6 +1721,7 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 
 	od_client_t *client = relay->client;
 	od_instance_t *instance = client->global->instance;
+	od_rule_t *rule = client->route->rule;
 	od_server_t *server = client->server;
 	od_frontend_status_t status = OD_OK;
 
@@ -1813,11 +1822,10 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 			status = delta_apply(&entry->delta, client, server);
 		}
 
-		if (od_logger_debug_enabled(&instance->logger, client,
-					    server)) {
+		if (instance->config.log_debug || rule->log_debug) {
 			char buf[256];
 			plan_entry_description(entry, buf, sizeof(buf));
-			od_debug(&instance->logger, "main", client, server,
+			od_debug(&instance->logger, client, server,
 				 "%s entry finished with status %s", buf,
 				 od_frontend_status_to_str(status));
 		}
@@ -1843,7 +1851,9 @@ send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
 
+	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 	int rc = od_io_writev(&server->io, iovecs, niovecs, timeout_ms, 0);
+	od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 	if (rc == -1) {
 		return OD_ESERVER_WRITE;
 	}
@@ -1873,8 +1883,7 @@ static inline void log_plan_debug(od_instance_t *instance, od_xplan_t *xp,
 	}
 
 	pos += od_snprintf(pos, end - pos, ")");
-	od_debug(&instance->logger, "main", client, client->server, "xplan: %s",
-		 msg);
+	od_debug(&instance->logger, client, client->server, "xplan: %s", msg);
 
 	od_free(msg);
 }
@@ -1898,8 +1907,8 @@ static inline void log_srv_send_buf(od_instance_t *instance,
 	}
 
 	pos += od_snprintf(pos, end - pos, ")");
-	od_debug(&instance->logger, "main", client, client->server,
-		 "server buf: %s", msg);
+	od_debug(&instance->logger, client, client->server, "server buf: %s",
+		 msg);
 
 	od_free(msg);
 }
@@ -1925,8 +1934,7 @@ static inline void log_xbuf(od_instance_t *instance, od_client_t *client,
 	}
 
 	pos += od_snprintf(pos, end - pos, ")");
-	od_debug(&instance->logger, "main", client, client->server, "xbuf: %s",
-		 msg);
+	od_debug(&instance->logger, client, client->server, "xbuf: %s", msg);
 
 	od_free(msg);
 }
@@ -1935,20 +1943,27 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 				  uint32_t timeout_ms)
 {
 	od_client_t *client = relay->client;
+	od_rule_t *rule = client->route->rule;
 	od_instance_t *instance = client->global->instance;
 
 	size_t count = mm_vector_size(&xp->entries);
 	od_assert(count > 0);
 
-	size_t niovecs = count;
-	struct iovec *iovecs = od_malloc(sizeof(struct iovec) * niovecs);
-	if (iovecs == NULL) {
-		return OD_EOOM;
+	/* most plans are small: avoid a heap round-trip per flush */
+	struct iovec stack_iovecs[OD_XPLAN_IOVEC_INLINE_MAX];
+	struct iovec *iovecs;
+	if (count <= OD_XPLAN_IOVEC_INLINE_MAX) {
+		iovecs = stack_iovecs;
+	} else {
+		iovecs = od_malloc(sizeof(struct iovec) * count);
+		if (iovecs == NULL) {
+			return OD_EOOM;
+		}
 	}
 
 	size_t written = prepare_send_iovecs(xp, iovecs);
 
-	if (od_logger_debug_enabled(&instance->logger, client, NULL)) {
+	if (instance->config.log_debug || rule->log_debug) {
 		log_xbuf(instance, client, &relay->xbuf);
 		log_plan_debug(instance, xp, client);
 		log_srv_send_buf(instance, client, iovecs, written);
@@ -1957,7 +1972,9 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 	od_frontend_status_t status =
 		send_buf_and_run_plan(xp, relay, iovecs, written, timeout_ms);
 
-	od_free(iovecs);
+	if (iovecs != stack_iovecs) {
+		od_free(iovecs);
+	}
 
 	return status;
 }

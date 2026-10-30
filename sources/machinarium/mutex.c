@@ -4,24 +4,15 @@
  * cooperative multitasking engine.
  */
 
-#include <errno.h>
-
 #include <machinarium/machinarium.h>
 #include <machinarium/machine.h>
 #include <machinarium/mutex.h>
 
-enum {
-	MM_MUTEX_UNLOCKED = 0,
-	MM_MUTEX_LOCKED = 1,
-};
-
 void mm_mutex_init(mm_mutex_t *mutex)
 {
-	atomic_init(&mutex->state, MM_MUTEX_UNLOCKED);
+	mm_sem_init(&mutex->sem, 1);
 	mutex->owner_machine = NULL;
 	mutex->owner_coro_id = MM_SLEEPY_NO_CORO_ID;
-
-	mm_wait_list_init(&mutex->wl, &mutex->state);
 }
 
 mm_mutex_t *mm_mutex_create(void)
@@ -39,7 +30,7 @@ mm_mutex_t *mm_mutex_create(void)
 void mm_mutex_destroy(mm_mutex_t *mutex)
 {
 	/* TODO: maybe handle not empty queue somehow? */
-	mm_wait_list_destroy(&mutex->wl);
+	mm_sem_destroy(&mutex->sem);
 }
 
 void mm_mutex_free(mm_mutex_t *mutex)
@@ -54,34 +45,14 @@ int mm_mutex_lock(mm_mutex_t *mutex, uint32_t timeout_ms)
 		abort();
 	}
 
-	uint64_t start_ms = machine_time_ms();
-
-	while (1) {
-		uint_fast64_t expected = MM_MUTEX_UNLOCKED;
-		if (atomic_compare_exchange_strong(&mutex->state, &expected,
-						   MM_MUTEX_LOCKED)) {
-			mutex->owner_machine = (void *)mm_self;
-			mutex->owner_coro_id = mm_self->scheduler.current->id;
-			return 1;
-		}
-
-		uint64_t elapsed = machine_time_ms() - start_ms;
-		if (elapsed >= timeout_ms) {
-			return 0;
-		}
-
-		uint32_t remaining = timeout_ms - (uint32_t)elapsed;
-
-		int rc = mm_wait_list_compare_wait(&mutex->wl, NULL,
-						   MM_MUTEX_LOCKED, remaining);
-		if (rc == -1 && mm_errno_get() == ECANCELED) {
-			return 0;
-		}
-
-		/* all other scenarios leads to retry */
+	/* returns 0 on both timeout and cancellation */
+	if (mm_sem_timedwait(&mutex->sem, timeout_ms) != 0) {
+		return 0;
 	}
 
-	return 0;
+	mutex->owner_machine = (void *)mm_self;
+	mutex->owner_coro_id = mm_self->scheduler.current->id;
+	return 1;
 }
 
 int mm_mutex_lock2(mm_mutex_t *mutex)
@@ -97,7 +68,6 @@ void mm_mutex_unlock(mm_mutex_t *mutex)
 
 	mutex->owner_machine = NULL;
 	mutex->owner_coro_id = MM_SLEEPY_NO_CORO_ID;
-	atomic_store(&mutex->state, MM_MUTEX_UNLOCKED);
 
-	mm_wait_list_notify(&mutex->wl);
+	mm_sem_post(&mutex->sem);
 }

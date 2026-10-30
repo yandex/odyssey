@@ -70,6 +70,7 @@ func runTests() {
 		"pool_routing",
 		"authentication",
 		"auth_query",
+		"auth_query_cache",
 		"rules_empty",
 		"group_rules",
 		"watchdog",

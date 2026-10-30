@@ -14,21 +14,21 @@
 #include <server.h>
 
 od_frontend_status_t
-od_attach_extended_endpoint(od_instance_t *instance, char *context,
-			    od_router_t *router, od_client_t *client,
+od_attach_extended_endpoint(od_instance_t *instance, od_router_t *router,
+			    od_client_t *client,
 			    od_storage_endpoint_t *endpoint)
 {
 	od_router_status_t status;
 
 	status = od_router_attach(router, client, 0 /* wait for idle */,
 				  endpoint, 0 /* wait if needed */);
-	od_debug(&instance->logger, context, client, NULL,
+	od_debug(&instance->logger, client, NULL,
 		 "attaching service client to backend connection status: %s",
 		 od_router_status_to_str(status));
 
 	if (status != OD_ROUTER_OK) {
 		od_debug(
-			&instance->logger, context, client, NULL,
+			&instance->logger, client, NULL,
 			"failed to attach internal service client to route: %s",
 			od_router_status_to_str(status));
 
@@ -37,14 +37,13 @@ od_attach_extended_endpoint(od_instance_t *instance, char *context,
 
 	od_server_t *server;
 	server = client->server;
-	od_debug(&instance->logger, context, client, server,
-		 "attached to server %s%.*s", server->id.id_prefix,
-		 (int)sizeof(server->id.id), server->id.id);
+	od_debug(&instance->logger, client, server, "attached to server %s%.*s",
+		 server->id.id_prefix, (int)sizeof(server->id.id),
+		 server->id.id);
 
 	if (od_backend_not_connected(server)) {
 		od_rule_storage_t *storage = client->rule->storage;
-		int rc = od_backend_connect(server, context, NULL, client,
-					    storage);
+		int rc = od_backend_connect(server, NULL, client, storage);
 		if (rc == NOT_OK_RESPONSE) {
 			od_router_close(router, client);
 			od_storage_endpoint_status_set_dead(&endpoint->status);
@@ -62,8 +61,8 @@ od_attach_extended_endpoint(od_instance_t *instance, char *context,
 	return OD_OK;
 }
 
-int od_attach_extended(od_instance_t *instance, char *context,
-		       od_router_t *router, od_client_t *client)
+int od_attach_extended(od_instance_t *instance, od_router_t *router,
+		       od_client_t *client)
 {
 	od_rule_storage_t *storage = client->rule->storage;
 
@@ -81,8 +80,8 @@ int od_attach_extended(od_instance_t *instance, char *context,
 				od_router_close(router, client);
 			}
 
-			status = od_attach_extended_endpoint(
-				instance, context, router, client, endpoint);
+			status = od_attach_extended_endpoint(instance, router,
+							     client, endpoint);
 		}
 
 		if (status == OD_OK) {
@@ -92,7 +91,7 @@ int od_attach_extended(od_instance_t *instance, char *context,
 		char addr[256];
 		od_address_to_str(&endpoint->address, addr, sizeof(addr) - 1);
 
-		od_debug(&instance->logger, context, client, NULL,
+		od_debug(&instance->logger, client, NULL,
 			 "attach to %s failed with status: %s", addr,
 			 od_frontend_status_to_str(status));
 	}

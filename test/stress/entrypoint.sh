@@ -18,8 +18,8 @@ until pg_isready -h replica -p 5432 -U postgres -d postgres; do
   sleep 1
 done
 
-/odyssey /odyssey.conf
-sleep 1
+trap 'ody-stop || exit 1' EXIT
+ODYSSEY_BIN=/odyssey ody-start /odyssey.conf console console
 
 # Under sanitizers (ASAN/TSAN) Odyssey runs 2-3x slower, so we relax
 # latency limits to avoid flaky failures on CI.

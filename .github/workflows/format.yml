@@ -8,6 +8,10 @@ on:
     branches: [ master ]
     paths-ignore:
       - "sources/machinarium/gdb/**"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   format:
     name: format
@@ -17,4 +21,8 @@ jobs:
       with:
         submodules: recursive
     - name: Check format
-      run: make check-format
+      shell: bash
+      run: make check-format 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

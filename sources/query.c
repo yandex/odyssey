@@ -14,20 +14,40 @@
 #include <global.h>
 #include <instance.h>
 #include <backend.h>
+#include <client.h>
+#include <tsa.h>
 #include <util.h>
 #include <sql/minimal/parser.h>
 #include <sql/full/parser.h>
 #include <sql/full/pg_constants.h>
 
-machine_msg_t *od_query_do(od_server_t *server, char *context,
-			   const char *query, char *param, uint32_t timeout_ms)
+od_config_query_parsing_mode_t od_query_parser_mode(od_client_t *client)
+{
+	if (client->parser_mode >= 0) {
+		return client->parser_mode;
+	}
+	od_instance_t *instance = client->global->instance;
+	od_config_query_parsing_mode_t mode =
+		instance->config.query_parsing.mode;
+	if (mode == OD_CONFIG_QUERY_PARSING_MODE_FULL &&
+	    !od_tsa_auto_route_ro_enabled(client)) {
+		/*
+		 * auto routing is the only consumer of the full-parser-only
+		 * results (is_select) - for clients without it the cheaper
+		 * minimal parser is enough
+		 */
+		mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
+	}
+	return mode;
+}
+
+machine_msg_t *od_query_do(od_server_t *server, const char *query, char *param,
+			   uint32_t timeout_ms)
 {
 	od_instance_t *instance = server->global->instance;
-	od_debug(&instance->logger, context, server->client, server, "%s",
-		 query);
+	od_debug(&instance->logger, server->client, server, "%s", query);
 
-	if (od_backend_query_send(server, context, query, param,
-				  strlen(query) + 1,
+	if (od_backend_query_send(server, query, param, strlen(query) + 1,
 				  timeout_ms) == NOT_OK_RESPONSE) {
 		return NULL;
 	}
@@ -40,9 +60,8 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 		msg = od_read(&server->io, timeout_ms, OD_READ_BE);
 		if (msg == NULL) {
 			if (!machine_timedout()) {
-				od_error(&instance->logger, context,
-					 server->client, server,
-					 "read error: %s",
+				od_error(&instance->logger, server->client,
+					 server, "read error: %s",
 					 od_io_error(&server->io));
 			}
 			if (ret_msg) {
@@ -55,12 +74,12 @@ machine_msg_t *od_query_do(od_server_t *server, char *context,
 		kiwi_be_type_t type;
 		type = *(char *)machine_msg_data(msg);
 
-		od_debug(&instance->logger, context, server->client, server,
-			 "%s", kiwi_be_type_to_string(type));
+		od_debug(&instance->logger, server->client, server, "%s",
+			 kiwi_be_type_to_string(type));
 
 		switch (type) {
 		case KIWI_BE_ERROR_RESPONSE:
-			od_backend_error(server, context, machine_msg_data(msg),
+			od_backend_error(server, machine_msg_data(msg),
 					 machine_msg_size(msg));
 			goto error;
 		case KIWI_BE_ROW_DESCRIPTION:
@@ -869,11 +888,15 @@ static void parse_full(const char *query, uint32_t query_len,
 		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SELECT);
 	} else if (IsA(node, VariableSetStmt)) {
 		VariableSetStmt *vsstmt = castNode(VariableSetStmt, node);
-		if (vsstmt->kind == VAR_SET_VALUE && vsstmt->args != NULL &&
-		    list_length(vsstmt->args) == 1) {
+		if (vsstmt->kind == VAR_SET_DEFAULT ||
+		    (vsstmt->kind == VAR_SET_VALUE && vsstmt->args != NULL &&
+		     list_length(vsstmt->args) == 1)) {
 			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_SET);
 			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s",
 				    vsstmt->name);
+			if (vsstmt->kind == VAR_SET_DEFAULT) {
+				return;
+			}
 
 			Node *arg = linitial(vsstmt->args);
 			if (!IsA(arg, A_Const)) {

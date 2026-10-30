@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/quickstart-alpine-test.yml"
       - "sources/**"
       - "test/**"
       - "CMakeLists.txt"
@@ -14,6 +16,10 @@ on:
       - "!docker/prom-exporter/**"
       - "!test/prom-exporter/**"
       - "!sources/machinarium/gdb/**"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   quickstart-image-build:
     name: quickstart-image-build
@@ -23,4 +29,8 @@ jobs:
       with:
         submodules: recursive
     - name: Odyssey quickstart image test
-      run: make quickstart_test
+      shell: bash
+      run: make quickstart_test 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

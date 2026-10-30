@@ -13,6 +13,7 @@
 #include <router.h>
 #include <system.h>
 #include <global.h>
+#include <wait_event.h>
 #include <module.h>
 #include <backend.h>
 #include <instance.h>
@@ -137,7 +138,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	od_list_foreach_safe (&not_changed, i, j) {
 		od_rule_key_t *rk;
 		rk = od_container_of(i, od_rule_key_t, link);
-		od_debug(&instance->logger, "reload", NULL, NULL,
+		od_debug(&instance->logger, NULL, NULL,
 			 "rule %s.%s %s %s was not changed", rk->db_name,
 			 rk->usr_name, rk->address_range.string_value,
 			 od_rule_conn_type_to_str(rk->conn_type));
@@ -151,7 +152,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	od_list_foreach (&added, i) {
 		od_rule_key_t *rk;
 		rk = od_container_of(i, od_rule_key_t, link);
-		od_log(&instance->logger, "reload", NULL, NULL,
+		od_log(&instance->logger, NULL, NULL,
 		       "rule %s.%s %s %s was added", rk->db_name, rk->usr_name,
 		       rk->address_range.string_value,
 		       od_rule_conn_type_to_str(rk->conn_type));
@@ -160,7 +161,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	od_list_foreach (&deleted, i) {
 		od_rule_key_t *rk;
 		rk = od_container_of(i, od_rule_key_t, link);
-		od_log(&instance->logger, "reload", NULL, NULL,
+		od_log(&instance->logger, NULL, NULL,
 		       "rule %s %s %s %s was deleted", rk->db_name,
 		       rk->usr_name, rk->address_range.string_value,
 		       od_rule_conn_type_to_str(rk->conn_type));
@@ -202,7 +203,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	od_list_foreach_safe (&to_drop, i, j) {
 		od_rule_key_t *rk;
 		rk = od_container_of(i, od_rule_key_t, link);
-		od_debug(&instance->logger, "reload", NULL, NULL,
+		od_debug(&instance->logger, NULL, NULL,
 			 "rule %s.%s %s %s was dropped", rk->db_name,
 			 rk->usr_name, rk->address_range.string_value,
 			 od_rule_conn_type_to_str(rk->conn_type));
@@ -367,8 +368,7 @@ od_router_create_connected_server(od_route_t *route,
 	/* connect is long operation, so release lock, which was taken by the caller */
 	od_route_unlock(route);
 
-	int rc = od_backend_connect_to(server, "idle-preallocate", address,
-				       storage->tls_opts,
+	int rc = od_backend_connect_to(server, address, storage->tls_opts,
 				       OD_BACKEND_TLS_DEFAULT);
 
 	/* caller function believes the lock is held */
@@ -428,7 +428,7 @@ static inline int od_router_create_idle_server(od_route_t *route,
 	od_server_set_pool_state(server, OD_SERVER_IDLE);
 
 	od_logger_t *logger = &server->global->instance->logger;
-	od_log(logger, "idle-preallocate", NULL, server,
+	od_log(logger, NULL, server,
 	       "idle server connection preallocated for %s.%s",
 	       route->id.database, route->id.user);
 
@@ -686,7 +686,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 		od_router_unlock(router);
 		return OD_ROUTER_ERROR_NOT_FOUND;
 	}
-	od_debug(&instance->logger, "routing", NULL, NULL,
+	od_debug(&instance->logger, NULL, NULL,
 		 "matching rule: %s %s %s with %s routing type to %s client",
 		 rule->db_name, rule->user_name,
 		 rule->address_range.string_value,
@@ -721,7 +721,9 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 
 		/* need to unlock - will do i/o operation */
 		od_router_unlock(router);
+		od_wait_event_start(OD_WAIT_AUTH_LDAP);
 		int rc = od_auth_ldap_resolve_storage_credentials(client, rule);
+		od_wait_event_end(OD_WAIT_AUTH_LDAP);
 		od_router_lock(router);
 
 		od_rules_unref(rule);
@@ -743,7 +745,7 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 				od_strdup(client->ldap_storage_password);
 			rule->storage_password_len =
 				client->ldap_storage_password_len;
-			od_debug(&instance->logger, "routing", client, NULL,
+			od_debug(&instance->logger, client, NULL,
 				 "route->id.user changed to %s", id.user);
 		} else {
 			/* mask the possible insufficient access error */
@@ -1081,8 +1083,6 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	od_router_status_t status = OD_ROUTER_ERROR_TIMEDOUT;
 
 	while (now_ms < end_time_ms) {
-		uint64_t version = od_route_pools_version(route);
-
 		rc = od_router_try_attach(router, client, wait_for_idle,
 					  endpoint);
 		if (rc != OD_ROUTER_NEED_WAIT) {
@@ -1113,7 +1113,7 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				       notice_deadline - machine_time_ms());
 		}
 
-		od_route_wait(route, client, &endpoint->address, version,
+		od_route_wait(route, client, &endpoint->address,
 			      od_min(end_time_ms - now_ms, until_notice));
 		if (client->server != NULL) {
 			/* someone attached freed server directly to us */
@@ -1203,10 +1203,10 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	if (to_close != NULL) {
 		if (is_repl) {
-			od_debug(&instance->logger, "expire-replication", NULL,
-				 to_close, "closing replication connection");
+			od_debug(&instance->logger, NULL, to_close,
+				 "closing replication connection");
 		} else if (offline) {
-			od_debug(&instance->logger, "expire", NULL, to_close,
+			od_debug(&instance->logger, NULL, to_close,
 				 "closing obsolete server connection");
 		}
 

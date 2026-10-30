@@ -37,7 +37,7 @@ COPY . .
 ENV CC=${odyssey_cc}
 
 RUN make clean
-RUN make ${odyssey_build_type}
+RUN make ${odyssey_build_type} ODYSSEY_CMAKE_EXTRA="-DENABLE_INJECTION_POINTS=ON"
 
 FROM golang:1.25-alpine AS golang-tests-builder
 
@@ -127,6 +127,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     cmake \
     clang \
     gdb \
+    procps \
     strace \
     ltrace \
     bpftrace \
@@ -171,12 +172,14 @@ COPY ./test/functional/tests/pg/pg_hba-test.conf /etc/postgresql/16/main/pg_hba.
 COPY ./test/functional/odyssey.conf /etc/odyssey/odyssey.conf
 
 COPY ./test/functional/bin/ody-restart /usr/bin/ody-restart
-COPY ./test/functional/bin/ody-start  /usr/bin/ody-start
-COPY ./test/functional/bin/ody-start2  /usr/bin/ody-start2
-COPY ./test/functional/bin/ody-stop /usr/bin/ody-stop
+COPY ./test/bin/ody-start  /usr/bin/ody-start
+COPY ./test/bin/ody-stop /usr/bin/ody-stop
 COPY ./test/functional/bin/start-pg /usr/bin/start-pg
 
 COPY ./test/functional/tests /tests
+
+# shared config base, reused by config-errors autoconf tests
+COPY ./test/pg_regress/conf/_base /tests/config-errors/_base
 
 WORKDIR /tests
 

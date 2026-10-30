@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+      - ".github/actions/test-logs/**"
+      - ".github/workflows/async-notification.yml"
       - "sources/**"
       - "test/**"
       - "CMakeLists.txt"
@@ -14,6 +16,10 @@ on:
       - "!docker/prom-exporter/**"
       - "!test/prom-exporter/**"
       - "!sources/machinarium/gdb/**"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   async-notification:
     name: async-notification
@@ -23,4 +29,8 @@ jobs:
       with:
         submodules: recursive
     - name: Test with async notifications against Odyssey
-      run: make async-notice-test
+      shell: bash
+      run: make async-notice-test 2>&1 | tee test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs

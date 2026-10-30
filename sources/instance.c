@@ -62,18 +62,16 @@ int od_cfg_import_with_autoconf(od_logger_t *logger, od_config_t *config,
 					    d->location.filename :
 					    config_file;
 		if (d->level == OD_CFG_DIAG_WARNING) {
-			od_log(logger, "config", NULL, NULL,
-			       "%s:%d:%d: warning: %s", fname,
-			       d->location.first_line, d->location.first_column,
-			       d->message);
+			od_log(logger, NULL, NULL, "%s:%d:%d: warning: %s",
+			       fname, d->location.first_line,
+			       d->location.first_column, d->message);
 		} else {
-			od_error(logger, "config", NULL, NULL, "%s:%d:%d: %s",
-				 fname, d->location.first_line,
+			od_error(logger, NULL, NULL, "%s:%d:%d: %s", fname,
+				 d->location.first_line,
 				 d->location.first_column, d->message);
 		}
 		if (d->hint != NULL) {
-			od_error(logger, "config", NULL, NULL, "  hint: %s",
-				 d->hint);
+			od_error(logger, NULL, NULL, "  hint: %s", d->hint);
 		}
 	}
 
@@ -95,18 +93,16 @@ int od_cfg_import_with_autoconf(od_logger_t *logger, od_config_t *config,
 					    d->location.filename :
 					    config_file;
 		if (d->level == OD_CFG_DIAG_WARNING) {
-			od_log(logger, "config", NULL, NULL,
-			       "%s:%d:%d: warning: %s", fname,
-			       d->location.first_line, d->location.first_column,
-			       d->message);
+			od_log(logger, NULL, NULL, "%s:%d:%d: warning: %s",
+			       fname, d->location.first_line,
+			       d->location.first_column, d->message);
 		} else {
-			od_error(logger, "config", NULL, NULL, "%s:%d:%d: %s",
-				 fname, d->location.first_line,
+			od_error(logger, NULL, NULL, "%s:%d:%d: %s", fname,
+				 d->location.first_line,
 				 d->location.first_column, d->message);
 		}
 		if (d->hint != NULL) {
-			od_error(logger, "config", NULL, NULL, "  hint: %s",
-				 d->hint);
+			od_error(logger, NULL, NULL, "  hint: %s", d->hint);
 		}
 	}
 
@@ -238,10 +234,9 @@ void od_instance_free(od_instance_t *instance)
 
 void od_usage(od_instance_t *instance, char *path)
 {
-	od_log(&instance->logger, "init", NULL, NULL, "%s %s", ODYSSEY_NAME,
+	od_log(&instance->logger, NULL, NULL, "%s %s", ODYSSEY_NAME,
 	       ODYSSEY_VERSION_FULL);
-	od_log(&instance->logger, "init", NULL, NULL, "usage: %s <config_file>",
-	       path);
+	od_log(&instance->logger, NULL, NULL, "usage: %s <config_file>", path);
 }
 
 int od_cfg_check(od_logger_t *logger, const char *config_file,
@@ -284,7 +279,7 @@ int od_config_testing(od_instance_t *instance)
 		return 1;
 	}
 
-	od_log(&instance->logger, "config", NULL, NULL, "config is valid");
+	od_log(&instance->logger, NULL, NULL, "config is valid");
 	return 0;
 }
 
@@ -382,10 +377,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	/* validate command line options */
 	od_parse_args(argc, argv, &args);
 
-	od_log(&instance->logger, "startup", NULL, NULL, "Starting Odyssey");
+	od_log(&instance->logger, NULL, NULL, "Starting Odyssey");
 
 	if (fill_cmdline(instance, argc, argv, envp) != 0) {
-		od_error(&instance->logger, "startup", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "can't preserve main arguments");
 		return NOT_OK_RESPONSE;
 	}
@@ -402,7 +397,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 
 	extensions = od_extensions_create();
 	if (extensions == NULL) {
-		od_error(&instance->logger, "config", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "failed to extensions init");
 		goto error;
 	}
@@ -416,8 +411,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	router_initialized = true;
 
 	if (od_cron_init(&cron) != 0) {
-		od_error(&instance->logger, "config", NULL, NULL,
-			 "failed to init cron");
+		od_error(&instance->logger, NULL, NULL, "failed to init cron");
 		goto error;
 	}
 
@@ -485,7 +479,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 #ifdef PROM_FOUND
 	rc = od_prom_metrics_init(cron.metrics);
 	if (rc != OK_RESPONSE) {
-		od_error(&instance->logger, "metrics", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "failed to initialize metrics");
 		goto error;
 	}
@@ -493,15 +487,15 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	if (instance->config.log_route_stats_prom) {
 		rc = od_prom_activate_route_metrics(cron.metrics);
 		if (rc != OK_RESPONSE) {
-			od_error(&instance->logger, "promhttp", NULL, NULL,
-				 "%s", "could not activate prom_http server");
+			od_error(&instance->logger, NULL, NULL, "%s",
+				 "could not activate prom_http server");
 			goto error;
 		}
 	} else if (instance->config.log_general_stats_prom) {
 		rc = od_prom_activate_general_metrics(cron.metrics);
 		if (rc != OK_RESPONSE) {
-			od_error(&instance->logger, "promhttp", NULL, NULL,
-				 "%s", "could not activate prom_http server");
+			od_error(&instance->logger, NULL, NULL, "%s",
+				 "could not activate prom_http server");
 			goto error;
 		}
 	}
@@ -513,7 +507,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		rc = od_logger_open(&instance->logger,
 				    instance->config.log_file);
 		if (rc == -1) {
-			od_error(&instance->logger, "init", NULL, NULL,
+			od_error(&instance->logger, NULL, NULL,
 				 "failed to open log file '%s'",
 				 instance->config.log_file);
 			goto error;
@@ -540,18 +534,17 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	fill_supported_features_string(features, sizeof(features));
 
 #ifdef ODYSSEY_VERSION_GIT
-	od_log(&instance->logger, "init", NULL, NULL, "%s %s (git: %s) %s%s",
+	od_log(&instance->logger, NULL, NULL, "%s %s (git: %s) %s%s",
 	       ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER, ODYSSEY_VERSION_GIT,
 	       ODYSSEY_BUILD_TYPE, features);
 #else
-	od_log(&instance->logger, "init", NULL, NULL, "%s %s %s%s",
-	       ODYSSEY_NAME, ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE,
-	       features);
+	od_log(&instance->logger, NULL, NULL, "%s %s %s%s", ODYSSEY_NAME,
+	       ODYSSEY_VERSION_NUMBER, ODYSSEY_BUILD_TYPE, features);
 #endif
 
 	/* print configuration */
-	od_log(&instance->logger, "init", NULL, NULL,
-	       "using configuration file '%s'", instance->config_file);
+	od_log(&instance->logger, NULL, NULL, "using configuration file '%s'",
+	       instance->config_file);
 
 	if (instance->config.log_config) {
 		od_config_print(&instance->config, &instance->logger);
@@ -566,7 +559,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		int rc;
 		rc = setpriority(PRIO_PROCESS, 0, instance->config.priority);
 		if (rc == -1) {
-			od_error(&instance->logger, "init", NULL, NULL,
+			od_error(&instance->logger, NULL, NULL,
 				 "failed to set process priority: %s",
 				 strerror(errno));
 			goto error;
@@ -584,7 +577,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	machinarium_set_dns_ttl_ms(instance->config.dns_cache_ttl_ms);
 	rc = machinarium_init();
 	if (rc == -1) {
-		od_error(&instance->logger, "init", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "failed to init machinarium");
 		goto error;
 	}
@@ -593,7 +586,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	if (instance->config.pid_file) {
 		rc = od_pid_create(&instance->pid, instance->config.pid_file);
 		if (rc == -1) {
-			od_error(&instance->logger, "init", NULL, NULL,
+			od_error(&instance->logger, NULL, NULL,
 				 "failed to create pid file %s: %s",
 				 instance->config.pid_file, strerror(errno));
 			goto error;

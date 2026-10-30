@@ -134,6 +134,12 @@ static void test_show_with_block_comment(void)
 {
 	test(strcmp(parse_ok("SHOW /* comment */ search_path"),
 		    "(show search_path)") == 0);
+
+	test(strcmp(parse_ok("SHOW search_path /* comment */"),
+		    "(show search_path)") == 0);
+
+	test(strcmp(parse_ok("SHOW search_path -- comment"),
+		    "(show search_path)") == 0);
 }
 
 static void test_show_multiline_block_comment(void)
@@ -366,6 +372,11 @@ static void test_unlisten_name(void)
 	test(strcmp(parse_ok("UNLISTEN foo"), "(unlisten foo)") == 0);
 }
 
+static void test_unclosed_comments(void)
+{
+	parse_fail("/* SHOW x");
+}
+
 static void test_unlisten_star(void)
 {
 	test(strcmp(parse_ok("UNLISTEN *"), "(unlisten *)") == 0);
@@ -398,8 +409,10 @@ static void test_parse_errors(void)
 	parse_fail("SHOW");
 	parse_fail("SET foo =");
 	parse_fail("DEALLOCATE");
-	parse_fail("DEALLOCATE PREPARE");
-	parse_fail("DEALLOCATE PREPARE;");
+	test(strcmp(parse_ok("DEALLOCATE PREPARE"), "(deallocate prepare)") ==
+	     0);
+	test(strcmp(parse_ok("DEALLOCATE PREPARE;"), "(deallocate prepare)") ==
+	     0);
 	parse_fail("DEALLOCATE PREPARE prepared pst");
 	parse_fail("DEALLOCATE PREPARED pst");
 	parse_fail("DEALLOCATE ALL pst");
@@ -727,10 +740,10 @@ static void test_parse_fill_ctx_full(void)
 		test(ctx.s2_long == NULL);
 	}
 
-	/* SET ... DEFAULT — not VAR_SET_VALUE, no IS_SET, no parse error */
+	/* DEFAULT uses the same empty value as the minimal parser. */
 	fill_ctx_full("SET application_name TO DEFAULT", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
-	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SET));
 	od_query_ctx_reset(&ctx);
 
 	/* SET with multiple values — no IS_SET, no parse error */
@@ -1191,9 +1204,86 @@ static void test_parse_fill_ctx_modes(void)
 	}
 }
 
+static void test_prepare_locations(void)
+{
+	const char *sql =
+		" /* leading */ PREPARE \"Ab\" (numeric(10, 2), text[]) AS SELECT $1, ';', $$a;b$$ /* tail */;";
+	od_sql_minimal_prepare_stmt_t *node = (void *)od_sql_minimal_parse(
+		sql, strlen(sql), &s_arena, NULL, NULL);
+	test(node != NULL);
+	test(node->type == OD_SQL_MINIMAL_NODE_TYPE_PREPARE_STMT);
+	test(strcmp(node->name, "Ab") == 0);
+	test(node->name_location.start == strstr(sql, "\"A") - sql);
+	test(node->name_location.end == node->name_location.start + 4);
+	test(node->types_location.start == strstr(sql, "numeric") - sql);
+	test(node->types_location.end == strstr(sql, ") AS") - sql);
+	test(node->query_location.start == strstr(sql, "SELECT") - sql);
+	test(node->query_location.end == (int)strlen(sql) - 1);
+
+	sql = "PREPARE foo AS select 1";
+	node = (void *)od_sql_minimal_parse(sql, strlen(sql), &s_arena, NULL,
+					    NULL);
+	test(node != NULL);
+	test(node->types_location.start == -1);
+	test(node->query_location.start == 15);
+	test(node->query_location.end == (int)strlen(sql));
+
+	sql = " EXECUTE \"Ab\"(1, 'a;b');";
+	od_sql_minimal_execute_stmt_t *execute = (void *)od_sql_minimal_parse(
+		sql, strlen(sql), &s_arena, NULL, NULL);
+	test(execute != NULL);
+	test(execute->type == OD_SQL_MINIMAL_NODE_TYPE_EXECUTE_STMT);
+	test(strcmp(execute->name, "Ab") == 0);
+	test(execute->name_location.start == 9);
+	test(execute->name_location.end == 13);
+	test(execute->args_location.start == 13);
+	test(execute->args_location.end == (int)strlen(sql) - 1);
+
+	parse_fail("PREPARE foo$bar AS SELECT 1");
+	parse_fail("PREPARE \"A\"\"B\" AS SELECT 1");
+	parse_fail("PREPARE канал AS SELECT 1");
+	parse_fail("PREPARE U&\"name\" AS SELECT 1");
+}
+
+static void test_locations_after_comments(void)
+{
+	/*
+	 * block comments (including nested ones) are consumed via
+	 * input() and must not shift offsets of the following tokens
+	 */
+	const char *sql =
+		"/* pre * with stars ** /* nested */ */"
+		" PREPARE \"Ab\" /* c1 */(numeric(10, 2) /* c2 */, text[])"
+		" AS SELECT /* c3 */ $1, 'a;b'";
+	od_sql_minimal_prepare_stmt_t *node = (void *)od_sql_minimal_parse(
+		sql, strlen(sql), &s_arena, NULL, NULL);
+	test(node != NULL);
+	test(node->type == OD_SQL_MINIMAL_NODE_TYPE_PREPARE_STMT);
+	test(strcmp(node->name, "Ab") == 0);
+	test(node->name_location.start == strstr(sql, "\"A") - sql);
+	test(node->name_location.end == node->name_location.start + 4);
+	test(node->types_location.start == strstr(sql, "numeric") - sql);
+	test(node->types_location.end == strstr(sql, ") AS") - sql);
+	test(node->query_location.start == strstr(sql, "SELECT") - sql);
+	test(node->query_location.end == (int)strlen(sql));
+
+	/* comments inside the opaque EXECUTE() tail */
+	sql = "/* lead */ EXECUTE \"Ab\" (1 /* c */, 'a;b' /* c2 */);";
+	od_sql_minimal_execute_stmt_t *execute = (void *)od_sql_minimal_parse(
+		sql, strlen(sql), &s_arena, NULL, NULL);
+	test(execute != NULL);
+	test(strcmp(execute->name, "Ab") == 0);
+	test(execute->name_location.start == strstr(sql, "\"A") - sql);
+	test(execute->name_location.end == execute->name_location.start + 4);
+	test(execute->args_location.start == strstr(sql, "(1") - sql);
+	test(execute->args_location.end == (int)strlen(sql) - 1);
+}
+
 void odyssey_test_sql_minimal_parser(void)
 {
 	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
+	test_prepare_locations();
+	test_locations_after_comments();
 
 	test_parse_fill_ctx_modes();
 
@@ -1254,4 +1344,6 @@ void odyssey_test_sql_minimal_parser(void)
 	test_extract_query_ctx();
 	test_parse_fill_ctx();
 	test_parse_fill_ctx_full();
+
+	test_unclosed_comments();
 }

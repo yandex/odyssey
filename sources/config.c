@@ -93,6 +93,12 @@ void od_config_init(od_config_t *config)
 	config->hba_file = NULL;
 	config->max_sigterms_to_die = 3;
 	config->group_checker_interval_ms = 7000; /* 7 seconds */
+
+	config->auth_query_cache_ttl_ms = 10 * 1000; /* 10 seconds */
+	config->auth_query_cache_ttl_jitter_ms = 5 * 1000; /* up to 5 seconds */
+	config->auth_query_cache_error_retry_ms = 1000; /* 1 second */
+	config->auth_query_cache_stale_on_error = 1;
+	config->auth_query_timeout_ms = 500; /* 500 ms */
 	od_list_init(&config->listen);
 
 	config->backend_connect_timeout_ms = 30U * 1000U; /* 30 seconds */
@@ -100,6 +106,7 @@ void od_config_init(od_config_t *config)
 	config->cancel_queue_timeout_ms = -1;
 	config->cancel_max_inflight = -1;
 	config->cancel_rate_limit = 0;
+	config->ignore_cancel = 0;
 	config->virtual_processing = 0;
 	config->replication_proxy_phys = 0;
 	config->replication_proxy_logic = 0;
@@ -147,6 +154,7 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 	current_config->backend_connect_timeout_ms =
 		new_config->backend_connect_timeout_ms;
 	current_config->cancel_timeout_ms = new_config->cancel_timeout_ms;
+	current_config->ignore_cancel = new_config->ignore_cancel;
 	current_config->smart_search_path_enquoting =
 		new_config->smart_search_path_enquoting;
 	current_config->disable_nolinger = new_config->disable_nolinger;
@@ -162,6 +170,16 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 		new_config->keepalive_usr_timeout_ms;
 	current_config->graceful_shutdown_timeout_ms =
 		new_config->graceful_shutdown_timeout_ms;
+	current_config->auth_query_cache_ttl_ms =
+		new_config->auth_query_cache_ttl_ms;
+	current_config->auth_query_cache_ttl_jitter_ms =
+		new_config->auth_query_cache_ttl_jitter_ms;
+	current_config->auth_query_cache_error_retry_ms =
+		new_config->auth_query_cache_error_retry_ms;
+	current_config->auth_query_cache_stale_on_error =
+		new_config->auth_query_cache_stale_on_error;
+	current_config->auth_query_timeout_ms =
+		new_config->auth_query_timeout_ms;
 }
 
 static void od_config_listen_free(od_config_listen_t *);
@@ -271,43 +289,40 @@ static void od_config_listen_free(od_config_listen_t *config)
 int od_config_validate(od_config_t *config, od_logger_t *logger)
 {
 	if (config->workers <= 0) {
-		od_error(logger, "config", NULL, NULL, "bad workers number");
+		od_error(logger, NULL, NULL, "bad workers number");
 		return -1;
 	}
 
 	if (config->tls_workers < 0) {
-		od_error(logger, "config", NULL, NULL,
-			 "bad tls_workers number");
+		od_error(logger, NULL, NULL, "bad tls_workers number");
 		return -1;
 	}
 
 	if (config->resolvers <= 0) {
-		od_error(logger, "config", NULL, NULL, "bad resolvers number");
+		od_error(logger, NULL, NULL, "bad resolvers number");
 		return -1;
 	}
 
 	if (config->coroutine_stack_size < 4) {
-		od_error(logger, "config", NULL, NULL,
-			 "bad coroutine_stack_size number");
+		od_error(logger, NULL, NULL, "bad coroutine_stack_size number");
 		return -1;
 	}
 
 	if (config->system_coroutine_stack_size < 4) {
-		od_error(logger, "config", NULL, NULL,
+		od_error(logger, NULL, NULL,
 			 "bad system_coroutine_stack_size number");
 		return -1;
 	}
 
 	if (config->log_format == NULL) {
-		od_error(logger, "config", NULL, NULL,
-			 "log_format is not defined");
+		od_error(logger, NULL, NULL, "log_format is not defined");
 		return -1;
 	}
 
 	/* unix_socket_mode */
 	if (config->unix_socket_dir) {
 		if (config->unix_socket_mode == NULL) {
-			od_error(logger, "config", NULL, NULL,
+			od_error(logger, NULL, NULL,
 				 "unix_socket_mode is not set");
 			return -1;
 		}
@@ -315,8 +330,7 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 
 	/* listen */
 	if (od_list_empty(&config->listen)) {
-		od_error(logger, "config", NULL, NULL,
-			 "no listen servers defined");
+		od_error(logger, NULL, NULL, "no listen servers defined");
 		return -1;
 	}
 
@@ -327,7 +341,7 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 		if (listen->host == NULL) {
 			if (config->unix_socket_dir == NULL) {
 				od_error(
-					logger, "config", NULL, NULL,
+					logger, NULL, NULL,
 					"listen host is not set and no unix_socket_dir is specified");
 				return -1;
 			}
@@ -340,7 +354,7 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 			if (od_unix_socket_path(sock_path, sizeof(sock_path),
 						config->unix_socket_dir,
 						listen->port) == -1) {
-				od_error(logger, "config", NULL, NULL,
+				od_error(logger, NULL, NULL,
 					 "unix socket path '%s/.s.PGSQL.%d' is "
 					 "too long (maximum %d characters)",
 					 config->unix_socket_dir, listen->port,
@@ -375,7 +389,7 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 				listen->tls_opts->tls_mode =
 					OD_CONFIG_TLS_VERIFY_FULL;
 			} else {
-				od_error(logger, "config", NULL, NULL,
+				od_error(logger, NULL, NULL,
 					 "unknown tls_opts->tls mode");
 				return -1;
 			}
@@ -398,7 +412,7 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 						   OD_CONFIG_TLS_PREFER;
 
 			od_error(
-				logger, "config", NULL, NULL,
+				logger, NULL, NULL,
 				"failed to load tls certificate for %s:%d%s: %s",
 				od_config_listen_host_name(listen),
 				listen->port,
@@ -414,7 +428,7 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 	if (config->enable_online_restart_feature &&
 	    !config->bindwith_reuseport) {
 		od_error(
-			logger, "config", NULL, NULL,
+			logger, NULL, NULL,
 			"online restart feature works only with SO_REUSEPORT. Disable "
 			"online restart or/and enable bindwith_reuseport");
 		return NOT_OK_RESPONSE;
@@ -559,6 +573,16 @@ static const od_config_field_t od_config_fields[] = {
 	  0 },
 	{ "group_checker_interval", OD_CONFIG_FIELD_U64,
 	  offsetof(od_config_t, group_checker_interval_ms), 0 },
+	{ "auth_query_cache_ttl", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, auth_query_cache_ttl_ms), 1 },
+	{ "auth_query_cache_ttl_jitter", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, auth_query_cache_ttl_jitter_ms), 1 },
+	{ "auth_query_cache_error_retry", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, auth_query_cache_error_retry_ms), 1 },
+	{ "auth_query_cache_stale_on_error", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, auth_query_cache_stale_on_error), 1 },
+	{ "auth_query_timeout", OD_CONFIG_FIELD_U64,
+	  offsetof(od_config_t, auth_query_timeout_ms), 1 },
 	{ "backend_connect_timeout_ms", OD_CONFIG_FIELD_U64,
 	  offsetof(od_config_t, backend_connect_timeout_ms), 1 },
 	{ "cancel_timeout_ms", OD_CONFIG_FIELD_U64,
@@ -567,6 +591,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, cancel_queue_timeout_ms), 0 },
 	{ "cancel_max_inflight", OD_CONFIG_FIELD_INT,
 	  offsetof(od_config_t, cancel_max_inflight), 0 },
+	{ "ignore_cancel", OD_CONFIG_FIELD_BOOL,
+	  offsetof(od_config_t, ignore_cancel), 1 },
 	{ "virtual_processing", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, virtual_processing), 0 },
 	{ "virtual_transaction", OD_CONFIG_FIELD_BOOL,
@@ -791,250 +817,250 @@ void od_config_field_default(const od_config_field_t *field, char *buf,
 
 void od_config_print(od_config_t *config, od_logger_t *logger)
 {
-	od_log(logger, "config", NULL, NULL, "daemonize               %s",
+	od_log(logger, NULL, NULL, "daemonize               %s",
 	       od_config_yes_no(config->daemonize));
-	od_log(logger, "config", NULL, NULL, "priority                %d",
+	od_log(logger, NULL, NULL, "priority                %d",
 	       config->priority);
-	od_log(logger, "config", NULL, NULL, "sequential_routing      %s",
+	od_log(logger, NULL, NULL, "sequential_routing      %s",
 	       od_config_yes_no(config->sequential_routing));
 	if (config->pid_file) {
-		od_log(logger, "config", NULL, NULL,
-		       "pid_file                %s", config->pid_file);
+		od_log(logger, NULL, NULL, "pid_file                %s",
+		       config->pid_file);
 	}
 	if (config->unix_socket_dir) {
-		od_log(logger, "config", NULL, NULL,
-		       "unix_socket_dir         %s", config->unix_socket_dir);
-		od_log(logger, "config", NULL, NULL,
-		       "unix_socket_mode        %s", config->unix_socket_mode);
+		od_log(logger, NULL, NULL, "unix_socket_dir         %s",
+		       config->unix_socket_dir);
+		od_log(logger, NULL, NULL, "unix_socket_mode        %s",
+		       config->unix_socket_mode);
 	}
 	if (config->log_format) {
-		od_log(logger, "config", NULL, NULL,
-		       "log_format              %s", config->log_format);
+		od_log(logger, NULL, NULL, "log_format              %s",
+		       config->log_format);
 	}
 	if (config->log_file) {
-		od_log(logger, "config", NULL, NULL,
-		       "log_file                %s", config->log_file);
+		od_log(logger, NULL, NULL, "log_file                %s",
+		       config->log_file);
 	}
-	od_log(logger, "config", NULL, NULL, "log_to_stdout           %s",
+	od_log(logger, NULL, NULL, "log_to_stdout           %s",
 	       od_config_yes_no(config->log_to_stdout));
-	od_log(logger, "config", NULL, NULL, "log_syslog              %s",
+	od_log(logger, NULL, NULL, "log_syslog              %s",
 	       od_config_yes_no(config->log_syslog));
 	if (config->log_syslog_ident) {
-		od_log(logger, "config", NULL, NULL,
-		       "log_syslog_ident        %s", config->log_syslog_ident);
+		od_log(logger, NULL, NULL, "log_syslog_ident        %s",
+		       config->log_syslog_ident);
 	}
 	if (config->log_syslog_facility) {
-		od_log(logger, "config", NULL, NULL,
-		       "log_syslog_facility     %s",
+		od_log(logger, NULL, NULL, "log_syslog_facility     %s",
 		       config->log_syslog_facility);
 	}
-	od_log(logger, "config", NULL, NULL, "log_debug               %s",
+	od_log(logger, NULL, NULL, "log_debug               %s",
 	       od_config_yes_no(config->log_debug));
-	od_log(logger, "config", NULL, NULL, "log_debug_sampling      %d",
+	od_log(logger, NULL, NULL, "log_debug_sampling      %d",
 	       config->log_debug_sampling);
-	od_log(logger, "config", NULL, NULL, "maintain_params         %s",
+	od_log(logger, NULL, NULL, "maintain_params         %s",
 	       od_config_yes_no(config->maintain_params));
-	od_log(logger, "config", NULL, NULL, "log_config              %s",
+	od_log(logger, NULL, NULL, "log_config              %s",
 	       od_config_yes_no(config->log_config));
-	od_log(logger, "config", NULL, NULL, "log_session             %s",
+	od_log(logger, NULL, NULL, "log_session             %s",
 	       od_config_yes_no(config->log_session));
-	od_log(logger, "config", NULL, NULL, "log_query               %s",
+	od_log(logger, NULL, NULL, "log_query               %s",
 	       od_config_yes_no(config->log_query));
-	od_log(logger, "config", NULL, NULL, "log_query_sampling      %d",
+	od_log(logger, NULL, NULL, "log_query_sampling      %d",
 	       config->log_query_sampling);
-	od_log(logger, "config", NULL, NULL, "log_stats               %s",
+	od_log(logger, NULL, NULL, "log_stats               %s",
 	       od_config_yes_no(config->log_stats));
-	od_log(logger, "config", NULL, NULL, "log_general_stats_prom  %s",
+	od_log(logger, NULL, NULL, "log_general_stats_prom  %s",
 	       od_config_yes_no(config->log_general_stats_prom));
-	od_log(logger, "config", NULL, NULL, "log_route_stats_prom    %s",
+	od_log(logger, NULL, NULL, "log_route_stats_prom    %s",
 	       od_config_yes_no(config->log_route_stats_prom));
-	od_log(logger, "config", NULL, NULL, "log_queue_depth         %d",
+	od_log(logger, NULL, NULL, "log_queue_depth         %d",
 	       config->log_queue_depth);
-	od_log(logger, "config", NULL, NULL, "stats_interval          %d",
+	od_log(logger, NULL, NULL, "stats_interval          %d",
 	       config->stats_interval);
-	od_log(logger, "config", NULL, NULL, "readahead               %d",
+	od_log(logger, NULL, NULL, "readahead               %d",
 	       config->readahead);
-	od_log(logger, "config", NULL, NULL, "nodelay                 %s",
+	od_log(logger, NULL, NULL, "nodelay                 %s",
 	       od_config_yes_no(config->nodelay));
-	od_log(logger, "config", NULL, NULL, "disable_nolinger        %s",
+	od_log(logger, NULL, NULL, "disable_nolinger        %s",
 	       od_config_yes_no(config->disable_nolinger));
-	od_log(logger, "config", NULL, NULL, "keepalive               %d",
+	od_log(logger, NULL, NULL, "keepalive               %d",
 	       config->keepalive);
-	od_log(logger, "config", NULL, NULL, "keepalive_keep_interval %d",
+	od_log(logger, NULL, NULL, "keepalive_keep_interval %d",
 	       config->keepalive_keep_interval);
-	od_log(logger, "config", NULL, NULL, "keepalive_probes        %d",
+	od_log(logger, NULL, NULL, "keepalive_probes        %d",
 	       config->keepalive_probes);
-	od_log(logger, "config", NULL, NULL, "keepalive_usr_timeout   %" PRId64,
+	od_log(logger, NULL, NULL, "keepalive_usr_timeout   %" PRId64,
 	       config->keepalive_usr_timeout_ms);
 	if (config->client_max_set) {
-		od_log(logger, "config", NULL, NULL,
-		       "client_max              %d", config->client_max);
+		od_log(logger, NULL, NULL, "client_max              %d",
+		       config->client_max);
 	}
-	od_log(logger, "config", NULL, NULL, "client_max_routing      %d",
+	od_log(logger, NULL, NULL, "client_max_routing      %d",
 	       config->client_max_routing);
-	od_log(logger, "config", NULL, NULL, "server_login_retry      %" PRIu64,
+	od_log(logger, NULL, NULL, "server_login_retry      %" PRIu64,
 	       config->server_login_retry_ms);
-	od_log(logger, "config", NULL, NULL, "cache_msg_gc_size       %d",
+	od_log(logger, NULL, NULL, "cache_msg_gc_size       %d",
 	       config->cache_msg_gc_size);
-	od_log(logger, "config", NULL, NULL, "cache_msg_gc_count      %d",
+	od_log(logger, NULL, NULL, "cache_msg_gc_count      %d",
 	       config->cache_msg_gc_count);
-	od_log(logger, "config", NULL, NULL, "cache_coroutine         %d",
+	od_log(logger, NULL, NULL, "cache_coroutine         %d",
 	       config->cache_coroutine);
-	od_log(logger, "config", NULL, NULL, "coroutine_stack_size    %d",
+	od_log(logger, NULL, NULL, "coroutine_stack_size    %d",
 	       config->coroutine_stack_size);
-	od_log(logger, "config", NULL, NULL, "system_coroutine_stack_size %d",
+	od_log(logger, NULL, NULL, "system_coroutine_stack_size %d",
 	       config->system_coroutine_stack_size);
-	od_log(logger, "config", NULL, NULL, "workers                 %d",
+	od_log(logger, NULL, NULL, "workers                 %d",
 	       config->workers);
-	od_log(logger, "config", NULL, NULL, "tls_workers             %d",
+	od_log(logger, NULL, NULL, "tls_workers             %d",
 	       config->tls_workers);
-	od_log(logger, "config", NULL, NULL, "resolvers               %d",
+	od_log(logger, NULL, NULL, "resolvers               %d",
 	       config->resolvers);
-	od_log(logger, "config", NULL, NULL,
-	       "backend_connect_timeout_ms %" PRIu64,
+	od_log(logger, NULL, NULL, "backend_connect_timeout_ms %" PRIu64,
 	       config->backend_connect_timeout_ms);
-	od_log(logger, "config", NULL, NULL,
-	       "cancel_timeout_ms         %" PRIu64, config->cancel_timeout_ms);
-	od_log(logger, "config", NULL, NULL,
-	       "cancel_queue_timeout_ms   %" PRId64,
+	od_log(logger, NULL, NULL, "cancel_timeout_ms         %" PRIu64,
+	       config->cancel_timeout_ms);
+	od_log(logger, NULL, NULL, "cancel_queue_timeout_ms   %" PRId64,
 	       config->cancel_queue_timeout_ms);
-	od_log(logger, "config", NULL, NULL, "cancel_max_inflight       %d",
+	od_log(logger, NULL, NULL, "cancel_max_inflight       %d",
 	       config->cancel_max_inflight);
-	od_log(logger, "config", NULL, NULL, "cancel_rate_limit         %d",
+	od_log(logger, NULL, NULL, "cancel_rate_limit         %d",
 	       config->cancel_rate_limit);
-	od_log(logger, "config", NULL, NULL, "dns_ttl_ms              %d",
+	od_log(logger, NULL, NULL, "ignore_cancel            %s",
+	       od_config_yes_no(config->ignore_cancel));
+	od_log(logger, NULL, NULL, "dns_ttl_ms              %d",
 	       config->dns_cache_ttl_ms);
-	od_log(logger, "config", NULL, NULL, "group_checker_interval  %" PRIu64,
+	od_log(logger, NULL, NULL, "group_checker_interval  %" PRIu64,
 	       config->group_checker_interval_ms);
-	od_log(logger, "config", NULL, NULL, "max_sigterms_to_die     %d",
+	od_log(logger, NULL, NULL, "auth_query_cache_ttl            %" PRIu64,
+	       config->auth_query_cache_ttl_ms);
+	od_log(logger, NULL, NULL, "auth_query_cache_ttl_jitter     %" PRIu64,
+	       config->auth_query_cache_ttl_jitter_ms);
+	od_log(logger, NULL, NULL, "auth_query_cache_error_retry    %" PRIu64,
+	       config->auth_query_cache_error_retry_ms);
+	od_log(logger, NULL, NULL, "auth_query_cache_stale_on_error %s",
+	       od_config_yes_no(config->auth_query_cache_stale_on_error));
+	od_log(logger, NULL, NULL, "auth_query_timeout              %" PRIu64,
+	       config->auth_query_timeout_ms);
+	od_log(logger, NULL, NULL, "max_sigterms_to_die     %d",
 	       config->max_sigterms_to_die);
-	od_log(logger, "config", NULL, NULL, "virtual_processing      %s",
+	od_log(logger, NULL, NULL, "virtual_processing      %s",
 	       od_config_yes_no(config->virtual_processing));
-	od_log(logger, "config", NULL, NULL, "virtual_transaction     %s",
+	od_log(logger, NULL, NULL, "virtual_transaction     %s",
 	       od_config_yes_no(config->virtual_transaction));
-	od_log(logger, "config", NULL, NULL, "replication_proxy_phys     %s",
+	od_log(logger, NULL, NULL, "replication_proxy_phys     %s",
 	       od_config_yes_no(config->replication_proxy_phys));
-	od_log(logger, "config", NULL, NULL, "replication_proxy_logic    %s",
+	od_log(logger, NULL, NULL, "replication_proxy_logic    %s",
 	       od_config_yes_no(config->replication_proxy_logic));
-	od_log(logger, "config", NULL, NULL, "smart_search_path_enquoting %s",
+	od_log(logger, NULL, NULL, "smart_search_path_enquoting %s",
 	       od_config_yes_no(config->smart_search_path_enquoting));
-	od_log(logger, "config", NULL, NULL, "query_parsing_mode      %s",
+	od_log(logger, NULL, NULL, "query_parsing_mode      %s",
 	       od_config_query_parsing_mode_to_str(config->query_parsing.mode));
-	od_log(logger, "config", NULL, NULL, "query_parsing_max_query_len %zu",
+	od_log(logger, NULL, NULL, "query_parsing_max_query_len %zu",
 	       config->query_parsing.max_query_len);
-	od_log(logger, "config", NULL, NULL, "query_parsing_mem_limit %zu",
+	od_log(logger, NULL, NULL, "query_parsing_mem_limit %zu",
 	       config->query_parsing.mem_limit_bytes);
-	od_log(logger, "config", NULL, NULL,
+	od_log(logger, NULL, NULL,
 	       "query_parsing_standby_function_list extra functions %zu",
 	       config->query_parsing.standby_function_names_count);
 	if (config->availability_zone[0]) {
-		od_log(logger, "config", NULL, NULL,
-		       "availability_zone       %s", config->availability_zone);
+		od_log(logger, NULL, NULL, "availability_zone       %s",
+		       config->availability_zone);
 	}
-	od_log(logger, "config", NULL, NULL, "enable_host_watcher:    %d",
+	od_log(logger, NULL, NULL, "enable_host_watcher:    %d",
 	       config->host_watcher_enabled);
 
-	od_log(logger, "config", NULL, NULL, "online restart enabled: %d",
+	od_log(logger, NULL, NULL, "online restart enabled: %d",
 	       config->enable_online_restart_feature);
 
-	od_log(logger, "config", NULL, NULL, "graceful die enabled:   %d",
+	od_log(logger, NULL, NULL, "graceful die enabled:   %d",
 	       config->graceful_die_on_errors);
 
-	od_log(logger, "config", NULL, NULL, "bindwith_reuseport:     %d",
+	od_log(logger, NULL, NULL, "bindwith_reuseport:     %d",
 	       config->bindwith_reuseport);
 
 	if (config->hba_file) {
-		od_log(logger, "config", NULL, NULL,
-		       "hba_file                %s", config->hba_file);
+		od_log(logger, NULL, NULL, "hba_file                %s",
+		       config->hba_file);
 	}
 
 	if (config->conn_drop_options.drop_enabled) {
-		od_log(logger, "config", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "conn_drop_options: enabled, rate %d, interval_ms %d",
 		       config->conn_drop_options.rate,
 		       config->conn_drop_options.interval_ms);
 	}
 
 	if (config->soft_oom.enabled) {
-		od_log(logger, "config", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "soft_oom: check '%s' every %dms with limit %" PRIu64
 		       " bytes",
 		       config->soft_oom.process,
 		       config->soft_oom.check_interval_ms,
 		       config->soft_oom.limit_bytes);
 		if (config->soft_oom.drop.enabled) {
-			od_log(logger, "config", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "soft_oom drop: signal %d, max_rate %d",
 			       config->soft_oom.drop.signal,
 			       config->soft_oom.drop.max_rate);
 		}
 	} else {
-		od_log(logger, "config", NULL, NULL,
-		       "soft_oom:         DISABLED");
+		od_log(logger, NULL, NULL, "soft_oom:         DISABLED");
 	}
 
 	od_list_t *i;
 	od_list_foreach (&config->listen, i) {
 		od_config_listen_t *listen;
 		listen = od_container_of(i, od_config_listen_t, link);
-		od_log(logger, "config", NULL, NULL, "listen");
-		od_log(logger, "config", NULL, NULL, "  host          %s",
+		od_log(logger, NULL, NULL, "listen");
+		od_log(logger, NULL, NULL, "  host          %s",
 		       listen->host ? listen->host : "<unix socket>");
-		od_log(logger, "config", NULL, NULL, "  port          %d",
-		       listen->port);
-		od_log(logger, "config", NULL, NULL, "  backlog       %d",
+		od_log(logger, NULL, NULL, "  port          %d", listen->port);
+		od_log(logger, NULL, NULL, "  backlog       %d",
 		       listen->backlog);
-		od_log(logger, "config", NULL, NULL,
-		       "  client_login_timeout %d",
+		od_log(logger, NULL, NULL, "  client_login_timeout %d",
 		       listen->client_login_timeout_ms);
-		od_log(logger, "config", NULL, NULL, "  reserved_clients %d",
+		od_log(logger, NULL, NULL, "  reserved_clients %d",
 		       listen->reserved_clients);
-		od_log(logger, "config", NULL, NULL,
-		       "  target_session_attrs %s",
+		od_log(logger, NULL, NULL, "  target_session_attrs %s",
 		       od_target_session_attrs_to_str(
 			       listen->target_session_attrs));
-		od_log(logger, "config", NULL, NULL,
-		       "  auto_route_ro_on_standby %s",
+		od_log(logger, NULL, NULL, "  auto_route_ro_on_standby %s",
 		       listen->auto_route_ro_on_standby ? "yes" : "no");
 		if (listen->balancing_override_set) {
-			od_log(logger, "config", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  balancing override: method %s, az_aware %d",
 			       od_balancing_method_to_str(
 				       listen->balancing_override.method.type),
 			       listen->balancing_override.method.az_aware);
 		}
 		if (listen->catchup_timeout) {
-			od_log(logger, "config", NULL, NULL,
-			       "  catchup_timeout %d", listen->catchup_timeout);
+			od_log(logger, NULL, NULL, "  catchup_timeout %d",
+			       listen->catchup_timeout);
 		}
 		if (listen->tls_opts->tls) {
-			od_log(logger, "config", NULL, NULL,
-			       "  tls           %s", listen->tls_opts->tls);
+			od_log(logger, NULL, NULL, "  tls           %s",
+			       listen->tls_opts->tls);
 		}
 		if (listen->tls_opts->tls_ca_file) {
-			od_log(logger, "config", NULL, NULL,
-			       "  tls_ca_file   %s",
+			od_log(logger, NULL, NULL, "  tls_ca_file   %s",
 			       listen->tls_opts->tls_ca_file);
 		}
 		if (listen->tls_opts->tls_key_file) {
-			od_log(logger, "config", NULL, NULL,
-			       "  tls_key_file  %s",
+			od_log(logger, NULL, NULL, "  tls_key_file  %s",
 			       listen->tls_opts->tls_key_file);
 		}
 		if (listen->tls_opts->tls_cert_file) {
-			od_log(logger, "config", NULL, NULL,
-			       "  tls_cert_file %s",
+			od_log(logger, NULL, NULL, "  tls_cert_file %s",
 			       listen->tls_opts->tls_cert_file);
 		}
 		if (listen->tls_opts->tls_protocols) {
-			od_log(logger, "config", NULL, NULL,
-			       "  tls_protocols %s",
+			od_log(logger, NULL, NULL, "  tls_protocols %s",
 			       listen->tls_opts->tls_protocols);
 		}
 
 		for (size_t i = 0; i < listen->storage_count; ++i) {
-			od_log(logger, "config", NULL, NULL,
-			       "  storage       %s", listen->storage_names[i]);
+			od_log(logger, NULL, NULL, "  storage       %s",
+			       listen->storage_names[i]);
 		}
 	}
 }

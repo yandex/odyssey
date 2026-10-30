@@ -3,13 +3,15 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <machinarium/file.h>
+#include <machinarium/memory.h>
+
 #include <host_watcher.h>
 #include <logger.h>
+#include <util.h>
 
 #define PROC_MEMINFO_PATH "/proc/meminfo"
 #define PROC_STAT_PATH "/proc/stat"
-
-DEFINE_SIMPLE_MODULE_LOGGER(hw, "host-watcher")
 
 static inline uint64_t sub(uint64_t a, uint64_t b)
 {
@@ -46,32 +48,33 @@ static inline int get_cpu_stat(od_cpu_stat_t *out)
 {
 	/* https://www.kernel.org/doc/html/latest/filesystems/proc.html#miscellaneous-kernel-statistics-in-proc-stat */
 
-	FILE *fp = fopen(PROC_STAT_PATH, "re");
-	if (!fp) {
-		hw_error("can't open '%s': %s", PROC_STAT_PATH,
-			 strerror(errno));
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(PROC_STAT_PATH, &buf, &size) != 0) {
+		od_gerror(NULL, NULL, "can't open '%s': %s", PROC_STAT_PATH,
+			  strerror(errno));
 		return -1;
 	}
 
-	static OD_THREAD_LOCAL char cpu_stat_buffer[4096 + 1];
-
-	if (fgets(cpu_stat_buffer, sizeof(cpu_stat_buffer), fp) == NULL) {
-		hw_error("can't read '%s': %s", PROC_STAT_PATH,
-			 strerror(errno));
+	char *cursor = buf;
+	char *cpu_stat_line = od_next_line(&cursor);
+	if (cpu_stat_line == NULL) {
+		od_gerror(NULL, NULL, "can't read '%s'", PROC_STAT_PATH);
+		mm_free(buf);
 		return -1;
 	}
-
-	fclose(fp);
 
 	uint64_t usertime, nicetime, systemtime, idletime;
 	uint64_t io_wait = 0, irq = 0, soft_irq = 0, steal = 0, guest = 0,
 		 guestnice = 0;
 
-	sscanf(cpu_stat_buffer,
+	sscanf(cpu_stat_line,
 	       "cpu  %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
 	       " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64,
 	       &usertime, &nicetime, &systemtime, &idletime, &io_wait, &irq,
 	       &soft_irq, &steal, &guest, &guestnice);
+
+	mm_free(buf);
 
 	usertime -= guest;
 	nicetime -= guestnice;
@@ -92,17 +95,19 @@ static inline int get_memory_stat(od_mem_stat_t *out)
 {
 	/* https://www.kernel.org/doc/html/latest/filesystems/proc.html#meminfo */
 
-	FILE *fp = fopen(PROC_MEMINFO_PATH, "re");
-	if (!fp) {
-		hw_error("can't open '%s': %s", PROC_MEMINFO_PATH,
-			 strerror(errno));
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(PROC_MEMINFO_PATH, &buf, &size) != 0) {
+		od_gerror(NULL, NULL, "can't open '%s': %s", PROC_MEMINFO_PATH,
+			  strerror(errno));
 		return -1;
 	}
 
-	char line[256];
 	int64_t mem_available = 0, mem_total = 0;
 
-	while (fgets(line, sizeof(line), fp)) {
+	char *cursor = buf;
+	char *line;
+	while ((line = od_next_line(&cursor)) != NULL) {
 		if (sscanf(line, "MemAvailable: %" PRId64 " kB",
 			   &mem_available) == 1) {
 			continue;
@@ -113,14 +118,7 @@ static inline int get_memory_stat(od_mem_stat_t *out)
 		}
 	}
 
-	if (ferror(fp)) {
-		hw_error("can't read '%s': %s", PROC_MEMINFO_PATH,
-			 strerror(errno));
-		fclose(fp);
-		return -1;
-	}
-
-	fclose(fp);
+	mm_free(buf);
 
 	out->total = mem_total;
 	out->available = mem_available;
@@ -132,12 +130,13 @@ static inline void hw_watcher(void *arg)
 {
 	od_host_watcher_t *hw = arg;
 
-	hw_log("host watcher started");
+	od_glog(NULL, NULL, "host watcher started");
 
 	while (1) {
 		int rc = machine_wait_flag_wait(hw->stop_flag, 1000);
 		if (rc != -1 && machine_errno() != ETIMEDOUT) {
-			hw_log("stop flag is set, exiting host watcher");
+			od_glog(NULL, NULL,
+				"stop flag is set, exiting host watcher");
 			break;
 		}
 
@@ -156,11 +155,12 @@ static inline void hw_watcher(void *arg)
 		float ucpu, umem;
 		od_host_watcher_read(hw, &ucpu, &umem);
 
-		hw_log("update values to: %.2f%% cpu and %.2f%% mem", ucpu,
-		       umem);
+		od_glog(NULL, NULL,
+			"update values to: %.2f%% cpu and %.2f%% mem", ucpu,
+			umem);
 	}
 
-	hw_log("host watcher finished");
+	od_glog(NULL, NULL, "host watcher finished");
 }
 
 int od_host_watcher_init(od_host_watcher_t *hw)
@@ -183,7 +183,7 @@ int od_host_watcher_init(od_host_watcher_t *hw)
 
 	hw->worker_id = machine_create("host-watcher", hw_watcher, hw);
 	if (hw->worker_id == -1) {
-		hw_error("can't start host watcher machine");
+		od_gerror(NULL, NULL, "can't start host watcher machine");
 		machine_wait_flag_destroy(hw->stop_flag);
 		mm_spinlock_destroy(&hw->lock);
 		return -1;

@@ -432,6 +432,7 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 		  &model->global.replication_proxy_phys);
 	dump_bool(file, "replication_proxy_logic", 0,
 		  &model->global.replication_proxy_logic);
+	dump_bool(file, "ignore_cancel", 0, &model->global.ignore_cancel);
 	dump_bool(file, "smart_search_path_enquoting", 0,
 		  &model->global.smart_search_path_enquoting);
 	dump_bool(file, "nodelay", 0, &model->global.nodelay);
@@ -508,6 +509,17 @@ void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model)
 	} else {
 		dump_int(file, "tls_workers", 0, &model->global.tls_workers);
 	}
+
+	dump_uint64(file, "auth_query_cache_ttl_ms", 0,
+		    &model->global.auth_query_cache_ttl_ms);
+	dump_uint64(file, "auth_query_cache_ttl_jitter_ms", 0,
+		    &model->global.auth_query_cache_ttl_jitter_ms);
+	dump_uint64(file, "auth_query_cache_error_retry_ms", 0,
+		    &model->global.auth_query_cache_error_retry_ms);
+	dump_bool(file, "auth_query_cache_stale_on_error", 0,
+		  &model->global.auth_query_cache_stale_on_error);
+	dump_uint64(file, "auth_query_timeout_ms", 0,
+		    &model->global.auth_query_timeout_ms);
 
 	for (size_t i = 0; i < model->listens_count; ++i) {
 		dump_listen(file, model->listens[i]);
@@ -923,6 +935,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_bool_field_free(&g->log_route_stats_prom);
 	od_cfg_bool_field_free(&g->replication_proxy_phys);
 	od_cfg_bool_field_free(&g->replication_proxy_logic);
+	od_cfg_bool_field_free(&g->ignore_cancel);
 
 	/* global string fields */
 	od_cfg_string_field_free(&g->pid_file);
@@ -970,6 +983,12 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_u64_field_free(&g->group_checker_interval_ms);
 	od_cfg_int_field_free(&g->workers);
 	od_cfg_int_field_free(&g->tls_workers);
+
+	od_cfg_u64_field_free(&g->auth_query_cache_ttl_ms);
+	od_cfg_u64_field_free(&g->auth_query_cache_ttl_jitter_ms);
+	od_cfg_u64_field_free(&g->auth_query_cache_error_retry_ms);
+	od_cfg_bool_field_free(&g->auth_query_cache_stale_on_error);
+	od_cfg_u64_field_free(&g->auth_query_timeout_ms);
 
 	memset(g, 0, sizeof(*g));
 }

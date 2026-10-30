@@ -50,7 +50,7 @@ static void setup_affinity(od_instance_t *instance, int wid)
 
 #if !defined(__linux__)
 	(void)rule;
-	od_log(&instance->logger, "worker_init", NULL, NULL,
+	od_log(&instance->logger, NULL, NULL,
 	       "cpu affinity is not supported on this platform, ignoring");
 	return;
 #else
@@ -62,8 +62,8 @@ static void setup_affinity(od_instance_t *instance, int wid)
 
 		char buf[256];
 		od_affinity_cpuset_to_str(&rule.cpuset, buf, sizeof(buf));
-		od_log(&instance->logger, "worker_init", NULL, NULL,
-		       "pin worker %d to cpu %s", wid, buf);
+		od_log(&instance->logger, NULL, NULL, "pin worker %d to cpu %s",
+		       wid, buf);
 	} else if (mode == OD_AFFINITY_MODE_AUTO) {
 		int ncpu = sysconf(_SC_NPROCESSORS_ONLN);
 		int cpunum = 0;
@@ -73,13 +73,13 @@ static void setup_affinity(od_instance_t *instance, int wid)
 
 		CPU_SET(cpunum, &cpuset);
 
-		od_log(&instance->logger, "worker_init", NULL, NULL,
-		       "pin worker %d to cpu %d", wid, cpunum);
+		od_log(&instance->logger, NULL, NULL, "pin worker %d to cpu %d",
+		       wid, cpunum);
 	}
 
 	if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
 				   &cpuset) != 0) {
-		od_error(&instance->logger, "worker_init", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "can't set worker cpu affinity: %s", strerror(errno));
 	}
 #endif
@@ -100,7 +100,7 @@ static inline void od_worker(void *arg)
 
 	if (rc != OK_RESPONSE) {
 		/* TODO: set errno */
-		od_fatal(&instance->logger, "worker_init", NULL, NULL,
+		od_fatal(&instance->logger, NULL, NULL,
 			 "failed to init worker thread info");
 		return;
 	}
@@ -116,7 +116,7 @@ static inline void od_worker(void *arg)
 		linear_alloc_buf = od_malloc(sz);
 		if (linear_alloc_buf == NULL) {
 			od_fatal(
-				&instance->logger, "worker_init", NULL, NULL,
+				&instance->logger, NULL, NULL,
 				"failed to init worker's linear allocator, errno=%d (%s)",
 				mm_errno_get(), strerror(mm_errno_get()));
 			return;
@@ -127,18 +127,27 @@ static inline void od_worker(void *arg)
 	}
 
 	for (;;) {
-		uint32_t task_wait_timout_ms = draining ? 0 : 10 * 1000;
+		uint32_t task_wait_timeout_ms = draining ? 0 : UINT32_MAX;
 
 		machine_msg_t *msg;
-		/* Inverse priorities of cliend routing to decrease chances of timeout */
+		/*
+		 * Prefer newer clients: their connection timeouts are less likely
+		 * to have expired while waiting in the queue.
+		 */
 		msg = machine_channel_read_back(worker->task_channel,
-						task_wait_timout_ms);
+						task_wait_timeout_ms);
 		if (msg == NULL) {
 			if (draining) {
 				break;
 			}
-			/* no tasks within timeout, this is not an error */
-			continue;
+			int error = machine_errno();
+			if (error != ECANCELED) {
+				od_error(
+					&instance->logger, NULL, NULL,
+					"worker[%d]: failed to read task channel: %s (%d)",
+					worker->id, strerror(error), error);
+			}
+			break;
 		}
 
 		od_msg_t msg_type;
@@ -158,8 +167,8 @@ static inline void od_worker(void *arg)
 			coroutine_id = machine_coroutine_create_named(
 				od_frontend, client, coro_name);
 			if (coroutine_id == -1) {
-				od_error(&instance->logger, "worker", client,
-					 NULL, "failed to create coroutine");
+				od_error(&instance->logger, client, NULL,
+					 "failed to create coroutine");
 				od_frontend_close(client);
 				od_routing_slot_release(worker->global);
 				break;
@@ -187,7 +196,7 @@ static inline void od_worker(void *arg)
 				count_coroutine, count_coroutine_cache,
 				worker->clients_processed);
 #endif
-			od_log(&instance->logger, "stats", NULL, NULL,
+			od_log(&instance->logger, NULL, NULL,
 			       "worker[%d]: msg (%" PRIu64
 			       " allocated, %" PRIu64 " cached, %" PRIu64
 			       " freed, %" PRIu64 " cache_size), "
@@ -200,7 +209,7 @@ static inline void od_worker(void *arg)
 			break;
 		}
 		case OD_MSG_SHUTDOWN:
-			od_log(&instance->logger, "worker", NULL, NULL,
+			od_log(&instance->logger, NULL, NULL,
 			       "worker[%d]: shutdown message received",
 			       worker->id);
 			/* read_back sees shutdown before older client messages. All
@@ -215,7 +224,7 @@ static inline void od_worker(void *arg)
 		machine_msg_free(msg);
 	}
 
-	od_log(&instance->logger, "worker", NULL, NULL,
+	od_log(&instance->logger, NULL, NULL,
 	       "worker[%d] stopped processing new connections", worker->id);
 }
 
@@ -233,7 +242,7 @@ int od_worker_start(od_worker_t *worker)
 
 	worker->task_channel = machine_channel_create();
 	if (worker->task_channel == NULL) {
-		od_error(&instance->logger, "worker", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "failed to create task channel");
 		return -1;
 	}
@@ -243,7 +252,7 @@ int od_worker_start(od_worker_t *worker)
 	worker->machine = machine_create(name, od_worker, worker);
 	if (worker->machine == -1) {
 		machine_channel_free(worker->task_channel);
-		od_error(&instance->logger, "worker", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "failed to start worker, errno = %d (%s)",
 			 machine_errno(), strerror(machine_errno()));
 		return -1;

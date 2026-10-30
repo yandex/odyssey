@@ -156,6 +156,30 @@ struct od_config {
 	char *hba_file;
 	/* Soft interval between group checks (milliseconds) */
 	uint64_t group_checker_interval_ms;
+
+	/*
+	 * auth_query cached password lifetime (milliseconds) and the
+	 * maximum random jitter added on top of it (0 disables jitter)
+	 */
+	uint64_t auth_query_cache_ttl_ms;
+	uint64_t auth_query_cache_ttl_jitter_ms;
+	/*
+	 * Delay before the next auth_query password refresh attempt
+	 * after a failed one (milliseconds)
+	 */
+	uint64_t auth_query_cache_error_retry_ms;
+	/*
+	 * Continue to serve the stale cached password when an auth_query
+	 * password refresh fails; when disabled the cached value is
+	 * dropped and clients can not authenticate until a refresh
+	 * succeeds
+	 */
+	int auth_query_cache_stale_on_error;
+	/*
+	 * auth_query execution timeout (milliseconds), also used as the
+	 * initial wait for the first password fetch of a route
+	 */
+	uint64_t auth_query_timeout_ms;
 	od_list_t listen;
 
 	uint64_t backend_connect_timeout_ms;
@@ -163,6 +187,12 @@ struct od_config {
 	int64_t cancel_queue_timeout_ms;
 	int cancel_max_inflight;
 	int cancel_rate_limit;
+
+	/*
+	 * Ignore incoming client cancel requests entirely:
+	 * they are dropped without forwarding to the backend
+	 */
+	int ignore_cancel;
 
 	int virtual_processing; /* enables some cases for full-virtual query processing */
 	int virtual_transaction;

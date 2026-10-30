@@ -13,6 +13,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <machinarium/file.h>
+#include <machinarium/memory.h>
+
 #include <od_memory.h>
 #include <util.h>
 #include <cfg/reader.h>
@@ -124,69 +127,32 @@ static int od_autoconf_read(const char *path, char **text, char *err,
 {
 	*text = NULL;
 
-	int fd = open(path, O_RDONLY | O_CLOEXEC);
-	if (fd == -1) {
-		if (errno != ENOENT) {
-			od_snprintf(err, (int)err_size,
-				    "could not open \"%s\": %s", path,
-				    strerror(errno));
-			return -1;
+	char *buf;
+	size_t size;
+	if (mm_file_read_all(path, &buf, &size) != 0) {
+		if (errno == ENOENT) {
+			*text = mm_strdup("");
+			if (*text == NULL) {
+				od_snprintf(err, (int)err_size,
+					    "out of memory");
+				return -1;
+			}
+			return 0;
 		}
-		*text = od_strdup("");
-		if (*text == NULL) {
-			od_snprintf(err, (int)err_size, "out of memory");
-			return -1;
-		}
-		return 0;
-	}
-
-	struct stat st;
-	if (fstat(fd, &st) != 0) {
-		od_snprintf(err, (int)err_size, "could not stat \"%s\": %s",
+		od_snprintf(err, (int)err_size, "could not read \"%s\": %s",
 			    path, strerror(errno));
-		close(fd);
 		return -1;
 	}
-	if (st.st_size > OD_AUTOCONF_MAX_SIZE) {
+
+	if (size > OD_AUTOCONF_MAX_SIZE) {
+		mm_free(buf);
 		od_snprintf(err, (int)err_size,
 			    "autoconf file \"%s\" is too large (limit is "
 			    "%d bytes), remove old commented lines from "
 			    "it by hand",
 			    path, OD_AUTOCONF_MAX_SIZE);
-		close(fd);
 		return -1;
 	}
-
-	size_t size = (size_t)st.st_size;
-	char *buf = od_malloc(size + 1);
-	if (buf == NULL) {
-		od_snprintf(err, (int)err_size, "out of memory");
-		close(fd);
-		return -1;
-	}
-
-	size_t done = 0;
-	while (done < size) {
-		ssize_t rc = read(fd, buf + done, size - done);
-		if (rc < 0) {
-			if (errno == EINTR) {
-				continue;
-			}
-			od_snprintf(err, (int)err_size,
-				    "could not read \"%s\": %s", path,
-				    strerror(errno));
-			od_free(buf);
-			close(fd);
-			return -1;
-		}
-		if (rc == 0) {
-			/* the file got shorter since fstat() */
-			break;
-		}
-		done += (size_t)rc;
-	}
-	buf[done] = '\0';
-	close(fd);
 
 	*text = buf;
 	return 0;
@@ -195,38 +161,27 @@ static int od_autoconf_read(const char *path, char **text, char *err,
 static int od_autoconf_write_file(const char *path, const char *text, char *err,
 				  size_t err_size)
 {
-	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+	int fd = mm_file_open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1) {
 		od_snprintf(err, (int)err_size, "could not create \"%s\": %s",
 			    path, strerror(errno));
 		return -1;
 	}
 
-	size_t len = strlen(text);
-	size_t done = 0;
-	while (done < len) {
-		ssize_t rc = write(fd, text + done, len - done);
-		if (rc < 0) {
-			if (errno == EINTR) {
-				continue;
-			}
-			od_snprintf(err, (int)err_size,
-				    "could not write \"%s\": %s", path,
-				    strerror(errno));
-			close(fd);
-			return -1;
-		}
-		done += (size_t)rc;
-	}
-
 	/* the data must be on disk before rename() makes it visible */
-	if (fsync(fd) != 0) {
-		od_snprintf(err, (int)err_size, "could not fsync \"%s\": %s",
+	if (mm_file_write_all(fd, text, strlen(text)) != 0) {
+		od_snprintf(err, (int)err_size, "could not write \"%s\": %s",
 			    path, strerror(errno));
-		close(fd);
+		mm_file_close(fd);
 		return -1;
 	}
-	if (close(fd) != 0) {
+	if (mm_file_fsync(fd) != 0) {
+		od_snprintf(err, (int)err_size, "could not fsync \"%s\": %s",
+			    path, strerror(errno));
+		mm_file_close(fd);
+		return -1;
+	}
+	if (mm_file_close(fd) != 0) {
 		od_snprintf(err, (int)err_size, "could not close \"%s\": %s",
 			    path, strerror(errno));
 		return -1;
@@ -246,19 +201,19 @@ static int od_autoconf_fsync_dir(const char *path, char *err, size_t err_size)
 	const char *dir = dirname(copy);
 
 	int rc = -1;
-	int fd = open(dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+	int fd = mm_file_open_dir(dir);
 	if (fd == -1) {
 		od_snprintf(err, (int)err_size, "could not open \"%s\": %s",
 			    dir, strerror(errno));
 		goto cleanup;
 	}
-	if (fsync(fd) != 0) {
+	if (mm_file_fsync(fd) != 0) {
 		od_snprintf(err, (int)err_size, "could not fsync \"%s\": %s",
 			    dir, strerror(errno));
-		close(fd);
+		mm_file_close(fd);
 		goto cleanup;
 	}
-	close(fd);
+	mm_file_close(fd);
 	rc = 0;
 
 cleanup:
@@ -349,7 +304,7 @@ int od_autoconf_update(const char *config_path, const char *key,
 			    "see the odyssey log for details");
 		goto cleanup;
 	}
-	if (rename(tmp, path) != 0) {
+	if (mm_file_rename(tmp, path) != 0) {
 		od_snprintf(err, (int)err_size,
 			    "could not rename \"%s\" to \"%s\": %s", tmp, path,
 			    strerror(errno));
@@ -364,10 +319,10 @@ int od_autoconf_update(const char *config_path, const char *key,
 
 cleanup:
 	if (tmp_created) {
-		unlink(tmp);
+		mm_file_unlink(tmp);
 	}
 	od_free(new_text);
-	od_free(old_text);
+	mm_free(old_text);
 	od_free(tmp);
 	od_free(path);
 	return rc;

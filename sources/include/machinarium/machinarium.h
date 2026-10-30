@@ -212,6 +212,11 @@ machine_channel_assign_limit_policy(machine_channel_t *obj, int limit,
 MACHINE_API mm_retcode_t machine_channel_write(machine_channel_t *,
 					       machine_msg_t *);
 
+/*
+ * A delivered message is returned even if the wait also times out or is
+ * cancelled. NULL means no message was delivered; inspect machine_errno()
+ * only then. Returning a message does not clear coroutine cancellation.
+ */
 MACHINE_API machine_msg_t *machine_channel_read(machine_channel_t *,
 						uint32_t time_ms);
 

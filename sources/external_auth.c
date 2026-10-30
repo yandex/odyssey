@@ -15,6 +15,7 @@
 #include <client.h>
 #include <util.h>
 #include <external_auth.h>
+#include <wait_event.h>
 
 #define AGENT_AUTH_OK 1
 #define MAX_MSG_BODY_SIZE (1024 * 1024)
@@ -37,8 +38,10 @@ static void read_header(uint64_t *header, const void *src)
 machine_msg_t *msg_read(mm_io_t *io)
 {
 	uint64_t body_size = 0;
+	od_wait_event_start(OD_WAIT_AUTH_EXTERNAL);
 	machine_msg_t *header = machine_read(io, sizeof(body_size), TIMEOUT_MS);
 	if (header == NULL) {
+		od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 		return NULL;
 	}
 
@@ -47,10 +50,14 @@ machine_msg_t *msg_read(mm_io_t *io)
 	machine_msg_free(header);
 
 	if (body_size > MAX_MSG_BODY_SIZE) {
+		od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 		return NULL;
 	}
 
-	return machine_read(io, body_size, TIMEOUT_MS);
+	machine_msg_t *body = machine_read(io, body_size, TIMEOUT_MS);
+	od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
+
+	return body;
 }
 
 od_external_auth_status_t msg_write(mm_io_t *io, machine_msg_t *msg)
@@ -105,7 +112,7 @@ static od_external_auth_status_t auth_impl(mm_io_t *io, const char *username,
 
 	od_external_auth_status_t status = msg_write(io, umsg);
 	if (status != OD_EAUTH_OK) {
-		od_error(&instance->logger, "auth", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "failed to send user msg to agent, errno=%d (%s)",
 			 machine_errno(), strerror(machine_errno()));
 
@@ -119,7 +126,7 @@ static od_external_auth_status_t auth_impl(mm_io_t *io, const char *username,
 
 	status = msg_write(io, tmsg);
 	if (status != OD_EAUTH_OK) {
-		od_error(&instance->logger, "auth", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "failed to send token msg to agent, errno=%d (%s)",
 			 machine_errno(), strerror(machine_errno()));
 
@@ -128,7 +135,7 @@ static od_external_auth_status_t auth_impl(mm_io_t *io, const char *username,
 
 	machine_msg_t *resp = msg_read(io);
 	if (resp == NULL) {
-		od_error(&instance->logger, "auth", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "failed to receive response from agent, errno=%d (%s)",
 			 machine_errno(), strerror(machine_errno()));
 
@@ -136,7 +143,7 @@ static od_external_auth_status_t auth_impl(mm_io_t *io, const char *username,
 	}
 
 	if (machine_msg_size(resp) < 1) {
-		od_error(&instance->logger, "auth", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "invalid msg from agent");
 		machine_msg_free(resp);
 
@@ -148,7 +155,7 @@ static od_external_auth_status_t auth_impl(mm_io_t *io, const char *username,
 	machine_msg_t *eid = msg_read(io);
 	if (eid == NULL) {
 		od_error(
-			&instance->logger, "auth", client, NULL,
+			&instance->logger, client, NULL,
 			"failed to receive external id from agent, errno=%d (%s)",
 			machine_errno(), strerror(machine_errno()));
 		machine_msg_free(resp);
@@ -171,7 +178,7 @@ static od_external_auth_status_t auth_impl(mm_io_t *io, const char *username,
 	client->external_id[eid_len] = '\0';
 
 	if (instance->config.log_session) {
-		od_log(&instance->logger, "auth", client, NULL,
+		od_log(&instance->logger, client, NULL,
 		       "user '%s.%s' was authenticated with external_id: %s",
 		       client->startup.database.value,
 		       client->startup.user.value, client->external_id);
@@ -215,7 +222,7 @@ od_external_auth_status_t external_user_authentication(char *username,
 	if (rc == 0) {
 		status = auth_impl(io, username, token, instance, client);
 	} else {
-		od_error(&instance->logger, "auth", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "failed to connect to %s, errno=%d (%s)",
 			 exchange_socket.sun_path, machine_errno(),
 			 strerror(machine_errno()));

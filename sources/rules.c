@@ -25,6 +25,7 @@
 #include <global.h>
 #include <instance.h>
 #include <util.h>
+#include <port.h>
 #include <attach.h>
 
 const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
@@ -133,7 +134,7 @@ od_retcode_t od_rules_storages_watchdogs_run(od_logger_t *logger,
 				od_storage_watchdog_watch, storage->watchdog);
 			if (coroutine_id == INVALID_COROUTINE_ID) {
 				od_rules_storage_unref(storage);
-				od_error(logger, "system", NULL, NULL,
+				od_error(logger, NULL, NULL,
 					 "failed to start watchdog coroutine");
 				return NOT_OK_RESPONSE;
 			}
@@ -211,20 +212,18 @@ static int handle_group_query_msg(od_client_t *client, od_server_t *server,
 	kiwi_be_type_t type;
 	type = *(char *)machine_msg_data(msg);
 
-	od_gdebug("group_checker", client, server, "%s",
-		  kiwi_be_type_to_string(type));
+	od_gdebug(client, server, "%s", kiwi_be_type_to_string(type));
 
 	switch (type) {
 	case KIWI_BE_ERROR_RESPONSE:
-		od_backend_error(server, "group_checker", machine_msg_data(msg),
+		od_backend_error(server, machine_msg_data(msg),
 				 machine_msg_size(msg));
 		return GROUP_QUERY_FAIL;
 
 	case KIWI_BE_DATA_ROW:
 		rc = od_group_parse_val_datarow(msg, &group_member);
 		if (rc != OK_RESPONSE) {
-			od_gerror("group_checker", client, server,
-				  "can't read data row");
+			od_gerror(client, server, "can't read data row");
 			return GROUP_QUERY_FAIL;
 		}
 		member = od_group_member_name_item_add(members);
@@ -252,7 +251,7 @@ static int read_group_list(od_client_t *client, od_server_t *server,
 			od_read(&server->io, timeout_ms, OD_READ_BE);
 		if (msg == NULL) {
 			int err = mm_errno_get();
-			od_gerror("group_checker", client, server,
+			od_gerror(client, server,
 				  "can't read response: %d (%s)", err,
 				  strerror(err));
 			return NOT_OK_RESPONSE;
@@ -281,15 +280,13 @@ static void do_group_check_poll_connected(od_instance_t *instance,
 
 	od_assert(server != NULL);
 
-	int rc = od_backend_query_send(server, "group_checker",
-				       group->group_query, NULL,
+	int rc = od_backend_query_send(server, group->group_query, NULL,
 				       strlen(group->group_query) + 1,
 				       1000 /* 1 sec */);
 	if (rc != OK_RESPONSE) {
 		/* retry later */
-		od_gerror("group_checker", client, server,
-			  "group query failed, errno=%d (%s)", mm_errno_get(),
-			  strerror(mm_errno_get()));
+		od_gerror(client, server, "group query failed, errno=%d (%s)",
+			  mm_errno_get(), strerror(mm_errno_get()));
 		return;
 	}
 
@@ -323,8 +320,8 @@ static void do_group_check_poll_connected(od_instance_t *instance,
 			out += snprintf(out, end - out, "'%s', ",
 					usernames[k++]);
 		}
-		od_debug(&instance->logger, "group_checker", client, server,
-			 "%lu, [%s]", count, buff);
+		od_debug(&instance->logger, client, server, "%lu, [%s]", count,
+			 buff);
 	}
 
 	char **t_names;
@@ -370,7 +367,7 @@ static void do_group_check_iteration(od_instance_t *instance, od_rule_t *rule,
 {
 	int rc;
 
-	rc = od_attach_extended(instance, "group_checker", router, client);
+	rc = od_attach_extended(instance, router, client);
 	if (rc != OK_RESPONSE) {
 		/* do nothing with error, go to retry */
 		return;
@@ -395,16 +392,14 @@ static void do_group_check(void *arg)
 	od_instance_t *instance = global->instance;
 
 	group->online = 1;
-	od_log(&instance->logger, "group_checker", NULL, NULL,
-	       "start group checking for %s.%s", group_rule->db_name,
-	       group_rule->user_name);
+	od_log(&instance->logger, NULL, NULL, "start group checking for %s.%s",
+	       group_rule->db_name, group_rule->user_name);
 
 	/* create internal auth client */
 	od_client_t *group_checker_client;
-	group_checker_client =
-		od_client_allocate_internal(global, "rule-group-checker");
+	group_checker_client = od_client_allocate_internal(global);
 	if (group_checker_client == NULL) {
-		od_error(&instance->logger, "group_checker", NULL, NULL,
+		od_error(&instance->logger, NULL, NULL,
 			 "route rule group_checker failed to allocate client");
 		goto to_return;
 	}
@@ -427,13 +422,12 @@ static void do_group_check(void *arg)
 	/* route */
 	od_router_status_t status;
 	status = od_router_route(router, group_checker_client);
-	od_debug(&instance->logger, "group_checker", group_checker_client, NULL,
+	od_debug(&instance->logger, group_checker_client, NULL,
 		 "routing to internal group_checker route status: %s",
 		 od_router_status_to_str(status));
 
 	if (status != OD_ROUTER_OK) {
-		od_error(&instance->logger, "group_checker",
-			 group_checker_client, NULL,
+		od_error(&instance->logger, group_checker_client, NULL,
 			 "route rule group_checker failed: %s",
 			 od_router_status_to_str(status));
 		goto to_return;
@@ -444,14 +438,14 @@ static void do_group_check(void *arg)
 			group_rule->group_checker_online,
 			(uint32_t)instance->config.group_checker_interval_ms);
 		if (rc == 0) {
-			od_log(&instance->logger, "group_checker", NULL, NULL,
+			od_log(&instance->logger, NULL, NULL,
 			       "done flag is set, exiting from rule group checker for %s.%s",
 			       group_rule->db_name, group_rule->user_name);
 			break;
 		}
 
 		if (rc == -1 && machine_errno() != ETIMEDOUT) {
-			od_error(&instance->logger, "group_checker", NULL, NULL,
+			od_error(&instance->logger, NULL, NULL,
 				 "can't wait done flag: %s (%d)",
 				 strerror(machine_errno()), machine_errno());
 			break;
@@ -480,7 +474,7 @@ static void do_group_check(void *arg)
 	od_free(t_names);
 
 to_return:
-	od_log(&instance->logger, "group_checker", NULL, NULL,
+	od_log(&instance->logger, NULL, NULL,
 	       "group checking for %s.%s finished", group_rule->db_name,
 	       group_rule->user_name);
 
@@ -506,7 +500,7 @@ od_retcode_t od_rules_groups_checkers_run(od_logger_t *logger,
 			    INVALID_COROUTINE_ID) {
 				od_rules_unref(rule);
 				od_error(
-					logger, "system", NULL, NULL,
+					logger, NULL, NULL,
 					"failed to start group_checker coroutine");
 				return NOT_OK_RESPONSE;
 			}
@@ -655,6 +649,9 @@ static void od_rules_rule_free_now(od_rule_t *rule)
 
 	if (rule->password) {
 		od_free(rule->password);
+	}
+	if (rule->password_pgpass) {
+		od_free(rule->password_pgpass);
 	}
 	if (rule->auth) {
 		od_free(rule->auth);
@@ -1809,7 +1806,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 {
 	/* pooling mode */
 	if (!pool->pool_type_str) {
-		od_error(logger, "rules", NULL, NULL,
+		od_error(logger, NULL, NULL,
 			 "rule '%s.%s %s': pooling mode is not set", db_name,
 			 user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
@@ -1821,7 +1818,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	} else if (strcmp(pool->pool_type_str, "statement") == 0) {
 		pool->pool_type = OD_RULE_POOL_STATEMENT;
 	} else {
-		od_error(logger, "rules", NULL, NULL,
+		od_error(logger, NULL, NULL,
 			 "rule '%s.%s %s': unknown pooling mode", db_name,
 			 user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
@@ -1830,7 +1827,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
 	if (!pool->routing_type) {
 		od_debug(
-			logger, "rules", NULL, NULL,
+			logger, NULL, NULL,
 			"rule '%s.%s %s': pool routing mode is not set, assuming \"client_visible\" by default",
 			db_name, user_name, address_range->string_value);
 	} else if (strcmp(pool->routing_type, "internal") == 0) {
@@ -1838,7 +1835,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	} else if (strcmp(pool->routing_type, "client_visible") == 0) {
 		pool->routing = OD_RULE_POOL_CLIENT_VISIBLE;
 	} else {
-		od_error(logger, "rules", NULL, NULL,
+		od_error(logger, NULL, NULL,
 			 "rule '%s.%s %s': unknown pool routing mode", db_name,
 			 user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
@@ -1847,7 +1844,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	if (pool->routing == OD_RULE_POOL_INTERNAL &&
 	    !address_range->is_default) {
 		od_error(
-			logger, "rules", NULL, NULL,
+			logger, NULL, NULL,
 			"rule '%s.%s %s': internal rules must have default address_range",
 			db_name, user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
@@ -1855,7 +1852,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 
 	if (pool->pool_type == OD_RULE_POOL_SESSION && pool->pin_on_listen) {
 		od_error(
-			logger, "rules", NULL, NULL,
+			logger, NULL, NULL,
 			"setting pool_pin_on_listen with session pool for %s.%s makes no sense",
 			db_name, user_name);
 		return NOT_OK_RESPONSE;
@@ -1866,7 +1863,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	    pool->pool_type == OD_RULE_POOL_SESSION) {
 		pool->reserve_prepared_statement = 0;
 
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "rule '%s.%s %s': disable prepared statements reserving due to session pooling",
 		       db_name, user_name, address_range->string_value);
 	}
@@ -1875,7 +1872,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	    pool->server_pstmt_cache_size > 0) {
 		pool->server_pstmt_cache_size = 0;
 
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "rule '%s.%s %s': ignore server_pstmt_cache_size due to disabled prepared statements reserving",
 		       db_name, user_name, address_range->string_value);
 	}
@@ -1884,14 +1881,14 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 		pool->discard = 0;
 		pool->smart_discard = 1;
 
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "rule '%s.%s %s': replace pool_discard with pool_smart_discard due to prepared statements reserving",
 		       db_name, user_name, address_range->string_value);
 	}
 
 	if (pool->smart_discard && !pool->reserve_prepared_statement) {
 		od_error(
-			logger, "rules", NULL, NULL,
+			logger, NULL, NULL,
 			"rule '%s.%s %s': pool smart discard is forbidden without using prepared statements support",
 			db_name, user_name, address_range->string_value);
 		return NOT_OK_RESPONSE;
@@ -1900,7 +1897,7 @@ int od_pool_validate(od_logger_t *logger, od_rule_pool_t *pool, char *db_name,
 	if (pool->discard_query && pool->reserve_prepared_statement) {
 		if (strcasestr(pool->discard_query, "DEALLOCATE ALL")) {
 			od_error(
-				logger, "rules", NULL, NULL,
+				logger, NULL, NULL,
 				"rule '%s.%s %s': cannot support prepared statements when 'DEALLOCATE ALL' present in discard string",
 				db_name, user_name,
 				address_range->string_value);
@@ -1939,7 +1936,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	    od_rules_match(rules, "default_db", "default_user",
 			   &default_address_range, OD_RULE_CONN_TYPE_DEFAULT, 1,
 			   1, 1)) {
-		od_log(logger, "config", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "skipping default internal rule auto-generation: no need in them");
 		od_address_range_destroy(&default_address_range);
 		return OK_RESPONSE;
@@ -1949,21 +1946,21 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 				      &default_address_range,
 				      OD_RULE_CONN_TYPE_DEFAULT, 1, 1, 0);
 	if (!default_rule) {
-		od_log(logger, "config", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "skipping default internal rule auto-generation: no default rule provided");
 		od_address_range_destroy(&default_address_range);
 		return OK_RESPONSE;
 	}
 
 	if (!default_rule->storage) {
-		od_log(logger, "config", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "skipping default internal rule auto-generation: default rule storage not set");
 		od_address_range_destroy(&default_address_range);
 		return OK_RESPONSE;
 	}
 
 	if (!default_rule->storage_password) {
-		od_log(logger, "config", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "skipping default internal rule auto-generation: default rule storage password not set");
 		od_address_range_destroy(&default_address_range);
 		return OK_RESPONSE;
@@ -2020,8 +2017,7 @@ int od_rules_autogenerate_defaults(od_rules_t *rules, od_logger_t *logger)
 	}
 	rule->storage_password_len = default_rule->storage_password_len;
 
-	od_log(logger, "config", NULL, NULL,
-	       "default internal rule auto-generated");
+	od_log(logger, NULL, NULL, "default internal rule auto-generated");
 	return OK_RESPONSE;
 }
 
@@ -2031,7 +2027,7 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 {
 	if (storage->host == NULL) {
 		if (config->unix_socket_dir == NULL) {
-			od_error(logger, "rules", NULL, NULL,
+			od_error(logger, NULL, NULL,
 				 "storage '%s': no host specified and "
 				 "unix_socket_dir is not set",
 				 storage->name);
@@ -2045,7 +2041,7 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 		if (od_unix_socket_path(buff, sizeof(buff),
 					config->unix_socket_dir,
 					storage->port) == -1) {
-			od_error(logger, "rules", NULL, NULL,
+			od_error(logger, NULL, NULL,
 				 "storage '%s': unix socket path "
 				 "'%s/.s.PGSQL.%d' is too long",
 				 storage->name, config->unix_socket_dir,
@@ -2091,7 +2087,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 {
 	/* storages */
 	if (od_list_empty(&rules->storages)) {
-		od_error(logger, "rules", NULL, NULL, "no storage defined");
+		od_error(logger, NULL, NULL, "no storage defined");
 		return -1;
 	}
 
@@ -2104,7 +2100,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			storage->server_max_routing = config->workers;
 		}
 		if (storage->type == NULL) {
-			od_error(logger, "rules", NULL, NULL,
+			od_error(logger, NULL, NULL,
 				 "storage '%s': no type is specified",
 				 storage->name);
 			return -1;
@@ -2114,8 +2110,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		} else if (strcmp(storage->type, "local") == 0) {
 			storage->storage_type = OD_RULE_STORAGE_LOCAL;
 		} else {
-			od_error(logger, "rules", NULL, NULL,
-				 "unknown storage type");
+			od_error(logger, NULL, NULL, "unknown storage type");
 			return -1;
 		}
 		if (storage->storage_type == OD_RULE_STORAGE_REMOTE) {
@@ -2132,7 +2127,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				   0) {
 				storage->tls_opts->tls_mode =
 					OD_CONFIG_TLS_ALLOW;
-				od_log(logger, "rules", NULL, NULL,
+				od_log(logger, NULL, NULL,
 				       "storage '%s': tls \"allow\" now follows libpq sslmode=allow, "
 				       "a connection is made in plaintext and is retried with tls "
 				       "only after the server has rejected it; "
@@ -2155,7 +2150,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 				storage->tls_opts->tls_mode =
 					OD_CONFIG_TLS_VERIFY_FULL;
 			} else {
-				od_error(logger, "rules", NULL, NULL,
+				od_error(logger, NULL, NULL,
 					 "unknown storage tls_opts->tls mode");
 				return -1;
 			}
@@ -2173,7 +2168,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			listen = od_container_of(li, od_config_listen_t, link);
 			if (listen->auto_route_ro_on_standby) {
 				od_error(
-					logger, "rules", NULL, NULL,
+					logger, NULL, NULL,
 					"listen '%s:%d': auto_route_ro_on_standby requires query_parsing_mode 'full'",
 					od_config_listen_host_name(listen),
 					listen->port);
@@ -2186,7 +2181,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			rule = od_container_of(i, od_rule_t, link);
 			if (rule->auto_route_ro_on_standby) {
 				od_error(
-					logger, "rules", NULL, NULL,
+					logger, NULL, NULL,
 					"rule '%s.%s %s': auto_route_ro_on_standby requires query_parsing_mode 'full'",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
@@ -2197,7 +2192,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 
 	/* rules */
 	if (od_list_empty(&rules->rules)) {
-		od_error(logger, "rules", NULL, NULL, "no rules defined");
+		od_error(logger, NULL, NULL, "no rules defined");
 		return -1;
 	}
 
@@ -2208,7 +2203,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		/* match storage and make a copy of in the user rules */
 		if (rule->storage_name == NULL) {
 			od_error(
-				logger, "rules", NULL, NULL,
+				logger, NULL, NULL,
 				"rule '%s.%s %s': no rule storage is specified",
 				rule->db_name, rule->user_name,
 				rule->address_range.string_value);
@@ -2218,7 +2213,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		od_rule_storage_t *storage;
 		storage = od_rules_storage_match(rules, rule->storage_name);
 		if (storage == NULL) {
-			od_error(logger, "rules", NULL, NULL,
+			od_error(logger, NULL, NULL,
 				 "rule '%s.%s %s': no rule storage '%s' found",
 				 rule->db_name, rule->user_name,
 				 rule->address_range.string_value,
@@ -2237,7 +2232,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		if (rule->auto_route_ro_on_standby &&
 		    rule->pool->pool_type == OD_RULE_POOL_SESSION) {
 			od_error(
-				logger, "rules", NULL, NULL,
+				logger, NULL, NULL,
 				"rule '%s.%s %s': auto_route_ro_on_standby is not supported with session pooling",
 				rule->db_name, rule->user_name,
 				rule->address_range.string_value);
@@ -2247,7 +2242,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		if (rule->storage->storage_type != OD_RULE_STORAGE_LOCAL) {
 			if (rule->user_role != OD_RULE_ROLE_UNDEF) {
 				od_error(
-					logger, "rules validate", NULL, NULL,
+					logger, NULL, NULL,
 					"rule '%s.%s %s': role set for non-local storage",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
@@ -2256,7 +2251,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		} else {
 			if (rule->user_role == OD_RULE_ROLE_UNDEF) {
 				od_error(
-					logger, "rules validate", NULL, NULL,
+					logger, NULL, NULL,
 					"rule '%s.%s %s': force stat role for local storage",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
@@ -2264,10 +2259,38 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			}
 		}
 
+		/* resolve password from pgpass file if requested */
+		if (rule->password_pgpass != NULL) {
+			const char *errmsg = NULL;
+			char *pgpass_password = passwordFromFile(
+				NULL, NULL, rule->db_name, rule->user_name,
+				rule->password_pgpass, &errmsg);
+			if (errmsg != NULL) {
+				od_error(logger, NULL, NULL,
+					 "rule '%s.%s %s': %s", rule->db_name,
+					 rule->user_name,
+					 rule->address_range.string_value,
+					 errmsg);
+				return -1;
+			}
+			if (pgpass_password != NULL) {
+				od_free(rule->password);
+				rule->password = pgpass_password;
+				rule->password_len = strlen(rule->password);
+			} else {
+				od_log(logger, NULL, NULL,
+				       "rule '%s.%s %s': no password for user "
+				       "found in pgpass file '%s'",
+				       rule->db_name, rule->user_name,
+				       rule->address_range.string_value,
+				       rule->password_pgpass);
+			}
+		}
+
 		/* auth */
 		if (!rule->auth) {
 			od_error(
-				logger, "rules", NULL, NULL,
+				logger, NULL, NULL,
 				"rule '%s.%s %s': authentication mode is not defined",
 				rule->db_name, rule->user_name,
 				rule->address_range.string_value);
@@ -2284,7 +2307,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			if (rule->auth_query != NULL &&
 			    rule->auth_pam_service != NULL) {
 				od_error(
-					logger, "rules", NULL, NULL,
+					logger, NULL, NULL,
 					"auth query and pam service auth method cannot be "
 					"used simultaneously");
 				return -1;
@@ -2302,7 +2325,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 #endif
 			) {
 
-				od_error(logger, "rules", NULL, NULL,
+				od_error(logger, NULL, NULL,
 					 "rule '%s.%s %s': password is not set",
 					 rule->db_name, rule->user_name,
 					 rule->address_range.string_value);
@@ -2314,7 +2337,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			rule->auth_mode = OD_RULE_AUTH_MD5;
 			if (rule->password == NULL &&
 			    rule->auth_query == NULL) {
-				od_error(logger, "rules", NULL, NULL,
+				od_error(logger, NULL, NULL,
 					 "rule '%s.%s %s': password is not set",
 					 rule->db_name, rule->user_name,
 					 rule->address_range.string_value);
@@ -2324,7 +2347,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			rule->auth_mode = OD_RULE_AUTH_SCRAM_SHA_256;
 			if (rule->password == NULL &&
 			    rule->auth_query == NULL) {
-				od_error(logger, "rules", NULL, NULL,
+				od_error(logger, NULL, NULL,
 					 "rule '%s.%s %s': password is not set",
 					 rule->db_name, rule->user_name,
 					 rule->address_range.string_value);
@@ -2334,7 +2357,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			rule->auth_mode = OD_RULE_AUTH_CERT;
 		} else {
 			od_error(
-				logger, "rules", NULL, NULL,
+				logger, NULL, NULL,
 				"rule '%s.%s %s': has unknown authentication mode",
 				rule->db_name, rule->user_name,
 				rule->address_range.string_value);
@@ -2345,7 +2368,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		if (rule->auth_query) {
 			if (rule->auth_query_user == NULL) {
 				od_error(
-					logger, "rules", NULL, NULL,
+					logger, NULL, NULL,
 					"rule '%s.%s %s': auth_query_user is not set",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
@@ -2353,7 +2376,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			}
 			if (rule->auth_query_db == NULL) {
 				od_error(
-					logger, "rules", NULL, NULL,
+					logger, NULL, NULL,
 					"rule '%s.%s %s': auth_query_db is not set",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
@@ -2365,7 +2388,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		if (rule->group) {
 			if (rule->group->group_query == NULL) {
 				od_error(
-					logger, "rules", NULL, NULL,
+					logger, NULL, NULL,
 					"rule '%s.%s %s': group_query is not set",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
@@ -2373,7 +2396,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			}
 			if (rule->group->group_query_user == NULL) {
 				od_error(
-					logger, "rules", NULL, NULL,
+					logger, NULL, NULL,
 					"rule '%s.%s %s': group_query_user is not set",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
@@ -2381,7 +2404,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 			}
 			if (rule->group->group_query_db == NULL) {
 				od_error(
-					logger, "rules", NULL, NULL,
+					logger, NULL, NULL,
 					"rule '%s.%s %s': group_query_db is not set",
 					rule->db_name, rule->user_name,
 					rule->address_range.string_value);
@@ -2394,7 +2417,7 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 		    config->coroutine_stack_size <
 			    LDAP_MIN_COROUTINE_STACK_SIZE) {
 			od_error(
-				logger, "rules", NULL, NULL,
+				logger, NULL, NULL,
 				"rule '%s.%s %s' use ldap_endpoint. coroutine_stack_size must be >= %d",
 				rule->db_name, rule->user_name,
 				rule->address_range.string_value,
@@ -2576,68 +2599,62 @@ static inline char *od_rules_yes_no(int value)
 void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 {
 	od_list_t *i;
-	od_log(logger, "config", NULL, NULL, "storages");
+	od_log(logger, NULL, NULL, "storages");
 
 	od_list_foreach (&rules->storages, i) {
 		od_rule_storage_t *storage;
 		storage = od_container_of(i, od_rule_storage_t, link);
 
-		od_log(logger, "storage", NULL, NULL,
-		       "  storage types           %s",
+		od_log(logger, NULL, NULL, "  storage types           %s",
 		       storage->storage_type == OD_RULE_STORAGE_REMOTE ?
 			       "remote" :
 			       "local");
 
-		od_log(logger, "storage", NULL, NULL, "  host          %s",
+		od_log(logger, NULL, NULL, "  host          %s",
 		       storage->host ? storage->host : "<unix socket>");
 
-		od_log(logger, "storage", NULL, NULL, "  port          %d",
-		       storage->port);
-		od_log(logger, "storage", NULL, NULL, "  server_max_routing %d",
+		od_log(logger, NULL, NULL, "  port          %d", storage->port);
+		od_log(logger, NULL, NULL, "  server_max_routing %d",
 		       storage->server_max_routing);
-		od_log(logger, "storage", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  endpoints_status_poll_interval_ms %d",
 		       storage->endpoints_status_poll_interval_ms);
 		for (size_t ep_i = 0; ep_i < storage->endpoints_count; ep_i++) {
 			char ep_str[256];
 			od_address_to_str(&storage->endpoints[ep_i].address,
 					  ep_str, sizeof(ep_str));
-			od_log(logger, "storage", NULL, NULL,
-			       "  endpoint[%zu] %s", ep_i, ep_str);
+			od_log(logger, NULL, NULL, "  endpoint[%zu] %s", ep_i,
+			       ep_str);
 		}
 
 		if (storage->tls_opts->tls) {
-			od_log(logger, "storage", NULL, NULL,
-			       "  tls             %s", storage->tls_opts->tls);
+			od_log(logger, NULL, NULL, "  tls             %s",
+			       storage->tls_opts->tls);
 		}
 		if (storage->tls_opts->tls_ca_file) {
-			od_log(logger, "storage", NULL, NULL,
-			       "  tls_ca_file     %s",
+			od_log(logger, NULL, NULL, "  tls_ca_file     %s",
 			       storage->tls_opts->tls_ca_file);
 		}
 		if (storage->tls_opts->tls_key_file) {
-			od_log(logger, "storage", NULL, NULL,
-			       "  tls_key_file    %s",
+			od_log(logger, NULL, NULL, "  tls_key_file    %s",
 			       storage->tls_opts->tls_key_file);
 		}
 		if (storage->tls_opts->tls_cert_file) {
-			od_log(logger, "storage", NULL, NULL,
-			       "  tls_cert_file   %s",
+			od_log(logger, NULL, NULL, "  tls_cert_file   %s",
 			       storage->tls_opts->tls_cert_file);
 		}
 		if (storage->tls_opts->tls_protocols) {
-			od_log(logger, "storage", NULL, NULL,
-			       "  tls_protocols   %s",
+			od_log(logger, NULL, NULL, "  tls_protocols   %s",
 			       storage->tls_opts->tls_protocols);
 		}
 		if (storage->watchdog) {
 			if (storage->watchdog->query) {
-				od_log(logger, "storage", NULL, NULL,
+				od_log(logger, NULL, NULL,
 				       "  watchdog query   %s",
 				       storage->watchdog->query);
 			}
 			if (storage->watchdog->interval) {
-				od_log(logger, "storage", NULL, NULL,
+				od_log(logger, NULL, NULL,
 				       "  watchdog interval   %d",
 				       storage->watchdog->interval);
 			}
@@ -2650,40 +2667,39 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		if (rule->obsolete) {
 			continue;
 		}
-		od_log(logger, "rules", NULL, NULL, "<%s.%s %s %s>",
-		       rule->db_name, rule->user_name,
-		       rule->address_range.string_value,
+		od_log(logger, NULL, NULL, "<%s.%s %s %s>", rule->db_name,
+		       rule->user_name, rule->address_range.string_value,
 		       od_rule_conn_type_to_str(rule->conn_type));
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  authentication                    %s", rule->auth);
 		if (rule->auth_common_name_default) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  auth_common_name default");
 		}
 		od_list_t *j;
 		od_list_foreach (&rule->auth_common_names, j) {
 			od_rule_auth_t *auth;
 			auth = od_container_of(j, od_rule_auth_t, link);
-			od_log(logger, "rules", NULL, NULL,
-			       "  auth_common_name %s", auth->common_name);
+			od_log(logger, NULL, NULL, "  auth_common_name %s",
+			       auth->common_name);
 		}
 		if (rule->auth_query) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  auth_query                        %s",
 			       rule->auth_query);
 		}
 		if (rule->auth_query_db) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  auth_query_db                     %s",
 			       rule->auth_query_db);
 		}
 		if (rule->auth_query_user) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  auth_query_user                   %s",
 			       rule->auth_query_user);
 		}
 		if (rule->auth_module) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  auth_module                       %s",
 			       rule->auth_module);
 		}
@@ -2702,125 +2718,125 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 			default:
 				break;
 			}
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  role                              %s",
 			       role_str);
 		}
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  target_session_attrs              %s",
 		       od_target_session_attrs_to_str(
 			       rule->target_session_attrs));
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  auto_route_ro_on_standby          %s",
 		       rule->auto_route_ro_on_standby ? "yes" : "no");
 
 		/* pool  */
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool                              %s",
 		       rule->pool->pool_type_str);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool routing                      %s",
 		       rule->pool->routing_type == NULL ?
 			       "client visible" :
 			       rule->pool->routing_type);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool size                         %d",
 		       rule->pool->size);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  min pool size                     %d",
 		       rule->pool->min_size);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool timeout                      %" PRIu64,
 		       rule->pool->timeout_ms);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool ttl                          %d",
 		       rule->pool->ttl);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool discard                      %s",
 		       rule->pool->discard ? "yes" : "no");
 		if (rule->pool->discard_query) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  pool discard_query                %s",
 			       rule->pool->discard_query);
 		}
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool smart discard                %s",
 		       rule->pool->smart_discard ? "yes" : "no");
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool cancel                       %s",
 		       rule->pool->cancel ? "yes" : "no");
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool rollback                     %s",
 		       rule->pool->rollback ? "yes" : "no");
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool client_idle_timeout          %" PRIu64,
 		       rule->pool->client_idle_timeout);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool idle_in_transaction_timeout  %" PRIu64,
 		       rule->pool->idle_in_transaction_timeout);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool reset_timeout_ms             %" PRIu64,
 		       rule->pool->reset_timeout_ms);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool pin_on_listen                %s",
 		       rule->pool->pin_on_listen ? "yes" : "no");
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool notice_after_waiting_ms      %d",
 		       rule->pool->notice_after_waiting_ms);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool attach_check                 %s",
 		       rule->pool->attach_check ? "yes" : "no");
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  pool acquire_fail_fast            %s",
 		       rule->pool->acquire_fail_fast ? "yes" : "no");
 		if (rule->pool->pool_type != OD_RULE_POOL_SESSION) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  pool prepared statement support   %s",
 			       rule->pool->reserve_prepared_statement ? "yes" :
 									"no");
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  server pstmt cache size            %d",
 			       rule->pool->server_pstmt_cache_size);
 		}
 
 		if (rule->client_max_set) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  client_max                        %d",
 			       rule->client_max);
 		}
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  client_fwd_error                  %s",
 		       od_rules_yes_no(rule->client_fwd_error));
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  reserve_session_server_connection %s",
 		       od_rules_yes_no(
 			       rule->reserve_session_server_connection));
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  client_show_id                    %s",
 		       od_rules_yes_no(rule->client_show_id));
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  application_name_add_host         %s",
 		       od_rules_yes_no(rule->application_name_add_host));
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  server_drop_on_cached_plan_error  %s",
 		       od_rules_yes_no(rule->server_drop_on_cached_plan_error));
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  server_drop_on_oom                %s",
 		       od_rules_yes_no(rule->server_drop_on_oom));
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  password_passthrough              %s",
 		       od_rules_yes_no(rule->enable_password_passthrough));
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  server_lifetime_us                %" PRIu64,
 		       rule->server_lifetime_us);
 #ifdef LDAP_FOUND
 		if (rule->ldap_endpoint_name) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  ldap_endpoint_name                %s",
 			       rule->ldap_endpoint_name);
 		}
 		if (rule->ldap_storage_credentials_attr != NULL) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  ldap_storage_credentials_attr     %s",
 			       rule->ldap_storage_credentials_attr);
 		}
@@ -2831,97 +2847,97 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 				lsc = od_container_of(
 					f, od_ldap_storage_credentials_t, link);
 				if (lsc->name) {
-					od_log(logger, "rule", NULL, NULL,
+					od_log(logger, NULL, NULL,
 					       "  lsc_name                %s",
 					       lsc->name);
 				}
 				if (lsc->lsc_username) {
-					od_log(logger, "rule", NULL, NULL,
+					od_log(logger, NULL, NULL,
 					       "  lsc_username                %s",
 					       lsc->lsc_username);
 				}
 				if (lsc->lsc_password) {
-					od_log(logger, "rule", NULL, NULL,
+					od_log(logger, NULL, NULL,
 					       "  lsc_password                %s",
 					       lsc->lsc_password);
 				}
 			}
 		}
 #endif
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  storage                           %s",
 		       rule->storage_name);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  type                              %s",
 		       rule->storage->type);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  host                              %s",
 		       rule->storage->host ? rule->storage->host :
 					     "<unix socket>");
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  port                              %d",
 		       rule->storage->port);
 		if (rule->storage->tls_opts->tls) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  tls_opts->tls                               %s",
 			       rule->storage->tls_opts->tls);
 		}
 		if (rule->storage->tls_opts->tls_ca_file) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  tls_opts->tls_ca_file                       %s",
 			       rule->storage->tls_opts->tls_ca_file);
 		}
 		if (rule->storage->tls_opts->tls_key_file) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  tls_opts->tls_key_file                      %s",
 			       rule->storage->tls_opts->tls_key_file);
 		}
 		if (rule->storage->tls_opts->tls_cert_file) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  tls_opts->tls_cert_file                     %s",
 			       rule->storage->tls_opts->tls_cert_file);
 		}
 		if (rule->storage->tls_opts->tls_protocols) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  tls_opts->tls_protocols                     %s",
 			       rule->storage->tls_opts->tls_protocols);
 		}
 		if (rule->storage_db) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  storage_db                        %s",
 			       rule->storage_db);
 		}
 		if (rule->storage_user) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  storage_user                      %s",
 			       rule->storage_user);
 		}
 		if (rule->catchup_timeout) {
-			od_log(logger, "rules", NULL, NULL,
-			       "  catchup timeout   %d", rule->catchup_timeout);
+			od_log(logger, NULL, NULL, "  catchup timeout   %d",
+			       rule->catchup_timeout);
 		}
 		if (rule->catchup_checks) {
-			od_log(logger, "rules", NULL, NULL,
-			       "  catchup checks    %d", rule->catchup_checks);
+			od_log(logger, NULL, NULL, "  catchup checks    %d",
+			       rule->catchup_checks);
 		}
 
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  maintain_params                   %s",
 		       od_rules_yes_no(rule->maintain_params));
 
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  log_debug                         %s",
 		       od_rules_yes_no(rule->log_debug));
 		if (rule->log_debug_sampling_set) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  log_debug_sampling                %d",
 			       rule->log_debug_sampling);
 		}
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  log_query                         %s",
 		       od_rules_yes_no(rule->log_query));
 		if (rule->log_query_sampling_set) {
-			od_log(logger, "rules", NULL, NULL,
+			od_log(logger, NULL, NULL,
 			       "  log_query_sampling                %d",
 			       rule->log_query_sampling);
 		}
@@ -2929,29 +2945,29 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		for (int vi = 0; vi < KIWI_VAR_MAX; vi++) {
 			kiwi_var_t *v = &rule->vars.vars[vi];
 			if (v->value_len > 0 && v->name) {
-				od_log(logger, "rules", NULL, NULL,
-				       "  pgoption %s=%s", v->name, v->value);
+				od_log(logger, NULL, NULL, "  pgoption %s=%s",
+				       v->name, v->value);
 			}
 		}
 		for (size_t vi = 0; vi < rule->backend_startup_vars_sz; vi++) {
 			untyped_kiwi_var_t *v = &rule->backend_startup_vars[vi];
 			if (v->name) {
-				od_log(logger, "rules", NULL, NULL,
+				od_log(logger, NULL, NULL,
 				       "  backend_startup_var %s=%s", v->name,
 				       v->value ? v->value : "");
 			}
 		}
 
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  keepalive                         %d",
 		       rule->keepalive);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  keepalive_keep_interval           %d",
 		       rule->keepalive_keep_interval);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  keepalive_probes                  %d",
 		       rule->keepalive_probes);
-		od_log(logger, "rules", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "  keepalive_usr_timeout             %d",
 		       rule->keepalive_usr_timeout);
 	}
