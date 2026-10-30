@@ -18,6 +18,8 @@
 
 typedef struct {
 	machine_msg_t *msg;
+	/* Internal Query prepended to an extended-protocol batch. */
+	bool is_deferred_begin;
 
 	/*
 	 * pstmt resolved while seeding the query ctx (checking the batch
@@ -70,5 +72,3 @@ od_frontend_status_t od_relay_process_xflush(od_relay_t *relay,
 od_frontend_status_t od_relay_process_xsync(od_relay_t *relay,
 					    machine_msg_t *msg,
 					    uint32_t timeout_ms);
-
-extern uint8_t od_relay_deferred_begin_bytes[12];

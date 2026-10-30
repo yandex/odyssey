@@ -35,16 +35,6 @@ static inline kiwi_fe_type_t msg_fe_type(machine_msg_t *msg)
 	return type;
 }
 
-static int msg_is_begin_query(machine_msg_t *msg)
-{
-	char *data = machine_msg_data(msg);
-	int size = machine_msg_size(msg);
-
-	return size == sizeof(od_relay_deferred_begin_bytes) &&
-	       memcmp(data, od_relay_deferred_begin_bytes,
-		      sizeof(od_relay_deferred_begin_bytes)) == 0;
-}
-
 static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 {
 	switch (type) {
@@ -314,7 +304,7 @@ static void entry_init_virtual_close_complete(od_xplan_entry_t *e,
 
 static void entry_init_deferred_begin(od_xplan_entry_t *e, machine_msg_t *begin)
 {
-	od_assert(msg_is_begin_query(begin));
+	od_assert(msg_fe_type(begin) == KIWI_FE_QUERY);
 
 	entry_init_internal(e, OD_XPLAN_DEFERRED_BEGIN, begin, NULL, NULL,
 			    OD_XPLAN_DELTA_NONE, NULL, NULL, NULL);
@@ -1152,7 +1142,7 @@ static od_frontend_status_t plan_simple(od_xplan_t *xp, od_relay_t *relay)
 
 		od_frontend_status_t status;
 
-		if (i == 0 && msg_is_begin_query(m->msg)) {
+		if (i == 0 && m->is_deferred_begin) {
 			/* deferred begin plan entry is always at the beggining */
 			status = xplan_append_deferred_begin(xp, m->msg);
 		} else {
@@ -1187,8 +1177,7 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 
 		switch (type) {
 		case KIWI_FE_QUERY:
-			if (od_unlikely(i != 0 ||
-					!msg_is_begin_query(m->msg))) {
+			if (od_unlikely(i != 0 || !m->is_deferred_begin)) {
 				/* deferred begin must always be at the begginig of the plan */
 				abort();
 			}
@@ -1516,6 +1505,7 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 
 	int rc;
 	int done = 0;
+	int failed = 0;
 	machine_msg_t *msg = NULL;
 
 	while (!done) {
@@ -1560,6 +1550,10 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 			}
 			/* fallthrough */
 		default:
+			if (type == KIWI_BE_ERROR_RESPONSE) {
+				od_backend_error(server, data, size);
+				failed = 1;
+			}
 			rc = od_write2(&client->io, msg, timeout_ms);
 			if (rc != 0) {
 				return OD_ECLIENT_READ;
@@ -1568,7 +1562,7 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 		}
 	}
 
-	return OD_OK;
+	return failed ? OD_SKIP : OD_OK;
 }
 
 static od_frontend_status_t run_parse(od_xplan_entry_t *ps, od_client_t *client,
@@ -1736,7 +1730,7 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	 *
 	 * individually:
 	 * Flush	-> <no response>
-	 * Deffered BEGIN -> read until RFQ, resend only async messages to client
+	 * Deferred BEGIN -> already replayed before sending this batch;
 	 * no response awaiting from server
 	 */
 
@@ -1785,8 +1779,7 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 
 		switch (entry->type) {
 		case OD_XPLAN_DEFERRED_BEGIN:
-			status = run_deferred_begin(entry, client, server,
-						    timeout_ms);
+			/* Already replayed before sending the extended batch. */
 			break;
 		case OD_XPLAN_PARSE:
 			status = run_parse(entry, client, server, timeout_ms);
@@ -1850,6 +1843,32 @@ send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
 {
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
+
+	od_xplan_entry_t *first = mm_vector_get(&xp->entries, 0);
+	if (first->type == OD_XPLAN_DEFERRED_BEGIN) {
+		/* A rejected BEGIN must not let the batch run outside a transaction. */
+		od_assert(niovecs > 1);
+		od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
+		int rc = od_io_writev(&server->io, iovecs, 1, timeout_ms, 0);
+		od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
+		if (rc == -1) {
+			return OD_ESERVER_WRITE;
+		}
+
+		od_frontend_status_t status =
+			run_deferred_begin(first, client, server, timeout_ms);
+		if (status == OD_SKIP) {
+			/* Only Flush/Sync may be sent after the error. */
+			server->xproto_err = 1;
+			iovecs += niovecs - 1;
+			niovecs = 1;
+		} else if (status == OD_OK) {
+			iovecs++;
+			niovecs--;
+		} else {
+			return status;
+		}
+	}
 
 	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 	int rc = od_io_writev(&server->io, iovecs, niovecs, timeout_ms, 0);

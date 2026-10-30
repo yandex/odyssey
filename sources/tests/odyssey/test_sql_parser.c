@@ -763,6 +763,32 @@ static void test_parse_fill_ctx_full(void)
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
 	od_query_ctx_reset(&ctx);
 
+	fill_ctx_full("BEGIN TRANSACTION;", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
+	od_query_ctx_reset(&ctx);
+
+	/* Virtual BEGIN must recognize transaction options for deferred replay. */
+	const char *begin_with_options[] = {
+		"BEGIN ISOLATION LEVEL SERIALIZABLE;",
+		"BEGIN ISOLATION LEVEL REPEATABLE READ;",
+		"BEGIN ISOLATION LEVEL READ COMMITTED;",
+		"BEGIN ISOLATION LEVEL READ UNCOMMITTED;",
+		"BEGIN WORK READ ONLY;",
+		"BEGIN TRANSACTION READ WRITE;",
+		"BEGIN DEFERRABLE;",
+		"BEGIN NOT DEFERRABLE;",
+		"BEGIN ISOLATION LEVEL SERIALIZABLE, READ ONLY, DEFERRABLE;",
+	};
+	for (size_t i = 0;
+	     i < sizeof(begin_with_options) / sizeof(begin_with_options[0]);
+	     i++) {
+		fill_ctx_full(begin_with_options[i], &ctx);
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
+		od_query_ctx_reset(&ctx);
+	}
+
 	/* UNLISTEN * */
 	fill_ctx_full("UNLISTEN *", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
