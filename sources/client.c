@@ -69,7 +69,7 @@ void od_client_init(od_client_t *client)
 	memset(&client->query_ctx, 0, sizeof(client->query_ctx));
 	client->parser_mode = -1;
 
-	client->pending_begin = 0;
+	client->pending_begin = NULL;
 	client->debug_log_sampled = -1;
 
 	memset(client->scram_client_key, 0, sizeof(client->scram_client_key));
@@ -101,6 +101,7 @@ void od_client_free(od_client_t *client)
 	od_relay_destroy(&client->relay);
 
 	od_query_ctx_reset(&client->query_ctx);
+	od_free(client->pending_begin);
 
 	od_io_free(&client->io);
 	/* clear password if saved any */

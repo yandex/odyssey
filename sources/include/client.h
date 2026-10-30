@@ -115,7 +115,8 @@ struct od_client {
 	/* external_id for logging additional info about client authneticated with external auth */
 	char *external_id;
 
-	int pending_begin;
+	/* Owned SQL of a virtual BEGIN, replayed when a backend is needed. */
+	char *pending_begin;
 
 	/*
 	 * Per-connection debug log sampling decision:

@@ -686,6 +686,7 @@ static od_frontend_status_t process_vdeallocate(od_client_t *client,
 }
 
 static od_frontend_status_t process_vbegin(od_client_t *client,
+					   const char *query,
 					   od_virtual_portal_t *portal)
 {
 	od_server_t *server = client->server;
@@ -699,8 +700,12 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
 	if (virtual_portal_set_complete(portal, "BEGIN") != 0) {
 		return OD_EOOM;
 	}
+	char *begin = od_strdup(query);
+	if (begin == NULL) {
+		return OD_EOOM;
+	}
 	portal->txstatus_force = 'T';
-	client->pending_begin = 1;
+	client->pending_begin = begin;
 
 	return OD_SKIP;
 }
@@ -793,7 +798,8 @@ static bool virtual_query_supported(od_client_t *client,
 }
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
-					       const od_query_ctx_t *ctx)
+					       const od_query_ctx_t *ctx,
+					       const char *query)
 {
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
 		return OD_OK;
@@ -812,7 +818,7 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET)) {
 		status = process_vset(client, ctx, &portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_BEGIN)) {
-		status = process_vbegin(client, &portal);
+		status = process_vbegin(client, query, &portal);
 	} else {
 		status = process_vdeallocate(client, ctx, &portal);
 	}
