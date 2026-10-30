@@ -17,6 +17,7 @@
 #include <types.h>
 #include <router.h>
 #include <config.h>
+#include <cfg/model.h>
 #include <tls.h>
 #include <od_memory.h>
 #include <util.h>
@@ -73,6 +74,11 @@ void od_config_init(od_config_t *config)
 	// od_affinity_config_init(&config->cpu_affinity);
 
 	config->workers = 1;
+#ifdef TLS_WORKERS_DEFAULT_AUTO
+	config->tls_workers = OD_CFG_TLS_WORKERS_AUTO;
+#else
+	config->tls_workers = 0;
+#endif
 	config->resolvers = 1;
 	config->client_max_set = 0;
 	config->client_max = 0;
@@ -284,6 +290,11 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 {
 	if (config->workers <= 0) {
 		od_error(logger, NULL, NULL, "bad workers number");
+		return -1;
+	}
+
+	if (config->tls_workers < 0) {
+		od_error(logger, NULL, NULL, "bad tls_workers number");
 		return -1;
 	}
 
@@ -534,6 +545,8 @@ static const od_config_field_t od_config_fields[] = {
 	{ "keepalive_usr_timeout", OD_CONFIG_FIELD_I64,
 	  offsetof(od_config_t, keepalive_usr_timeout_ms), 1 },
 	{ "workers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, workers), 0 },
+	{ "tls_workers", OD_CONFIG_FIELD_INT,
+	  offsetof(od_config_t, tls_workers), 0 },
 	{ "resolvers", OD_CONFIG_FIELD_INT, offsetof(od_config_t, resolvers),
 	  0 },
 	{ "client_max", OD_CONFIG_FIELD_INT, offsetof(od_config_t, client_max),
@@ -705,8 +718,9 @@ int od_config_field_format(const od_config_field_t *field, const char *value,
 
 	switch (field->type) {
 	case OD_CONFIG_FIELD_INT:
-		/* workers "auto" means half of the CPUs, see cfg/parse.y */
-		if (strcmp(field->key, "workers") == 0 &&
+		/* Both worker count options accept "auto". */
+		if ((strcmp(field->key, "workers") == 0 ||
+		     strcmp(field->key, "tls_workers") == 0) &&
 		    strcmp(value, "auto") == 0) {
 			n = snprintf(buf, size, "%s \"auto\"", field->key);
 			break;
@@ -744,6 +758,12 @@ void od_config_field_value(od_config_t *config, const od_config_field_t *field,
 			   char *buf, size_t size)
 {
 	char *at = (char *)config + field->offset;
+
+	if (field->offset == offsetof(od_config_t, tls_workers) &&
+	    *(int *)at == OD_CFG_TLS_WORKERS_AUTO) {
+		od_snprintf(buf, size, "auto");
+		return;
+	}
 
 	switch (field->type) {
 	case OD_CONFIG_FIELD_INT:
@@ -891,6 +911,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->system_coroutine_stack_size);
 	od_log(logger, NULL, NULL, "workers                 %d",
 	       config->workers);
+	od_log(logger, NULL, NULL, "tls_workers             %d",
+	       config->tls_workers);
 	od_log(logger, NULL, NULL, "resolvers               %d",
 	       config->resolvers);
 	od_log(logger, NULL, NULL, "backend_connect_timeout_ms %" PRIu64,

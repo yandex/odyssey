@@ -68,6 +68,7 @@ megabytes) and is rejected by time-valued options.
 | `log_route_stats_prom`                     | int (bool)       | `no`        | SIGHUP  | Prometheus per-route stats                            |
 | `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging; duration suffixes (`60s`, `1m`) are supported |
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
+| `tls_workers`                              | int              | `0`         | restart | Threads for client TLS handshakes; 0 = in worker, "auto" = part of `workers` |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
 | `readahead`                                | int (bytes)      | one page    | SIGHUP  | Per-connection read buffer                            |
 | `cache_coroutine`                          | int              | `1024`      | restart | Coroutines cache size                                  |
@@ -393,6 +394,35 @@ N: Add additional worker threads, if your server experience heavy load,
 especially using TLS setup.
 
 `workers 1`
+
+## **tls_workers**
+*integer*
+
+Number of threads used for client TLS handshakes. Handshake crypto is
+CPU-bound and blocks the worker event loop while it runs, so with many
+connecting TLS clients it can slow down all clients of the worker.
+
+0: By default, handshakes are performed in worker threads.
+
+N: The client's frontend coroutine temporarily moves to one of N dedicated
+threads for the TLS handshake, then returns to its original worker. No separate
+handshake coroutine is created. Handshakes yield while waiting for I/O, so slow
+clients do not block other handshakes.
+
+"auto": TLS workers are taken from `workers` threads, so the total number
+of threads stays the same:
+
+| `workers` | worker threads | TLS workers |
+|-----------|----------------|-------------|
+| 1 - 2     | `workers`      | 0           |
+| 3 - 4     | `workers` - 1  | 1           |
+| 5 - 7     | `workers` - 2  | 2           |
+| 8 and more | `workers` / 2 (rounded up) | `workers` / 2 (rounded down) |
+
+Odyssey built with `-DTLS_WORKERS_DEFAULT_AUTO=ON` uses `"auto"` when
+`tls_workers` is not set in the config (`+tls-auto` in `odyssey --version`).
+
+`tls_workers 0`
 
 ## **resolvers**
 *integer*

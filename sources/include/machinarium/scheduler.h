@@ -21,7 +21,7 @@ struct mm_scheduler {
 	int count_active;
 	mm_list_t list_ready;
 	mm_list_t list_active;
-	uint64_t id_seq;
+	mm_list_t list_owned;
 };
 
 static inline mm_coroutine_t *mm_scheduler_current(mm_scheduler_t *scheduler)

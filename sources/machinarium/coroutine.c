@@ -19,10 +19,12 @@ void mm_coroutine_init(mm_coroutine_t *coroutine)
 	coroutine->state = MM_CNEW;
 	coroutine->errno_ = 0;
 	coroutine->call_ptr = NULL;
+	atomic_init(&coroutine->cancel_requested, 0);
 	memset(coroutine->name, 0, MM_COROUTINE_MAX_NAME_LEN + 1);
 	mm_list_init(&coroutine->joiners);
 	mm_list_init(&coroutine->link);
 	mm_list_init(&coroutine->link_join);
+	mm_list_init(&coroutine->link_owned);
 #ifdef MM_MEM_PROF
 	coroutine->allocated_bytes = 0;
 	coroutine->freed_bytes = 0;

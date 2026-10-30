@@ -134,6 +134,16 @@ MACHINE_API void machine_sleep(uint32_t time_ms);
 
 MACHINE_API int machine_join(uint64_t coroutine_id);
 
+/* Execute function on the current coroutine's stack on another machine, then
+ * return to the calling machine, including on cancellation. Coroutine IDs and
+ * join/cancel ownership stay with the creating machine. No machine-local I/O,
+ * waits or thread-local resources may remain active across either transfer.
+ * Calls cannot be nested. Returns -1 without calling function if the destination
+ * is unavailable or the coroutine is cancelled, otherwise 0. */
+MACHINE_API int machine_coroutine_call_on(uint64_t machine_id,
+					  machine_coroutine_t function,
+					  void *arg);
+
 MACHINE_API int machine_cancel(uint64_t coroutine_id);
 
 MACHINE_API int machine_cancelled(void);

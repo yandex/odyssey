@@ -32,6 +32,13 @@ typedef struct mm_machine mm_machine_t;
 
 struct mm_machine {
 	atomic_int online;
+	/* Protected by the machine manager lock. */
+	int accepting;
+	int joining;
+	atomic_int visits;
+	mm_list_t incoming;
+	atomic_int incoming_pending;
+	atomic_int cancel_pending;
 	uint64_t id;
 	char *name;
 	machine_coroutine_t main;
@@ -75,3 +82,7 @@ void mm_machine_atexit(void (*fun)(void *), void *arg);
 int machine_wait_nb(uint64_t machine_id);
 
 void machine_set_global_dtor(void (*dtor)(void *gl));
+
+void mm_machine_dispatch(mm_coroutine_t *);
+void mm_machine_receive(void);
+int mm_machine_running(mm_machine_t *);

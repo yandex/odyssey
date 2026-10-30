@@ -15,6 +15,7 @@
 #include <client.h>
 #include <router.h>
 #include <server.h>
+#include <worker_pool.h>
 #include <wait_event.h>
 #include <rules.h>
 #include <global.h>
@@ -40,7 +41,7 @@
 #include <log_sampling.h>
 #include <server.h>
 
-static inline void od_frontend_close(od_client_t *client)
+void od_frontend_close(od_client_t *client)
 {
 	od_assert(client->route == NULL);
 	od_assert(client->server == NULL);
@@ -179,8 +180,13 @@ static int read_and_parse_startup(od_client_t *client, int *parse_rc)
 	od_instance_t *instance = client->global->instance;
 
 	od_wait_event_start(OD_WAIT_CONNECT_CLIENT_STARTUP);
-	machine_msg_t *msg = od_read_startup(
-		&client->io, client->source->config->client_login_timeout_ms);
+	machine_msg_t *msg = NULL;
+	uint32_t timeout = od_client_startup_timeout(client);
+	if (timeout != 0) {
+		msg = od_read_startup(&client->io, timeout);
+	} else {
+		mm_errno_set(ETIMEDOUT);
+	}
 	od_wait_event_end(OD_WAIT_CONNECT_CLIENT_STARTUP);
 	if (msg == NULL) {
 		if (parse_rc) {
@@ -307,11 +313,22 @@ static int reject_unsupported_request(od_client_t *client)
 	return 0;
 }
 
-static int od_frontend_startup(od_client_t *client)
+static void od_frontend_startup_error(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-	int ssl_done = 0;
-	int gss_done = 0;
+	od_debug(&instance->logger, client, NULL,
+		 "startup packet read error, errno = %d (%s)", machine_errno(),
+		 strerror(machine_errno()));
+	atomic_fetch_add(&client->global->cron->startup_errors, 1);
+}
+
+/* SSL/GSS negotiation runs on the frontend worker; only the TLS handshake
+ * temporarily executes on a TLS worker, on this same coroutine. */
+static int od_frontend_negotiate(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	bool ssl_done = false;
+	bool gss_done = false;
 
 	while (1) {
 		int rc;
@@ -339,7 +356,7 @@ static int od_frontend_startup(od_client_t *client)
 			}
 
 			client->startup.is_ssl_request = 0;
-			ssl_done = 1;
+			ssl_done = true;
 			continue;
 		}
 
@@ -348,7 +365,7 @@ static int od_frontend_startup(od_client_t *client)
 				return -1;
 			}
 
-			gss_done = 1;
+			gss_done = true;
 			continue;
 		}
 
@@ -360,7 +377,19 @@ static int od_frontend_startup(od_client_t *client)
 	}
 
 	client->startup.is_ssl_request = ssl_done;
+	return 0;
 
+error:
+	od_frontend_startup_error(client);
+	return -1;
+}
+
+static int od_frontend_startup(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	if (od_frontend_negotiate(client) == -1) {
+		return -1;
+	}
 	if (client->startup.is_cancel) {
 		/* no need to proceed any further */
 		return 0;
@@ -386,7 +415,7 @@ static int od_frontend_startup(od_client_t *client)
 
 	if (client->source->config->tls_opts->tls_mode >=
 		    OD_CONFIG_TLS_REQUIRE &&
-	    !ssl_done) {
+	    !client->startup.is_ssl_request) {
 		od_log(&instance->logger, client, NULL, "required, closing");
 		od_frontend_error(client, KIWI_PROTOCOL_VIOLATION,
 				  "SSL is required");
@@ -428,11 +457,7 @@ static int od_frontend_startup(od_client_t *client)
 	return 0;
 
 error:
-	od_debug(&instance->logger, client, NULL,
-		 "startup packet read error, errno = %d (%s)", machine_errno(),
-		 strerror(machine_errno()));
-	od_cron_t *cron = client->global->cron;
-	atomic_fetch_add(&cron->startup_errors, 1);
+	od_frontend_startup_error(client);
 	return -1;
 }
 
@@ -3488,6 +3513,30 @@ static inline void cancel_finished(od_global_t *global, od_instance_t *instance)
 	}
 }
 
+static int od_frontend_prepare(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	if (od_readahead_prepare(&client->io.readahead) == -1) {
+		od_error(&instance->logger, client, NULL,
+			 "failed to allocate readahead buffer");
+		return -1;
+	}
+	if (od_io_attach(&client->io) == -1) {
+		od_error(&instance->logger, client, NULL,
+			 "failed to transfer client io");
+		return -1;
+	}
+
+	od_getpeername(client->io.io, client->peer, OD_CLIENT_MAX_PEERLEN, 1,
+		       1);
+
+	if (instance->config.log_session) {
+		od_log(&instance->logger, client, NULL,
+		       "new client connection %s", client->peer);
+	}
+	return 0;
+}
+
 static void od_frontend_cancel_close(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
@@ -3511,27 +3560,12 @@ void od_frontend(void *arg)
 	od_extension_t *extensions = global->extensions;
 	od_module_t *modules = extensions->modules;
 
-	od_getpeername(client->io.io, client->peer, OD_CLIENT_MAX_PEERLEN, 1,
-		       1);
-
-	/* log client connection */
-	if (instance->config.log_session) {
-		od_log(&instance->logger, client, NULL,
-		       "new client connection %s", client->peer);
-	}
-
-	/* attach client io to worker machine event loop */
-	int rc;
-	rc = od_io_attach(&client->io);
-	if (rc == -1) {
-		od_error(&instance->logger, client, NULL,
-			 "failed to transfer client io");
-		od_io_close(&client->io);
-		od_client_free(client);
+	if (od_frontend_prepare(client) == -1) {
+		od_frontend_close(client);
 		od_routing_slot_release(global);
 		return;
 	}
-
+	int rc;
 	/* handle startup */
 	rc = od_frontend_startup(client);
 	if (rc == -1) {

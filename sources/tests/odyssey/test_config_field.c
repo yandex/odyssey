@@ -85,12 +85,25 @@ static void test_format_workers_auto(void)
 {
 	test(strcmp(format_ok("workers", "auto", FORMAT_BUF_SIZE),
 		    "workers \"auto\"") == 0);
-	/* "auto" is special for workers only */
+	/* "auto" is supported only by the worker count options. */
 	format_fail("resolvers", "auto", FORMAT_BUF_SIZE);
 	format_fail("workers", "AUTO", FORMAT_BUF_SIZE);
 	/* "workers \"auto\"" is 14 chars + terminator */
 	test(strcmp(format_ok("workers", "auto", 15), "workers \"auto\"") == 0);
 	format_fail("workers", "auto", 14);
+}
+
+static void test_format_tls_workers_auto(void)
+{
+	test(strcmp(format_ok("tls_workers", "auto", FORMAT_BUF_SIZE),
+		    "tls_workers \"auto\"") == 0);
+	test(strcmp(format_ok("tls_workers", "2", FORMAT_BUF_SIZE),
+		    "tls_workers 2") == 0);
+	format_fail("tls_workers", "AUTO", FORMAT_BUF_SIZE);
+	format_fail("tls_workers", "invalid", FORMAT_BUF_SIZE);
+	test(strcmp(format_ok("tls_workers", "auto", 19),
+		    "tls_workers \"auto\"") == 0);
+	format_fail("tls_workers", "auto", 18);
 }
 
 static void test_format_bool(void)
@@ -161,6 +174,7 @@ void odyssey_test_config_field(void)
 	test_field_deprecated();
 	test_format_int();
 	test_format_workers_auto();
+	test_format_tls_workers_auto();
 	test_format_bool();
 	test_format_string();
 	test_format_buffer_bounds();

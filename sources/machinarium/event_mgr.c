@@ -37,11 +37,6 @@ static void mm_eventmgr_on_read(mm_fd_t *handle)
 	/* wakeup event waiters */
 	mm_sleeplock_lock(&mgr->lock);
 
-	if (!mgr->count_ready) {
-		mm_sleeplock_unlock(&mgr->lock);
-		return;
-	}
-
 	mm_list_t *i;
 	mm_list_foreach (&mgr->list_ready, i) {
 		mm_event_t *event;
@@ -54,6 +49,7 @@ static void mm_eventmgr_on_read(mm_fd_t *handle)
 	mgr->count_ready = 0;
 
 	mm_sleeplock_unlock(&mgr->lock);
+	mm_machine_receive();
 }
 
 int mm_eventmgr_init(mm_eventmgr_t *mgr, mm_loop_t *loop)
