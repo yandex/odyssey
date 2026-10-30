@@ -1,0 +1,2 @@
+WARNING: pgbouncer.ini:4: unsupported section: users (routes blocked)
+WARNING: pgbouncer.ini:7: unsupported database security option; routes blocked: connect_query

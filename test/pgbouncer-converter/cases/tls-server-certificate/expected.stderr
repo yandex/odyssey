@@ -1,0 +1,1 @@
+WARNING: pgbouncer.ini:6: unsupported security option; routes blocked: server_tls_cert_file

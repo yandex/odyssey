@@ -134,6 +134,7 @@ set(od_src
     host_watcher.c
     compression.c
     option.c
+    pgbouncer_convert.c
     tls_config.c
     tsa.c
     query.c
