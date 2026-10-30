@@ -428,9 +428,9 @@ static inline int od_router_create_idle_server(od_route_t *route,
 	od_server_set_pool_state(server, OD_SERVER_IDLE);
 
 	od_logger_t *logger = &server->global->instance->logger;
-	od_log(logger, NULL, server,
-	       "idle server connection preallocated for %s.%s",
-	       route->id.database, route->id.user);
+	od_debug(logger, NULL, server,
+		 "idle server connection preallocated for %s.%s",
+		 route->id.database, route->id.user);
 
 	return OK_RESPONSE;
 }
