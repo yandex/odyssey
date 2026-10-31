@@ -90,18 +90,18 @@ struct od_config {
 	int sequential_routing;
 	/* logging */
 	int log_to_stdout;
-	int log_debug;
-	int log_debug_sampling;
-	int maintain_params;
-	int log_config;
-	int log_session;
-	int log_query;
-	int log_query_sampling;
+	_Atomic int log_debug;
+	_Atomic int log_debug_sampling;
+	_Atomic int maintain_params;
+	_Atomic int log_config;
+	_Atomic int log_session;
+	_Atomic int log_query;
+	_Atomic int log_query_sampling;
 	int log_queue_depth;
 	int log_async;
 	char *log_file;
 	char *log_format;
-	int log_stats;
+	_Atomic int log_stats;
 	int log_general_stats_prom;
 	int log_route_stats_prom;
 	int log_syslog;
@@ -109,7 +109,7 @@ struct od_config {
 	char *log_syslog_facility;
 	/*         */
 	/* statistics interval in seconds */
-	int stats_interval;
+	_Atomic int stats_interval;
 	/* system related settings */
 	char *pid_file;
 	char *unix_socket_dir;
@@ -119,7 +119,7 @@ struct od_config {
 	/* sigusr2 etc */
 	/* TODO: delete this option - online restart is always enabled now */
 	int graceful_die_on_errors;
-	uint64_t graceful_shutdown_timeout_ms;
+	 _Atomic uint64_t graceful_shutdown_timeout_ms;
 	/* TODO: delete this option - online restart is always enabled now */
 	int enable_online_restart_feature;
 	od_config_conn_drop_options_t conn_drop_options;
@@ -127,23 +127,23 @@ struct od_config {
 	/*                         */
 	int readahead;
 	int nodelay;
-	int disable_nolinger;
+	_Atomic int disable_nolinger;
 
 	/* TCP KEEPALIVE related settings (keepalive and interval in seconds,
 	 * usr timeout = TCP_USER_TIMEOUT in milliseconds) */
-	int keepalive;
-	int keepalive_keep_interval;
-	int keepalive_probes;
-	int64_t keepalive_usr_timeout_ms;
+	_Atomic int keepalive;
+	_Atomic int keepalive_keep_interval;
+	_Atomic int keepalive_probes;
+	 _Atomic int64_t keepalive_usr_timeout_ms;
 	/*                                */
 	int workers;
 	int resolvers;
 	/*         client                 */
-	int client_max_set;
-	int client_max;
-	int client_max_routing;
-	int accept_rate_limit;
-	uint64_t server_login_retry_ms;
+	_Atomic int client_max_set;
+	_Atomic int client_max;
+	_Atomic int client_max_routing;
+	_Atomic int accept_rate_limit;
+	 _Atomic uint64_t server_login_retry_ms;
 	int reserve_session_server_connection;
 	/*  */
 	int cache_coroutine;
@@ -160,29 +160,29 @@ struct od_config {
 	 * auth_query cached password lifetime (milliseconds) and the
 	 * maximum random jitter added on top of it (0 disables jitter)
 	 */
-	uint64_t auth_query_cache_ttl_ms;
-	uint64_t auth_query_cache_ttl_jitter_ms;
+	 _Atomic uint64_t auth_query_cache_ttl_ms;
+	 _Atomic uint64_t auth_query_cache_ttl_jitter_ms;
 	/*
 	 * Delay before the next auth_query password refresh attempt
 	 * after a failed one (milliseconds)
 	 */
-	uint64_t auth_query_cache_error_retry_ms;
+	 _Atomic uint64_t auth_query_cache_error_retry_ms;
 	/*
 	 * Continue to serve the stale cached password when an auth_query
 	 * password refresh fails; when disabled the cached value is
 	 * dropped and clients can not authenticate until a refresh
 	 * succeeds
 	 */
-	int auth_query_cache_stale_on_error;
+	_Atomic int auth_query_cache_stale_on_error;
 	/*
 	 * auth_query execution timeout (milliseconds), also used as the
 	 * initial wait for the first password fetch of a route
 	 */
-	uint64_t auth_query_timeout_ms;
+	 _Atomic uint64_t auth_query_timeout_ms;
 	od_list_t listen;
 
-	uint64_t backend_connect_timeout_ms;
-	uint64_t cancel_timeout_ms;
+	 _Atomic uint64_t backend_connect_timeout_ms;
+	 _Atomic uint64_t cancel_timeout_ms;
 	int64_t cancel_queue_timeout_ms;
 	int cancel_max_inflight;
 	int cancel_rate_limit;
@@ -191,7 +191,7 @@ struct od_config {
 	 * Ignore incoming client cancel requests entirely:
 	 * they are dropped without forwarding to the backend
 	 */
-	int ignore_cancel;
+	_Atomic int ignore_cancel;
 
 	int virtual_processing; /* enables some cases for full-virtual query processing */
 	int virtual_transaction;
@@ -201,12 +201,12 @@ struct od_config {
 	 * bypassing all of the odyssey logic (authentication, pooling etc.)
 	 * separately for physical and logical replication
 	 */
-	int replication_proxy_phys;
-	int replication_proxy_logic;
+	_Atomic int replication_proxy_phys;
+	_Atomic int replication_proxy_logic;
 
 	char availability_zone[OD_MAX_AVAILABILITY_ZONE_LENGTH];
 
-	int max_sigterms_to_die;
+	_Atomic int max_sigterms_to_die;
 
 	int host_watcher_enabled;
 
@@ -214,7 +214,7 @@ struct od_config {
 
 	od_config_query_parsing_t query_parsing;
 
-	int smart_search_path_enquoting;
+	_Atomic int smart_search_path_enquoting;
 
 	od_affinity_config_t *cpu_affinity;
 };

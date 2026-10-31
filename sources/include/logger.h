@@ -7,6 +7,7 @@
  */
 
 #include <machinarium/ds/intrusive/lf-stack.h>
+#include <stdatomic.h>
 #include <machinarium/ds/intrusive/mpsc_queue.h>
 #include <machinarium/wait_list.h>
 
@@ -74,8 +75,8 @@ typedef struct {
 
 struct od_logger {
 	od_pid_t *pid;
-	int log_debug;
-	int log_debug_sampling;
+	_Atomic int log_debug;
+	_Atomic int log_debug_sampling;
 	int log_stdout;
 	int log_syslog;
 	int async;
