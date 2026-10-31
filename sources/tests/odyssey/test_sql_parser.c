@@ -400,6 +400,24 @@ static void test_empty_input(void)
 	od_linear_alloc_reset(&s_arena, 0);
 	od_sql_minimal_node_t *node =
 		od_sql_minimal_parse("", 0, &s_arena, NULL, NULL);
+	test(node != NULL);
+	test(node->type == OD_SQL_MINIMAL_NODE_TYPE_EMPTY_STMT);
+
+	od_linear_alloc_reset(&s_arena, 0);
+	node = od_sql_minimal_parse(";", 1, &s_arena, NULL, NULL);
+	test(node != NULL);
+	test(node->type == OD_SQL_MINIMAL_NODE_TYPE_EMPTY_STMT);
+
+	od_linear_alloc_reset(&s_arena, 0);
+	node = od_sql_minimal_parse(" ; ; ", strlen(" ; ; "), &s_arena, NULL,
+				    NULL);
+	test(node != NULL);
+	test(node->type == OD_SQL_MINIMAL_NODE_TYPE_EMPTY_STMT);
+
+	/* an empty query followed by a statement is not an empty query */
+	od_linear_alloc_reset(&s_arena, 0);
+	node = od_sql_minimal_parse("; SELECT 1;", strlen("; SELECT 1;"),
+				    &s_arena, NULL, NULL);
 	test(node == NULL);
 }
 
@@ -561,6 +579,13 @@ static void test_parse_fill_ctx(void)
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_DISCARD_ALL));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_UNLISTEN_ALL));
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
+	od_query_ctx_reset(&ctx);
+
+	od_linear_alloc_reset(&s_arena, 0);
+	od_query_parse_fill_ctx(" ; ; ", strlen(" ; ; "), &s_arena, &ctx,
+				&s_minimal_parsing);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_EMPTY));
 	od_query_ctx_reset(&ctx);
 
 	/* SHOW — name stored in ctx */

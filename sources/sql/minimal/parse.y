@@ -182,13 +182,23 @@ typedef od_sql_location_t od_sql_minimal_yyltype_t;
 %%
 
 top:
-	  stmt opt_semicolon { ctx->result = $1; }
-	| opt_semicolon      { ctx->result = NULL; }
+	  stmt opt_semicolons { ctx->result = $1; }
+	| opt_semicolons
+		{
+			od_sql_minimal_node_t *n =
+				od_sql_minimal_node_alloc(ctx->arena,
+					OD_SQL_MINIMAL_NODE_TYPE_EMPTY_STMT,
+					sizeof(od_sql_minimal_node_t));
+			if (n == NULL) {
+				YYABORT;
+			}
+			ctx->result = n;
+		}
 	;
 
-opt_semicolon:
+opt_semicolons:
 	  %empty
-	| ';'
+	| opt_semicolons ';'
 	;
 
 stmt:
