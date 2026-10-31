@@ -1420,6 +1420,21 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 	va_end(args);
 
+	if (od_unlikely(len < 0)) {
+		len = 0;
+	} else if (od_unlikely((size_t)len >= output_max)) {
+		/*
+		 * The formatters clamp their appends to the buffer end,
+		 * but chained appends (e.g. an escaped message token
+		 * followed by the trailing format literal) may still leave
+		 * dst_pos exactly at the end of the buffer, i.e. the
+		 * returned length may equal output_max. Guard the NUL
+		 * store below (and the length passed down) so that a
+		 * full-length line cannot write one byte out of bounds.
+		 */
+		len = output_max - 1;
+	}
+
 	if (async_slot) {
 		async_slot->len = (size_t)len;
 		async_slot->text[len] = '\0';
