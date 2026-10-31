@@ -1781,6 +1781,21 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 				return status;
 			}
 			forward_begin = -1;
+
+			if (server->xproto_err && i != count - 1) {
+				/*
+				 * The forwarded range responses may contain
+				 * an ErrorResponse. PG skips every client
+				 * message of the failed extended cycle until
+				 * Sync, so must the virtual responses below
+				 * be suppressed (the check above missed the
+				 * error since the responses are not yet read
+				 * at the time). Like the check above, the
+				 * terminal Flush/Sync entry (the last one)
+				 * is still processed to drain until RFQ.
+				 */
+				continue;
+			}
 		}
 
 		switch (entry->type) {
