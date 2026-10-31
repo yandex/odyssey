@@ -59,6 +59,9 @@ int od_sql_minimal_node_print(const od_sql_minimal_node_t *node, char *buf,
 	case OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT:
 		return snprintf(buf, buflen, "(begin)");
 
+	case OD_SQL_MINIMAL_NODE_TYPE_EMPTY_STMT:
+		return snprintf(buf, buflen, "(empty)");
+
 	case OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT: {
 		const od_sql_minimal_deallocate_stmt_t *n =
 			(const od_sql_minimal_deallocate_stmt_t *)node;
@@ -112,6 +115,11 @@ void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 
 	if (ast == NULL) {
 		od_query_ctx_set(ctx, OD_QUERY_CTX_PARSE_ERROR);
+		return;
+	}
+
+	if (ast->type == OD_SQL_MINIMAL_NODE_TYPE_EMPTY_STMT) {
+		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_EMPTY);
 		return;
 	}
 

@@ -179,11 +179,13 @@ static void parse_minimal(const char *query, uint32_t query_len,
 typedef struct {
 	char *errbuf;
 	size_t size;
+	int fired;
 } parse_error_cb_arg_t;
 
 static void full_on_error(const char *msg, void *userdata)
 {
 	parse_error_cb_arg_t *a = userdata;
+	a->fired = 1;
 	strncpy(a->errbuf, msg, a->size - 1);
 	a->errbuf[a->size - 1] = '\0';
 }
@@ -863,6 +865,10 @@ static void parse_full(const char *query, uint32_t query_len,
 	ctx->s2_long = NULL;
 
 	if (tree == NULL) {
+		if (!ea.fired) {
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_EMPTY);
+			return;
+		}
 		goto error;
 	}
 
