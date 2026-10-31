@@ -107,4 +107,4 @@ See [docs](docs/) dir with more documentation info. You can serve docs locally b
 You can also read about Odyssey on our [website](https://pg-odyssey.tech/).
 ### Support
 
-We have a [Telegram chat](https://t.me/+ecwqGEkVgXg2OTQy) to discuss Odyssey usage and development.
+We have a [Telegram chat](https://t.me/+-P-dtScP5_A5ZTRi) to discuss Odyssey usage and development.
