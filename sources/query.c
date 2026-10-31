@@ -967,6 +967,26 @@ error:
 	od_query_ctx_set(ctx, OD_QUERY_CTX_PARSE_ERROR);
 }
 
+static int query_is_empty(const char *query, uint32_t query_len)
+{
+	uint32_t i;
+	for (i = 0; i < query_len; i++) {
+		switch (query[i]) {
+		case ';':
+		case ' ':
+		case '\t':
+		case '\r':
+		case '\n':
+		case '\v':
+		case '\f':
+			continue;
+		default:
+			return 0;
+		}
+	}
+	return 1;
+}
+
 void od_query_parse_fill_ctx(const char *query, uint32_t query_len,
 			     od_linear_alloc_t *arena, od_query_ctx_t *ctx,
 			     const od_config_query_parsing_t *parsing)
@@ -980,6 +1000,11 @@ void od_query_parse_fill_ctx(const char *query, uint32_t query_len,
 	if (query_len > parsing->max_query_len) {
 		od_query_ctx_set(ctx, OD_QUERY_CTX_PARSE_ERROR);
 		od_query_ctx_set(ctx, OD_QUERY_CTX_TOO_LONG);
+		return;
+	}
+
+	if (query_is_empty(query, query_len)) {
+		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_EMPTY);
 		return;
 	}
 

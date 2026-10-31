@@ -1116,9 +1116,25 @@ static void test_parse_fill_ctx_full(void)
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	od_query_ctx_reset(&ctx);
 
-	/* empty query — parse error */
+	/* empty query — answered virtually, no parse error at all */
 	fill_ctx_full("", &ctx);
-	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_EMPTY));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full(";", &ctx);
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_EMPTY));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full(" ; ;  ", &ctx);
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_EMPTY));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	od_query_ctx_reset(&ctx);
+
+	/* "; SELECT 1;" is not an empty query */
+	fill_ctx_full("; SELECT 1;", &ctx);
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_EMPTY) == 0);
 	od_query_ctx_reset(&ctx);
 }
 

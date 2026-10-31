@@ -83,6 +83,10 @@ void virtual_portal_free(od_virtual_portal_t *portal)
 		machine_msg_free(portal->error);
 		portal->error = NULL;
 	}
+	if (portal->empty != NULL) {
+		machine_msg_free(portal->empty);
+		portal->empty = NULL;
+	}
 }
 
 /*
@@ -685,6 +689,22 @@ static od_frontend_status_t process_vdeallocate(od_client_t *client,
 	return OD_SKIP;
 }
 
+static od_frontend_status_t process_vempty(od_client_t *client,
+					   od_virtual_portal_t *portal)
+{
+	od_instance_t *instance = client->global->instance;
+	od_debug(&instance->logger, client, client->server,
+		 "processed virtual empty query");
+
+	machine_msg_t *msg = kiwi_be_write_empty_query(NULL);
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+	portal->empty = msg;
+
+	return OD_SKIP;
+}
+
 static od_frontend_status_t process_vbegin(od_client_t *client,
 					   od_virtual_portal_t *portal)
 {
@@ -729,6 +749,7 @@ static od_frontend_status_t write_virtual_portal(od_client_t *client,
 		portal->notice,
 		portal->tts != NULL ? portal->tts->row_description : NULL,
 		portal->tts != NULL ? portal->tts->data_rows : NULL,
+		portal->empty,
 		virtual_portal_is_error(portal) ? portal->error :
 						  portal->command_complete,
 	};
@@ -763,8 +784,9 @@ static od_frontend_status_t write_virtual_portal(od_client_t *client,
 /*
  * does the query have a virtual handler at all, and is its config gate
  * open: SHOW/SET need virtual_processing (a SET may also go the
- * application_name_add_host rewrite way), BEGIN needs
- * virtual_transaction, DEALLOCATE needs reserve_prepared_statement
+ * application_name_add_host rewrite way), an empty query (";") needs
+ * virtual_processing too, BEGIN needs virtual_transaction, DEALLOCATE
+ * needs reserve_prepared_statement
  */
 static bool virtual_query_supported(od_client_t *client,
 				    const od_query_ctx_t *ctx)
@@ -772,6 +794,10 @@ static bool virtual_query_supported(od_client_t *client,
 	od_instance_t *instance = od_global_get_instance();
 
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SHOW)) {
+		return instance->config.virtual_processing;
+	}
+
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EMPTY)) {
 		return instance->config.virtual_processing;
 	}
 
@@ -811,6 +837,8 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 		status = process_vshow(client, ctx, &portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET)) {
 		status = process_vset(client, ctx, &portal);
+	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EMPTY)) {
+		status = process_vempty(client, &portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_BEGIN)) {
 		status = process_vbegin(client, &portal);
 	} else {
