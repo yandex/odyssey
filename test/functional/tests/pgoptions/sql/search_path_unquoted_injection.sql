@@ -1,0 +1,11 @@
+\set ON_ERROR_STOP on
+\pset format unaligned
+\pset tuples_only on
+SELECT current_schemas(false) = ARRAY[]::name[] AS nonexistent_schema;
+SELECT to_regclass('public.ody_inj') IS NULL AS no_injection;
+\! PGOPTIONS='-c search_path=public' psql -XqAt -v ON_ERROR_STOP=1 -c "SELECT current_setting('search_path') = 'public'"
+\if :SHELL_ERROR
+SELECT 1/0;
+\endif
+SELECT current_schemas(false) = ARRAY[]::name[] AS restored_schema;
+SELECT to_regclass('public.ody_inj') IS NULL AS still_no_injection;

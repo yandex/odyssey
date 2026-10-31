@@ -1,0 +1,15 @@
+\set ON_ERROR_STOP on
+\pset format unaligned
+\pset tuples_only on
+SELECT current_setting('search_path') = '"odyssey-legacy,public"' AS legacy_path;
+CREATE SCHEMA "odyssey-legacy,public";
+SELECT current_schemas(false) = ARRAY['odyssey-legacy,public']::name[] AS single_schema;
+SELECT pg_backend_pid() AS saved_pid \gset
+\! PGOPTIONS='-c search_path=public' psql -XqAt -v ON_ERROR_STOP=1 -c "SELECT current_setting('search_path') = 'public'"
+\if :SHELL_ERROR
+SELECT 1/0;
+\endif
+SELECT pg_backend_pid() = :saved_pid AS same_backend;
+SELECT current_setting('search_path') = '"odyssey-legacy,public"' AS restored_path;
+SELECT current_schemas(false) = ARRAY['odyssey-legacy,public']::name[] AS restored_schema;
+DROP SCHEMA "odyssey-legacy,public";
