@@ -27,6 +27,11 @@ static int mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 		return -1;
 	}
 
+	/* The error callback latches the socket error state; reset it for
+	 * the new connection attempt. */
+	io->errored = 0;
+	io->error = 0;
+
 	/* create socket */
 	int rc;
 	rc = mm_io_socket(io, sa);
@@ -62,6 +67,24 @@ static int mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	rc = mm_io_wait(io, time_ms);
 	if (rc == -1) {
 		mm_io_detach((mm_io_t *)io);
+		goto error;
+	}
+
+	/*
+	 * The error callback may run before this coroutine is woken up and
+	 * its getsockopt() call consumes SO_ERROR. Re-reading SO_ERROR
+	 * would then return 0 and report the failed connection as a
+	 * success. Prefer the latched error, fall back to the socket
+	 * value, and finally to a generic error if both were consumed.
+	 */
+	if (io->errored) {
+		int error = io->error;
+		if (error == 0)
+			error = mm_socket_error(io->handle.fd);
+		if (error == 0)
+			error = ECONNRESET;
+		mm_loop_delete(&machine->loop, &io->handle);
+		mm_errno_set(error);
 		goto error;
 	}
 
