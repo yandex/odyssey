@@ -251,7 +251,11 @@ bool od_address_validate(const od_address_range_t *address_range,
 			(struct sockaddr_in *)&address_range->mask;
 		in_addr_t client_addr = sin->sin_addr.s_addr;
 		in_addr_t client_net = mask->sin_addr.s_addr & client_addr;
-		return (client_net ^ addr->sin_addr.s_addr) == 0;
+		/* mask the rule address as well: the config may carry
+		 * non-canonical network entries with host bits set */
+		in_addr_t rule_net = mask->sin_addr.s_addr &
+				     addr->sin_addr.s_addr;
+		return client_net == rule_net;
 	} else if (sa->ss_family == AF_INET6) {
 		struct sockaddr_in6 *sin = (struct sockaddr_in6 *)sa;
 		struct sockaddr_in6 *addr =
@@ -261,7 +265,9 @@ bool od_address_validate(const od_address_range_t *address_range,
 		for (int i = 0; i < 16; ++i) {
 			uint8_t client_net_byte = mask->sin6_addr.s6_addr[i] &
 						  sin->sin6_addr.s6_addr[i];
-			if (client_net_byte ^ addr->sin6_addr.s6_addr[i]) {
+			uint8_t rule_net_byte = mask->sin6_addr.s6_addr[i] &
+						 addr->sin6_addr.s6_addr[i];
+			if (client_net_byte ^ rule_net_byte) {
 				return false;
 			}
 		}
