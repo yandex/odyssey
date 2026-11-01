@@ -213,6 +213,32 @@ static od_rule_conn_type_t convert_conn_type(od_cfg_conn_type_t type)
 	}
 }
 
+static char *hba_unquote_item(char *item)
+{
+	size_t len = strlen(item);
+	if (len < 2) {
+		return item;
+	}
+	char q = item[0];
+	if ((q != '"' && q != '\'') || item[len - 1] != q) {
+		return item;
+	}
+	/* strip the paired surrounding quotes */
+	item[len - 1] = '\0';
+	++item;
+	/* collapse doubled quote characters inside the quoted item */
+	char *w = item;
+	char *r = item;
+	while (*r != '\0') {
+		if (r[0] == q && r[1] == q) {
+			++r;
+		}
+		*w++ = *r++;
+	}
+	*w = '\0';
+	return item;
+}
+
 static int parse_hba_names(const char *path, int line_no, const char *token,
 			   od_hba_rule_name_t *name, bool is_db,
 			   od_cfg_diag_list_t *diags, od_cfg_location_t loc)
@@ -242,7 +268,14 @@ static int parse_hba_names(const char *path, int line_no, const char *token,
 						  line_no);
 				return -1;
 			}
-			ni->value = od_strdup(item);
+			/*
+			 * Quoted items are literals, never keywords (PG
+			 * semantics); strip the surrounding quotes so that
+			 * e.g. "fuzz" matches the database fuzz instead of
+			 * silently never matching anything.
+			 */
+			char *value = hba_unquote_item(item);
+			ni->value = od_strdup(value);
 			if (ni->value == NULL) {
 				od_free(copy);
 				od_cfg_diag_error(diags, loc,
