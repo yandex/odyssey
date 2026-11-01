@@ -8,6 +8,7 @@
 #include <odyssey.h>
 
 #include <arpa/inet.h>
+#include <inttypes.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -421,9 +422,28 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 
 	for (;;) {
 		od_wait_event_start(OD_WAIT_AUTH_SERVER_READ);
-		msg = od_read(&server->io, UINT32_MAX, OD_READ_BE);
+		/*
+		 * The backend may accept the TCP connection and then go silent
+		 * (e.g. a lazy listener that never sends the startup reply). An
+		 * unbounded read parks this coroutine forever: the routing slot
+		 * is never released, the route slowly wedges and client
+		 * disconnects go unnoticed. Bound the wait by the backend
+		 * connect timeout instead.
+		 */
+		msg = od_read(&server->io,
+			      (uint32_t)instance->config
+				      .backend_connect_timeout_ms,
+			      OD_READ_BE);
 		od_wait_event_end(OD_WAIT_AUTH_SERVER_READ);
 		if (msg == NULL) {
+			if (machine_timedout()) {
+				od_error(&instance->logger, client, server,
+					 "backend startup timed out after %" PRIu64
+					 " ms",
+					 instance->config
+						 .backend_connect_timeout_ms);
+				return -1;
+			}
 			od_error(&instance->logger, client, server,
 				 "read error: %s", od_io_error(&server->io));
 			return -1;
