@@ -1739,6 +1739,15 @@ static inline int od_console_show_rules(od_tuple_table_slot_t *tts)
 	od_router_t *router = global->router;
 	od_rules_t *rules = &router->rules;
 
+	/*
+	 * The live rules list is mutated and freed by od_router_reconfigure()
+	 * under od_router_lock (od_rules_merge unrefs and od_free's rules
+	 * mid-list). Take the router lock here as well around the whole
+	 * iteration - the rules lock alone does not serialize against a
+	 * concurrent reconfigure (SIGHUP / console RELOAD / ALTER SYSTEM),
+	 * which led to a use-after-free during SHOW rules.
+	 */
+	od_router_lock(router);
 	od_rules_lock(rules);
 
 	od_list_t *i, *n;
@@ -1810,11 +1819,13 @@ static inline int od_console_show_rules(od_tuple_table_slot_t *tts)
 	}
 
 	od_rules_unlock(rules);
+	od_router_unlock(router);
 
 	return kiwi_be_write_complete(stream, "SHOW", sizeof("SHOW"));
 
 error:
 	od_rules_unlock(rules);
+	od_router_unlock(router);
 	return NOT_OK_RESPONSE;
 }
 
