@@ -2337,6 +2337,12 @@ static inline int od_console_show_storages(od_client_t *client,
 	int rc;
 	int offset;
 
+	/*
+	 * Like SHOW rules: the storages list is mutated/freed by a
+	 * concurrent reconfigure under the router lock; the rules lock
+	 * alone does not serialize against it.
+	 */
+	od_router_lock(router);
 	od_rules_lock(rules);
 
 	od_list_t *i;
@@ -2393,9 +2399,11 @@ static inline int od_console_show_storages(od_client_t *client,
 	}
 
 	od_rules_unlock(rules);
+	od_router_unlock(router);
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 error:
 	od_rules_unlock(rules);
+	od_router_unlock(router);
 	return rc;
 }
 
