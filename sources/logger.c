@@ -641,13 +641,29 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 			break;
 		}
 		case OD_FMT_MESSAGE:
-			dst_pos += od_vsnprintf(dst_pos, dst_end - dst_pos, fmt,
-						args);
+		case OD_FMT_MESSAGE_ESC: {
+			/*
+			 * The message tokens consume the va_list; a format
+			 * with more than one message token would consume
+			 * it twice, which is undefined (and crashed on the
+			 * second use). Give every message token its own
+			 * copy, so that repeated tokens simply repeat the
+			 * message.
+			 */
+			va_list args_copy;
+			va_copy(args_copy, args);
+			if (tok->type == OD_FMT_MESSAGE) {
+				dst_pos += od_vsnprintf(dst_pos,
+							dst_end - dst_pos, fmt,
+							args_copy);
+			} else {
+				dst_pos += od_logger_escape(dst_pos,
+							    dst_end - dst_pos,
+							    fmt, args_copy);
+			}
+			va_end(args_copy);
 			break;
-		case OD_FMT_MESSAGE_ESC:
-			dst_pos += od_logger_escape(dst_pos, dst_end - dst_pos,
-						    fmt, args);
-			break;
+		}
 		case OD_FMT_CLIENT_ID:
 			if (client && client->id.id_prefix != NULL) {
 				dst_pos += od_logger_append_id(
