@@ -203,10 +203,15 @@ int od_hba_process(od_client_t *client)
 		} else if (rule->connection_type == OD_CONFIG_HBA_LOCAL) {
 			continue;
 		} else if (rule->connection_type == OD_CONFIG_HBA_HOSTSSL &&
-			   !client->startup.is_ssl_request) {
+			   !mm_tls_is_active(client->io.io)) {
+			/* hostssl must match only encrypted connections:
+			 * a client SSLRequest packet that got refused (plain
+			 * listener) leaves the session unencrypted, so it
+			 * must not match hostssl (and vice versa for
+			 * hostnossl) - PostgreSQL pg_hba semantics. */
 			continue;
 		} else if (rule->connection_type == OD_CONFIG_HBA_HOSTNOSSL &&
-			   client->startup.is_ssl_request) {
+			   mm_tls_is_active(client->io.io)) {
 			continue;
 		} else if (sa.ss_family == AF_INET ||
 			   sa.ss_family == AF_INET6) {
