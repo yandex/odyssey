@@ -53,6 +53,7 @@ struct od_server {
 	int idle_time;
 
 	kiwi_key_t key;
+	uint32_t proto_version;
 	kiwi_key_t key_client;
 	kiwi_vars_t vars;
 
