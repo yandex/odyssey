@@ -3620,7 +3620,7 @@ void od_frontend(void *arg)
 		client->key.key_len = KIWI_CANCEL_KEY_DEFAULT_LEN;
 		if (RAND_bytes((unsigned char *)client->key.key,
 			       client->key.key_len) != 1) {
-			od_error(&instance->logger, "startup", client, NULL,
+			od_error(&instance->logger, client, NULL,
 				 "could not generate random cancel key");
 			od_frontend_error(
 				client, KIWI_INTERNAL_ERROR,
