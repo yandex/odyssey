@@ -568,18 +568,18 @@ od_frontend_attach_to_endpoint(od_client_t *client, kiwi_params_t *route_params,
 
 		od_server_t *server = client->server;
 		if (server->io.io && server->route->rule->pool->attach_check) {
-			int rc = od_io_poll(&server->io);
-			if (rc != 0) {
+			int events = od_io_poll(&server->io);
+			if (events < 0) {
 				od_error(&instance->logger, client, server,
 					 "server fd poll failed, errno=%d (%s)",
 					 machine_errno(),
 					 strerror(machine_errno()));
-			}
-
-			if (!od_io_connected(&server->io)) {
-				od_log(&instance->logger, client, server,
-				       "server disconnected (%s), close connection and retry attach",
-				       od_io_error(&server->io));
+			} else if ((events & MM_R) ||
+				   !od_io_connected(&server->io)) {
+				od_debug(
+					&instance->logger, client, server,
+					"server disconnected or has pending data (%s), close connection and retry attach",
+					od_io_error(&server->io));
 				od_router_close(router, client);
 				continue;
 			}
