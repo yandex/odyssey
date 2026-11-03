@@ -40,7 +40,8 @@ static inline int mm_clock_ctz64(uint64_t bits)
 #endif
 }
 
-static inline int mm_clock_mask_test(const mm_clock_t *clock, int level, int slot)
+static inline int mm_clock_mask_test(const mm_clock_t *clock, int level,
+				     int slot)
 {
 	uint64_t mask = clock->wheel_mask[level][slot >> MM_WHEEL_MASK_SHIFT];
 
