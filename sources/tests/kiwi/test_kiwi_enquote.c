@@ -44,10 +44,22 @@ void test_invalid(void)
 	test(res == -1);
 }
 
+void test_exact_buffer(void)
+{
+	/* An exact-sized destination includes the trailing NUL. */
+	char exact[7];
+	test(kiwi_enquote("abc", exact, sizeof(exact)) == 6);
+	test(strcmp(exact, "E'abc'") == 0);
+	test(kiwi_enquote("a'", exact, sizeof(exact)) == 6);
+	test(strcmp(exact, "E'a'''") == 0);
+	test(kiwi_enquote("a'", exact, sizeof(exact) - 1) == -1);
+}
+
 void kiwi_test_enquote(void)
 {
 	test_without_screen();
 	test_one_screen();
 	test_many_screens();
 	test_invalid();
+	test_exact_buffer();
 }
