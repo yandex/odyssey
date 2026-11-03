@@ -774,6 +774,29 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
+
+		uint64_t connections[] = {
+			atomic_load_explicit(&route->stats.client_connections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.client_disconnections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.server_connections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.server_disconnections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.server_detaches,
+					     memory_order_relaxed),
+		};
+		for (size_t i = 0;
+		     i < sizeof(connections) / sizeof(connections[0]); i++) {
+			data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+					       connections[i]);
+			rc = kiwi_be_write_data_row_add(stream, offset, data,
+							data_len);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+		}
 	}
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
@@ -1031,6 +1054,21 @@ static inline int od_console_show_pools(od_client_t *client,
 				return NOT_OK_RESPONSE;
 			}
 		}
+
+		char *connections[] = {
+			"client_connections", "client_disconnections",
+			"server_connections", "server_disconnections",
+			"server_detaches",
+		};
+		for (size_t i = 0;
+		     i < sizeof(connections) / sizeof(connections[0]); i++) {
+			rc = kiwi_be_write_row_description_add(
+				msg, 0, connections[i], strlen(connections[i]),
+				0, 0, PG_INT8OID, PG_INT8_LEN, 0, 0);
+			if (rc == NOT_OK_RESPONSE) {
+				return NOT_OK_RESPONSE;
+			}
+		}
 	}
 
 	td_histogram_t *transactions_hgram = NULL;
@@ -1088,6 +1126,14 @@ static inline int od_console_show_pools(od_client_t *client,
 					       client_lifetime_hgram);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
+		}
+		/* Connection counters are per-route, not aggregated. */
+		for (size_t i = 0; i < 5; ++i) {
+			rc = kiwi_be_write_data_row_add(stream, offset, NULL,
+							NULL_MSG_LEN);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
 		}
 	}
 	td_safe_free(transactions_hgram);

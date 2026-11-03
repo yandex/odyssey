@@ -60,6 +60,8 @@ struct od_server {
 	/* do not set this field directly, use od_server_attach_client */
 	od_client_t *client;
 	od_route_t *route;
+	/* A counted connection may leave its pool before its socket is closed. */
+	bool stats_connected;
 
 	od_global_t *global;
 	int offline;
@@ -148,6 +150,7 @@ static inline od_server_t *od_server_allocate(int reserve_prep_stmts)
 }
 
 void od_server_free(od_server_t *server);
+void od_server_stat_close(od_server_t *server);
 
 static inline void od_server_sync_request(od_server_t *server, uint64_t count)
 {
