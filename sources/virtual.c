@@ -700,12 +700,10 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
 	if (virtual_portal_set_complete(portal, "BEGIN") != 0) {
 		return OD_EOOM;
 	}
-	char *begin = od_strdup(query);
-	if (begin == NULL) {
+	if (od_client_pending_begin_set(client, query) != 0) {
 		return OD_EOOM;
 	}
 	portal->txstatus_force = 'T';
-	client->pending_begin = begin;
 
 	return OD_SKIP;
 }

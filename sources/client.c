@@ -85,6 +85,27 @@ void od_client_init(od_client_t *client)
 	od_address_init(&client->execute_on_host);
 }
 
+int od_client_pending_begin_set(od_client_t *client, const char *query)
+{
+	od_assert(client->pending_begin == NULL);
+	size_t size = strlen(query) + 1;
+	if (size <= sizeof(client->pending_begin_buf)) {
+		memcpy(client->pending_begin_buf, query, size);
+		client->pending_begin = client->pending_begin_buf;
+	} else {
+		client->pending_begin = od_strdup(query);
+	}
+	return client->pending_begin == NULL ? -1 : 0;
+}
+
+void od_client_pending_begin_clear(od_client_t *client)
+{
+	if (client->pending_begin != client->pending_begin_buf) {
+		od_free(client->pending_begin);
+	}
+	client->pending_begin = NULL;
+}
+
 void od_client_free(od_client_t *client)
 {
 #ifdef LDAP_FOUND
@@ -101,7 +122,7 @@ void od_client_free(od_client_t *client)
 	od_relay_destroy(&client->relay);
 
 	od_query_ctx_reset(&client->query_ctx);
-	od_free(client->pending_begin);
+	od_client_pending_begin_clear(client);
 
 	od_io_free(&client->io);
 	/* clear password if saved any */

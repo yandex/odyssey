@@ -115,8 +115,9 @@ struct od_client {
 	/* external_id for logging additional info about client authneticated with external auth */
 	char *external_id;
 
-	/* Owned SQL of a virtual BEGIN, replayed when a backend is needed. */
+	/* SQL of a virtual BEGIN; owned heap storage only if it exceeds the buffer. */
 	char *pending_begin;
+	char pending_begin_buf[128];
 
 	/*
 	 * Per-connection debug log sampling decision:
@@ -163,6 +164,9 @@ static inline od_client_t *od_client_allocate(void)
 }
 
 void od_client_free(od_client_t *client);
+
+int od_client_pending_begin_set(od_client_t *client, const char *query);
+void od_client_pending_begin_clear(od_client_t *client);
 
 /*
  * for service clients (auth, watchdog, etc) usage

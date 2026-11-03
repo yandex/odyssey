@@ -397,8 +397,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		if (status != OD_OK) {
 			return status;
 		}
-		od_free(client->pending_begin);
-		client->pending_begin = NULL;
+		od_client_pending_begin_clear(client);
 	}
 
 	status = od_stream_server_until_rfq(server, timeout_ms,
@@ -436,8 +435,7 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 			return -1;
 		}
 
-		od_free(client->pending_begin);
-		client->pending_begin = NULL;
+		od_client_pending_begin_clear(client);
 	}
 
 	if (xbuf_append(&relay->xbuf, msg)) {
