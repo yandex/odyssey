@@ -189,6 +189,15 @@ typedef struct {
 struct od_xplan {
 	/* od_xplan_entry_t[] */
 	mm_vector_t entries;
+
+	/*
+	 * set when a planned forward is known to fail on the backend
+	 * (e.g. Bind/Describe of a pstmt unknown to the client). the rest
+	 * of the batch must not be planned: the backend discards all
+	 * messages until Sync after an error, so executing or
+	 * virtualizing them would be wrong
+	 */
+	int errored;
 };
 
 void od_xplan_init(od_xplan_t *xp);
