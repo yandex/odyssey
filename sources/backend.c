@@ -457,12 +457,11 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 			machine_msg_free(msg);
 			if (rc == -1) {
 				od_error(
-					&instance->logger, "startup", client,
-					server,
+					&instance->logger, client, server,
 					"invalid protocol negotiation message");
 				return -1;
 			}
-			od_debug(&instance->logger, "startup", client, server,
+			od_debug(&instance->logger, client, server,
 				 "server negotiated protocol %d.%d",
 				 PG_PROTOCOL_MAJOR(server->proto_version),
 				 PG_PROTOCOL_MINOR(server->proto_version));
