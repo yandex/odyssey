@@ -30,6 +30,7 @@
 #include <tuple_table_slot.h>
 #include <console.h>
 #include <virtual.h>
+#include <analyze.h>
 
 #define APPLICATION_NAME_STR "application_name"
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
@@ -819,19 +820,25 @@ static bool virtual_query_supported(od_client_t *client,
 }
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
-					       const od_query_ctx_t *ctx)
+					       const char *query, size_t len)
 {
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
-		return OD_OK;
-	}
-
-	if (!virtual_query_supported(client, ctx)) {
-		return OD_OK;
-	}
-
+	const od_query_ctx_t *ctx = &client->query_ctx;
 	od_frontend_status_t status;
 	od_virtual_portal_t portal;
+
 	virtual_portal_init(&portal);
+	status = od_sql_analyze(client, query, len, &portal.error);
+	if (status == OD_SKIP && virtual_portal_set_notice(&portal) != 0) {
+		status = OD_EOOM;
+	}
+	if (status != OD_OK) {
+		goto reply;
+	}
+
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR) ||
+	    !virtual_query_supported(client, ctx)) {
+		goto done;
+	}
 
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SHOW)) {
 		status = process_vshow(client, ctx, &portal);
@@ -845,6 +852,7 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 		status = process_vdeallocate(client, ctx, &portal);
 	}
 
+reply:
 	if (status == OD_SKIP) {
 		/* Preserve the write limit for virtual SET and error replies. */
 		uint32_t timeout_ms = UINT32_MAX;
@@ -855,6 +863,7 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 		status = write_virtual_portal(client, &portal, timeout_ms);
 	}
 
+done:
 	virtual_portal_free(&portal);
 
 	return status;

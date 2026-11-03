@@ -403,7 +403,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	od_query_parse_fill_ctx(query, query_len - 1 /* zero included */, arena,
 				&client->query_ctx, &parsing);
 
-	status = try_virtual_process_query(client, &client->query_ctx);
+	status = try_virtual_process_query(client, query, query_len - 1);
 	od_linear_alloc_reset(arena, 0);
 
 	if (status == OD_SKIP) {

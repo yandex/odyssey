@@ -23,3 +23,48 @@ SET odyssey.parser_mode = 'mini';
 NOTICE:  processed virtually by odyssey
 EXECUTE U&"\0078"(1+2);
 ERROR:  26000
+-- SQL names in Odyssey's namespace are reserved in either parser mode.
+PREPARE odyssey AS SELECT 1;
+NOTICE:  processed virtually by odyssey
+ERROR:  42939
+PREPARE odyssey_ext AS SELECT 1 \parse reserved_sql
+ERROR:  42939
+EXECUTE odyssey_pstmt_0(1+2);
+NOTICE:  processed virtually by odyssey
+ERROR:  42939
+DEALLOCATE odyssey_pstmt_0;
+NOTICE:  processed virtually by odyssey
+ERROR:  42939
+EXPLAIN EXECUTE odyssey_missing;
+ERROR:  26000
+SET odyssey.parser_mode = 'full';
+NOTICE:  processed virtually by odyssey
+PREPARE "odyssey_custom" AS SELECT 1;
+NOTICE:  processed virtually by odyssey
+ERROR:  42939
+EXPLAIN EXECUTE odyssey_missing;
+NOTICE:  processed virtually by odyssey
+ERROR:  42939
+DEALLOCATE PREPARE "odyssey_custom" \parse reserved_deallocate
+ERROR:  42939
+-- Reject the whole batch before any nontransactional side effect.
+CREATE SEQUENCE reserved_batch;
+SELECT nextval('reserved_batch') \; EXECUTE odyssey_pstmt_0;
+NOTICE:  processed virtually by odyssey
+ERROR:  42939
+SELECT is_called FROM reserved_batch;
+is_called
+f
+(1 row)
+DROP SEQUENCE reserved_batch;
+SET odyssey.parser_mode = 'mini';
+NOTICE:  processed virtually by odyssey
+-- A literal or a case-sensitive quoted name is not reserved.
+SELECT 'odyssey' AS v;
+v
+odyssey
+(1 row)
+PREPARE "ODYSSEY" AS SELECT 1 AS v \; EXECUTE "ODYSSEY" \; DEALLOCATE "ODYSSEY";
+v
+1
+(1 row)
