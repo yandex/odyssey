@@ -841,13 +841,7 @@ static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
 	 */
 	od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
 	if (pstmt == NULL) {
-		machine_msg_t *vresp = pstmt_does_not_exists_msg(pstmt_name);
-		if (vresp == NULL) {
-			return OD_EOOM;
-		}
-
-		/* plan entry will take the additional ref to pstmt */
-		return xplan_append_virtual_error_response(xp, msg, vresp);
+		return xplan_append_fwd_no_delta(xp, msg, NULL /* No rewrite */);
 	}
 
 	/* will create xplan entry with ref if needed */
