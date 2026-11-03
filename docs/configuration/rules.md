@@ -717,6 +717,14 @@ Enable support of prepared statements in transactional pooling.
 
 `pool_reserve_prepared_statement yes`
 
+SQL `EXECUTE` can invoke a statement created by protocol `Parse`: Odyssey
+rewrites the name and deploys the saved `Parse` when needed. PostgreSQL evaluates
+the original argument expressions. Only a single top-level simple query is
+rewritten, subject to the configured parser's syntax and limits.
+The minimal parser treats arguments as opaque SQL; Unicode-escaped names require
+the full parser.
+Backend diagnostics may refer to the rewritten name and SQL positions.
+
 ## **server_pstmt_cache_size**
 
 *integer*

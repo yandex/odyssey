@@ -101,6 +101,7 @@ typedef enum {
 	OD_QUERY_CTX_HAS_DEALLOCATE_NAME = 1 << 8,
 	OD_QUERY_CTX_TOO_LONG = 1 << 9,
 	OD_QUERY_CTX_IS_EMPTY = 1 << 10,
+	OD_QUERY_CTX_IS_EXECUTE = 1 << 11,
 } od_query_ctx_flags_t;
 
 typedef struct {
@@ -109,10 +110,12 @@ typedef struct {
 	 *   OD_QUERY_CTX_IS_SHOW               s1 = guc name
 	 *   OD_QUERY_CTX_IS_SET                s1 = guc key, s2 = guc value
 	 *   OD_QUERY_CTX_HAS_DEALLOCATE_NAME   s1 = prepared statement name
+	 *   OD_QUERY_CTX_IS_EXECUTE            s1 = prepared statement name
 	 */
 	char s1[OD_PG_NAMEDATALEN];
 	char s2[OD_PG_NAMEDATALEN];
 	char *s2_long;
+	od_sql_location_t name_location;
 } od_query_ctx_t;
 
 #define od_query_ctx_has(ctx, flag) (((ctx)->flags & (flag)) != 0)
