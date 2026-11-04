@@ -246,9 +246,11 @@ static inline int od_console_show_stats(od_client_t *client,
 	}
 
 	void *argv[] = { stream };
+	od_router_lock(router);
 	od_route_pool_stat_database(&router->route_pool,
 				    od_console_show_stats_cb,
 				    cron->stat_time_us, argv);
+	od_router_unlock(router);
 
 	int rc = kiwi_be_write_complete(stream, "SHOW", 5);
 	if (rc == NOT_OK_RESPONSE) {
@@ -784,8 +786,7 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 					     memory_order_relaxed),
 			atomic_load_explicit(&route->stats.server_disconnections,
 					     memory_order_relaxed),
-			atomic_load_explicit(&route->stats.server_detaches,
-					     memory_order_relaxed),
+			route->stats.server_detaches,
 		};
 		for (size_t i = 0;
 		     i < sizeof(connections) / sizeof(connections[0]); i++) {

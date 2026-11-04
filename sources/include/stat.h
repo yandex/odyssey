@@ -42,7 +42,8 @@ struct od_stat {
 	atomic_uint_fast64_t client_disconnections;
 	atomic_uint_fast64_t server_connections;
 	atomic_uint_fast64_t server_disconnections;
-	atomic_uint_fast64_t server_detaches;
+	/* Protected by the route lock. */
+	uint64_t server_detaches;
 
 	td_histogram_t *transaction_hgram[QUANTILES_WINDOW];
 	td_histogram_t *query_hgram[QUANTILES_WINDOW];
@@ -128,8 +129,7 @@ static inline void od_stat_server_disconnect(od_stat_t *stat)
 
 static inline void od_stat_server_detach(od_stat_t *stat)
 {
-	atomic_fetch_add_explicit(&stat->server_detaches, 1,
-				  memory_order_relaxed);
+	stat->server_detaches++;
 }
 
 static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
@@ -226,8 +226,7 @@ static inline void od_stat_copy(od_stat_t *dst, od_stat_t *src)
 						       memory_order_relaxed);
 	dst->server_disconnections = atomic_load_explicit(
 		&src->server_disconnections, memory_order_relaxed);
-	dst->server_detaches = atomic_load_explicit(&src->server_detaches,
-						    memory_order_relaxed);
+	dst->server_detaches = src->server_detaches;
 }
 
 static inline void od_stat_sum(od_stat_t *sum, od_stat_t *stat)
@@ -262,8 +261,7 @@ static inline void od_stat_sum(od_stat_t *sum, od_stat_t *stat)
 		&stat->server_connections, memory_order_relaxed);
 	sum->server_disconnections += atomic_load_explicit(
 		&stat->server_disconnections, memory_order_relaxed);
-	sum->server_detaches += atomic_load_explicit(&stat->server_detaches,
-						     memory_order_relaxed);
+	sum->server_detaches += stat->server_detaches;
 }
 
 static inline void od_stat_update_of(atomic_uint_fast64_t *prev,
@@ -293,7 +291,7 @@ static inline void od_stat_update(od_stat_t *dst, od_stat_t *stat)
 	od_stat_update_of(&dst->server_connections, &stat->server_connections);
 	od_stat_update_of(&dst->server_disconnections,
 			  &stat->server_disconnections);
-	od_stat_update_of(&dst->server_detaches, &stat->server_detaches);
+	dst->server_detaches = stat->server_detaches;
 }
 
 static inline void od_stat_average(od_stat_t *avg, od_stat_t *current,
