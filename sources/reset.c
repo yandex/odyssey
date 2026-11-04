@@ -176,7 +176,7 @@ int od_reset(od_server_t *server)
 	/* evict reserved prepared statements over the configured limit */
 	if (route->rule->pool->reserve_prepared_statement &&
 	    route->rule->pool->server_pstmt_cache_size > 0 &&
-	    server->pstmt_count >
+	    od_server_pstmt_count(server) >
 		    (size_t)route->rule->pool->server_pstmt_cache_size) {
 		machine_msg_t *stream = machine_msg_create(0);
 		if (stream == NULL) {

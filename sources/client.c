@@ -107,10 +107,10 @@ void od_client_free(od_client_t *client)
 	kiwi_password_free(&client->password);
 	kiwi_password_free(&client->received_password);
 	if (client->prep_stmt_ids) {
-		od_client_pstmt_hashmap_free(client->prep_stmt_ids);
+		od_client_pstmt_map_free(client->prep_stmt_ids);
 	}
 	if (client->portals) {
-		od_client_portal_hashmap_free(client->portals);
+		od_client_portal_map_free(client->portals);
 	}
 	if (client->external_id) {
 		od_free(client->external_id);

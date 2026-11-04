@@ -95,9 +95,21 @@ struct od_pstmt {
 	_Alignas(max_align_t) uint8_t desc_data[];
 };
 
+/*
+ * client-side "name" -> *od_pstmt_t map (named prepared statements
+ * and portals share the shape). the wrapper keeps client-specific
+ * map state (and will host the fast-path slot for the unnamed ("")
+ * entry in a follow-up patch, so the hot relay path can bypass
+ * hashing and the hashmap lookup entirely).
+ */
+typedef struct {
+	/* "name" -> *od_pstmt_t (the named entries) */
+	mm_hashmap_t hm;
+} od_client_stmt_map_t;
+
 /* "P_0" -> *od_pstmt_t */
-mm_hashmap_t *od_client_pstmt_hashmap_create(void);
-void od_client_pstmt_hashmap_free(mm_hashmap_t *hm);
+od_client_stmt_map_t *od_client_pstmt_map_create(void);
+void od_client_pstmt_map_free(od_client_stmt_map_t *map);
 
 int od_client_add_pstmt(od_client_t *client, const char *name,
 			od_pstmt_t *pstmt);
@@ -107,8 +119,8 @@ od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name);
 void od_client_pstmts_clear(od_client_t *client);
 
 /* "portal_name" -> *od_pstmt_t (portal tracking, extended protocol) */
-mm_hashmap_t *od_client_portal_hashmap_create(void);
-void od_client_portal_hashmap_free(mm_hashmap_t *hm);
+od_client_stmt_map_t *od_client_portal_map_create(void);
+void od_client_portal_map_free(od_client_stmt_map_t *map);
 
 int od_client_add_portal(od_client_t *client, const char *portal_name,
 			 od_pstmt_t *pstmt);
@@ -116,8 +128,27 @@ od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name);
 int od_client_remove_portal(od_client_t *client, const char *portal_name);
 void od_client_portals_clear(od_client_t *client);
 
-/* "odyssey_pstmt_0" -> *od_pstmt_t */
-mm_hashmap_t *od_server_pstmt_hashmap_create(void);
+/*
+ * server-side reserved prepared statements: a "odyssey_pstmt_<n>"
+ * (inplace) -> slot map, paired with the SIEVE eviction queue over
+ * the same entries. the queue lives with the map so the eviction
+ * invariants (hand never points at an unlinked node, count mirrors
+ * live map entries) are maintained in one place.
+ */
+typedef struct {
+	/* generated names as inplace keys: no unnamed statements */
+	mm_hashmap_t hm;
+	/* SIEVE queue of the slots, oldest first */
+	od_list_t fifo;
+	/* rotating SIEVE hand, points at a fifo slot or the head */
+	od_list_t *hand;
+	/* live entries, mirrors hm size */
+	size_t count;
+} od_server_pstmt_map_t;
+
+od_server_pstmt_map_t *od_server_pstmt_map_create(void);
+/* NULL-safe live entry count of the server stmt map */
+size_t od_server_pstmt_count(od_server_t *server);
 void od_server_pstmts_free(od_server_t *server);
 
 int od_server_has_pstmt(od_server_t *server, const od_pstmt_t *pstmt);

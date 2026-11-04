@@ -174,7 +174,7 @@ void test_pstmt_client_hashmap(void)
 	test(global != NULL);
 
 	od_client_t *client = od_client_allocate();
-	client->prep_stmt_ids = od_client_pstmt_hashmap_create();
+	client->prep_stmt_ids = od_client_pstmt_map_create();
 	test(client->prep_stmt_ids != NULL);
 
 	od_pstmt_desc_t desc1;
@@ -306,7 +306,7 @@ static void test_portal_client_hashmap(void)
 	test(global != NULL);
 
 	od_client_t *client = od_client_allocate();
-	client->portals = od_client_portal_hashmap_create();
+	client->portals = od_client_portal_map_create();
 	test(client->portals != NULL);
 
 	od_pstmt_desc_t desc1;
@@ -510,23 +510,23 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	od_server_t *server = od_server_allocate(1);
 	test(server->prep_stmts != NULL);
-	test(server->pstmt_count == 0);
+	test(od_server_pstmt_count(server) == 0);
 
 	machine_msg_t *stream = machine_msg_create(0);
 	test(stream != NULL);
 	test(od_server_pstmt_evict_overflow(server, 10, stream) == 0);
-	test(server->pstmt_count == 0);
+	test(od_server_pstmt_count(server) == 0);
 	machine_msg_free(stream);
 
 	/* refs = 3: pinned */
 	for (int i = 0; i < 4; i++) {
 		test(od_server_add_pstmt(server, p[i]) == 0);
 	}
-	test(server->pstmt_count == 4);
+	test(od_server_pstmt_count(server) == 4);
 
 	stream = machine_msg_create(0);
 	test(od_server_pstmt_evict_overflow(server, 2, stream) == 0);
-	test(server->pstmt_count == 4);
+	test(od_server_pstmt_count(server) == 4);
 	machine_msg_free(stream);
 
 	/* refs = 2: evictable */
@@ -536,7 +536,7 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	stream = machine_msg_create(0);
 	test(od_server_pstmt_evict_overflow(server, 0, stream) == 4);
-	test(server->pstmt_count == 0);
+	test(od_server_pstmt_count(server) == 0);
 	machine_msg_free(stream);
 
 	for (int i = 0; i < 4; i++) {
@@ -564,7 +564,7 @@ static void test_pstmt_server_sieve_eviction(void)
 	size_t close_msg_size = 5 + 1 + strlen(p[0]->name) + 1;
 	stream = machine_msg_create(0);
 	test(od_server_pstmt_evict_overflow(server, 2, stream) == 2);
-	test(server->pstmt_count == 2);
+	test(od_server_pstmt_count(server) == 2);
 
 	/* p[0], p[1] are freed - checked via the global map only */
 	test(od_global_pstmts_has_pstmt(global, d[0]) == 0);
@@ -609,7 +609,7 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	stream = machine_msg_create(0);
 	test(od_server_pstmt_evict_overflow(server, 2, stream) == 2);
-	test(server->pstmt_count == 2);
+	test(od_server_pstmt_count(server) == 2);
 
 	test(od_server_has_pstmt(server, hp[0]) == 1);
 	test(od_global_pstmts_has_pstmt(global, dh[0]) == 1);
@@ -649,7 +649,7 @@ static void test_pstmt_server_sieve_eviction(void)
 
 	stream = machine_msg_create(0);
 	test(od_server_pstmt_evict_overflow(server, 0, stream) == 3);
-	test(server->pstmt_count == 1);
+	test(od_server_pstmt_count(server) == 1);
 	test(od_server_has_pstmt(server, rp[0]) == 1);
 	test(od_global_pstmts_has_pstmt(global, dr[0]) == 1);
 	test(od_global_pstmts_has_pstmt(global, dr[1]) == 0);
@@ -660,7 +660,7 @@ static void test_pstmt_server_sieve_eviction(void)
 	od_pstmt_unref(rp[0]);
 	stream = machine_msg_create(0);
 	test(od_server_pstmt_evict_overflow(server, 0, stream) == 1);
-	test(server->pstmt_count == 0);
+	test(od_server_pstmt_count(server) == 0);
 	test(od_global_pstmts_has_pstmt(global, dr[0]) == 0);
 	machine_msg_free(stream);
 
@@ -678,10 +678,10 @@ static void test_pstmt_server_sieve_eviction(void)
 	server = od_server_allocate(1);
 	test(od_server_add_pstmt(server, p4) == 0);
 	test(od_server_add_pstmt(server, p4) == 1);
-	test(server->pstmt_count == 1);
+	test(od_server_pstmt_count(server) == 1);
 
 	od_server_pstmts_clear(server);
-	test(server->pstmt_count == 0);
+	test(od_server_pstmt_count(server) == 0);
 
 	stream = machine_msg_create(0);
 	test(od_server_pstmt_evict_overflow(server, 0, stream) == 0);

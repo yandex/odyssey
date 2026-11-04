@@ -124,6 +124,8 @@ typedef struct {
 	size_t nfree_max;
 } mm_hashmap_ctl_t;
 
+int mm_hashmap_init(mm_hashmap_t *hm, const mm_hashmap_ctl_t *ctl, int flags);
+void mm_hashmap_destroy(mm_hashmap_t *hm);
 mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags);
 void mm_hashmap_free(mm_hashmap_t *hm);
 void mm_hashmap_clear(mm_hashmap_t *hm);
