@@ -168,6 +168,16 @@ A client that starts to queue moves out of `cl_waiting` into `cl_queue`, so `cl_
 can drop exactly when the pool becomes saturated. Use `cl_queue` and `maxwait` to detect
 pool exhaustion.
 
+### show time_quantiles
+
+Write the latency quantiles of `show pools_extended` aggregated across all
+routes (requires the `quantiles` option to be configured)
+
+`show time_quantiles`
+
+Returns a single row with a `query_<q>`/`transaction_<q>`/`client_lifetime_<q>`
+triple per configured quantile (in microseconds), merged over all routes.
+
 ### show storages
 
 Write information about current storages that are used to connect to PostgreSQL
