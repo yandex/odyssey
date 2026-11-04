@@ -127,13 +127,15 @@ od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
 {
 	if (map->hm == NULL) {
 		/* maps are owned by one client or server - no locks needed */
-		map->hm = mm_hashmap_create(64, 0 /* nlocks */, sizeof(char *),
-					    sizeof(od_sql_pstmt_t *), name_cmp,
-					    name_hash, NULL /* key dtor */,
-					    NULL /* value dtor */,
-					    NULL /* key copy */,
-					    0 /* nfree_max: default, capped
-					       * at nbuckets */);
+		mm_hashmap_ctl_t ctl = {
+			.nbuckets = 64,
+			.keysz = sizeof(char *),
+			.valsz = sizeof(od_sql_pstmt_t *),
+			.kcmp = name_cmp,
+			.khash = name_hash,
+		};
+
+		map->hm = mm_hashmap_create(&ctl, 0);
 		if (map->hm == NULL) {
 			return NULL;
 		}

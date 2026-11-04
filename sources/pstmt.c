@@ -63,17 +63,23 @@ static int str_ptr_copy(void *dst, const void *src)
 
 mm_hashmap_t *od_client_pstmt_hashmap_create(void)
 {
-	return mm_hashmap_create(
-		50 /* XXX: big enough? */,
-		0 /* nlocks = 0, map is client-private */,
-		sizeof(char *) /* key size */,
-		sizeof(od_pstmt_t *) /* val size */, str_ptr_cmp /* key cmp */,
-		xxh_str_ptr /* key hash */, str_ptr_dtor /* key dtor */,
-		NULL /* no need to free the pointer from global table */,
-		str_ptr_copy /* key copy */,
-		64 /* nfree_max: pooled shells well above the live set of a
-		    * serial client, bounded so the pool is not the retention
-		    * multiplier across the whole client population */);
+	mm_hashmap_ctl_t ctl = {
+		.nbuckets = 50 /* XXX: big enough? */,
+		.keysz = sizeof(char *),
+		.valsz = sizeof(od_pstmt_t *),
+		.kcmp = str_ptr_cmp,
+		.khash = xxh_str_ptr,
+		.kdtor = str_ptr_dtor,
+		.kcopy = str_ptr_copy,
+		/* pooled shells well above the live set of a serial client,
+		 * bounded so the pool is not the retention multiplier across
+		 * the whole client population */
+		.nfree_max = 64,
+	};
+
+	/* map is client-private: no locks */
+	return mm_hashmap_create(&ctl, MM_HM_KEYDTOR | MM_HM_KEYCOPY |
+					       MM_HM_NFREE_MAX);
 }
 
 static int unref_pstmt_entry(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
@@ -211,18 +217,23 @@ void od_client_pstmts_clear(od_client_t *client)
 
 mm_hashmap_t *od_client_portal_hashmap_create(void)
 {
-	return mm_hashmap_create(
-		50 /* XXX: big enough? */,
-		0 /* nlocks = 0, map is client-private */,
-		sizeof(char *) /* key size */,
-		sizeof(od_pstmt_t *) /* value size */,
-		str_ptr_cmp /* key cmp */, xxh_str_ptr /* key hash */,
-		str_ptr_dtor /* key dtor */,
-		NULL /* no need to free the pointer from global table */,
-		str_ptr_copy /* key copy */,
-		32 /* nfree_max: portals live per transaction and the client
-		    * is serial, so a couple dozen shells cover the hot reuse
-		    * without inflating per-client retention */);
+	mm_hashmap_ctl_t ctl = {
+		.nbuckets = 50 /* XXX: big enough? */,
+		.keysz = sizeof(char *),
+		.valsz = sizeof(od_pstmt_t *),
+		.kcmp = str_ptr_cmp,
+		.khash = xxh_str_ptr,
+		.kdtor = str_ptr_dtor,
+		.kcopy = str_ptr_copy,
+		/* portals live per transaction and the client is serial, so
+		 * a couple dozen shells cover the hot reuse without
+		 * inflating per-client retention */
+		.nfree_max = 32,
+	};
+
+	/* map is client-private: no locks */
+	return mm_hashmap_create(&ctl, MM_HM_KEYDTOR | MM_HM_KEYCOPY |
+					       MM_HM_NFREE_MAX);
 }
 
 void od_client_portal_hashmap_free(mm_hashmap_t *hm)
@@ -358,17 +369,17 @@ static int str_inplace_cmp(const void *k1, const void *k2)
 
 mm_hashmap_t *od_server_pstmt_hashmap_create(void)
 {
-	return mm_hashmap_create(
-		1000 /* XXX: big enough? */,
-		1 /* nlocks = 1, console foreach may run concurrently with writers */,
-		sizeof(od_pstmt_name_t) /* key size */,
-		sizeof(od_server_pstmt_slot_t) /* value size */,
-		str_inplace_cmp /* key cmp */, xxh_str_inplace /* key hash */,
-		NULL /* no need to free on inplace str */,
-		NULL /* no need to free the pointer from global table */,
-		NULL /* no key copy function */,
-		0 /* nfree_max: default, capped at nbuckets */
-	);
+	mm_hashmap_ctl_t ctl = {
+		.nbuckets = 1000 /* XXX: big enough? */,
+		.keysz = sizeof(od_pstmt_name_t),
+		.valsz = sizeof(od_server_pstmt_slot_t),
+		.kcmp = str_inplace_cmp,
+		.khash = xxh_str_inplace,
+		/* console foreach may run concurrently with writers */
+		.nlocks = 1,
+	};
+
+	return mm_hashmap_create(&ctl, MM_HM_NLOCKS);
 }
 
 void od_server_pstmts_free(od_server_t *server)
@@ -681,17 +692,21 @@ static void pstmt_init_new(od_global_pstmt_map_t *hm, od_pstmt_t *out)
 
 od_global_pstmt_map_t *od_global_pstmts_map_create(size_t nlocks)
 {
-	mm_hashmap_t *hm = mm_hashmap_create(
-		10000 /* XXX: big enough? */, nlocks,
-		sizeof(od_pstmt_desc_t) /* key size */,
-		sizeof(od_pstmt_t *) /* value size */,
-		pstmt_desc_cmp /* key comparator */,
-		xxh_pstmt_desc /* key hash */,
-		NULL /* key does not own desc.data */,
-		pstmt_desc_val_dtor /* value owns the pstmt pointer */,
-		NULL /* no key copy — raw memcpy, data ptr overwritten after insert */,
-		0 /* nfree_max: default, capped at nbuckets */
-	);
+	mm_hashmap_ctl_t ctl = {
+		.nbuckets = 10000 /* XXX: big enough? */,
+		.keysz = sizeof(od_pstmt_desc_t),
+		.valsz = sizeof(od_pstmt_t *),
+		.kcmp = pstmt_desc_cmp,
+		.khash = xxh_pstmt_desc,
+		/* key does not own desc.data; value owns the pstmt pointer */
+		.vdtor = pstmt_desc_val_dtor,
+		/* no key copy — raw memcpy, data ptr overwritten after
+		 * insert */
+		.nlocks = nlocks,
+	};
+
+	mm_hashmap_t *hm =
+		mm_hashmap_create(&ctl, MM_HM_NLOCKS | MM_HM_VALDTOR);
 
 	if (hm == NULL) {
 		return NULL;
