@@ -61,8 +61,13 @@ static int str_ptr_copy(void *dst, const void *src)
 	return 0;
 }
 
-mm_hashmap_t *od_client_pstmt_hashmap_create(void)
+od_client_stmt_map_t *od_client_pstmt_map_create(void)
 {
+	od_client_stmt_map_t *map = od_malloc(sizeof(*map));
+	if (map == NULL) {
+		return NULL;
+	}
+
 	mm_hashmap_ctl_t ctl = {
 		.nbuckets = 50 /* XXX: big enough? */,
 		.keysz = sizeof(char *),
@@ -71,15 +76,53 @@ mm_hashmap_t *od_client_pstmt_hashmap_create(void)
 		.khash = xxh_str_ptr,
 		.kdtor = str_ptr_dtor,
 		.kcopy = str_ptr_copy,
-		/* pooled shells well above the live set of a serial client,
-		 * bounded so the pool is not the retention multiplier across
-		 * the whole client population */
+		/* pooled shells well above the live set of a serial
+		 * client, bounded so the pool is not the retention
+		 * multiplier across the whole client population */
 		.nfree_max = 64,
 	};
 
 	/* map is client-private: no locks */
-	return mm_hashmap_create(&ctl, MM_HM_KEYDTOR | MM_HM_KEYCOPY |
-					       MM_HM_NFREE_MAX);
+	if (mm_hashmap_init(&map->hm, &ctl,
+			    MM_HM_KEYDTOR | MM_HM_KEYCOPY | MM_HM_NFREE_MAX) ==
+	    -1) {
+		od_free(map);
+		return NULL;
+	}
+
+	return map;
+}
+
+od_client_stmt_map_t *od_client_portal_map_create(void)
+{
+	od_client_stmt_map_t *map = od_malloc(sizeof(*map));
+	if (map == NULL) {
+		return NULL;
+	}
+
+	mm_hashmap_ctl_t ctl = {
+		.nbuckets = 50 /* XXX: big enough? */,
+		.keysz = sizeof(char *),
+		.valsz = sizeof(od_pstmt_t *),
+		.kcmp = str_ptr_cmp,
+		.khash = xxh_str_ptr,
+		.kdtor = str_ptr_dtor,
+		.kcopy = str_ptr_copy,
+		/* portals live per transaction and the client is serial,
+		 * so a couple dozen shells cover the hot reuse without
+		 * inflating per-client retention */
+		.nfree_max = 32,
+	};
+
+	/* map is client-private: no locks */
+	if (mm_hashmap_init(&map->hm, &ctl,
+			    MM_HM_KEYDTOR | MM_HM_KEYCOPY | MM_HM_NFREE_MAX) ==
+	    -1) {
+		od_free(map);
+		return NULL;
+	}
+
+	return map;
 }
 
 static int unref_pstmt_entry(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
@@ -94,25 +137,44 @@ static int unref_pstmt_entry(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
 	return 0;
 }
 
-void od_client_pstmt_hashmap_free(mm_hashmap_t *hm)
+static void client_stmt_map_free(od_client_stmt_map_t *map)
 {
-	mm_hashmap_foreach(hm, unref_pstmt_entry, NULL);
+	mm_hashmap_foreach(&map->hm, unref_pstmt_entry, NULL);
 
-	mm_hashmap_free(hm);
+	mm_hashmap_destroy(&map->hm);
+	od_free(map);
+}
+
+void od_client_pstmt_map_free(od_client_stmt_map_t *map)
+{
+	if (map == NULL) {
+		return;
+	}
+
+	client_stmt_map_free(map);
+}
+
+void od_client_portal_map_free(od_client_stmt_map_t *map)
+{
+	if (map == NULL) {
+		return;
+	}
+
+	client_stmt_map_free(map);
 }
 
 od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name)
 {
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(client->prep_stmt_ids, &klock, &name,
+	int rc = mm_hashmap_lock_key(&client->prep_stmt_ids->hm, &klock, &name,
 				     0 /* do not create */);
 	(void)rc;
 
 	if (klock.found) {
 		od_pstmt_t *ps = *(od_pstmt_t **)mm_hashmap_kvp_val(
-			client->prep_stmt_ids, klock.kvp);
+			&client->prep_stmt_ids->hm, klock.kvp);
 		/* no real concurrent access - can unlock now and return */
-		mm_hashmap_unlock_key(client->prep_stmt_ids, &klock);
+		mm_hashmap_unlock_key(&client->prep_stmt_ids->hm, &klock);
 		return ps;
 	}
 
@@ -127,7 +189,7 @@ int od_client_add_pstmt(od_client_t *client, const char *name,
 	od_pstmt_t *to_unref = NULL;
 	const int unnamed = name[0] == '\0';
 
-	int rc = mm_hashmap_lock_key(client->prep_stmt_ids, &klock, &name,
+	int rc = mm_hashmap_lock_key(&client->prep_stmt_ids->hm, &klock, &name,
 				     MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
 		/* cant create and lock is not held */
@@ -136,7 +198,7 @@ int od_client_add_pstmt(od_client_t *client, const char *name,
 
 	int ret = 0;
 
-	void *val = mm_hashmap_kvp_val(client->prep_stmt_ids, klock.kvp);
+	void *val = mm_hashmap_kvp_val(&client->prep_stmt_ids->hm, klock.kvp);
 	if (unnamed && (*(void **)val) != NULL) {
 		/*
 		 * its ok to redefine "" statement
@@ -160,7 +222,7 @@ int od_client_add_pstmt(od_client_t *client, const char *name,
 	}
 
 	/* no real concurrent access - can unlock now and return */
-	mm_hashmap_unlock_key(client->prep_stmt_ids, &klock);
+	mm_hashmap_unlock_key(&client->prep_stmt_ids->hm, &klock);
 
 	if (to_unref != NULL) {
 		od_pstmt_unref(to_unref);
@@ -177,14 +239,14 @@ int od_client_has_pstmt(od_client_t *client, const char *name)
 int od_client_remove_pstmt(od_client_t *client, const char *name)
 {
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(client->prep_stmt_ids, &klock, &name,
+	int rc = mm_hashmap_lock_key(&client->prep_stmt_ids->hm, &klock, &name,
 				     0 /* do not create */);
 	(void)rc;
 
 	if (klock.kvp != NULL) {
 		od_pstmt_t *pstmt = *(od_pstmt_t **)mm_hashmap_kvp_val(
-			client->prep_stmt_ids, klock.kvp);
-		mm_hashmap_remove(client->prep_stmt_ids, &klock);
+			&client->prep_stmt_ids->hm, klock.kvp);
+		mm_hashmap_remove(&client->prep_stmt_ids->hm, &klock);
 		if (pstmt != NULL) {
 			od_pstmt_unref(pstmt);
 		}
@@ -197,9 +259,9 @@ int od_client_remove_pstmt(od_client_t *client, const char *name)
 
 void od_client_pstmts_clear(od_client_t *client)
 {
-	mm_hashmap_foreach(client->prep_stmt_ids, unref_pstmt_entry, NULL);
+	mm_hashmap_foreach(&client->prep_stmt_ids->hm, unref_pstmt_entry, NULL);
 
-	mm_hashmap_clear(client->prep_stmt_ids);
+	mm_hashmap_clear(&client->prep_stmt_ids->hm);
 }
 
 /*
@@ -215,45 +277,17 @@ void od_client_pstmts_clear(od_client_t *client)
  * see od_pstmt_unref).
  */
 
-mm_hashmap_t *od_client_portal_hashmap_create(void)
-{
-	mm_hashmap_ctl_t ctl = {
-		.nbuckets = 50 /* XXX: big enough? */,
-		.keysz = sizeof(char *),
-		.valsz = sizeof(od_pstmt_t *),
-		.kcmp = str_ptr_cmp,
-		.khash = xxh_str_ptr,
-		.kdtor = str_ptr_dtor,
-		.kcopy = str_ptr_copy,
-		/* portals live per transaction and the client is serial, so
-		 * a couple dozen shells cover the hot reuse without
-		 * inflating per-client retention */
-		.nfree_max = 32,
-	};
-
-	/* map is client-private: no locks */
-	return mm_hashmap_create(&ctl, MM_HM_KEYDTOR | MM_HM_KEYCOPY |
-					       MM_HM_NFREE_MAX);
-}
-
-void od_client_portal_hashmap_free(mm_hashmap_t *hm)
-{
-	mm_hashmap_foreach(hm, unref_pstmt_entry, NULL);
-
-	mm_hashmap_free(hm);
-}
-
 od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name)
 {
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
+	int rc = mm_hashmap_lock_key(&client->portals->hm, &klock, &portal_name,
 				     0 /* do not create */);
 	(void)rc;
 
 	if (klock.found) {
 		od_pstmt_t *ps = *(od_pstmt_t **)mm_hashmap_kvp_val(
-			client->portals, klock.kvp);
-		mm_hashmap_unlock_key(client->portals, &klock);
+			&client->portals->hm, klock.kvp);
+		mm_hashmap_unlock_key(&client->portals->hm, &klock);
 		return ps;
 	}
 
@@ -266,7 +300,7 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 	mm_hashmap_keylock_t klock;
 	od_pstmt_t *to_unref = NULL;
 
-	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
+	int rc = mm_hashmap_lock_key(&client->portals->hm, &klock, &portal_name,
 				     MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
 		return rc;
@@ -278,11 +312,11 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 	 * the server will enforce that - we just store the mapping here
 	 */
 
-	void *val = mm_hashmap_kvp_val(client->portals, klock.kvp);
+	void *val = mm_hashmap_kvp_val(&client->portals->hm, klock.kvp);
 	to_unref = *(od_pstmt_t **)(val);
 	memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
 	od_pstmt_ref(pstmt);
-	mm_hashmap_unlock_key(client->portals, &klock);
+	mm_hashmap_unlock_key(&client->portals->hm, &klock);
 
 	if (to_unref != NULL) {
 		od_pstmt_unref(to_unref);
@@ -294,15 +328,15 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 int od_client_remove_portal(od_client_t *client, const char *portal_name)
 {
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(client->portals, &klock, &portal_name,
+	int rc = mm_hashmap_lock_key(&client->portals->hm, &klock, &portal_name,
 				     0 /* do not create */);
 	(void)rc;
 
 	if (klock.kvp != NULL) {
 		od_pstmt_t *pstmt = *(od_pstmt_t **)mm_hashmap_kvp_val(
-			client->portals, klock.kvp);
+			&client->portals->hm, klock.kvp);
 
-		mm_hashmap_remove(client->portals, &klock);
+		mm_hashmap_remove(&client->portals->hm, &klock);
 
 		if (pstmt != NULL) {
 			od_pstmt_unref(pstmt);
@@ -314,9 +348,9 @@ int od_client_remove_portal(od_client_t *client, const char *portal_name)
 
 void od_client_portals_clear(od_client_t *client)
 {
-	mm_hashmap_foreach(client->portals, unref_pstmt_entry, NULL);
+	mm_hashmap_foreach(&client->portals->hm, unref_pstmt_entry, NULL);
 
-	mm_hashmap_clear(client->portals);
+	mm_hashmap_clear(&client->portals->hm);
 }
 
 /*
@@ -345,11 +379,11 @@ static int unref_server_pstmt_slot(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
 	return 0;
 }
 
-static void server_pstmt_queue_reset(od_server_t *server)
+static void server_pstmt_queue_reset(od_server_pstmt_map_t *map)
 {
-	od_list_init(&server->pstmt_fifo);
-	server->pstmt_hand = &server->pstmt_fifo;
-	server->pstmt_count = 0;
+	od_list_init(&map->fifo);
+	map->hand = &map->fifo;
+	map->count = 0;
 }
 
 static mm_hash_t xxh_str_inplace(const void *data)
@@ -367,8 +401,13 @@ static int str_inplace_cmp(const void *k1, const void *k2)
 	return strcmp(s1, s2);
 }
 
-mm_hashmap_t *od_server_pstmt_hashmap_create(void)
+od_server_pstmt_map_t *od_server_pstmt_map_create(void)
 {
+	od_server_pstmt_map_t *map = od_malloc(sizeof(*map));
+	if (map == NULL) {
+		return NULL;
+	}
+
 	mm_hashmap_ctl_t ctl = {
 		.nbuckets = 1000 /* XXX: big enough? */,
 		.keysz = sizeof(od_pstmt_name_t),
@@ -379,35 +418,54 @@ mm_hashmap_t *od_server_pstmt_hashmap_create(void)
 		.nlocks = 1,
 	};
 
-	return mm_hashmap_create(&ctl, MM_HM_NLOCKS);
+	if (mm_hashmap_init(&map->hm, &ctl, MM_HM_NLOCKS) == -1) {
+		od_free(map);
+		return NULL;
+	}
+
+	od_list_init(&map->fifo);
+	map->hand = &map->fifo;
+	map->count = 0;
+
+	return map;
+}
+
+size_t od_server_pstmt_count(od_server_t *server)
+{
+	if (server->prep_stmts == NULL) {
+		return 0;
+	}
+
+	return server->prep_stmts->count;
 }
 
 void od_server_pstmts_free(od_server_t *server)
 {
 	/* the hashmap has no value dtor, unref explicitly */
-	mm_hashmap_foreach(server->prep_stmts, unref_server_pstmt_slot, NULL);
+	mm_hashmap_foreach(&server->prep_stmts->hm, unref_server_pstmt_slot,
+			   NULL);
 
-	mm_hashmap_free(server->prep_stmts);
+	mm_hashmap_destroy(&server->prep_stmts->hm);
+	od_free(server->prep_stmts);
 	server->prep_stmts = NULL;
-
-	server_pstmt_queue_reset(server);
 }
 
 int od_server_has_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 {
+	od_server_pstmt_map_t *map = server->prep_stmts;
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(server->prep_stmts, &klock, pstmt->name,
+	int rc = mm_hashmap_lock_key(&map->hm, &klock, pstmt->name,
 				     0 /* do not create */);
 	(void)rc;
 
 	if (klock.found) {
 		/* SIEVE hit */
 		od_server_pstmt_slot_t *slot =
-			mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
+			mm_hashmap_kvp_val(&map->hm, klock.kvp);
 		slot->visited = 1;
 
 		/* no real concurrent access - can unlock now and return */
-		mm_hashmap_unlock_key(server->prep_stmts, &klock);
+		mm_hashmap_unlock_key(&map->hm, &klock);
 		return 1;
 	}
 
@@ -417,8 +475,9 @@ int od_server_has_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 
 int od_server_add_pstmt(od_server_t *server, od_pstmt_t *pstmt)
 {
+	od_server_pstmt_map_t *map = server->prep_stmts;
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(server->prep_stmts, &klock, pstmt->name,
+	int rc = mm_hashmap_lock_key(&map->hm, &klock, pstmt->name,
 				     MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
 		/* cant create and lock is not held */
@@ -435,50 +494,51 @@ int od_server_add_pstmt(od_server_t *server, od_pstmt_t *pstmt)
 
 	if (!klock.found) {
 		od_server_pstmt_slot_t *slot =
-			mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
+			mm_hashmap_kvp_val(&map->hm, klock.kvp);
 		slot->pstmt = pstmt;
 		slot->visited = 0;
 		od_list_init(&slot->link);
-		od_list_append(&server->pstmt_fifo, &slot->link);
-		server->pstmt_count++;
+		od_list_append(&map->fifo, &slot->link);
+		map->count++;
 
 		od_pstmt_ref(pstmt);
 		ret = 0;
 	} else {
 		/* count a duplicate add as a hit */
 		od_server_pstmt_slot_t *slot =
-			mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
+			mm_hashmap_kvp_val(&map->hm, klock.kvp);
 		slot->visited = 1;
 		ret = 1;
 	}
 
 	/* no real concurrent access - can unlock now and return */
-	mm_hashmap_unlock_key(server->prep_stmts, &klock);
+	mm_hashmap_unlock_key(&map->hm, &klock);
 
 	return ret;
 }
 
 int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 {
+	od_server_pstmt_map_t *map = server->prep_stmts;
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(server->prep_stmts, &klock, pstmt->name,
+	int rc = mm_hashmap_lock_key(&map->hm, &klock, pstmt->name,
 				     0 /* do not create */);
 	(void)rc;
 
 	if (klock.found) {
 		od_server_pstmt_slot_t *slot =
-			mm_hashmap_kvp_val(server->prep_stmts, klock.kvp);
+			mm_hashmap_kvp_val(&map->hm, klock.kvp);
 
 		/* the hand must not point at the node being unlinked */
-		if (server->pstmt_hand == &slot->link) {
-			server->pstmt_hand = slot->link.next;
+		if (map->hand == &slot->link) {
+			map->hand = slot->link.next;
 		}
 
 		od_list_unlink(&slot->link);
-		server->pstmt_count--;
+		map->count--;
 
 		od_pstmt_t *p = slot->pstmt;
-		mm_hashmap_remove(server->prep_stmts, &klock);
+		mm_hashmap_remove(&map->hm, &klock);
 		if (p != NULL) {
 			od_pstmt_unref(p);
 		}
@@ -491,11 +551,13 @@ int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 
 void od_server_pstmts_clear(od_server_t *server)
 {
-	mm_hashmap_foreach(server->prep_stmts, unref_server_pstmt_slot, NULL);
+	od_server_pstmt_map_t *map = server->prep_stmts;
 
-	mm_hashmap_clear(server->prep_stmts);
+	mm_hashmap_foreach(&map->hm, unref_server_pstmt_slot, NULL);
 
-	server_pstmt_queue_reset(server);
+	mm_hashmap_clear(&map->hm);
+
+	server_pstmt_queue_reset(map);
 }
 
 const od_pstmt_t *od_server_pstmt_kvp_pstmt(mm_hashmap_t *hm,
@@ -513,26 +575,28 @@ int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
 		return 0;
 	}
 
+	od_server_pstmt_map_t *map = server->prep_stmts;
+
 	int evicted = 0;
 
 	/* three sweeps always reach a fixed point, see the SIEVE paper */
 	size_t iterations = 0;
-	size_t bound = 3 * server->pstmt_count + 3;
+	size_t bound = 3 * map->count + 3;
 
-	while (server->pstmt_count > cap && iterations++ < bound) {
-		if (server->pstmt_hand == &server->pstmt_fifo) {
-			server->pstmt_hand = server->pstmt_fifo.next;
-			if (server->pstmt_hand == &server->pstmt_fifo) {
+	while (map->count > cap && iterations++ < bound) {
+		if (map->hand == &map->fifo) {
+			map->hand = map->fifo.next;
+			if (map->hand == &map->fifo) {
 				break;
 			}
 		}
 
 		od_server_pstmt_slot_t *slot = od_container_of(
-			server->pstmt_hand, od_server_pstmt_slot_t, link);
+			map->hand, od_server_pstmt_slot_t, link);
 		od_pstmt_t *pstmt = slot->pstmt;
 
 		/* advance first: the node may be freed below */
-		server->pstmt_hand = slot->link.next;
+		map->hand = slot->link.next;
 
 		if (slot->visited) {
 			slot->visited = 0;
@@ -547,41 +611,39 @@ int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
 		}
 
 		mm_hashmap_keylock_t klock;
-		int rc =
-			mm_hashmap_lock_key(server->prep_stmts, &klock,
-					    pstmt->name, 0 /* do not create */);
+		int rc = mm_hashmap_lock_key(&map->hm, &klock, pstmt->name,
+					     0 /* do not create */);
 		if (rc == -1) {
 			continue;
 		}
 
 		if (!klock.found) {
 			/* out of sync with the map - drop the node and its reference */
-			mm_hashmap_unlock_key(server->prep_stmts, &klock);
+			mm_hashmap_unlock_key(&map->hm, &klock);
 			od_list_unlink(&slot->link);
-			server->pstmt_count--;
+			map->count--;
 			od_pstmt_unref(pstmt);
 			continue;
 		}
 
 		od_release_assert((od_server_pstmt_slot_t *)mm_hashmap_kvp_val(
-					  server->prep_stmts, klock.kvp) ==
-				  slot);
+					  &map->hm, klock.kvp) == slot);
 		od_release_assert(((od_server_pstmt_slot_t *)mm_hashmap_kvp_val(
-					   server->prep_stmts, klock.kvp))
+					   &map->hm, klock.kvp))
 					  ->pstmt == pstmt);
 
 		machine_msg_t *next = kiwi_fe_write_close(
 			stream, 'S', pstmt->name, strlen(pstmt->name) + 1);
 		if (next == NULL) {
-			mm_hashmap_unlock_key(server->prep_stmts, &klock);
+			mm_hashmap_unlock_key(&map->hm, &klock);
 			return -1;
 		}
 		stream = next;
 
 		od_list_unlink(&slot->link);
-		server->pstmt_count--;
+		map->count--;
 
-		mm_hashmap_remove(server->prep_stmts, &klock);
+		mm_hashmap_remove(&map->hm, &klock);
 
 		/* last use of pstmt: the unref may free it */
 		od_pstmt_unref(pstmt);

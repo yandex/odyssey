@@ -74,11 +74,7 @@ struct od_server {
 	int xproto_err;
 	int cached_plan_broken;
 	int oom;
-	mm_hashmap_t *prep_stmts;
-	/* SIEVE eviction queue over the reserved statements */
-	od_list_t pstmt_fifo;
-	od_list_t *pstmt_hand;
-	size_t pstmt_count;
+	od_server_pstmt_map_t *prep_stmts;
 
 	/* number of ErrorResponse messages received */
 	uint64_t error_responses;
@@ -120,16 +116,13 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 
 	od_io_init(&server->io);
 	od_list_init(&server->link);
-	od_list_init(&server->pstmt_fifo);
-	server->pstmt_hand = &server->pstmt_fifo;
-	server->pstmt_count = 0;
 	memset(&server->id, 0, sizeof(server->id));
 
 	server->xproto_mode = 0;
 	server->xproto_err = 0;
 	server->cached_plan_broken = 0;
 	if (reserve_prep_stmts) {
-		server->prep_stmts = od_server_pstmt_hashmap_create();
+		server->prep_stmts = od_server_pstmt_map_create();
 	} else {
 		server->prep_stmts = NULL;
 	}

@@ -167,11 +167,11 @@ static mm_hashmap_kvp_t *kvp_create(mm_hashmap_t *hm, mm_hash_t hash,
 	return kvp;
 }
 
-mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags)
+int mm_hashmap_init(mm_hashmap_t *hm, const mm_hashmap_ctl_t *ctl, int flags)
 {
 	if (ctl == NULL || ctl->nbuckets == 0 || ctl->keysz == 0 ||
 	    ctl->kcmp == NULL || ctl->khash == NULL) {
-		return NULL;
+		return -1;
 	}
 
 	size_t nbuckets = adjust_to_pow2(ctl->nbuckets);
@@ -185,15 +185,9 @@ mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags)
 		nlocks = nbuckets;
 	}
 
-	mm_hashmap_t *hm = mm_malloc(sizeof(mm_hashmap_t));
-	if (hm == NULL) {
-		return NULL;
-	}
-
 	hm->buckets = mm_malloc(sizeof(mm_hashmap_bucket_t) * nbuckets);
 	if (hm->buckets == NULL) {
-		mm_free(hm);
-		return NULL;
+		return -1;
 	}
 
 	if (nlocks > 0) {
@@ -202,8 +196,8 @@ mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags)
 					  MM_MUTEX_PADDED_SIZE);
 		if (hm->locks == NULL) {
 			mm_free(hm->buckets);
-			mm_free(hm);
-			return NULL;
+			hm->buckets = NULL;
+			return -1;
 		}
 	} else {
 		hm->locks = NULL;
@@ -234,6 +228,21 @@ mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags)
 	}
 	init_locks(hm);
 	init_buckets(hm);
+
+	return 0;
+}
+
+mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags)
+{
+	mm_hashmap_t *hm = mm_malloc(sizeof(mm_hashmap_t));
+	if (hm == NULL) {
+		return NULL;
+	}
+
+	if (mm_hashmap_init(hm, ctl, flags) == -1) {
+		mm_free(hm);
+		return NULL;
+	}
 
 	return hm;
 }
@@ -270,12 +279,8 @@ void mm_hashmap_clear(mm_hashmap_t *hm)
 	}
 }
 
-void mm_hashmap_free(mm_hashmap_t *hm)
+void mm_hashmap_destroy(mm_hashmap_t *hm)
 {
-	if (hm == NULL) {
-		return;
-	}
-
 	mm_hashmap_clear(hm);
 
 	mm_lf_stack_entry_t *e;
@@ -291,6 +296,15 @@ void mm_hashmap_free(mm_hashmap_t *hm)
 
 	mm_free(hm->locks);
 	mm_free(hm->buckets);
+}
+
+void mm_hashmap_free(mm_hashmap_t *hm)
+{
+	if (hm == NULL) {
+		return;
+	}
+
+	mm_hashmap_destroy(hm);
 	mm_free(hm);
 }
 
