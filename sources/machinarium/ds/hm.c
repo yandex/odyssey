@@ -180,14 +180,15 @@ static mm_hashmap_kvp_t *kvp_create(mm_hashmap_t *hm, mm_hash_t hash,
 	return kvp;
 }
 
-mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
-				size_t valsz, mm_hm_key_cmp_fn kcmp,
-				mm_hm_key_hash_fn khash,
-				mm_hm_key_dtor_fn kdtor,
-				mm_hm_value_dtor_fn vdtor,
-				mm_hm_key_copy_fn kcopy, size_t nfree_max)
+mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags)
 {
-	nbuckets = adjust_to_prime(nbuckets);
+	if (ctl == NULL || ctl->nbuckets == 0 || ctl->keysz == 0 ||
+	    ctl->kcmp == NULL || ctl->khash == NULL) {
+		return NULL;
+	}
+
+	size_t nbuckets = adjust_to_prime(ctl->nbuckets);
+	size_t nlocks = (flags & MM_HM_NLOCKS) ? ctl->nlocks : 0;
 
 	if (nlocks > 1) {
 		nlocks = adjust_to_prime(nlocks);
@@ -223,13 +224,13 @@ mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
 
 	hm->nbuckets = nbuckets;
 	hm->nlocks = nlocks;
-	hm->keysz = keysz;
-	hm->valsz = valsz;
-	hm->kcmp = kcmp;
-	hm->khash = khash;
-	hm->kdtor = kdtor;
-	hm->vdtor = vdtor;
-	hm->kcopy = kcopy;
+	hm->keysz = ctl->keysz;
+	hm->valsz = ctl->valsz;
+	hm->kcmp = ctl->kcmp;
+	hm->khash = ctl->khash;
+	hm->kdtor = (flags & MM_HM_KEYDTOR) ? ctl->kdtor : NULL;
+	hm->vdtor = (flags & MM_HM_VALDTOR) ? ctl->vdtor : NULL;
+	hm->kcopy = (flags & MM_HM_KEYCOPY) ? ctl->kcopy : NULL;
 
 	hm->keyoff = alignsz(sizeof(mm_hashmap_kvp_t));
 	hm->valoff = alignsz(hm->keyoff + hm->keysz);
@@ -238,7 +239,10 @@ mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
 	mm_lf_stack_init(&hm->freelist);
 
 	atomic_init(&hm->nfree, 0);
-	hm->nfree_max = nfree_max != 0 ? nfree_max : nbuckets;
+	hm->nfree_max = (flags & MM_HM_NFREE_MAX) ? ctl->nfree_max : 0;
+	if (hm->nfree_max == 0) {
+		hm->nfree_max = nbuckets;
+	}
 	init_locks(hm);
 	init_buckets(hm);
 

@@ -151,9 +151,9 @@ extern int od_logger_reopen(od_logger_t *);
 extern int od_logger_open_syslog(od_logger_t *, char *, char *);
 extern void od_logger_shutdown(od_logger_t *);
 extern void od_logger_close(od_logger_t *);
-extern void od_logger_write(od_logger_t *, od_logger_level_t, char *,
-			    od_client_t *, od_server_t *, char *, va_list)
-	__attribute__((format(printf, 6, 0)));
+extern void od_logger_write(od_logger_t *, od_logger_level_t, od_client_t *,
+			    od_server_t *, const char *, int, const char *, ...)
+	__attribute__((format(printf, 7, 8)));
 
 /*
  * Reports whether a debug message from the given client/server context
@@ -165,181 +165,40 @@ extern int od_logger_debug_enabled(od_logger_t *, od_client_t *, od_server_t *);
 void od_logger_wait_finish(od_logger_t *);
 void od_logger_flush(od_logger_t *);
 
-static inline void od_log(od_logger_t *logger, char *context,
-			  od_client_t *client, od_server_t *server, char *fmt,
-			  ...) __attribute__((format(printf, 5, 6)));
-static inline void od_glog(char *context, od_client_t *client,
-			   od_server_t *server, char *fmt, ...)
-	__attribute__((format(printf, 4, 5)));
-static inline void od_debug(od_logger_t *logger, char *context,
-			    od_client_t *client, od_server_t *server, char *fmt,
-			    ...) __attribute__((format(printf, 5, 6)));
-static inline void od_gdebug(char *context, od_client_t *client,
-			     od_server_t *server, char *fmt, ...)
-	__attribute__((format(printf, 4, 5)));
-static inline void od_error(od_logger_t *logger, char *context,
-			    od_client_t *client, od_server_t *server, char *fmt,
-			    ...) __attribute__((format(printf, 5, 6)));
-static inline void od_gerror(char *context, od_client_t *client,
-			     od_server_t *server, char *fmt, ...)
-	__attribute__((format(printf, 4, 5)));
-static inline void od_fatal(od_logger_t *logger, char *context,
-			    od_client_t *client, od_server_t *server, char *fmt,
-			    ...) __attribute__((format(printf, 5, 6)));
-static inline void od_gfatal(char *context, od_client_t *client,
-			     od_server_t *server, char *fmt, ...)
-	__attribute__((format(printf, 4, 5)));
-static inline void od_vglog(char *context, od_client_t *client,
-			    od_server_t *server, char *fmt, va_list args)
-	__attribute__((format(printf, 4, 0)));
-static inline void od_vgdebug(char *context, od_client_t *client,
-			      od_server_t *server, char *fmt, va_list args)
-	__attribute__((format(printf, 4, 0)));
-static inline void od_vgerror(char *context, od_client_t *client,
-			      od_server_t *server, char *fmt, va_list args)
-	__attribute__((format(printf, 4, 0)));
-static inline void od_vgfatal(char *context, od_client_t *client,
-			      od_server_t *server, char *fmt, va_list args)
-	__attribute__((format(printf, 4, 0)));
+#define od_log(logger, client, server, ...)                                 \
+	od_logger_write(logger, OD_LOG, client, server, __FILE__, __LINE__, \
+			__VA_ARGS__)
 
-static inline void od_log(od_logger_t *logger, char *context,
-			  od_client_t *client, od_server_t *server, char *fmt,
-			  ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	od_logger_write(logger, OD_LOG, context, client, server, fmt, args);
-	va_end(args);
-}
+#define od_glog(client, server, ...)                                        \
+	od_logger_write(OD_LOGGER_GLOBAL, OD_LOG, client, server, __FILE__, \
+			__LINE__, __VA_ARGS__)
 
-static inline void od_glog(char *context, od_client_t *client,
-			   od_server_t *server, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	od_logger_write(OD_LOGGER_GLOBAL, OD_LOG, context, client, server, fmt,
-			args);
-	va_end(args);
-}
+#define od_debug(logger, client, server, ...)                                 \
+	od_logger_write(logger, OD_DEBUG, client, server, __FILE__, __LINE__, \
+			__VA_ARGS__)
 
-static inline void od_debug(od_logger_t *logger, char *context,
-			    od_client_t *client, od_server_t *server, char *fmt,
-			    ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	od_logger_write(logger, OD_DEBUG, context, client, server, fmt, args);
-	va_end(args);
-}
+#define od_gdebug(client, server, ...)                                        \
+	od_logger_write(OD_LOGGER_GLOBAL, OD_DEBUG, client, server, __FILE__, \
+			__LINE__, __VA_ARGS__)
 
-static inline void od_gdebug(char *context, od_client_t *client,
-			     od_server_t *server, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	od_logger_write(OD_LOGGER_GLOBAL, OD_DEBUG, context, client, server,
-			fmt, args);
-	va_end(args);
-}
+#define od_error(logger, client, server, ...)                                 \
+	od_logger_write(logger, OD_ERROR, client, server, __FILE__, __LINE__, \
+			__VA_ARGS__)
 
-static inline void od_error(od_logger_t *logger, char *context,
-			    od_client_t *client, od_server_t *server, char *fmt,
-			    ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	od_logger_write(logger, OD_ERROR, context, client, server, fmt, args);
-	va_end(args);
-}
+#define od_gerror(client, server, ...)                                        \
+	od_logger_write(OD_LOGGER_GLOBAL, OD_ERROR, client, server, __FILE__, \
+			__LINE__, __VA_ARGS__)
 
-static inline void od_gerror(char *context, od_client_t *client,
-			     od_server_t *server, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	od_logger_write(OD_LOGGER_GLOBAL, OD_ERROR, context, client, server,
-			fmt, args);
-	va_end(args);
-}
+#define od_fatal(logger, client, server, ...)                               \
+	do {                                                                \
+		od_logger_write(logger, OD_FATAL, client, server, __FILE__, \
+				__LINE__, __VA_ARGS__);                     \
+		exit(1);                                                    \
+	} while (0)
 
-static inline void od_fatal(od_logger_t *logger, char *context,
-			    od_client_t *client, od_server_t *server, char *fmt,
-			    ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	od_logger_write(logger, OD_FATAL, context, client, server, fmt, args);
-	va_end(args);
-	exit(1);
-}
-
-static inline void od_gfatal(char *context, od_client_t *client,
-			     od_server_t *server, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	od_logger_write(OD_LOGGER_GLOBAL, OD_FATAL, context, client, server,
-			fmt, args);
-	va_end(args);
-	exit(1);
-}
-
-/* log functions to create module-owned loggers with predefined values */
-static inline void od_vglog(char *context, od_client_t *client,
-			    od_server_t *server, char *fmt, va_list args)
-{
-	od_logger_write(OD_LOGGER_GLOBAL, OD_LOG, context, client, server, fmt,
-			args);
-}
-
-static inline void od_vgdebug(char *context, od_client_t *client,
-			      od_server_t *server, char *fmt, va_list args)
-{
-	od_logger_write(OD_LOGGER_GLOBAL, OD_DEBUG, context, client, server,
-			fmt, args);
-}
-
-static inline void od_vgerror(char *context, od_client_t *client,
-			      od_server_t *server, char *fmt, va_list args)
-{
-	od_logger_write(OD_LOGGER_GLOBAL, OD_ERROR, context, client, server,
-			fmt, args);
-}
-
-static inline void od_vgfatal(char *context, od_client_t *client,
-			      od_server_t *server, char *fmt, va_list args)
-{
-	od_logger_write(OD_LOGGER_GLOBAL, OD_FATAL, context, client, server,
-			fmt, args);
-	exit(1);
-}
-
-#define DEFINE_SIMPLE_MODULE_LOGGER(mod, ctx)                                  \
-	__attribute__((unused)) static inline void mod##_log(char *fmt, ...)   \
-	{                                                                      \
-		va_list args;                                                  \
-		va_start(args, fmt);                                           \
-		od_vglog(ctx, NULL, NULL, fmt, args);                          \
-		va_end(args);                                                  \
-	}                                                                      \
-	__attribute__((unused)) static inline void mod##_debug(char *fmt, ...) \
-	{                                                                      \
-		va_list args;                                                  \
-		va_start(args, fmt);                                           \
-		od_vgdebug(ctx, NULL, NULL, fmt, args);                        \
-		va_end(args);                                                  \
-	}                                                                      \
-	__attribute__((unused)) static inline void mod##_error(char *fmt, ...) \
-	{                                                                      \
-		va_list args;                                                  \
-		va_start(args, fmt);                                           \
-		od_vgerror(ctx, NULL, NULL, fmt, args);                        \
-		va_end(args);                                                  \
-	}                                                                      \
-	__attribute__((unused)) static inline void mod##_fatal(char *fmt, ...) \
-	{                                                                      \
-		va_list args;                                                  \
-		va_start(args, fmt);                                           \
-		od_vgfatal(ctx, NULL, NULL, fmt, args);                        \
-		va_end(args);                                                  \
-	}
+#define od_gfatal(client, server, ...)                                      \
+	do {                                                                \
+		od_logger_write(OD_LOGGER_GLOBAL, OD_FATAL, client, server, \
+				__FILE__, __LINE__, __VA_ARGS__);           \
+		exit(1);                                                    \
+	} while (0)

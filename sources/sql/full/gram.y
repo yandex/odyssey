@@ -12370,6 +12370,8 @@ ExecuteStmt: EXECUTE name execute_param_clause
 
 					n->name = $2;
 					n->params = $3;
+					n->name_location = @2;
+					n->name_end_location = $<core_yystype>2.identifier.end_location;
 					$$ = (Node *) n;
 				}
 			| CREATE OptTemp TABLE create_as_target AS
@@ -12380,6 +12382,8 @@ ExecuteStmt: EXECUTE name execute_param_clause
 
 					n->name = $7;
 					n->params = $8;
+					n->name_location = @7;
+					n->name_end_location = $<core_yystype>7.identifier.end_location;
 					ctas->query = (Node *) n;
 					ctas->into = $4;
 					ctas->objtype = OBJECT_TABLE;
@@ -12398,6 +12402,8 @@ ExecuteStmt: EXECUTE name execute_param_clause
 
 					n->name = $10;
 					n->params = $11;
+					n->name_location = @10;
+					n->name_end_location = $<core_yystype>10.identifier.end_location;
 					ctas->query = (Node *) n;
 					ctas->into = $7;
 					ctas->objtype = OBJECT_TABLE;
@@ -17678,7 +17684,7 @@ name_list:	name
 		;
 
 
-name:		ColId									{ $$ = $1; };
+name:		ColId;
 
 attr_name:	ColLabel								{ $$ = $1; };
 
@@ -17983,9 +17989,17 @@ plassign_equals: COLON_EQUALS
 
 /* Column identifier --- names that can be column, table, etc names.
  */
-ColId:		IDENT									{ $$ = $1; }
-			| unreserved_keyword					{ $$ = pstrdup($1); }
-			| col_name_keyword						{ $$ = pstrdup($1); }
+ColId:		IDENT
+			| unreserved_keyword
+				{
+					$<core_yystype>$.identifier.str = pstrdup($1);
+					$<core_yystype>$.identifier.end_location = @1 + strlen($1);
+				}
+			| col_name_keyword
+				{
+					$<core_yystype>$.identifier.str = pstrdup($1);
+					$<core_yystype>$.identifier.end_location = @1 + strlen($1);
+				}
 		;
 
 /* Type/function identifier --- names that can be type or function names.

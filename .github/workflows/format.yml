@@ -8,6 +8,10 @@ on:
     branches: [ master ]
     paths-ignore:
       - "sources/machinarium/gdb/**"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   format:
     name: format

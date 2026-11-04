@@ -49,7 +49,7 @@ static inline void od_signal_waiter(void *arg)
 
 		machine_msg_t *msg = machine_msg_create(sizeof(int));
 		if (msg == NULL) {
-			od_fatal(&instance->logger, "system", NULL, NULL,
+			od_fatal(&instance->logger, NULL, NULL,
 				 "failed to create a message in sigwaiter");
 		}
 
@@ -86,14 +86,14 @@ void od_system_signal_handler(void *arg)
 	int rc;
 	rc = machine_signal_init(&mask, &ignore_mask);
 	if (rc == -1) {
-		od_fatal(&instance->logger, "system", NULL, NULL,
+		od_fatal(&instance->logger, NULL, NULL,
 			 "failed to init signal handler (machine_signal_init)");
 	}
 
 	machine_channel_t *channel;
 	channel = machine_channel_create();
 	if (channel == NULL) {
-		od_fatal(&instance->logger, "system", NULL, NULL,
+		od_fatal(&instance->logger, NULL, NULL,
 			 "failed to init signal handler (channel creation)");
 	}
 
@@ -102,7 +102,7 @@ void od_system_signal_handler(void *arg)
 		od_signal_waiter, &waiter_arg, "sigwaiter");
 	if (sigwaiter_id == -1) {
 		od_fatal(
-			&instance->logger, "system", NULL, NULL,
+			&instance->logger, NULL, NULL,
 			"failed to init signal handler (signal waiter creation)");
 	}
 
@@ -113,7 +113,7 @@ void od_system_signal_handler(void *arg)
 
 		/* canceled */
 		if (msg == NULL) {
-			od_log(&instance->logger, "system", NULL, NULL,
+			od_log(&instance->logger, NULL, NULL,
 			       "NULL message in sighandler");
 			break;
 		}
@@ -131,7 +131,7 @@ void od_system_signal_handler(void *arg)
 		switch (sig) {
 		case SIGTERM:
 		case SIGINT:
-			od_log(&instance->logger, "system", NULL, NULL,
+			od_log(&instance->logger, NULL, NULL,
 			       "termination signal received, shutting down");
 
 			if (++term_count >=
@@ -155,8 +155,7 @@ void od_system_signal_handler(void *arg)
 
 			if (od_system_send_msg(system, OD_MSG_SHUTDOWN, NULL) !=
 			    0) {
-				od_error(&instance->logger, "system", NULL,
-					 NULL,
+				od_error(&instance->logger, NULL, NULL,
 					 "failed to send shutdown request, "
 					 "forcing exit");
 				exit(1);
@@ -170,7 +169,7 @@ void od_system_signal_handler(void *arg)
 			 */
 
 			if (instance->pid.restart_ppid == -1) {
-				online_restart_log(
+				od_glog(NULL, NULL,
 					"got unexpected SIGWINCH, ignored");
 				break;
 			}
@@ -178,18 +177,17 @@ void od_system_signal_handler(void *arg)
 			od_systemd_notify_ready();
 			break;
 		case SIGHUP:
-			od_log(&instance->logger, "system", NULL, NULL,
+			od_log(&instance->logger, NULL, NULL,
 			       "SIGHUP received");
 			if (new_binary_pid != -1) {
-				od_log(&instance->logger, "system", NULL, NULL,
+				od_log(&instance->logger, NULL, NULL,
 				       "performing online restart now, SIGHUP is ignored");
 				break;
 			}
 			od_systemd_notify_reloading("Reloading configuration");
 			mm_wait_flag_t *reload_done = mm_wait_flag_create();
 			if (reload_done == NULL) {
-				od_error(&instance->logger, "system", NULL,
-					 NULL,
+				od_error(&instance->logger, NULL, NULL,
 					 "failed to create wait flag for "
 					 "reload, notifying ready anyway");
 				od_systemd_notify_ready();
@@ -198,8 +196,7 @@ void od_system_signal_handler(void *arg)
 			if (od_system_send_msg(system, OD_MSG_RELOAD,
 					       reload_done) != 0) {
 				mm_wait_flag_destroy(reload_done);
-				od_error(&instance->logger, "system", NULL,
-					 NULL,
+				od_error(&instance->logger, NULL, NULL,
 					 "failed to send reload request, "
 					 "notifying ready anyway");
 				od_systemd_notify_ready();
@@ -211,28 +208,31 @@ void od_system_signal_handler(void *arg)
 			break;
 		case OD_SIG_LOG_ROTATE:
 			if (instance->config.log_file) {
-				od_log(&instance->logger, "system", NULL, NULL,
+				od_log(&instance->logger, NULL, NULL,
 				       "SIGUSR1 received, reopening log");
 				od_logger_reopen(&instance->logger);
 			}
 			break;
 		case OD_SIG_ONLINE_RESTART:
-			online_restart_log("online restart signal received");
+			od_glog(NULL, NULL, "online restart signal received");
 
 			if (!instance->config.enable_online_restart_feature) {
-				online_restart_error(
+				od_gerror(
+					NULL, NULL,
 					"online restart signal ignored - feature is disabled in config");
 				break;
 			}
 
 			if (new_binary_pid != -1) {
-				online_restart_error(
+				od_gerror(
+					NULL, NULL,
 					"online restart signal ignored - already spawning new binary");
 				break;
 			}
 
 			if (getppid() == instance->pid.restart_ppid) {
-				online_restart_error(
+				od_gerror(
+					NULL, NULL,
 					"online restart signal ignored - parent odyssey process is still alive");
 				break;
 			}
@@ -242,15 +242,16 @@ void od_system_signal_handler(void *arg)
 
 			new_binary_pid = od_restart_run_new_binary();
 			if (new_binary_pid != -1) {
-				online_restart_log("new binary pid = %d",
-						   new_binary_pid);
+				od_glog(NULL, NULL, "new binary pid = %d",
+					new_binary_pid);
 
 				od_global_get_instance()->pid.restart_new_pid =
 					new_binary_pid;
 			} else {
 				/* notify ready because no one else will - the child didnt start */
 				od_systemd_notify_ready();
-				online_restart_error(
+				od_gerror(
+					NULL, NULL,
 					"running new binary failed - keep use old instance");
 			}
 
@@ -258,8 +259,7 @@ void od_system_signal_handler(void *arg)
 		case SIGCHLD:
 			wpid = waitpid(-1, &wstatus, WNOHANG);
 			if (wpid == -1) {
-				od_gerror("system", NULL, NULL,
-					  "waitpid failed: %s",
+				od_gerror(NULL, NULL, "waitpid failed: %s",
 					  strerror(errno));
 				break;
 			}
@@ -270,7 +270,7 @@ void od_system_signal_handler(void *arg)
 
 			/* currently SIGCHLD is tracked to only catch if new binary failed to start */
 			if (wpid != new_binary_pid) {
-				od_glog("system", NULL, NULL,
+				od_glog(NULL, NULL,
 					"waitpid returned unexpected pid(%d), ignore (the only expected is %d)",
 					wpid, new_binary_pid);
 				break;
@@ -280,12 +280,14 @@ void od_system_signal_handler(void *arg)
 			od_systemd_notify_ready();
 
 			if (WIFEXITED(wstatus)) {
-				online_restart_error(
+				od_gerror(
+					NULL, NULL,
 					"new binary exited(%d) - keep use old binary instance",
 					WEXITSTATUS(wstatus));
 				new_binary_pid = -1;
 			} else if (WIFSIGNALED(wstatus)) {
-				online_restart_error(
+				od_gerror(
+					NULL, NULL,
 					"new binary was killed by signal(%d) - keep use old binary instance",
 					WTERMSIG(wstatus));
 				new_binary_pid = -1;

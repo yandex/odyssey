@@ -15,23 +15,27 @@
 static inline mm_hash_t od_global_clients_map_hm_hash(const void *a)
 {
 	const kiwi_key_t *key = a;
-	uint32_t buf[2] = { key->key_pid, key->key };
-	return mm_xxh64_hash(buf, sizeof(buf), 0);
+	return mm_xxh64_hash(key->key, key->key_len, key->key_pid);
 }
 
 static inline int od_global_clients_map_hm_cmp(const void *a, const void *b)
 {
 	const kiwi_key_t *x = a, *y = b;
-	return !(x->key_pid == y->key_pid && x->key == y->key);
+	return !kiwi_key_cmp(x, y);
 }
 
 od_global_clients_map_t *od_global_clients_map_create(size_t nlocks)
 {
-	mm_hashmap_t *hm = mm_hashmap_create(
-		32768, nlocks, sizeof(kiwi_key_t), sizeof(od_client_t *),
-		od_global_clients_map_hm_cmp, od_global_clients_map_hm_hash,
-		NULL, NULL, NULL,
-		0 /* nfree_max: default, capped at nbuckets */);
+	mm_hashmap_ctl_t ctl = {
+		.nbuckets = 32768,
+		.keysz = sizeof(kiwi_key_t),
+		.valsz = sizeof(od_client_t *),
+		.kcmp = od_global_clients_map_hm_cmp,
+		.khash = od_global_clients_map_hm_hash,
+		.nlocks = nlocks,
+	};
+
+	mm_hashmap_t *hm = mm_hashmap_create(&ctl, MM_HM_NLOCKS);
 	if (hm == NULL) {
 		return NULL;
 	}

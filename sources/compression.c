@@ -44,7 +44,7 @@ int od_compression_frontend_setup(od_client_t *client,
 
 	int rc = od_write(&client->io, msg);
 	if (rc == -1) {
-		od_error(logger, "compression", client, NULL, "write error: %s",
+		od_error(logger, client, NULL, "write error: %s",
 			 od_io_error(&client->io));
 		return -1;
 	}
@@ -58,7 +58,7 @@ int od_compression_frontend_setup(od_client_t *client,
 	/* initialize compression */
 	rc = mm_io_set_compression(client->io.io, compression_algorithm);
 	if (rc == -1) {
-		od_debug(logger, "compression", client, NULL,
+		od_debug(logger, client, NULL,
 			 "failed to initialize compression w/ algorithm %c",
 			 compression_algorithm);
 		return -1;

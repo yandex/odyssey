@@ -1,0 +1,19 @@
+\pset format unaligned
+SET odyssey.parser_mode = 'full';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.parser_mode;
+NOTICE:  processed virtually by odyssey
+odyssey.parser_mode
+full
+(1 row)
+SET odyssey.parser_mode = E'disabled';
+NOTICE:  processed virtually by odyssey
+ERROR:  disabling the SQL parser for a session is not supported
+HINT:  Use query_parsing_mode disabled in the Odyssey configuration.
+SET odyssey.parser_mode = E'mini';
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.parser_mode;
+NOTICE:  processed virtually by odyssey
+odyssey.parser_mode
+mini
+(1 row)

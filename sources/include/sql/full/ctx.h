@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <setjmp.h>
+#include <machinarium/setjmp.h>
 
 #include <sql/full/scanner.h>
 #include <sql/full/gramparse.h>
@@ -20,7 +20,7 @@ typedef struct od_sql_full_parse_ctx {
     int had_error;
 
     /* longjmp recovery for YY_FATAL_ERROR */
-    jmp_buf fatal_jmp;
+    mm_jmp_buf_t fatal_jmp;
     int fatal_set;
 } od_sql_full_parse_ctx_t;
 

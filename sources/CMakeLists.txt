@@ -198,7 +198,7 @@ BISON_TARGET(sql_parser
 FLEX_TARGET(sql_scanner
     sql/minimal/scan.l
     ${SQL_MINIMAL_GEN_DIR}/scan.c
-    COMPILE_FLAGS "--header-file=${SQL_MINIMAL_GEN_DIR}/scan.h"
+    COMPILE_FLAGS "--header-file=${SQL_MINIMAL_GEN_DIR}/scan.h -CF -8"
 )
 ADD_FLEX_BISON_DEPENDENCY(sql_scanner sql_parser)
 set_source_files_properties(${FLEX_sql_scanner_OUTPUTS} PROPERTIES
@@ -386,6 +386,7 @@ set(od_test_src
     tests/kiwi/test_kiwi_pgoptions.c
     tests/kiwi/test_kiwi_fe_read_auth.c
     tests/kiwi/test_kiwi_be_read_query.c
+    tests/kiwi/test_kiwi_cancel.c
     tests/machinarium/test_init.c
     tests/machinarium/test_create0.c
     tests/machinarium/test_create1.c
@@ -474,6 +475,7 @@ set(od_test_src
     tests/machinarium/test_mutex_bench.c
     tests/machinarium/test_queue.c
     tests/machinarium/test_heap.c
+    tests/machinarium/test_clock.c
     tests/machinarium/test_lf_stack.c
     tests/machinarium/test_sem.c
     tests/odyssey/test_attribute.c

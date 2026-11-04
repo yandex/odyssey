@@ -20,5 +20,3 @@ pid_t od_restart_get_ppid(void);
 pid_t od_restart_run_new_binary(void);
 
 void od_restart_terminate_parent(void);
-
-DEFINE_SIMPLE_MODULE_LOGGER(online_restart, "online-restart")

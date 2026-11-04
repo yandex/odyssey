@@ -212,10 +212,10 @@ int mm_socket_set_reuseport(int fd, int enable)
 	return rc;
 }
 
-int mm_socket_set_nolinger(int fd)
+int mm_socket_set_nolinger(int fd, int enable)
 {
 	int rc;
-	struct linger linger = { .l_linger = 0, .l_onoff = 1 };
+	struct linger linger = { .l_linger = 0, .l_onoff = enable };
 	rc = setsockopt(fd, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
 	return rc;
 }

@@ -68,7 +68,7 @@ od_retcode_t od_apply_validate_cli_args(od_logger_t *logger, od_config_t *conf,
 	}
 
 	if (args->silent && args->verbose) {
-		od_log(logger, "startup", NULL, NULL,
+		od_log(logger, NULL, NULL,
 		       "silent and verbose option both specified");
 		return NOT_OK_RESPONSE;
 	}
