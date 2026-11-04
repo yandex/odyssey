@@ -650,7 +650,10 @@ int mm_io_wait_deadline(mm_io_t *io)
 
 int mm_io_poll(mm_io_t *io)
 {
-	/* no need to check IN/OUT - we call read/write before awaiting anyway */
+	/* no need to check OUT - we call write before awaiting anyway.
+	 * POLLIN is also checked: dispatch the read callback and report
+	 * MM_R to the caller, same as the event loop does for EPOLLIN.
+	 * Returns the events mask or -1. */
 
 	if (!io->attached) {
 		mm_errno_set(ENOTCONN);
@@ -663,9 +666,9 @@ int mm_io_poll(mm_io_t *io)
 	memset(&pfd, 0, sizeof(struct pollfd));
 	pfd.fd = fd->fd;
 #if defined(POLLRDHUP)
-	pfd.events = POLLERR | POLLHUP | POLLRDHUP;
+	pfd.events = POLLERR | POLLHUP | POLLRDHUP | POLLIN;
 #else
-	pfd.events = POLLERR | POLLHUP;
+	pfd.events = POLLERR | POLLHUP | POLLIN;
 #endif
 
 	int rc = poll(&pfd, 1, 0);
@@ -681,23 +684,44 @@ int mm_io_poll(mm_io_t *io)
 
 	assert(rc == 1);
 
-	int events = pfd.events;
-	int err = events & POLLERR;
+	int events = pfd.revents;
+	int mask = 0;
+	if (events & POLLIN) {
+		mask |= MM_R;
+	}
+	if (events & POLLERR) {
+		mask |= MM_ERR;
+	}
+
 #if defined(POLLRDHUP)
-	int close = events & POLLHUP || events & POLLRDHUP;
+	if (events & POLLHUP || events & POLLRDHUP) {
+		mask |= MM_CLOSE;
+	}
 #else
-	int close = events & POLLHUP;
+	if (events & POLLHUP) {
+		mask |= MM_CLOSE;
+	}
 #endif
 
-	if (err && fd->mask & MM_ERR) {
+	if ((events & POLLERR) && fd->mask & MM_ERR) {
 		fd->on_err(&io->handle);
 	}
 
-	if (close && fd->mask & MM_CLOSE) {
+#if defined(POLLRDHUP)
+	if ((events & POLLHUP || events & POLLRDHUP) && fd->mask & MM_CLOSE) {
 		fd->on_close(&io->handle);
 	}
+#else
+	if ((events & POLLHUP) && fd->mask & MM_CLOSE) {
+		fd->on_close(&io->handle);
+	}
+#endif
 
-	return 0;
+	if ((events & POLLIN) && fd->mask & MM_R) {
+		fd->on_read(&io->handle);
+	}
+
+	return mask;
 }
 
 int mm_io_shutdown(mm_io_t *io)
