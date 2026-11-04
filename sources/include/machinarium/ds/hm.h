@@ -92,13 +92,37 @@ const void *mm_hashmap_kvp_key_const(const mm_hashmap_t *hm,
 const void *mm_hashmap_kvp_val_const(const mm_hashmap_t *hm,
 				     const mm_hashmap_kvp_t *kvp);
 
-/* nfree_max: freelist capacity in kvps; 0 = nbuckets (map-sized default) */
-mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
-				size_t valsz, mm_hm_key_cmp_fn kcmp,
-				mm_hm_key_hash_fn khash,
-				mm_hm_key_dtor_fn kdtor,
-				mm_hm_value_dtor_fn vdtor,
-				mm_hm_key_copy_fn kcopy, size_t nfree_max);
+/*
+ * mm_hashmap_create() flags: which of the optional mm_hashmap_ctl_t
+ * fields are honored.  The mandatory fields (nbuckets, keysz, valsz,
+ * kcmp, khash) are always read, so adding a new option is a matter of
+ * a new field + a new flag, without touching the existing call sites.
+ */
+typedef enum {
+	MM_HM_NLOCKS = 1 << 0, /* shard locks, 0 = lockless */
+	MM_HM_KEYDTOR = 1 << 1, /* key dtor, NULL = none */
+	MM_HM_VALDTOR = 1 << 2, /* value dtor, NULL = none */
+	MM_HM_KEYCOPY = 1 << 3, /* key copy fn, NULL = memcpy */
+	MM_HM_NFREE_MAX = 1 << 4, /* freelist capacity in kvps, 0 = nbuckets */
+} mm_hashmap_flags_t;
+
+typedef struct {
+	/* mandatory */
+	size_t nbuckets; /* approximate initial capacity */
+	size_t keysz;
+	size_t valsz;
+	mm_hm_key_cmp_fn kcmp;
+	mm_hm_key_hash_fn khash;
+
+	/* optional, read only when the matching flag is set */
+	size_t nlocks;
+	mm_hm_key_dtor_fn kdtor;
+	mm_hm_value_dtor_fn vdtor;
+	mm_hm_key_copy_fn kcopy;
+	size_t nfree_max;
+} mm_hashmap_ctl_t;
+
+mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags);
 void mm_hashmap_free(mm_hashmap_t *hm);
 void mm_hashmap_clear(mm_hashmap_t *hm);
 int mm_hashmap_foreach(mm_hashmap_t *hm, mm_hm_kvp_cb_fn cb, void **argv);
