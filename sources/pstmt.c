@@ -90,6 +90,8 @@ od_client_stmt_map_t *od_client_pstmt_map_create(void)
 		return NULL;
 	}
 
+	map->unnamed = NULL;
+
 	return map;
 }
 
@@ -122,6 +124,8 @@ od_client_stmt_map_t *od_client_portal_map_create(void)
 		return NULL;
 	}
 
+	map->unnamed = NULL;
+
 	return map;
 }
 
@@ -137,8 +141,41 @@ static int unref_pstmt_entry(mm_hashmap_t *hm, mm_hashmap_kvp_t *kvp,
 	return 0;
 }
 
+/*
+ * unnamed ("") fast-path: the slot holds the same reference the map
+ * holds for named entries, so the refcount invariants are identical.
+ * the "" key never enters the hashmap.
+ */
+
+static void client_stmt_map_set_unnamed(od_client_stmt_map_t *map,
+					od_pstmt_t *pstmt)
+{
+	/* ref first: a re-add of the same stmt stays alive across the
+	 * swap, mirroring the locked hashmap path */
+	od_pstmt_t *old = map->unnamed;
+
+	od_pstmt_ref(pstmt);
+	map->unnamed = pstmt;
+
+	if (old != NULL) {
+		od_pstmt_unref(old);
+	}
+}
+
+static void client_stmt_map_remove_unnamed(od_client_stmt_map_t *map)
+{
+	od_pstmt_t *old = map->unnamed;
+
+	if (old != NULL) {
+		map->unnamed = NULL;
+		od_pstmt_unref(old);
+	}
+}
+
 static void client_stmt_map_free(od_client_stmt_map_t *map)
 {
+	client_stmt_map_remove_unnamed(map);
+
 	mm_hashmap_foreach(&map->hm, unref_pstmt_entry, NULL);
 
 	mm_hashmap_destroy(&map->hm);
@@ -165,6 +202,10 @@ void od_client_portal_map_free(od_client_stmt_map_t *map)
 
 od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name)
 {
+	if (name[0] == '\0') {
+		return client->prep_stmt_ids->unnamed;
+	}
+
 	mm_hashmap_keylock_t klock;
 	int rc = mm_hashmap_lock_key(&client->prep_stmt_ids->hm, &klock, &name,
 				     0 /* do not create */);
@@ -185,10 +226,18 @@ od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name)
 int od_client_add_pstmt(od_client_t *client, const char *name,
 			od_pstmt_t *pstmt)
 {
-	mm_hashmap_keylock_t klock;
-	od_pstmt_t *to_unref = NULL;
-	const int unnamed = name[0] == '\0';
+	if (name[0] == '\0') {
+		/*
+		 * its ok to redefine "" statement
+		 * (unnamed statemnt is rewritten every Parse,
+		 * not generate ErrorResponse about
+		 * statement already exists)
+		 */
+		client_stmt_map_set_unnamed(client->prep_stmt_ids, pstmt);
+		return 0;
+	}
 
+	mm_hashmap_keylock_t klock;
 	int rc = mm_hashmap_lock_key(&client->prep_stmt_ids->hm, &klock, &name,
 				     MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
@@ -198,21 +247,10 @@ int od_client_add_pstmt(od_client_t *client, const char *name,
 
 	int ret = 0;
 
-	void *val = mm_hashmap_kvp_val(&client->prep_stmt_ids->hm, klock.kvp);
-	if (unnamed && (*(void **)val) != NULL) {
-		/*
-		 * its ok to redefine "" statement
-		 * (unnamed statemnt is rewritten every Parse,
-		 * not generate ErrorResponse about
-		 * statement already exists)
-		 *
-		 * so need to not forget to unref previous pstmt
-		 */
-		to_unref = *(od_pstmt_t **)val;
-	}
-
-	if (!klock.found || unnamed) {
-		/* new or "" - save */
+	if (!klock.found) {
+		/* new - save */
+		void *val = mm_hashmap_kvp_val(&client->prep_stmt_ids->hm,
+					       klock.kvp);
 		memcpy(val, &pstmt, sizeof(const od_pstmt_t *));
 		od_pstmt_ref(pstmt);
 		ret = 0;
@@ -224,10 +262,6 @@ int od_client_add_pstmt(od_client_t *client, const char *name,
 	/* no real concurrent access - can unlock now and return */
 	mm_hashmap_unlock_key(&client->prep_stmt_ids->hm, &klock);
 
-	if (to_unref != NULL) {
-		od_pstmt_unref(to_unref);
-	}
-
 	return ret;
 }
 
@@ -238,6 +272,11 @@ int od_client_has_pstmt(od_client_t *client, const char *name)
 
 int od_client_remove_pstmt(od_client_t *client, const char *name)
 {
+	if (name[0] == '\0') {
+		client_stmt_map_remove_unnamed(client->prep_stmt_ids);
+		return 0;
+	}
+
 	mm_hashmap_keylock_t klock;
 	int rc = mm_hashmap_lock_key(&client->prep_stmt_ids->hm, &klock, &name,
 				     0 /* do not create */);
@@ -259,6 +298,8 @@ int od_client_remove_pstmt(od_client_t *client, const char *name)
 
 void od_client_pstmts_clear(od_client_t *client)
 {
+	client_stmt_map_remove_unnamed(client->prep_stmt_ids);
+
 	mm_hashmap_foreach(&client->prep_stmt_ids->hm, unref_pstmt_entry, NULL);
 
 	mm_hashmap_clear(&client->prep_stmt_ids->hm);
@@ -279,6 +320,10 @@ void od_client_pstmts_clear(od_client_t *client)
 
 od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name)
 {
+	if (portal_name[0] == '\0') {
+		return client->portals->unnamed;
+	}
+
 	mm_hashmap_keylock_t klock;
 	int rc = mm_hashmap_lock_key(&client->portals->hm, &klock, &portal_name,
 				     0 /* do not create */);
@@ -297,6 +342,16 @@ od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name)
 int od_client_add_portal(od_client_t *client, const char *portal_name,
 			 od_pstmt_t *pstmt)
 {
+	/*
+	 * note: unnamed portal "" is silently overwritten on every Bind.
+	 * for named portals PG requires an explicit Close before re-Bind, but
+	 * the server will enforce that - we just store the mapping here
+	 */
+	if (portal_name[0] == '\0') {
+		client_stmt_map_set_unnamed(client->portals, pstmt);
+		return 0;
+	}
+
 	mm_hashmap_keylock_t klock;
 	od_pstmt_t *to_unref = NULL;
 
@@ -305,12 +360,6 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 	if (rc == -1) {
 		return rc;
 	}
-
-	/*
-	 * note: unnamed portal "" is silently overwritten on every Bind.
-	 * for named portals PG requires an explicit Close before re-Bind, but
-	 * the server will enforce that - we just store the mapping here
-	 */
 
 	void *val = mm_hashmap_kvp_val(&client->portals->hm, klock.kvp);
 	to_unref = *(od_pstmt_t **)(val);
@@ -327,6 +376,11 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 
 int od_client_remove_portal(od_client_t *client, const char *portal_name)
 {
+	if (portal_name[0] == '\0') {
+		client_stmt_map_remove_unnamed(client->portals);
+		return 0;
+	}
+
 	mm_hashmap_keylock_t klock;
 	int rc = mm_hashmap_lock_key(&client->portals->hm, &klock, &portal_name,
 				     0 /* do not create */);
@@ -348,6 +402,8 @@ int od_client_remove_portal(od_client_t *client, const char *portal_name)
 
 void od_client_portals_clear(od_client_t *client)
 {
+	client_stmt_map_remove_unnamed(client->portals);
+
 	mm_hashmap_foreach(&client->portals->hm, unref_pstmt_entry, NULL);
 
 	mm_hashmap_clear(&client->portals->hm);
