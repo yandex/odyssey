@@ -97,14 +97,16 @@ struct od_pstmt {
 
 /*
  * client-side "name" -> *od_pstmt_t map (named prepared statements
- * and portals share the shape). the wrapper keeps client-specific
- * map state (and will host the fast-path slot for the unnamed ("")
- * entry in a follow-up patch, so the hot relay path can bypass
- * hashing and the hashmap lookup entirely).
+ * and portals share the shape). the unnamed ("") entry is served
+ * from a dedicated slot without hashing or a bucket lookup: the hot
+ * relay path touches the unnamed stmt/portal on every simple Query
+ * cycle (relay.c), so it must not pay for the hashmap roundtrip.
  */
 typedef struct {
 	/* "name" -> *od_pstmt_t (the named entries) */
 	mm_hashmap_t hm;
+	/* unnamed ("") entry, NULL while not registered */
+	od_pstmt_t *unnamed;
 } od_client_stmt_map_t;
 
 /* "P_0" -> *od_pstmt_t */
