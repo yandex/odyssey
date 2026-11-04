@@ -10,41 +10,28 @@
 
 #define HM_LOCK_AT(locks, i) mm_mutex_padded_at((mm_mutex_padded_t *)(locks), i)
 
-static size_t adjust_to_prime(size_t sz)
+static size_t adjust_to_pow2(size_t sz)
 {
-	static size_t primes[] = {
-		3,	 7,	  17,	   23,	    29,	     37,      47,
-		59,	 71,	  89,	   107,	    131,     163,     197,
-		239,	 293,	  353,	   431,	    521,     631,     761,
-		919,	 1103,	  1327,	   1597,    1931,    2333,    2801,
-		3371,	 4049,	  4861,	   5839,    7013,    8419,    10103,
-		12143,	 14591,	  17519,   21023,   25229,   30293,   36353,
-		43627,	 52361,	  62851,   75431,   90523,   108631,  130363,
-		156437,	 187751,  225307,  270371,  324449,  389357,  467237,
-		560689,	 672827,  807403,  968897,  1162687, 1395263, 1674319,
-		2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471,
-		7199369
-	};
-
-	size_t np = sizeof(primes) / sizeof(size_t);
-
-	for (size_t i = 0; i < np; ++i) {
-		if (primes[i] >= sz) {
-			return primes[i];
-		}
+	if (sz < 8) {
+		return 8;
 	}
 
-	return primes[np - 1];
+	size_t p = 1;
+	while (p < sz) {
+		p <<= 1;
+	}
+
+	return p;
 }
 
 static size_t bucket_idx(mm_hashmap_t *hm, mm_hash_t hash)
 {
-	return hash % hm->nbuckets;
+	return hash & hm->bucket_mask;
 }
 
 static size_t lock_idx(mm_hashmap_t *hm, size_t bucket_idx)
 {
-	return bucket_idx % hm->nlocks;
+	return bucket_idx & hm->lock_mask;
 }
 
 static inline void bucket_lock(mm_hashmap_bucket_t *b)
@@ -187,11 +174,11 @@ mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags)
 		return NULL;
 	}
 
-	size_t nbuckets = adjust_to_prime(ctl->nbuckets);
+	size_t nbuckets = adjust_to_pow2(ctl->nbuckets);
 	size_t nlocks = (flags & MM_HM_NLOCKS) ? ctl->nlocks : 0;
 
 	if (nlocks > 1) {
-		nlocks = adjust_to_prime(nlocks);
+		nlocks = adjust_to_pow2(nlocks);
 	}
 
 	if (nlocks > nbuckets) {
@@ -223,7 +210,9 @@ mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags)
 	}
 
 	hm->nbuckets = nbuckets;
+	hm->bucket_mask = nbuckets - 1;
 	hm->nlocks = nlocks;
+	hm->lock_mask = nlocks > 0 ? nlocks - 1 : 0;
 	hm->keysz = ctl->keysz;
 	hm->valsz = ctl->valsz;
 	hm->kcmp = ctl->kcmp;
