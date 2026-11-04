@@ -73,9 +73,11 @@ struct mm_hashmap {
 	mm_hm_key_copy_fn kcopy;
 
 	size_t nbuckets;
+	size_t bucket_mask; /* nbuckets - 1, nbuckets is a power of 2 */
 	mm_hashmap_bucket_t *buckets;
 
 	size_t nlocks;
+	size_t lock_mask; /* nlocks - 1 when nlocks > 0, unused otherwise */
 	mm_mutex_t *locks;
 
 	mm_lf_stack_t freelist;
