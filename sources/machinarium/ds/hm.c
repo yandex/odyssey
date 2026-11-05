@@ -10,41 +10,28 @@
 
 #define HM_LOCK_AT(locks, i) mm_mutex_padded_at((mm_mutex_padded_t *)(locks), i)
 
-static size_t adjust_to_prime(size_t sz)
+static size_t adjust_to_pow2(size_t sz)
 {
-	static size_t primes[] = {
-		3,	 7,	  17,	   23,	    29,	     37,      47,
-		59,	 71,	  89,	   107,	    131,     163,     197,
-		239,	 293,	  353,	   431,	    521,     631,     761,
-		919,	 1103,	  1327,	   1597,    1931,    2333,    2801,
-		3371,	 4049,	  4861,	   5839,    7013,    8419,    10103,
-		12143,	 14591,	  17519,   21023,   25229,   30293,   36353,
-		43627,	 52361,	  62851,   75431,   90523,   108631,  130363,
-		156437,	 187751,  225307,  270371,  324449,  389357,  467237,
-		560689,	 672827,  807403,  968897,  1162687, 1395263, 1674319,
-		2009191, 2411033, 2893249, 3471899, 4166287, 4999559, 5999471,
-		7199369
-	};
-
-	size_t np = sizeof(primes) / sizeof(size_t);
-
-	for (size_t i = 0; i < np; ++i) {
-		if (primes[i] >= sz) {
-			return primes[i];
-		}
+	if (sz < 8) {
+		return 8;
 	}
 
-	return primes[np - 1];
+	size_t p = 1;
+	while (p < sz) {
+		p <<= 1;
+	}
+
+	return p;
 }
 
 static size_t bucket_idx(mm_hashmap_t *hm, mm_hash_t hash)
 {
-	return hash % hm->nbuckets;
+	return hash & hm->bucket_mask;
 }
 
 static size_t lock_idx(mm_hashmap_t *hm, size_t bucket_idx)
 {
-	return bucket_idx % hm->nlocks;
+	return bucket_idx & hm->lock_mask;
 }
 
 static inline void bucket_lock(mm_hashmap_bucket_t *b)
@@ -180,32 +167,27 @@ static mm_hashmap_kvp_t *kvp_create(mm_hashmap_t *hm, mm_hash_t hash,
 	return kvp;
 }
 
-mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
-				size_t valsz, mm_hm_key_cmp_fn kcmp,
-				mm_hm_key_hash_fn khash,
-				mm_hm_key_dtor_fn kdtor,
-				mm_hm_value_dtor_fn vdtor,
-				mm_hm_key_copy_fn kcopy, size_t nfree_max)
+int mm_hashmap_init(mm_hashmap_t *hm, const mm_hashmap_ctl_t *ctl, int flags)
 {
-	nbuckets = adjust_to_prime(nbuckets);
+	if (ctl == NULL || ctl->nbuckets == 0 || ctl->keysz == 0 ||
+	    ctl->kcmp == NULL || ctl->khash == NULL) {
+		return -1;
+	}
+
+	size_t nbuckets = adjust_to_pow2(ctl->nbuckets);
+	size_t nlocks = (flags & MM_HM_NLOCKS) ? ctl->nlocks : 0;
 
 	if (nlocks > 1) {
-		nlocks = adjust_to_prime(nlocks);
+		nlocks = adjust_to_pow2(nlocks);
 	}
 
 	if (nlocks > nbuckets) {
 		nlocks = nbuckets;
 	}
 
-	mm_hashmap_t *hm = mm_malloc(sizeof(mm_hashmap_t));
-	if (hm == NULL) {
-		return NULL;
-	}
-
 	hm->buckets = mm_malloc(sizeof(mm_hashmap_bucket_t) * nbuckets);
 	if (hm->buckets == NULL) {
-		mm_free(hm);
-		return NULL;
+		return -1;
 	}
 
 	if (nlocks > 0) {
@@ -214,22 +196,24 @@ mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
 					  MM_MUTEX_PADDED_SIZE);
 		if (hm->locks == NULL) {
 			mm_free(hm->buckets);
-			mm_free(hm);
-			return NULL;
+			hm->buckets = NULL;
+			return -1;
 		}
 	} else {
 		hm->locks = NULL;
 	}
 
 	hm->nbuckets = nbuckets;
+	hm->bucket_mask = nbuckets - 1;
 	hm->nlocks = nlocks;
-	hm->keysz = keysz;
-	hm->valsz = valsz;
-	hm->kcmp = kcmp;
-	hm->khash = khash;
-	hm->kdtor = kdtor;
-	hm->vdtor = vdtor;
-	hm->kcopy = kcopy;
+	hm->lock_mask = nlocks > 0 ? nlocks - 1 : 0;
+	hm->keysz = ctl->keysz;
+	hm->valsz = ctl->valsz;
+	hm->kcmp = ctl->kcmp;
+	hm->khash = ctl->khash;
+	hm->kdtor = (flags & MM_HM_KEYDTOR) ? ctl->kdtor : NULL;
+	hm->vdtor = (flags & MM_HM_VALDTOR) ? ctl->vdtor : NULL;
+	hm->kcopy = (flags & MM_HM_KEYCOPY) ? ctl->kcopy : NULL;
 
 	hm->keyoff = alignsz(sizeof(mm_hashmap_kvp_t));
 	hm->valoff = alignsz(hm->keyoff + hm->keysz);
@@ -238,9 +222,27 @@ mm_hashmap_t *mm_hashmap_create(size_t nbuckets, size_t nlocks, size_t keysz,
 	mm_lf_stack_init(&hm->freelist);
 
 	atomic_init(&hm->nfree, 0);
-	hm->nfree_max = nfree_max != 0 ? nfree_max : nbuckets;
+	hm->nfree_max = (flags & MM_HM_NFREE_MAX) ? ctl->nfree_max : 0;
+	if (hm->nfree_max == 0) {
+		hm->nfree_max = nbuckets;
+	}
 	init_locks(hm);
 	init_buckets(hm);
+
+	return 0;
+}
+
+mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags)
+{
+	mm_hashmap_t *hm = mm_malloc(sizeof(mm_hashmap_t));
+	if (hm == NULL) {
+		return NULL;
+	}
+
+	if (mm_hashmap_init(hm, ctl, flags) == -1) {
+		mm_free(hm);
+		return NULL;
+	}
 
 	return hm;
 }
@@ -277,12 +279,8 @@ void mm_hashmap_clear(mm_hashmap_t *hm)
 	}
 }
 
-void mm_hashmap_free(mm_hashmap_t *hm)
+void mm_hashmap_destroy(mm_hashmap_t *hm)
 {
-	if (hm == NULL) {
-		return;
-	}
-
 	mm_hashmap_clear(hm);
 
 	mm_lf_stack_entry_t *e;
@@ -298,6 +296,15 @@ void mm_hashmap_free(mm_hashmap_t *hm)
 
 	mm_free(hm->locks);
 	mm_free(hm->buckets);
+}
+
+void mm_hashmap_free(mm_hashmap_t *hm)
+{
+	if (hm == NULL) {
+		return;
+	}
+
+	mm_hashmap_destroy(hm);
 	mm_free(hm);
 }
 

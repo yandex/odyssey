@@ -1386,14 +1386,19 @@ error:
 static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 						      void **argv)
 {
-	mm_hashmap_t *hm = server->prep_stmts;
+	od_server_pstmt_map_t *map = server->prep_stmts;
+	if (map == NULL) {
+		/* server without reserved prepared statements */
+		return 0;
+	}
 
 	void *eargv[2] = {
 		argv[0],
 		(void *)server,
 	};
 
-	int rc = mm_hashmap_foreach(hm, show_server_pstmt_cb_internal, eargv);
+	int rc = mm_hashmap_foreach(&map->hm, show_server_pstmt_cb_internal,
+				    eargv);
 
 	return rc;
 }
@@ -2689,7 +2694,7 @@ static inline int od_console_pause(od_client_t *client, machine_msg_t *stream)
 {
 	od_instance_t *instance = client->global->instance;
 
-	od_log(&instance->logger, "pause", client, NULL, "global pause is on");
+	od_log(&instance->logger, client, NULL, "global pause is on");
 
 	od_global_pause(client->global);
 
@@ -2700,7 +2705,7 @@ static inline int od_console_resume(od_client_t *client, machine_msg_t *stream)
 {
 	od_instance_t *instance = client->global->instance;
 
-	od_log(&instance->logger, "pause", client, NULL, "global pause is off");
+	od_log(&instance->logger, client, NULL, "global pause is off");
 
 	od_global_resume(client->global);
 
@@ -2728,7 +2733,7 @@ static inline int od_console_load(od_client_t *client, machine_msg_t *stream,
 #ifdef ENABLE_INJECTION_POINTS
 	od_instance_t *instance = client->global->instance;
 
-	od_log(&instance->logger, "console", NULL, NULL, "LOAD %s", name);
+	od_log(&instance->logger, NULL, NULL, "LOAD %s", name);
 	od_injection_load(name);
 
 	return kiwi_be_write_complete(stream, "LOAD", 5);
@@ -2745,14 +2750,13 @@ static inline int od_console_reload(od_client_t *client, machine_msg_t *stream)
 {
 	od_instance_t *instance = client->global->instance;
 
-	od_log(&instance->logger, "console", NULL, NULL,
-	       "RELOAD command received");
+	od_log(&instance->logger, NULL, NULL, "RELOAD command received");
 
 	/* send reload request to system thread and wait for completion */
 	od_system_t *system = client->global->system;
 	mm_wait_flag_t *done = mm_wait_flag_create();
 	if (done == NULL) {
-		od_error(&instance->logger, "console", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "failed to create wait flag for reload");
 		return -1;
 	}
@@ -2760,7 +2764,7 @@ static inline int od_console_reload(od_client_t *client, machine_msg_t *stream)
 	int rc = od_system_send_msg(system, OD_MSG_RELOAD, done);
 	if (rc != 0) {
 		mm_wait_flag_destroy(done);
-		od_error(&instance->logger, "console", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "failed to send reload request to system thread");
 		return -1;
 	}
@@ -2776,13 +2780,13 @@ static inline int od_console_gc(od_client_t *client, machine_msg_t *stream)
 {
 	od_instance_t *instance = client->global->instance;
 
-	od_log(&instance->logger, "console", NULL, NULL, "GC command received");
+	od_log(&instance->logger, NULL, NULL, "GC command received");
 
 	/* send GC request to system thread and wait for completion */
 	od_system_t *system = client->global->system;
 	mm_wait_flag_t *done = mm_wait_flag_create();
 	if (done == NULL) {
-		od_error(&instance->logger, "console", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "failed to create wait flag for GC");
 		return -1;
 	}
@@ -2790,7 +2794,7 @@ static inline int od_console_gc(od_client_t *client, machine_msg_t *stream)
 	int rc = od_system_send_msg(system, OD_MSG_GC, done);
 	if (rc != 0) {
 		mm_wait_flag_destroy(done);
-		od_error(&instance->logger, "console", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "failed to send GC request to system thread");
 		return -1;
 	}
@@ -2883,15 +2887,14 @@ od_console_alter_system_done(od_client_t *client, machine_msg_t *stream,
 
 	if (od_system_alter_system(client->global, key, line, err,
 				   sizeof(err)) != 0) {
-		od_error(&instance->logger, "console", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "alter system %s failed: %s", desc, err);
 		od_frontend_errorf(client, stream, KIWI_IO_ERROR,
 				   "could not update autoconf file: %s", err);
 		return 0;
 	}
 
-	od_log(&instance->logger, "console", client, NULL, "alter system: %s",
-	       desc);
+	od_log(&instance->logger, client, NULL, "alter system: %s", desc);
 
 	if (field != NULL && !field->reloadable &&
 	    od_console_alter_system_restart_notice(stream, field) !=
@@ -2985,7 +2988,7 @@ int od_console_query(od_client_t *client, od_tuple_table_slot_t *tts,
 	rc = kiwi_be_read_query(query_data, query_data_size, &query,
 				&query_len);
 	if (rc == NOT_OK_RESPONSE) {
-		od_error(&instance->logger, "console", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "bad console command");
 		msg = od_frontend_errorf(client, stream, KIWI_SYNTAX_ERROR,
 					 "bad console command");
@@ -3000,8 +3003,8 @@ int od_console_query(od_client_t *client, od_tuple_table_slot_t *tts,
 	    od_log_sampling_hit(client->rule->log_query_sampling_set ?
 					client->rule->log_query_sampling :
 					instance->config.log_query_sampling)) {
-		od_debug(&instance->logger, "console", client, NULL, "%.*s",
-			 query_len, query);
+		od_debug(&instance->logger, client, NULL, "%.*s", query_len,
+			 query);
 	}
 
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
@@ -3009,7 +3012,7 @@ int od_console_query(od_client_t *client, od_tuple_table_slot_t *tts,
 	od_console_node_t *ast = od_console_parse(
 		query, query_len - 1, arena, od_console_error_cb, &parse_err);
 	if (ast == NULL) {
-		od_error(&instance->logger, "console", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "console command error: %.*s", query_len - 1, query);
 		if (parse_err.msg[0] != '\0') {
 			msg = od_frontend_errorf_pos(
@@ -3146,7 +3149,7 @@ int od_console_query(od_client_t *client, od_tuple_table_slot_t *tts,
 	return 0;
 
 incorrect_role:
-	od_error(&instance->logger, "console", client, NULL,
+	od_error(&instance->logger, client, NULL,
 		 "Unsuitable user role to emit console command");
 	msg = od_frontend_errorf(
 		client, stream, KIWI_INSUFFICIENT_PRIVILEGE,
@@ -3158,8 +3161,8 @@ incorrect_role:
 	return 0;
 
 bad_query:
-	od_error(&instance->logger, "console", client, NULL,
-		 "console command error: %.*s", query_len, query);
+	od_error(&instance->logger, client, NULL, "console command error: %.*s",
+		 query_len, query);
 
 	msg = od_frontend_errorf(client, stream, KIWI_SYNTAX_ERROR,
 				 "console command error: %.*s", query_len,

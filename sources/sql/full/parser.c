@@ -54,7 +54,7 @@ full_parse_oom_handler(void)
 	if (yyext->error_cb)
 		yyext->error_cb("out of memory", yyext->error_cb_userdata);
 
-	longjmp(yyext->error_jmp, 1);
+	mm_longjmp(yyext->error_jmp, 1);
 }
 
 
@@ -81,7 +81,7 @@ od_sql_full_raw_parse(const char *str,
 	yyextra.error_cb = error_cb;
 	yyextra.error_cb_userdata = error_userdata;
 
-	if (setjmp(yyextra.error_jmp) != 0)
+	if (mm_setjmp(yyextra.error_jmp) != 0)
 	{
 		/*
 		 * Syntax error or out of memory.  The scanner may not have been
@@ -326,6 +326,9 @@ base_yylex(BASE_YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 					scanner_yyerror("UESCAPE must be followed by a simple string literal",
 									yyscanner);
 
+				if (cur_token == UIDENT)
+					lvalp->core_yystype.identifier.end_location =
+						*llocp + strlen(yyextra->core_yy_extra.scanbuf + *llocp);
 				escstr = yyextra->lookahead_yylval.str;
 				if (strlen(escstr) != 1 || !check_uescapechar(escstr[0]))
 					scanner_yyerror("invalid Unicode escape character",
@@ -335,7 +338,7 @@ base_yylex(BASE_YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 				*llocp = cur_yylloc;
 
 				/* Apply Unicode conversion */
-				lvalp->core_yystype.str =
+				lvalp->core_yystype.identifier.str =
 					str_udeescape(lvalp->core_yystype.str,
 								  escstr[0],
 								  *llocp,
@@ -351,7 +354,7 @@ base_yylex(BASE_YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 			else
 			{
 				/* No UESCAPE, so convert using default escape character */
-				lvalp->core_yystype.str =
+				lvalp->core_yystype.identifier.str =
 					str_udeescape(lvalp->core_yystype.str,
 								  '\\',
 								  *llocp,

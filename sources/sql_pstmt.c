@@ -19,6 +19,7 @@
 #include <io.h>
 #include <pstmt.h>
 #include <sql_pstmt.h>
+#include <analyze.h>
 #include <sql/full/parser.h>
 #include <wait_event.h>
 
@@ -127,13 +128,15 @@ od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
 {
 	if (map->hm == NULL) {
 		/* maps are owned by one client or server - no locks needed */
-		map->hm = mm_hashmap_create(64, 0 /* nlocks */, sizeof(char *),
-					    sizeof(od_sql_pstmt_t *), name_cmp,
-					    name_hash, NULL /* key dtor */,
-					    NULL /* value dtor */,
-					    NULL /* key copy */,
-					    0 /* nfree_max: default, capped
-					       * at nbuckets */);
+		mm_hashmap_ctl_t ctl = {
+			.nbuckets = 64,
+			.keysz = sizeof(char *),
+			.valsz = sizeof(od_sql_pstmt_t *),
+			.kcmp = name_cmp,
+			.khash = name_hash,
+		};
+
+		map->hm = mm_hashmap_create(&ctl, 0);
 		if (map->hm == NULL) {
 			return NULL;
 		}
@@ -259,36 +262,6 @@ void od_sql_pstmt_query_reset(od_sql_pstmt_query_t *q)
 	od_free(q->ops);
 
 	memset(q, 0, sizeof(od_sql_pstmt_query_t));
-}
-
-/* the prepared statement a statement creates, executes or deallocates */
-static const char *stmt_pstmt_name(Node *node)
-{
-	/* EXPLAIN [ANALYZE] CREATE TABLE ... AS EXECUTE nests two levels */
-	while (node != NULL &&
-	       (IsA(node, ExplainStmt) || IsA(node, CreateTableAsStmt))) {
-		if (IsA(node, ExplainStmt)) {
-			node = castNode(ExplainStmt, node)->query;
-		} else {
-			node = castNode(CreateTableAsStmt, node)->query;
-		}
-	}
-
-	if (node == NULL) {
-		return NULL;
-	}
-
-	if (IsA(node, PrepareStmt)) {
-		return castNode(PrepareStmt, node)->name;
-	}
-	if (IsA(node, ExecuteStmt)) {
-		return castNode(ExecuteStmt, node)->name;
-	}
-	if (IsA(node, DeallocateStmt)) {
-		return castNode(DeallocateStmt, node)->name;
-	}
-
-	return NULL;
 }
 
 static int is_reserved_name(const char *name)
@@ -562,9 +535,9 @@ typedef char sqlstate_t[6];
  * sends count pipelined queries and waits for all of them, ignoring
  * errors; errors[i] is the SQLSTATE of query i, empty if it succeeded
  */
-static int run_service_queries(od_server_t *server, char *context,
-			       machine_msg_t *stream, int count,
-			       sqlstate_t *errors, uint32_t timeout_ms)
+static int run_service_queries(od_server_t *server, machine_msg_t *stream,
+			       int count, sqlstate_t *errors,
+			       uint32_t timeout_ms)
 {
 	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
 	int rc = od_write2(&server->io, stream, timeout_ms);
@@ -591,7 +564,7 @@ static int run_service_queries(od_server_t *server, char *context,
 
 			if (type == KIWI_BE_ERROR_RESPONSE) {
 				/* logs the error and updates server flags */
-				od_backend_error(server, context, data, size);
+				od_backend_error(server, data, size);
 
 				kiwi_fe_error_t error;
 				if (kiwi_fe_read_error(data, size, &error) ==
@@ -627,7 +600,7 @@ typedef struct {
 
 int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 			od_sql_pstmt_server_t *srv, od_server_t *server,
-			char *context, uint32_t timeout_ms)
+			uint32_t timeout_ms)
 {
 	if (srv->unknown) {
 		return 1;
@@ -685,7 +658,7 @@ int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 		stream = msg;
 		steps[count++] = (attach_step_t){ own, 0 };
 
-		od_gdebug(context, server->client, server,
+		od_gdebug(server->client, server,
 			  "deploy prepared statement \"%s\"", own->name);
 	}
 
@@ -694,8 +667,7 @@ int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 		goto out;
 	}
 
-	rc = run_service_queries(server, context, stream, count, errors,
-				 timeout_ms);
+	rc = run_service_queries(server, stream, count, errors, timeout_ms);
 	stream = NULL;
 	if (rc != 0) {
 		goto out;
@@ -714,7 +686,7 @@ int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 				/* deallocated now, or already gone */
 				od_sql_pstmt_map_remove(&srv->stmts, e->name);
 			} else {
-				od_glog(context, server->client, server,
+				od_glog(server->client, server,
 					"failed to deallocate prepared statement \"%s\" (%s)",
 					e->name, code);
 				unknown_state = 1;
@@ -737,7 +709,7 @@ int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 			 * the backend holds a statement under this name that
 			 * odyssey does not know about
 			 */
-			od_glog(context, server->client, server,
+			od_glog(server->client, server,
 				"prepared statement \"%s\" already exists on the server",
 				e->name);
 			unknown_state = 1;
@@ -749,7 +721,7 @@ int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 		 * table was dropped); forget it, so later EXECUTE reports
 		 * that it does not exist instead of retrying on every attach
 		 */
-		od_glog(context, server->client, server,
+		od_glog(server->client, server,
 			"failed to restore prepared statement \"%s\" on the server (%s), dropping it",
 			e->name, code);
 		od_sql_pstmt_map_remove(&client->stmts, e->name);

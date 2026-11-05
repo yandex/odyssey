@@ -23,8 +23,8 @@ Selects the SQL parsing mode:
 * `disabled` — queries are not parsed at all.
 * `minimal` — a lightweight parser recognizes a small subset of
   statements (`SHOW`, `SET`, `BEGIN`, `DEALLOCATE`, `DISCARD`,
-  `UNLISTEN`). All other statements, including plain `SELECT`, are not
-  classified and are treated as read-write.
+  `UNLISTEN`, `PREPARE`, `EXECUTE`). All other statements, including plain
+  `SELECT`, are not classified and are treated as read-write.
 * `full` — the complete PostgreSQL grammar is used. Queries which can
   not be parsed or can not be classified as read-only require the
   primary.
@@ -41,6 +41,15 @@ When `full` is set globally, clients without `auto_route_ro_on_standby`
 needed.
 
 `query_parsing_mode full`
+
+`SET odyssey.parser_mode = 'full'` or `'mini'` overrides simple-query parsing
+for this session. It requires `virtual_processing` and query parsing to be enabled.
+`SHOW odyssey.parser_mode` reports the effective mode;
+`SET odyssey.parser_mode = DEFAULT` restores the configuration.
+
+`disabled` is only available through `query_parsing_mode`. With parsing disabled,
+virtual `SET`/`SHOW` reach PostgreSQL. PostgreSQL may accept `SET odyssey.parser_mode`
+as a custom GUC, but it cannot enable Odyssey's parser.
 
 ## **query_parsing_max_query_len**
 

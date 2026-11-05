@@ -10,6 +10,7 @@
 %option noyyfree
 %option prefix="od_sql_minimal_yy"
 %option extra-type="od_sql_minimal_parse_ctx_t *"
+%x TAIL
 
 %top{
 /* flex-generated code triggers sign-compare warnings */
@@ -44,7 +45,7 @@
 		if (_ctx->error_cb) { \
 			_ctx->error_cb(msg, _ctx->error_cb_userdata); \
 		} \
-		longjmp(_ctx->fatal_jmp, 1); \
+		mm_longjmp(_ctx->fatal_jmp, 1); \
 	} \
 	fprintf(stderr, "%s\n", msg); \
 	od_assert(0); \
@@ -53,8 +54,21 @@
 
 %{
 
-#define SET_YYLLOC() \
-    (*yylloc = (int)(yytext - yyextra->scanbuf))
+#define SET_YYLLOC() do { \
+    yylloc->start = (int)(yytext - yyextra->scanbuf); \
+    yylloc->end = yylloc->start + (int)yyleng; \
+} while (0)
+
+static void tail_touch(od_sql_minimal_parse_ctx_t *ctx, int start, int end,
+                      int has_token)
+{
+    if (ctx->tail_location.start < 0) ctx->tail_location.start = start;
+    ctx->tail_location.end = end;
+    ctx->tail_has_token |= has_token;
+}
+
+#define TAIL_TOUCH(token) \
+    tail_touch(yyextra, yylloc->start, yylloc->end, token)
 
 void *od_sql_minimal_yyalloc(yy_size_t bytes, yyscan_t yyscanner);
 void *od_sql_minimal_yyrealloc(void *ptr, yy_size_t bytes, yyscan_t yyscanner);
@@ -72,19 +86,99 @@ INTEGER     -?{DIGIT}+
 
 [ \t\r\n]+   { SET_YYLLOC(); /* skip */ }
 "--".*       { SET_YYLLOC(); /* skip line comment */ }
+<TAIL>[ \t\r\n\f]+ { SET_YYLLOC(); }
+<TAIL>"--"[^\n]* {
+    SET_YYLLOC();
+    TAIL_TOUCH(0);
+}
 "/*"         { SET_YYLLOC();
-               int c;
-               while ((c = input(yyscanner)) != 0) {
-                   if (c == '*') {
-                       int next = input(yyscanner);
-                       if (next == 0) break;
-                       if (next == '/') goto comment_done;
-                       unput(next);
-                   }
+               int depth = 1, previous = 0, c;
+               while (depth && (c = input(yyscanner)) != 0) {
+                   if (previous == '/' && c == '*') { depth++; previous = 0; }
+                   else if (previous == '*' && c == '/') { depth--; previous = 0; }
+                   else previous = c;
                }
-               comment_done:;
+               if (depth) return ERROR_TOKEN;
                /* skip block comment */
              }
+
+<TAIL>"/*" {
+    SET_YYLLOC();
+    int depth = 1, previous = 0, c;
+    while (depth && (c = input(yyscanner)) != 0) {
+        yylloc->end++;
+        if (previous == '/' && c == '*') { depth++; previous = 0; }
+        else if (previous == '*' && c == '/') { depth--; previous = 0; }
+        else previous = c;
+    }
+    if (depth) return ERROR_TOKEN;
+    TAIL_TOUCH(0);
+}
+
+<TAIL>[eE]\'([^\'\\]|\\.|\'\')*\' {
+    SET_YYLLOC(); TAIL_TOUCH(1);
+}
+<TAIL>\'([^\']|\'\')*\' {
+    SET_YYLLOC(); TAIL_TOUCH(1);
+}
+<TAIL>\"([^\"]|\"\")*\" {
+    SET_YYLLOC(); TAIL_TOUCH(1);
+}
+<TAIL>\$({IDENT_START}[A-Za-z0-9_\200-\377]*)?\$ {
+    SET_YYLLOC();
+    size_t length = (size_t)yyleng;
+    char *delimiter = od_linear_alloc_alloc(yyextra->arena, length, 0);
+    if (delimiter == NULL) return ERROR_TOKEN;
+    memcpy(delimiter, yytext, length);
+    size_t matched = 0;
+    int c;
+    while ((c = input(yyscanner)) != 0) {
+        yylloc->end++;
+        if ((unsigned char)c == (unsigned char)delimiter[matched]) matched++;
+        else matched = c == '$' ? 1 : 0;
+        if (matched == length) break;
+    }
+    if (matched != length) return ERROR_TOKEN;
+    TAIL_TOUCH(1);
+}
+<TAIL>"(" {
+    SET_YYLLOC(); yyextra->tail_depth++; TAIL_TOUCH(1);
+}
+<TAIL>")" {
+    SET_YYLLOC();
+    if (yyextra->tail_depth == 0) {
+        yyless(0); BEGIN(INITIAL);
+        if (yyextra->tail_has_token) {
+            *yylloc = yyextra->tail_location;
+            return RAW_SQL;
+        }
+    } else {
+        yyextra->tail_depth--; TAIL_TOUCH(1);
+    }
+}
+<TAIL>";" {
+    SET_YYLLOC();
+    if (yyextra->tail_depth == 0) {
+        yyless(0); BEGIN(INITIAL);
+        if (yyextra->tail_has_token) {
+            *yylloc = yyextra->tail_location;
+            return RAW_SQL;
+        }
+    } else TAIL_TOUCH(1);
+}
+<TAIL><<EOF>> {
+    BEGIN(INITIAL);
+    if (yyextra->tail_has_token) {
+        *yylloc = yyextra->tail_location;
+        return RAW_SQL;
+    }
+    return 0;
+}
+<TAIL>{IDENT_START}[A-Za-z0-9_$\200-\377]* {
+    SET_YYLLOC(); TAIL_TOUCH(1);
+}
+<TAIL>[^ \t\r\n\f'"();$/A-Za-z0-9_\200-\377-]+ { SET_YYLLOC(); TAIL_TOUCH(1); }
+<TAIL>. { SET_YYLLOC(); TAIL_TOUCH(1); }
 
 ";"          { SET_YYLLOC(); return ';'; }
 "="          { SET_YYLLOC(); return '='; }
@@ -147,24 +241,25 @@ INTEGER     -?{DIGIT}+
 	SET_YYLLOC();
 
 	int tok = od_sql_minimal_keyword_lookup(yytext, (size_t)yyleng);
-	if (tok != 0) {
-		return tok;
-	}
-
 	od_linear_alloc_t *_arena = yyextra->arena;
 	char *s = od_linear_alloc_alloc(_arena, (size_t)yyleng + 1, 0);
 	if (s == NULL) {
 		return ERROR_TOKEN;
 	}
 
+	/* IDENT is pure ASCII, no need for the locale-aware tolower() */
 	for (int _i = 0; _i < yyleng; _i++) {
-		s[_i] = (char)tolower(yytext[_i]);
+		char _c = yytext[_i];
+		if (_c >= 'A' && _c <= 'Z') {
+			_c += 'a' - 'A';
+		}
+		s[_i] = _c;
 	}
 
 	s[yyleng] = '\0';
 	yylval->str = s;
 
-	return IDENT;
+	return tok != 0 ? tok : IDENT;
 }
 
 . {
@@ -173,6 +268,15 @@ INTEGER     -?{DIGIT}+
 }
 
 %%
+
+void od_sql_minimal_scan_tail(yyscan_t yyscanner)
+{
+    struct yyguts_t *yyg = (struct yyguts_t *)yyscanner;
+    yyextra->tail_location = (od_sql_location_t){ -1, -1 };
+    yyextra->tail_has_token = 0;
+    yyextra->tail_depth = 0;
+    BEGIN(TAIL);
+}
 
 void *
 od_sql_minimal_yyalloc(yy_size_t bytes, yyscan_t yyscanner)

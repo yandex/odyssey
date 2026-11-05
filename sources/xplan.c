@@ -3,6 +3,7 @@
 #include <kiwi/kiwi.h>
 
 #include <pstmt.h>
+#include <analyze.h>
 #include <server.h>
 #include <client.h>
 #include <global.h>
@@ -178,23 +179,6 @@ static inline machine_msg_t *pstmt_already_exists_msg(const char *name)
 			      "prepared statement \"%s\" already exists", name);
 
 	return kiwi_be_write_error(NULL, KIWI_DUPLICATE_PSTATEMENT, buf, len);
-}
-
-static inline machine_msg_t *pstmt_does_not_exists_msg(const char *name)
-{
-	char buf[OD_QRY_MAX_SZ];
-	int len;
-	if (name[0] != '\0') {
-		len = od_snprintf(buf, sizeof(buf),
-				  "prepared statement \"%s\" does not exist",
-				  name);
-	} else {
-		len = od_snprintf(buf, sizeof(buf),
-				  "unnamed prepared statement does not exist");
-	}
-
-	return kiwi_be_write_error(NULL, KIWI_INVALID_SQL_STATEMENT_NAME, buf,
-				   len);
 }
 
 static void plan_entry_destroy(void *a)
@@ -558,6 +542,7 @@ void od_xplan_clear(od_xplan_t *xp)
 	/* TODO: do not ignore error? */
 	mm_vector_clear(&xp->entries);
 	mm_vector_shrink_to_fit(&xp->entries);
+	xp->errored = 0;
 }
 
 static od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp, od_client_t *client,
@@ -777,6 +762,15 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		return xplan_append_virtual_error_response(xp, msg, vresp);
 	}
 
+	machine_msg_t *error;
+	st = od_sql_analyze(client, desc.data, strlen(desc.data), &error);
+	if (st == OD_SKIP) {
+		return xplan_append_virtual_error_response(xp, msg, error);
+	}
+	if (st != OD_OK) {
+		return st;
+	}
+
 	od_global_pstmt_map_t *global_pstmts =
 		od_instance_get_pstmts_map(instance);
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
@@ -842,13 +836,15 @@ static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
 	 */
 	od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
 	if (pstmt == NULL) {
-		machine_msg_t *vresp = pstmt_does_not_exists_msg(pstmt_name);
-		if (vresp == NULL) {
-			return OD_EOOM;
-		}
-
-		/* plan entry will take the additional ref to pstmt */
-		return xplan_append_virtual_error_response(xp, msg, vresp);
+		/*
+		 * the client never parsed this pstmt in its session, and
+		 * the backend only knows odyssey_pstmt_N names - forward
+		 * the original message unmodified and let the server produce
+		 * the appropriate ErrorResponse
+		 */
+		xp->errored = 1;
+		return xplan_append_fwd_no_delta(xp, msg,
+						 NULL /* no rewrite */);
 	}
 
 	/* will create xplan entry with ref if needed */
@@ -963,12 +959,16 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 	/* no ref to pstmt: already owned by client map or some plan entry */
 	od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
 	if (pstmt == NULL) {
-		machine_msg_t *vresp = pstmt_does_not_exists_msg(pstmt_name);
-		if (vresp == NULL) {
-			return OD_EOOM;
-		}
-
-		return xplan_append_virtual_error_response(xp, msg, vresp);
+		/*
+		 * the client never parsed this pstmt in its session, and
+		 * the backend only knows odyssey_pstmt_N names - forward
+		 * the original Bind unmodified and let the server produce
+		 * the appropriate ErrorResponse (and the real ReadyForQuery
+		 * tx status)
+		 */
+		xp->errored = 1;
+		return xplan_append_fwd_no_delta(xp, msg,
+						 NULL /* no rewrite */);
 	}
 
 	int pstmt_start_offset = kiwi_be_bind_opname_offset(data, size);
@@ -1035,6 +1035,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 		 * portal not found - just forward, let the server
 		 * produce the appropriate ErrorResponse
 		 */
+		xp->errored = 1;
 		return xplan_append_fwd_no_delta(xp, msg,
 						 NULL /* no rewrite */);
 	}
@@ -1061,7 +1062,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 	 */
 	const od_query_ctx_t *qctx = &pstmt->query_ctx;
 	if (od_query_ctx_has(qctx, OD_QUERY_CTX_IS_DISCARD_ALL)) {
-		od_debug(&instance->logger, "rewrite execute", client, server,
+		od_debug(&instance->logger, client, server,
 			 "DISCARD ALL detected via portal, invalidate caches");
 
 		return xplan_append_fwd(
@@ -1071,7 +1072,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 
 	if (od_query_ctx_has(qctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL)) {
 		od_debug(
-			&instance->logger, "rewrite execute", client, server,
+			&instance->logger, client, server,
 			"DEALLOCATE ALL detected via portal, invalidate client caches");
 		return xplan_append_virtual_command_complete(
 			xp, msg, OD_XPLAN_DELTA_REMOVE_CLIENT_ALL, NULL, NULL,
@@ -1080,7 +1081,7 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 
 	/* DEALLOCATE name */
 	if (od_query_ctx_has(qctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME)) {
-		od_debug(&instance->logger, "rewrite execute", client, server,
+		od_debug(&instance->logger, client, server,
 			 "DEALLOCATE '%s' detected via portal", qctx->s1);
 		/*
 		 * TODO: PG returns ERROR 26000 if the statement does not
@@ -1228,10 +1229,12 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 		}
 
 		od_xplan_entry_t *last = mm_vector_back(&xp->entries);
-		if (last->type == OD_XPLAN_VIRTUAL_ERROR_RESPONSE) {
+		if (last->type == OD_XPLAN_VIRTUAL_ERROR_RESPONSE ||
+		    xp->errored) {
 			/*
-			 * last planned was error response
-			 * now skip all until flush/sync (which is last in xbuf)
+			 * last planned was (or will be) an error response -
+			 * now skip all until flush/sync (which is last in
+			 * xbuf), the backend discards them anyway
 			 */
 			break;
 		}
@@ -1279,6 +1282,17 @@ od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay)
 	od_route_t *route = client->route;
 	od_rule_t *rule = route->rule;
 	int reserve_prepared = rule->pool->reserve_prepared_statement;
+
+	if (server->is_error_tx) {
+		/*
+		 * the backend is in a failed transaction: it will reject
+		 * all commands until ROLLBACK anyway, so there is no point
+		 * in planning - forward everything as-is and let the backend
+		 * produce the real errors (25P02) and the real ReadyForQuery
+		 * tx status
+		 */
+		return plan_simple(xp, relay);
+	}
 
 	if (!reserve_prepared) {
 		return plan_simple(xp, relay);
@@ -1482,15 +1496,15 @@ static od_frontend_status_t run_parse_shadow(od_xplan_entry_t *ps,
 		 * i think this ErrorResponse is nearly impossible on shadow parsing
 		 * but lets handle it, just in case
 		 */
-		od_backend_error(server, "main", machine_msg_data(msg),
+		od_backend_error(server, machine_msg_data(msg),
 				 machine_msg_size(msg));
-		od_error(&instance->logger, "main", client, server,
+		od_error(&instance->logger, client, server,
 			 "run_parse_shadow: ErrorResponse met");
 		status = OD_ESERVER_READ;
 		break;
 	default:
 		od_error(
-			&instance->logger, "main", client, server,
+			&instance->logger, client, server,
 			"run_parse_shadow: unexpected msg type from server '%c'",
 			type);
 		status = OD_ESERVER_READ;
@@ -1533,14 +1547,13 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 			if (type == KIWI_BE_COMMAND_COMPLETE) {
 				const char *command_tag =
 					data + sizeof(kiwi_header_t);
-				od_debug(&instance->logger, "main", client,
-					 server, "%s - %s",
+				od_debug(&instance->logger, client, server,
+					 "%s - %s",
 					 kiwi_be_type_to_string(type),
 					 command_tag);
 			} else {
-				od_debug(&instance->logger, "main", client,
-					 server, "%s",
-					 kiwi_be_type_to_string(type));
+				od_debug(&instance->logger, client, server,
+					 "%s", kiwi_be_type_to_string(type));
 			}
 		}
 
@@ -1552,11 +1565,10 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 			machine_msg_free(msg);
 			break;
 		case KIWI_BE_PARAMETER_STATUS:
-			rc = od_backend_update_parameter(server, "main", data,
-							 size, 0);
+			rc = od_backend_update_parameter(server, data, size, 0);
 			if (rc == -1) {
 				machine_msg_free(msg);
-				od_gerror("main", client, server,
+				od_gerror(client, server,
 					  "can't update parameter");
 				return OD_ESERVER_READ;
 			}
@@ -1579,7 +1591,7 @@ static od_frontend_status_t run_parse(od_xplan_entry_t *ps, od_client_t *client,
 	(void)ps;
 	(void)client;
 
-	return od_stream_server_exact_completes("main", server,
+	return od_stream_server_exact_completes(server,
 						1 /* one complete for parse */,
 						NULL, NULL, timeout_ms,
 						OD_WAIT_STREAM_SERVER_READ);
@@ -1615,7 +1627,7 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 		char buf[256];
 		plan_entry_description(entry, buf, sizeof(buf));
 		od_debug(
-			&instance->logger, "main", client, server,
+			&instance->logger, client, server,
 			"%s entry finished, response type = %c, apply_delta = %d",
 			buf, type, apply_delta);
 	}
@@ -1664,15 +1676,15 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 		size_t left = end - arg.idx;
 
 		status = od_stream_server_exact_completes(
-			"main", server, left, forward_apply_delta_cb, &arg,
-			timeout_ms, OD_WAIT_STREAM_SERVER_READ);
+			server, left, forward_apply_delta_cb, &arg, timeout_ms,
+			OD_WAIT_STREAM_SERVER_READ);
 
 		if (status == OD_COPY_IN_RECEIVED) {
 			machine_msg_t *add =
 				od_relay_get_copy_additional(&client->relay);
 
-			status = od_stream_copy_to_server(
-				"main", client, server, add, timeout_ms);
+			status = od_stream_copy_to_server(client, server, add,
+							  timeout_ms);
 
 			od_relay_set_copy_additional(&client->relay, NULL);
 
@@ -1707,7 +1719,7 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 	 * on ErrorResponse, RFQ is still pending and must be drained
 	 */
 	if (has_sync && server->xproto_err) {
-		status = od_stream_server_sync("main", server, timeout_ms,
+		status = od_stream_server_sync(server, timeout_ms,
 					       OD_WAIT_STREAM_SERVER_READ);
 	}
 
@@ -1827,7 +1839,7 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		if (instance->config.log_debug || rule->log_debug) {
 			char buf[256];
 			plan_entry_description(entry, buf, sizeof(buf));
-			od_debug(&instance->logger, "main", client, server,
+			od_debug(&instance->logger, client, server,
 				 "%s entry finished with status %s", buf,
 				 od_frontend_status_to_str(status));
 		}
@@ -1885,8 +1897,7 @@ static inline void log_plan_debug(od_instance_t *instance, od_xplan_t *xp,
 	}
 
 	pos += od_snprintf(pos, end - pos, ")");
-	od_debug(&instance->logger, "main", client, client->server, "xplan: %s",
-		 msg);
+	od_debug(&instance->logger, client, client->server, "xplan: %s", msg);
 
 	od_free(msg);
 }
@@ -1910,8 +1921,8 @@ static inline void log_srv_send_buf(od_instance_t *instance,
 	}
 
 	pos += od_snprintf(pos, end - pos, ")");
-	od_debug(&instance->logger, "main", client, client->server,
-		 "server buf: %s", msg);
+	od_debug(&instance->logger, client, client->server, "server buf: %s",
+		 msg);
 
 	od_free(msg);
 }
@@ -1937,8 +1948,7 @@ static inline void log_xbuf(od_instance_t *instance, od_client_t *client,
 	}
 
 	pos += od_snprintf(pos, end - pos, ")");
-	od_debug(&instance->logger, "main", client, client->server, "xbuf: %s",
-		 msg);
+	od_debug(&instance->logger, client, client->server, "xbuf: %s", msg);
 
 	od_free(msg);
 }

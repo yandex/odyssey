@@ -100,15 +100,6 @@ static inline int kiwi_be_read_options(kiwi_be_startup_t *su, char *pos,
 	return 0;
 }
 
-#define PG_PROTOCOL(m, n) (((m) << 16) | (n))
-#define PG_PROTOCOL_MAJOR(v) ((int)((v) >> 16))
-#define PG_PROTOCOL_MINOR(v) ((int)((v) & 0x0000ffff))
-#define NEGOTIATE_SSL_CODE PG_PROTOCOL(1234, 5679)
-#define NEGOTIATE_GSS_CODE PG_PROTOCOL(1234, 5680)
-#define CANCEL_REQUEST_CODE PG_PROTOCOL(1234, 5678)
-#define PG_PROTOCOL_LATEST PG_PROTOCOL(3, 0)
-#define PG_PROTOCOL_EARLIEST PG_PROTOCOL(3, 0)
-
 enum {
 	KIWI_STARTUP_READ_OK = 0,
 	KIWI_STARTUP_READ_LEN_ERROR,
@@ -125,9 +116,15 @@ KIWI_API static inline int kiwi_be_read_cancel_request(char **pos,
 	if (kiwi_unlikely(kiwi_read32(&su->key.key_pid, pos, pos_size) == -1)) {
 		return -1;
 	}
-	if (kiwi_unlikely(kiwi_read32(&su->key.key, pos, pos_size) == -1)) {
+	/* PostgreSQL accepts 1..256 bytes here; the stored key must match exactly. */
+	if (kiwi_unlikely(*pos_size == 0 ||
+			  *pos_size > KIWI_CANCEL_KEY_MAX_LEN)) {
 		return -1;
 	}
+	su->key.key_len = *pos_size;
+	memcpy(su->key.key, *pos, *pos_size);
+	*pos += *pos_size;
+	*pos_size = 0;
 	return 0;
 }
 
@@ -168,6 +165,9 @@ KIWI_API static inline int kiwi_be_read_startup(char *data, uint32_t size,
 	switch (version) {
 	/* CancelRequest */
 	case CANCEL_REQUEST_CODE:
+		if (kiwi_unlikely(len != size)) {
+			return KIWI_STARTUP_CANCEL_READ_ERROR;
+		}
 		su->is_cancel = 1;
 		rc = kiwi_be_read_cancel_request(&pos, &pos_size, su);
 		if (rc == -1) {

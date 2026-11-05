@@ -16,6 +16,10 @@ on:
       - "!docker/prom-exporter/**"
       - "!test/prom-exporter/**"
       - "!sources/machinarium/gdb/**"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   async-notification:
     name: async-notification

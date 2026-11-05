@@ -20,7 +20,7 @@ assert_config_error() {
         cat "$test_dir/output.log"
         exit 1
     fi
-    if ! grep -q 'error (config)' "$test_dir/output.log"; then
+    if ! grep -qE 'error \([^)]*\).*config\.conf' "$test_dir/output.log"; then
         echo "Missing config error diagnostic (options: $*)"
         cat "$test_dir/output.log"
         exit 1

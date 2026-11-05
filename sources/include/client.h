@@ -66,10 +66,10 @@ struct od_client {
 	char peer[OD_CLIENT_MAX_PEERLEN];
 
 	/* desc preparet statements ids */
-	mm_hashmap_t *prep_stmt_ids;
+	od_client_stmt_map_t *prep_stmt_ids;
 
 	/* portal name -> *od_pstmt_t (extended protocol portals tracking) */
-	mm_hashmap_t *portals;
+	od_client_stmt_map_t *portals;
 
 	/* passwd from config rule */
 	kiwi_password_t password;
@@ -130,17 +130,19 @@ struct od_client {
 	machine_msg_t *read_msg;
 
 	od_query_ctx_t query_ctx;
+	/* -1 inherits the configured mode. */
+	int parser_mode;
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)
 {
-	client->prep_stmt_ids = od_client_pstmt_hashmap_create();
+	client->prep_stmt_ids = od_client_pstmt_map_create();
 	if (client->prep_stmt_ids == NULL) {
 		return NOT_OK_RESPONSE;
 	}
-	client->portals = od_client_portal_hashmap_create();
+	client->portals = od_client_portal_map_create();
 	if (client->portals == NULL) {
-		od_client_pstmt_hashmap_free(client->prep_stmt_ids);
+		od_client_pstmt_map_free(client->prep_stmt_ids);
 		client->prep_stmt_ids = NULL;
 		return NOT_OK_RESPONSE;
 	}

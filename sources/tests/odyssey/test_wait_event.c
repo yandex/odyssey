@@ -137,6 +137,8 @@ static void test_classes(void)
 	     OD_WAIT_CLASS_RESET);
 	test(od_wait_event_class(OD_WAIT_RESET_SERVER_READ) ==
 	     OD_WAIT_CLASS_RESET);
+	test(od_wait_event_class(OD_WAIT_CANCEL_BACKEND_CONNECT) ==
+	     OD_WAIT_CLASS_CANCEL);
 	test(od_wait_event_class(OD_WAIT_AUTH_PAM) == OD_WAIT_CLASS_AUTH);
 	test(od_wait_event_class(OD_WAIT_AUTH_EXTERNAL) == OD_WAIT_CLASS_AUTH);
 	test(od_wait_event_class(OD_WAIT_AUTH_SERVER_READ) ==

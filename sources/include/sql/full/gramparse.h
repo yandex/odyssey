@@ -1,6 +1,6 @@
 #pragma once
 
-#include <setjmp.h>
+#include <machinarium/setjmp.h>
 #include <sql/full/pg_list.h>
 #include <sql/full/scanner.h>
 #include <sql/full/parser.h>
@@ -178,7 +178,7 @@ typedef struct base_yy_extra_type
 	List	   *parsetree;
 
 	/* error handling */
-	jmp_buf		error_jmp;
+	mm_jmp_buf_t error_jmp;
 	int			error_set;
 	int			had_error;
 	od_sql_full_error_cb_t error_cb;

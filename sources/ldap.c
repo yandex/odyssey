@@ -24,7 +24,7 @@ static od_retcode_t od_ldap_error_report_client(od_client_t *cl, int rc)
 		return OK_RESPONSE;
 	}
 
-	od_gerror("auth", cl, NULL,
+	od_gerror(cl, NULL,
 		  "ldap authentication failed for user \"%s\": %s (%d)",
 		  cl->startup.user.value, ldap_err2string(rc), rc);
 
@@ -66,8 +66,8 @@ od_ldap_change_storage_credentials(od_logger_t *logger,
 	client->ldap_storage_username_len = strlen(lsc->lsc_username);
 	client->ldap_storage_password = lsc->lsc_password;
 	client->ldap_storage_password_len = strlen(lsc->lsc_password);
-	od_debug(logger, "auth_ldap", client, NULL,
-		 "storage_user changed to %s", lsc->lsc_username);
+	od_debug(logger, client, NULL, "storage_user changed to %s",
+		 lsc->lsc_username);
 	return OK_RESPONSE;
 }
 
@@ -81,7 +81,7 @@ int search_storage_credentials(od_logger_t *logger, struct berval **values,
 	int len = ldap_count_values_len(values);
 
 	if (len == 0) {
-		od_error(logger, "auth_ldap", client, NULL,
+		od_error(logger, client, NULL,
 			 "empty search storage credentials result");
 		return LDAP_INSUFFICIENT_ACCESS;
 	}
@@ -99,8 +99,8 @@ int search_storage_credentials(od_logger_t *logger, struct berval **values,
 
 				if (strstr((char *)values[i]->bv_val,
 					   host_db_user)) {
-					od_debug(logger, "auth_ldap", client,
-						 NULL, "matched group %s",
+					od_debug(logger, client, NULL,
+						 "matched group %s",
 						 (char *)values[i]->bv_val);
 					od_ldap_change_storage_credentials(
 						logger, lsc, client);
@@ -110,7 +110,7 @@ int search_storage_credentials(od_logger_t *logger, struct berval **values,
 		}
 	}
 
-	od_error(logger, "auth_ldap", client, NULL,
+	od_error(logger, client, NULL,
 		 "error: route does not match any user attribute");
 
 	return LDAP_INSUFFICIENT_ACCESS;
@@ -352,7 +352,7 @@ static int is_username_valid(od_client_t *client, const char *name)
 		char c = name[i];
 		if (c == '*' || c == '(' || c == ')' || c == '\\' || c == '/') {
 			od_gerror(
-				"auth_ldap", client, NULL,
+				client, NULL,
 				"invalid character in user name for LDAP authentication");
 			return 0;
 		}
@@ -373,7 +373,7 @@ static int init_and_bind(od_instance_t *instance, od_client_t *client,
 
 	int rc = ldap_initialize(conn, endpoint->ldapurl);
 	if (rc != LDAP_SUCCESS) {
-		od_error(&instance->logger, "auth_ldap", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "ldap init failed: %d (%s)", rc, ldap_err2string(rc));
 		goto error;
 	}
@@ -415,7 +415,7 @@ static int init_and_bind(od_instance_t *instance, od_client_t *client,
 	rc = ldap_simple_bind_s(*conn, binddn, passwd);
 	if (rc != LDAP_SUCCESS) {
 		od_error(
-			&instance->logger, "auth_ldap", client, NULL,
+			&instance->logger, client, NULL,
 			"fail to do initial LDAP bind for ldapbinddn \"%s\" on \"%s\": %d (%s)",
 			binddn, endpoint->name, rc, ldap_err2string(rc));
 		goto error;
@@ -494,13 +494,13 @@ static int resolve_user(od_instance_t *instance, LDAP *ldap, od_rule_t *rule,
 
 	int rc = ldap_search_s(ldap, endp->ldapbasedn, LDAP_SCOPE_SUBTREE,
 			       filter, attributes, 0, &search_message);
-	od_debug(&instance->logger, "auth_ldap", client, NULL,
+	od_debug(&instance->logger, client, NULL,
 		 "basedn search entries with filter: %s and attrib %s", filter,
 		 attributes[0]);
 	od_free(filter);
 
 	if (rc != LDAP_SUCCESS) {
-		od_error(&instance->logger, "auth_ldap", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "basedn search failed: %d (%s)", rc,
 			 ldap_err2string(rc));
 		return rc;
@@ -508,7 +508,7 @@ static int resolve_user(od_instance_t *instance, LDAP *ldap, od_rule_t *rule,
 
 	count = ldap_count_entries(ldap, search_message);
 	if (count != 1) {
-		od_error(&instance->logger, "auth_ldap", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "invalid basedn search entries count: %d", count);
 		ldap_msgfree(search_message);
 		return LDAP_INSUFFICIENT_ACCESS;
@@ -519,7 +519,7 @@ static int resolve_user(od_instance_t *instance, LDAP *ldap, od_rule_t *rule,
 	if (dn == NULL) {
 		int err = LDAP_OTHER;
 		ldap_get_option(ldap, LDAP_OPT_ERROR_NUMBER, &err);
-		od_error(&instance->logger, "auth_ldap", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "ldap_get_dn failed: %d (%s)", err,
 			 ldap_err2string(err));
 		ldap_msgfree(search_message);
@@ -587,7 +587,7 @@ static int ldap_auth_impl(od_client_t *client, kiwi_password_t *password)
 	return LDAP_SUCCESS;
 
 error:
-	od_error(&instance->logger, "auth_ldap", client, NULL,
+	od_error(&instance->logger, client, NULL,
 		 "ldap auth failed with code %d (%s)", rc, ldap_err2string(rc));
 
 	if (ldap != NULL) {
@@ -619,7 +619,7 @@ static int resolve_storage_credentials_impl(od_client_t *client,
 	return LDAP_SUCCESS;
 
 error:
-	od_error(&instance->logger, "auth_ldap", client, NULL,
+	od_error(&instance->logger, client, NULL,
 		 "ldap storage crenedtials resolving failed with code %d (%s)",
 		 rc, ldap_err2string(rc));
 
@@ -664,7 +664,7 @@ int od_auth_ldap(od_client_t *client, kiwi_password_t *cl_password)
 						    &arg, NULL, NULL, 0);
 	if (future == NULL) {
 		int err = mm_errno_get();
-		od_error(&instance->logger, "auth_ldap", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "can't submit ldap auth task, errno=%d (%s)", err,
 			 strerror(err));
 		return NOT_OK_RESPONSE;
@@ -672,7 +672,7 @@ int od_auth_ldap(od_client_t *client, kiwi_password_t *cl_password)
 
 	if (mm_thread_pool_wait(future, UINT32_MAX)) {
 		int err = mm_errno_get();
-		od_error(&instance->logger, "auth_ldap", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "ldap auth wait error, errno=%d (%s)", err,
 			 strerror(err));
 		mm_future_unref(future);
@@ -724,7 +724,7 @@ int od_auth_ldap_resolve_storage_credentials(od_client_t *client,
 		&workers, do_resolve_storage_credentials, &arg, NULL, NULL, 0);
 	if (future == NULL) {
 		int err = mm_errno_get();
-		od_error(&instance->logger, "auth_ldap", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "can't submit ldap auth task, errno=%d (%s)", err,
 			 strerror(err));
 		return NOT_OK_RESPONSE;
@@ -732,7 +732,7 @@ int od_auth_ldap_resolve_storage_credentials(od_client_t *client,
 
 	if (mm_thread_pool_wait(future, UINT32_MAX)) {
 		int err = mm_errno_get();
-		od_error(&instance->logger, "auth_ldap", client, NULL,
+		od_error(&instance->logger, client, NULL,
 			 "ldap auth wait error, errno=%d (%s)", err,
 			 strerror(err));
 		mm_future_unref(future);

@@ -65,8 +65,7 @@ static mm_virtual_rbuf_cache_t *get_vrb_cache(void)
 	if (rc) {
 		od_free(cache);
 		tls_vrb_cache = NULL;
-		od_gfatal("readahead", NULL, NULL,
-			  "can't create vrb cache, errno = %d (%s)",
+		od_gfatal(NULL, NULL, "can't create vrb cache, errno = %d (%s)",
 			  machine_errno(), strerror(machine_errno()));
 		return NULL;
 	}

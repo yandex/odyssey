@@ -19,7 +19,15 @@ typedef enum {
 	OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT,
+	OD_SQL_MINIMAL_NODE_TYPE_PREPARE_STMT,
+	OD_SQL_MINIMAL_NODE_TYPE_EXECUTE_STMT,
+	OD_SQL_MINIMAL_NODE_TYPE_EMPTY_STMT,
 } od_sql_minimal_node_tag_t;
+
+typedef struct {
+	int start;
+	int end;
+} od_sql_location_t;
 
 typedef struct od_sql_minimal_node {
 	od_sql_minimal_node_tag_t type;
@@ -45,6 +53,21 @@ typedef struct {
 	char *name;
 	int is_all;
 } od_sql_minimal_deallocate_stmt_t;
+
+typedef struct {
+	od_sql_minimal_node_tag_t type;
+	char *name;
+	od_sql_location_t name_location;
+	od_sql_location_t types_location;
+	od_sql_location_t query_location;
+} od_sql_minimal_prepare_stmt_t;
+
+typedef struct {
+	od_sql_minimal_node_tag_t type;
+	char *name;
+	od_sql_location_t name_location;
+	od_sql_location_t args_location;
+} od_sql_minimal_execute_stmt_t;
 
 typedef enum {
 	OD_SQL_MINIMAL_DISCARD_ALL,
@@ -77,6 +100,8 @@ typedef enum {
 	OD_QUERY_CTX_IS_DEALLOCATE_ALL = 1 << 7,
 	OD_QUERY_CTX_HAS_DEALLOCATE_NAME = 1 << 8,
 	OD_QUERY_CTX_TOO_LONG = 1 << 9,
+	OD_QUERY_CTX_IS_EMPTY = 1 << 10,
+	OD_QUERY_CTX_IS_EXECUTE = 1 << 11,
 } od_query_ctx_flags_t;
 
 typedef struct {
@@ -85,10 +110,12 @@ typedef struct {
 	 *   OD_QUERY_CTX_IS_SHOW               s1 = guc name
 	 *   OD_QUERY_CTX_IS_SET                s1 = guc key, s2 = guc value
 	 *   OD_QUERY_CTX_HAS_DEALLOCATE_NAME   s1 = prepared statement name
+	 *   OD_QUERY_CTX_IS_EXECUTE            s1 = prepared statement name
 	 */
 	char s1[OD_PG_NAMEDATALEN];
 	char s2[OD_PG_NAMEDATALEN];
 	char *s2_long;
+	od_sql_location_t name_location;
 } od_query_ctx_t;
 
 #define od_query_ctx_has(ctx, flag) (((ctx)->flags & (flag)) != 0)

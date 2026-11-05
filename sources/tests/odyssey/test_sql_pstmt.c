@@ -233,7 +233,7 @@ static void test_attach_refuses_unknown_server(void)
 	srv.unknown = 1;
 
 	/* refused before any io, so no server connection is needed */
-	test(od_sql_pstmt_attach(&client, &srv, NULL, "test", 0) == 1);
+	test(od_sql_pstmt_attach(&client, &srv, NULL, 0) == 1);
 
 	od_sql_pstmt_client_free(&client);
 	od_sql_pstmt_server_free(&srv);
