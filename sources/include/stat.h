@@ -22,7 +22,6 @@ struct od_stat_state {
 
 struct od_stat {
 	bool enable_quantiles;
-	/* Protected by the route lock, together with the histograms. */
 	uint8_t current_tdigest;
 
 	atomic_uint_fast64_t count_query;
@@ -134,12 +133,11 @@ static inline void od_stat_server_detach(od_stat_t *stat)
 }
 
 static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
-				     int in_transaction, uint64_t now_us,
-				     int64_t *query_time)
+				     int in_transaction, int64_t *query_time)
 {
 	int64_t diff;
 	if (state->query_time_start) {
-		diff = now_us - state->query_time_start;
+		diff = machine_time_us() - state->query_time_start;
 		if (diff > 0) {
 			*query_time = diff;
 			atomic_fetch_add_explicit(&stat->query_time, diff,
@@ -159,7 +157,7 @@ static inline void od_stat_query_end(od_stat_t *stat, od_stat_state_t *state,
 	}
 
 	if (state->tx_time_start) {
-		diff = now_us - state->tx_time_start;
+		diff = machine_time_us() - state->tx_time_start;
 		if (diff > 0) {
 			atomic_fetch_add_explicit(&stat->tx_time, diff,
 						  memory_order_relaxed);
