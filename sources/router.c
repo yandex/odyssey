@@ -1162,9 +1162,15 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	mm_hashmap_keylock_t client_klock;
 	int rc;
-	/* the client stays registered during detach: only the
-	 * per-key serialization against cancellookup is needed,
-	 * so take the shard mutex without the chain walk */
+	/*
+	 * only the per-key serialization against the cancel lookup is
+	 * needed here, so take the shard mutex without the chain
+	 * walk.  the client may already be unregistered from the map
+	 * (frontend cleanup removes it before unroute), but the lock
+	 * must still be taken: it also serializes with concurrent
+	 * lock_key users on the same shard, and the old found=0 path
+	 * silently skipped that
+	 */
 	rc = od_global_clients_map_lock_shard(
 		client->global->instance->clients_by_key, &client_klock,
 		client->key_hash);

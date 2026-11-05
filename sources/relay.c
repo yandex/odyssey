@@ -827,12 +827,11 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 	 * unnamed pstmt and unnamed portal on client
 	 */
 	if (relay->client->prep_stmt_ids != NULL) {
-		od_client_remove_pstmt_hash(relay->client, "",
-					    od_hm_name_hash("", 1));
+		/* hash is unused: the unnamed fast path fires first */
+		od_client_remove_pstmt_hash(relay->client, "", 0);
 	}
 	if (relay->client->portals != NULL) {
-		od_client_remove_portal_hash(relay->client, "",
-					     od_hm_name_hash("", 1));
+		od_client_remove_portal_hash(relay->client, "", 0);
 	}
 
 	return status;
