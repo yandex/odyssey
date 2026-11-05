@@ -1,12 +1,3 @@
-/*
- * kiwi.
- *
- * Cancellation message formats, checked against PostgreSQL 18.6:
- * src/backend/tcop/postgres.c (BackendKeyData),
- * src/backend/tcop/backend_startup.c (ProcessCancelRequestPacket),
- * src/interfaces/libpq/fe-cancel.c (PQsendCancelRequest).
- */
-
 #include <kiwi/kiwi.h>
 #include <tests/odyssey_test.h>
 
