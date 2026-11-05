@@ -3,6 +3,7 @@
 #include <kiwi/kiwi.h>
 
 #include <pstmt.h>
+#include <analyze.h>
 #include <server.h>
 #include <client.h>
 #include <global.h>
@@ -759,6 +760,15 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		}
 
 		return xplan_append_virtual_error_response(xp, msg, vresp);
+	}
+
+	machine_msg_t *error;
+	st = od_sql_analyze(client, desc.data, strlen(desc.data), &error);
+	if (st == OD_SKIP) {
+		return xplan_append_virtual_error_response(xp, msg, error);
+	}
+	if (st != OD_OK) {
+		return st;
 	}
 
 	od_global_pstmt_map_t *global_pstmts =

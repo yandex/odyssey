@@ -725,6 +725,12 @@ The minimal parser treats arguments as opaque SQL; Unicode-escaped names require
 the full parser.
 Backend diagnostics may refer to the rewritten name and SQL positions.
 
+SQL `PREPARE`/`EXECUTE`/`DEALLOCATE` names beginning with `odyssey` are reserved
+(SQLSTATE `42939`). The check uses the selected parser: mini handles one simple
+command; full also handles query batches and wrapped `EXECUTE`. Parsing must be
+enabled and the query accepted within `query_parsing_max_query_len`.
+Unicode-escaped names are not supported yet; other unparsed queries pass through.
+
 ## **server_pstmt_cache_size**
 
 *integer*

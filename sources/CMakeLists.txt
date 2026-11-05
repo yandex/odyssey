@@ -109,6 +109,7 @@ set(od_src
     reset.c
     pstmt.c
     sql_pstmt.c
+    analyze.c
     clients_map.c
     frontend.c
     backend.c

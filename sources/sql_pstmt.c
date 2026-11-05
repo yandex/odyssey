@@ -19,6 +19,7 @@
 #include <io.h>
 #include <pstmt.h>
 #include <sql_pstmt.h>
+#include <analyze.h>
 #include <sql/full/parser.h>
 #include <wait_event.h>
 
@@ -261,36 +262,6 @@ void od_sql_pstmt_query_reset(od_sql_pstmt_query_t *q)
 	od_free(q->ops);
 
 	memset(q, 0, sizeof(od_sql_pstmt_query_t));
-}
-
-/* the prepared statement a statement creates, executes or deallocates */
-static const char *stmt_pstmt_name(Node *node)
-{
-	/* EXPLAIN [ANALYZE] CREATE TABLE ... AS EXECUTE nests two levels */
-	while (node != NULL &&
-	       (IsA(node, ExplainStmt) || IsA(node, CreateTableAsStmt))) {
-		if (IsA(node, ExplainStmt)) {
-			node = castNode(ExplainStmt, node)->query;
-		} else {
-			node = castNode(CreateTableAsStmt, node)->query;
-		}
-	}
-
-	if (node == NULL) {
-		return NULL;
-	}
-
-	if (IsA(node, PrepareStmt)) {
-		return castNode(PrepareStmt, node)->name;
-	}
-	if (IsA(node, ExecuteStmt)) {
-		return castNode(ExecuteStmt, node)->name;
-	}
-	if (IsA(node, DeallocateStmt)) {
-		return castNode(DeallocateStmt, node)->name;
-	}
-
-	return NULL;
 }
 
 static int is_reserved_name(const char *name)
