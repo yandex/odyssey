@@ -29,6 +29,7 @@
 #include <client.h>
 #include <msg.h>
 #include <extension.h>
+#include <util.h>
 #include <router.h>
 #include <dns.h>
 #include <hba_rule.h>
@@ -43,7 +44,6 @@
 #include <autoconf.h>
 #include <tls.h>
 #include <memory.h>
-#include <od_error.h>
 #include <systemd_notify.h>
 #include <rate.h>
 #include <restart_sync.h>

@@ -66,9 +66,6 @@ void od_storage_balancing_destroy(od_storage_balancing_t *b);
 
 typedef int (*od_balancing_filter_fn)(od_storage_endpoint_t *endp, void *arg);
 
-void od_storage_balancing_copy(od_storage_balancing_t *dest,
-			       const od_storage_balancing_t *src);
-
 size_t od_storage_balancing_select(od_storage_balancing_t *b,
 				   od_rule_storage_t *storage,
 				   od_route_t *route,
