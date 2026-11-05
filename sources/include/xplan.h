@@ -82,6 +82,13 @@ typedef struct {
 	 * where it is an owned NUL-terminated copy (freed in plan_entry_destroy).
 	 */
 	const char *client_pstmt;
+	/*
+	 * cached od_hm_name_hash of client_pstmt / portal_name
+	 * (filled at entry creation), so the plan loops and the apply
+	 * step never re-hash or strcmp on hash mismatch
+	 */
+	mm_hash_t client_pstmt_hash;
+	mm_hash_t portal_name_hash;
 	od_pstmt_t *pstmt;
 	/*
 	 * portal name for ADD_PORTAL / REMOVE_PORTAL deltas
