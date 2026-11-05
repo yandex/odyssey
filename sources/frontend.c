@@ -23,8 +23,6 @@
 #include <balancing.h>
 #include <instance.h>
 #include <cron.h>
-#include <thread_global.h>
-#include <ejection.h>
 #include <stream.h>
 #include <module.h>
 #include <auth.h>
@@ -1324,50 +1322,6 @@ error:
 	return OD_EOOM;
 }
 
-static inline bool od_eject_conn_with_rate(od_client_t *client,
-					   od_server_t *server,
-					   od_instance_t *instance)
-{
-	od_config_t *config = &instance->config;
-
-	if (!config->conn_drop_options.drop_enabled) {
-		return false;
-	}
-
-	if (server == NULL && client->rule != NULL &&
-	    client->rule->pool->pool_type == OD_RULE_POOL_SESSION) {
-		od_log(&instance->logger, client, server,
-		       "drop client because it was never attached to server");
-		return true;
-	}
-	od_thread_global **gl = od_thread_global_get();
-	if (gl == NULL) {
-		od_log(&instance->logger, client, server,
-		       "drop client connection on graceful shutdown, unable to throttle (wid %d)",
-		       (*gl)->wid);
-		/* this is clearly something bad, TODO: handle properly */
-		return true;
-	}
-
-	od_conn_eject_info *info = (*gl)->info;
-
-	uint64_t now_ms = machine_time_ms();
-	bool res = false;
-
-	if (od_conn_eject_info_try(info, now_ms)) {
-		res = true;
-
-		od_log(&instance->logger, client, server,
-		       "drop client connection on graceful shutdown");
-	} else {
-		od_debug(
-			&instance->logger, client, server,
-			"delay drop client connection on graceful shutdown, rate limited");
-	}
-
-	return res;
-}
-
 static inline bool od_eject_conn_with_timeout(od_client_t *client,
 					      __attribute__((unused))
 					      od_server_t *server,
@@ -1392,56 +1346,10 @@ static od_frontend_status_t od_frontend_ctl(od_client_t *client)
 }
 
 static inline od_frontend_status_t
-od_process_drop_on_restart(od_client_t *client)
-{
-	/* TODO:: drop no more than X connection per sec/min/whatever */
-	od_instance_t *instance = client->global->instance;
-	od_server_t *server = client->server;
-
-	int64_t shut_worker_id = od_instance_get_shutdown_worker_id(instance);
-
-	if (od_likely(shut_worker_id == INVALID_COROUTINE_ID)) {
-		/* try to optimize likely path */
-		return OD_OK;
-	}
-
-	if (od_unlikely(client->rule != NULL &&
-			client->rule->storage->storage_type ==
-				OD_RULE_STORAGE_LOCAL)) {
-		/* local server is not very important (db like console, pgbouncer used for stats) */
-		return OD_EGRACEFUL_SHUTDOWN;
-	}
-
-	if (od_unlikely(server == NULL)) {
-		if (od_eject_conn_with_rate(client, server, instance)) {
-			return OD_EGRACEFUL_SHUTDOWN;
-		}
-		return OD_OK;
-	}
-
-	if (server->state ==
-		    OD_SERVER_ACTIVE /* we can drop client that are just connected and do not perform any queries */
-	    && !od_server_synchronized(server)) {
-		/* most probably we are not in transaction, but still executing some stmt */
-		return OD_OK;
-	}
-
-	if (od_unlikely(!server->is_transaction)) {
-		if (od_eject_conn_with_rate(client, server, instance)) {
-			return OD_EGRACEFUL_SHUTDOWN;
-		}
-		return OD_OK;
-	}
-
-	return OD_OK;
-}
-
-static inline od_frontend_status_t
 od_process_drop_on_idle_in_transaction(od_client_t *client, od_server_t *server)
 {
 	od_instance_t *instance = client->global->instance;
 
-	/* the same as above but we are going to drop client inside transaction block */
 	if (server != NULL && server->is_transaction &&
 	    /*server is sync - that means client executed some stmts and got get result, and now just... do nothing */
 	    od_server_synchronized(server)) {
@@ -1473,7 +1381,7 @@ od_process_drop_transaction_pool(od_client_t *client)
 		}
 	}
 
-	return od_process_drop_on_restart(client);
+	return OD_OK;
 }
 
 static inline od_frontend_status_t
@@ -1563,9 +1471,7 @@ od_process_drop_session_pool(od_client_t *client)
 		}
 	}
 
-	status = od_process_drop_on_restart(client);
-
-	return status;
+	return OD_OK;
 }
 
 static inline od_frontend_status_t
@@ -2401,11 +2307,6 @@ static void od_frontend_replication_pipe(void *arg_)
 
 	while (1) {
 		status = od_frontend_ctl(client);
-		if (status != OD_OK) {
-			break;
-		}
-
-		status = od_process_drop_on_restart(client);
 		if (status != OD_OK) {
 			break;
 		}

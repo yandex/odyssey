@@ -182,7 +182,6 @@ od_instance_t *od_instance_create(void)
 
 	instance->pstmts = NULL;
 
-	atomic_store(&instance->shutdown_worker_id, INVALID_COROUTINE_ID);
 	atomic_store(&instance->config_load_failed, 0);
 
 	instance->cmdline.argc = 0;
@@ -338,20 +337,6 @@ static inline int fill_cmdline(od_instance_t *instance, int argc, char **argv,
 error:
 	free_cmdline(instance);
 	return -1;
-}
-
-char *od_instance_getenv(od_instance_t *instance, const char *name)
-{
-	int len = strlen(name);
-
-	for (int i = 0; instance->cmdline.envp[i] != NULL; ++i) {
-		if (strncmp(instance->cmdline.envp[i], name, len) == 0 &&
-		    instance->cmdline.envp[i][len] == '=') {
-			return &(instance->cmdline.envp[i][len + 1]);
-		}
-	}
-
-	return NULL;
 }
 
 int od_instance_main(od_instance_t *instance, int argc, char **argv,
@@ -623,16 +608,6 @@ error:
 	od_system_free(system);
 	/* TODO: clean up the remaining startup resources and started machines. */
 	return NOT_OK_RESPONSE;
-}
-
-void od_instance_set_shutdown_worker_id(od_instance_t *instance, int64_t id)
-{
-	atomic_store(&instance->shutdown_worker_id, id);
-}
-
-int64_t od_instance_get_shutdown_worker_id(od_instance_t *instance)
-{
-	return atomic_load(&instance->shutdown_worker_id);
 }
 
 od_global_pstmt_map_t *od_instance_get_pstmts_map(od_instance_t *instance)

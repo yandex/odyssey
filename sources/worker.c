@@ -16,7 +16,6 @@
 #include <status.h>
 #include <worker.h>
 #include <global.h>
-#include <thread_global.h>
 #include <client.h>
 #include <instance.h>
 #include <msg.h>
@@ -92,21 +91,6 @@ static inline void od_worker(void *arg)
 
 	setup_affinity(instance, worker->id);
 
-	/* thread global initialization */
-	od_thread_global **gl = od_thread_global_get();
-	od_retcode_t rc = od_thread_global_init(gl);
-
-	machine_set_global_dtor(od_thread_global_free);
-
-	if (rc != OK_RESPONSE) {
-		/* TODO: set errno */
-		od_fatal(&instance->logger, NULL, NULL,
-			 "failed to init worker thread info");
-		return;
-	}
-
-	(*gl)->wid = worker->id;
-
 	bool run = true;
 
 	memset(&linear_alloc, 0, sizeof(linear_alloc));
@@ -160,7 +144,7 @@ static inline void od_worker(void *arg)
 			 * so the buffer is obtained here, in the worker
 			 * thread that owns it.
 			 */
-			rc = od_readahead_prepare(&client->io.readahead);
+			int rc = od_readahead_prepare(&client->io.readahead);
 			if (rc == -1) {
 				od_error(
 					&instance->logger, client, NULL,

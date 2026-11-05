@@ -130,8 +130,6 @@ set(od_src
     soft_oom.c
     sighandler.c
     systemd_notify.c
-    ejection.c
-    thread_global.c
     host_watcher.c
     compression.c
     option.c
