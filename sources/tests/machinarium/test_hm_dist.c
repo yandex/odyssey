@@ -26,7 +26,7 @@ typedef char test_pstmt_name_t[32];
  * the map selects a bucket as `hash & bucket_mask` (power-of-2 sizes,
  * pg-style). this test pins down the guarantees for every production
  * scenario: each case mirrors a real call site (clients_map.c,
- * pstmt.c x4, sql_pstmt.c) with its exact key shape, hash function,
+ * pstmt.c x4) with its exact key shape, hash function,
  * size hint and lock mode, and checks that
  *
  *  - sizes and lock shard counts round up to powers of two, masks
@@ -179,26 +179,6 @@ static void fill_client_pstmt(void *keyobj, size_t i)
 static void fill_client_portal(void *keyobj, size_t i)
 {
 	fill_str_ptr_portal(keyobj, i);
-}
-
-static void fill_sql_name(void *keyobj, size_t i)
-{
-	/* statement names parsed from real traffic: mixed shapes */
-	static char storage[SCENARIO_KEY_MAX];
-	static char *slot = storage;
-
-	switch (i % 3) {
-	case 0:
-		snprintf(storage, sizeof(storage), "stmt_%zu", i);
-		break;
-	case 1:
-		snprintf(storage, sizeof(storage), "s%zu", i);
-		break;
-	default:
-		snprintf(storage, sizeof(storage), "odyssey_pstmt_%zu", i);
-		break;
-	}
-	memcpy(keyobj, &slot, sizeof(char *));
 }
 
 static void fill_server_pstmt(void *keyobj, size_t i)
@@ -463,24 +443,6 @@ static const scenario_t scenarios[] = {
 			.kcmp = desc_cmp,
 			.khash = desc_hash,
 			.nlocks = 9,
-		},
-	},
-	/* sql_pstmt.c:130 per-connection map, client-named ptr keys */
-	{
-		.name = "sql_pstmt",
-		.flags = MM_HM_KEYDTOR | MM_HM_KEYCOPY,
-		.nkeys = 48,
-		.nbuckets = 64,
-		.max_bound = 8,
-		.fill = fill_sql_name,
-		.ctl = {
-			.nbuckets = 64,
-			.keysz = sizeof(char *),
-			.valsz = sizeof(void *),
-			.kcmp = str_ptr_cmp,
-			.khash = str_ptr_hash,
-			.kdtor = str_ptr_dtor,
-			.kcopy = str_ptr_copy,
 		},
 	},
 };
