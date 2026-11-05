@@ -64,6 +64,19 @@ static void test_pstmt_global(void)
 	test(&pstmt->desc != &desc);
 	test(pstmt->desc.data != desc.data);
 
+	/*
+	 * cached hashes must equal what the map khash fns compute:
+	 * - desc_hash == xxh64 over the desc bytes (xxh_pstmt_desc)
+	 * - name_hash == xxh64 over strlen(name) bytes (the server
+	 *   map khash is strlen-based, NOT over the padded buffer)
+	 * a mismatch would make with_hash lookups land in a bucket
+	 * different from the plain lock_key ones
+	 */
+	test(pstmt->desc_hash ==
+	     mm_xxh64_hash(pstmt->desc.data, pstmt->desc.len, 0));
+	test(pstmt->name_hash ==
+	     mm_xxh64_hash(pstmt->name, strlen(pstmt->name), 0));
+
 	od_pstmt_t *t = od_pstmt_create_or_get(gm, desc, &s_arena, &s_parsing);
 	test(t == pstmt);
 	od_pstmt_unref(t);

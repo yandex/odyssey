@@ -130,6 +130,33 @@ mm_hashmap_t *mm_hashmap_create(const mm_hashmap_ctl_t *ctl, int flags);
 void mm_hashmap_free(mm_hashmap_t *hm);
 void mm_hashmap_clear(mm_hashmap_t *hm);
 int mm_hashmap_foreach(mm_hashmap_t *hm, mm_hm_kvp_cb_fn cb, void **argv);
+/*
+ * mm_hashmap_lock_key_with_hash: like mm_hashmap_lock_key, but
+ * the hash of the key is supplied by the caller.  for long-lived
+ * keys the hash may be computed once and reused across calls, so
+ * the khash fn does not run on every lookup.
+ *
+ * REQUIREMENT: hash must be equal to what hm->khash(key) returns
+ * (same bytes, same length convention, same seed), otherwise the
+ * lookup silently lands in the wrong bucket and finds nothing -
+ * or, with MM_HASHMAP_CREATE, creates a duplicate entry in another
+ * bucket.  there is no way to check this inside the hashmap.
+ */
+int mm_hashmap_lock_key_with_hash(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
+				  const void *key, mm_hash_t hash, int flags);
+/*
+ * acquire the shard (bucket) mutex for the given hash *without*
+ * walking the bucket chain - klock.found is always 0 and
+ * klock.kvp is always NULL.  Useful when the caller needs per-key
+ * serialization against concurrent lock_key users but does not
+ * need the lookup itself (e.g. router detaches).
+ *
+ * release with mm_hashmap_unlock_key (unconditional - the lock is
+ * always held on success).
+ */
+int mm_hashmap_lock_shard(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
+			  mm_hash_t hash);
+
 int mm_hashmap_lock_key(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
 			const void *key,
 			int flags /* see mm_hashmap_lockkey_flags_t */);

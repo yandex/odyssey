@@ -602,7 +602,7 @@ static int parse_standby_friendly(od_relay_t *relay, od_xbuf_msg_t *m)
 }
 
 static int pstmt_standby_friendly_by_name(od_relay_t *relay, const char *name,
-					  size_t idx)
+					  mm_hash_t hash, size_t idx)
 {
 	if (xbuf_has_parse(relay, name, idx)) {
 		/*
@@ -614,7 +614,7 @@ static int pstmt_standby_friendly_by_name(od_relay_t *relay, const char *name,
 		return 1;
 	}
 
-	od_pstmt_t *pstmt = od_client_get_pstmt(relay->client, name);
+	od_pstmt_t *pstmt = od_client_get_pstmt_hash(relay->client, name, hash);
 	if (pstmt != NULL) {
 		return od_query_ctx_standby_friendly(&pstmt->query_ctx);
 	}
@@ -638,7 +638,9 @@ static int bind_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
 	(void)portal;
 	(void)portal_len;
 
-	return pstmt_standby_friendly_by_name(relay, pstmt_name, idx);
+	return pstmt_standby_friendly_by_name(
+		relay, pstmt_name, od_hm_name_hash(pstmt_name, pstmt_name_len),
+		idx);
 }
 
 static int execute_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
@@ -653,8 +655,6 @@ static int execute_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
 		return 0;
 	}
 
-	(void)portal_len;
-
 	if (xbuf_has_bind(relay, portal, idx)) {
 		/*
 		 * the portal is created by this very batch - the matching
@@ -664,7 +664,8 @@ static int execute_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
 		return 1;
 	}
 
-	od_pstmt_t *pstmt = od_client_get_portal(relay->client, portal);
+	od_pstmt_t *pstmt = od_client_get_portal_hash(
+		relay->client, portal, od_hm_name_hash(portal, portal_len));
 	if (pstmt != NULL) {
 		return od_query_ctx_standby_friendly(&pstmt->query_ctx);
 	}
@@ -826,10 +827,11 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 	 * unnamed pstmt and unnamed portal on client
 	 */
 	if (relay->client->prep_stmt_ids != NULL) {
-		od_client_remove_pstmt(relay->client, "");
+		/* hash is unused: the unnamed fast path fires first */
+		od_client_remove_pstmt_hash(relay->client, "", 0);
 	}
 	if (relay->client->portals != NULL) {
-		od_client_remove_portal(relay->client, "");
+		od_client_remove_portal_hash(relay->client, "", 0);
 	}
 
 	return status;

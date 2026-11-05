@@ -202,13 +202,22 @@ void od_client_portal_map_free(od_client_stmt_map_t *map)
 
 od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name)
 {
+	return od_client_get_pstmt_hash(
+		client, name,
+		od_hm_name_hash(name, (uint32_t)strlen(name) + 1));
+}
+
+od_pstmt_t *od_client_get_pstmt_hash(od_client_t *client, const char *name,
+				     mm_hash_t hash)
+{
 	if (name[0] == '\0') {
 		return client->prep_stmt_ids->unnamed;
 	}
 
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(&client->prep_stmt_ids->hm, &klock, &name,
-				     0 /* do not create */);
+	int rc = mm_hashmap_lock_key_with_hash(&client->prep_stmt_ids->hm,
+					       &klock, &name, hash,
+					       0 /* do not create */);
 	(void)rc;
 
 	if (klock.found) {
@@ -226,6 +235,14 @@ od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name)
 int od_client_add_pstmt(od_client_t *client, const char *name,
 			od_pstmt_t *pstmt)
 {
+	return od_client_add_pstmt_hash(
+		client, name, od_hm_name_hash(name, (uint32_t)strlen(name) + 1),
+		pstmt);
+}
+
+int od_client_add_pstmt_hash(od_client_t *client, const char *name,
+			     mm_hash_t hash, od_pstmt_t *pstmt)
+{
 	if (name[0] == '\0') {
 		/*
 		 * its ok to redefine "" statement
@@ -238,8 +255,9 @@ int od_client_add_pstmt(od_client_t *client, const char *name,
 	}
 
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(&client->prep_stmt_ids->hm, &klock, &name,
-				     MM_HASHMAP_CREATE /* do create */);
+	int rc = mm_hashmap_lock_key_with_hash(
+		&client->prep_stmt_ids->hm, &klock, &name, hash,
+		MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
 		/* cant create and lock is not held */
 		return rc;
@@ -272,14 +290,23 @@ int od_client_has_pstmt(od_client_t *client, const char *name)
 
 int od_client_remove_pstmt(od_client_t *client, const char *name)
 {
+	return od_client_remove_pstmt_hash(
+		client, name,
+		od_hm_name_hash(name, (uint32_t)strlen(name) + 1));
+}
+
+int od_client_remove_pstmt_hash(od_client_t *client, const char *name,
+				mm_hash_t hash)
+{
 	if (name[0] == '\0') {
 		client_stmt_map_remove_unnamed(client->prep_stmt_ids);
 		return 0;
 	}
 
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(&client->prep_stmt_ids->hm, &klock, &name,
-				     0 /* do not create */);
+	int rc = mm_hashmap_lock_key_with_hash(&client->prep_stmt_ids->hm,
+					       &klock, &name, hash,
+					       0 /* do not create */);
 	(void)rc;
 
 	if (klock.kvp != NULL) {
@@ -320,13 +347,23 @@ void od_client_pstmts_clear(od_client_t *client)
 
 od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name)
 {
+	return od_client_get_portal_hash(
+		client, portal_name,
+		od_hm_name_hash(portal_name,
+				(uint32_t)strlen(portal_name) + 1));
+}
+
+od_pstmt_t *od_client_get_portal_hash(od_client_t *client,
+				      const char *portal_name, mm_hash_t hash)
+{
 	if (portal_name[0] == '\0') {
 		return client->portals->unnamed;
 	}
 
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(&client->portals->hm, &klock, &portal_name,
-				     0 /* do not create */);
+	int rc = mm_hashmap_lock_key_with_hash(&client->portals->hm, &klock,
+					       &portal_name, hash,
+					       0 /* do not create */);
 	(void)rc;
 
 	if (klock.found) {
@@ -342,6 +379,15 @@ od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name)
 int od_client_add_portal(od_client_t *client, const char *portal_name,
 			 od_pstmt_t *pstmt)
 {
+	return od_client_add_portal_hash(
+		client, portal_name,
+		od_hm_name_hash(portal_name, (uint32_t)strlen(portal_name) + 1),
+		pstmt);
+}
+
+int od_client_add_portal_hash(od_client_t *client, const char *portal_name,
+			      mm_hash_t hash, od_pstmt_t *pstmt)
+{
 	/*
 	 * note: unnamed portal "" is silently overwritten on every Bind.
 	 * for named portals PG requires an explicit Close before re-Bind, but
@@ -355,8 +401,9 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 	mm_hashmap_keylock_t klock;
 	od_pstmt_t *to_unref = NULL;
 
-	int rc = mm_hashmap_lock_key(&client->portals->hm, &klock, &portal_name,
-				     MM_HASHMAP_CREATE /* do create */);
+	int rc = mm_hashmap_lock_key_with_hash(
+		&client->portals->hm, &klock, &portal_name, hash,
+		MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
 		return rc;
 	}
@@ -376,14 +423,24 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 
 int od_client_remove_portal(od_client_t *client, const char *portal_name)
 {
+	return od_client_remove_portal_hash(
+		client, portal_name,
+		od_hm_name_hash(portal_name,
+				(uint32_t)strlen(portal_name) + 1));
+}
+
+int od_client_remove_portal_hash(od_client_t *client, const char *portal_name,
+				 mm_hash_t hash)
+{
 	if (portal_name[0] == '\0') {
 		client_stmt_map_remove_unnamed(client->portals);
 		return 0;
 	}
 
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(&client->portals->hm, &klock, &portal_name,
-				     0 /* do not create */);
+	int rc = mm_hashmap_lock_key_with_hash(&client->portals->hm, &klock,
+					       &portal_name, hash,
+					       0 /* do not create */);
 	(void)rc;
 
 	if (klock.kvp != NULL) {
@@ -510,8 +567,9 @@ int od_server_has_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 {
 	od_server_pstmt_map_t *map = server->prep_stmts;
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(&map->hm, &klock, pstmt->name,
-				     0 /* do not create */);
+	int rc = mm_hashmap_lock_key_with_hash(&map->hm, &klock, pstmt->name,
+					       pstmt->name_hash,
+					       0 /* do not create */);
 	(void)rc;
 
 	if (klock.found) {
@@ -533,8 +591,9 @@ int od_server_add_pstmt(od_server_t *server, od_pstmt_t *pstmt)
 {
 	od_server_pstmt_map_t *map = server->prep_stmts;
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(&map->hm, &klock, pstmt->name,
-				     MM_HASHMAP_CREATE /* do create */);
+	int rc = mm_hashmap_lock_key_with_hash(
+		&map->hm, &klock, pstmt->name, pstmt->name_hash,
+		MM_HASHMAP_CREATE /* do create */);
 	if (rc == -1) {
 		/* cant create and lock is not held */
 		return rc;
@@ -577,8 +636,9 @@ int od_server_remove_pstmt(od_server_t *server, const od_pstmt_t *pstmt)
 {
 	od_server_pstmt_map_t *map = server->prep_stmts;
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(&map->hm, &klock, pstmt->name,
-				     0 /* do not create */);
+	int rc = mm_hashmap_lock_key_with_hash(&map->hm, &klock, pstmt->name,
+					       pstmt->name_hash,
+					       0 /* do not create */);
 	(void)rc;
 
 	if (klock.found) {
@@ -667,8 +727,10 @@ int od_server_pstmt_evict_overflow(od_server_t *server, size_t cap,
 		}
 
 		mm_hashmap_keylock_t klock;
-		int rc = mm_hashmap_lock_key(&map->hm, &klock, pstmt->name,
-					     0 /* do not create */);
+		int rc = mm_hashmap_lock_key_with_hash(&map->hm, &klock,
+						       pstmt->name,
+						       pstmt->name_hash,
+						       0 /* do not create */);
 		if (rc == -1) {
 			continue;
 		}
@@ -806,6 +868,14 @@ static void pstmt_init_new(od_global_pstmt_map_t *hm, od_pstmt_t *out)
 
 	od_snprintf(out->name, sizeof(od_pstmt_name_t), "%s%" PRIu64,
 		    OD_PSTMT_NAME_PREFIX, num);
+
+	/*
+	 * cache the name hash so the server map lookups never re-hash
+	 * the name; must stay equal to the map khash (xxh_str_inplace,
+	 * strlen-based), otherwise lookups via mm_hashmap_lock_key
+	 * would land in the wrong bucket
+	 */
+	out->name_hash = mm_xxh64_hash(out->name, strlen(out->name), hash_seed);
 }
 
 od_global_pstmt_map_t *od_global_pstmts_map_create(size_t nlocks)
@@ -864,8 +934,9 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 	 *
 	 * need to remember: it does not owns desc.data
 	 */
-	rc = mm_hashmap_lock_key(pstmts->hm, &klock, &desc,
-				 MM_HASHMAP_CREATE /* create if not exists */);
+	mm_hash_t dhash = xxh_pstmt_desc(&desc);
+	rc = mm_hashmap_lock_key_with_hash(pstmts->hm, &klock, &desc, dhash,
+					   MM_HASHMAP_CREATE);
 	if (rc == -1) {
 		return NULL;
 	}
@@ -893,6 +964,7 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 
 		memset(value, 0, sizeof(od_pstmt_t));
 		pstmt_init_new(pstmts, value);
+		value->desc_hash = dhash;
 
 		if (desc.data == NULL) {
 			mm_hashmap_remove(pstmts->hm, &klock);
@@ -938,8 +1010,8 @@ void od_global_pstmt_try_remove(od_global_pstmt_map_t *gm, od_pstmt_t *pstmt)
 	int rc;
 	uint64_t refs;
 
-	rc = mm_hashmap_lock_key(gm->hm, &klock, &pstmt->desc,
-				 0 /* no create */);
+	rc = mm_hashmap_lock_key_with_hash(gm->hm, &klock, &pstmt->desc,
+					   pstmt->desc_hash, 0 /* no create */);
 	if (rc == -1) {
 		return;
 	}
@@ -982,7 +1054,9 @@ int od_global_pstmts_has_pstmt(od_global_pstmt_map_t *gm,
 	mm_hashmap_keylock_t klock;
 	int rc;
 
-	rc = mm_hashmap_lock_key(gm->hm, &klock, &desc, 0 /* do not create */);
+	rc = mm_hashmap_lock_key_with_hash(gm->hm, &klock, &desc,
+					   xxh_pstmt_desc(&desc),
+					   0 /* do not create */);
 	if (rc == -1) {
 		return 0;
 	}
@@ -1030,7 +1104,7 @@ void od_global_pstmt_foreach(od_global_pstmt_map_t *gm, od_global_pstmt_cb cb,
 
 /* helpers */
 
-char *od_pstmt_name_from_parse(machine_msg_t *msg)
+char *od_pstmt_name_from_parse_len(machine_msg_t *msg, uint32_t *name_len)
 {
 	char *data = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
@@ -1038,6 +1112,8 @@ char *od_pstmt_name_from_parse(machine_msg_t *msg)
 	if (kiwi_be_read_parse_dest(data, size, &desc)) {
 		return NULL;
 	}
+
+	*name_len = desc.operator_name_len;
 
 	return desc.operator_name;
 }

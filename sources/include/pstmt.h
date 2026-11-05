@@ -60,6 +60,16 @@ struct od_pstmt {
 	od_pstmt_name_t name;
 
 	/*
+	 * cached hashes, computed once at creation:
+	 * - desc_hash: xxh64 over desc bytes (xxh_pstmt_desc)
+	 * - name_hash: xxh64 over the name string (strlen-based, the
+	 *   same as the server map khash), so both lookup styles -
+	 *   via this cache and via mm_hashmap_lock_key - agree
+	 */
+	mm_hash_t desc_hash;
+	mm_hash_t name_hash;
+
+	/*
 	 * query context flags, parsed once from desc.data via
 	 * od_sql_minimal_parse at pstmt creation time.
 	 * deallocate_name is stored inplace (no heap allocation).
@@ -113,11 +123,40 @@ typedef struct {
 od_client_stmt_map_t *od_client_pstmt_map_create(void);
 void od_client_pstmt_map_free(od_client_stmt_map_t *map);
 
+/*
+ * canonical hash of a stmt/portal name as used by the client maps.
+ *
+ * name_len includes the trailing NUL - the convention of the
+ * kiwi_be_read_* helpers - so callers holding a wire message name
+ * never need strlen.  the value equals the strlen-based
+ * xxh_str_ptr hash, so both APIs share one map.
+ */
+static inline mm_hash_t od_hm_name_hash(const char *name, uint32_t name_len)
+{
+	/* name_len includes the NUL, so it is never zero */
+	od_assert(name_len >= 1);
+
+	return mm_xxh64_hash(name, name_len - 1, 0 /* seed */);
+}
+
 int od_client_add_pstmt(od_client_t *client, const char *name,
 			od_pstmt_t *pstmt);
 int od_client_has_pstmt(od_client_t *client, const char *name);
 int od_client_remove_pstmt(od_client_t *client, const char *name);
 od_pstmt_t *od_client_get_pstmt(od_client_t *client, const char *name);
+
+/*
+ * as the plain counterparts, but with the name length (including
+ * NUL) and the precomputed od_hm_name_hash supplied by the caller;
+ * the map operations then never strlen or re-hash the name.
+ */
+od_pstmt_t *od_client_get_pstmt_hash(od_client_t *client, const char *name,
+				     mm_hash_t hash);
+int od_client_add_pstmt_hash(od_client_t *client, const char *name,
+			     mm_hash_t hash, od_pstmt_t *pstmt);
+int od_client_remove_pstmt_hash(od_client_t *client, const char *name,
+				mm_hash_t hash);
+
 void od_client_pstmts_clear(od_client_t *client);
 
 /* "portal_name" -> *od_pstmt_t (portal tracking, extended protocol) */
@@ -128,6 +167,15 @@ int od_client_add_portal(od_client_t *client, const char *portal_name,
 			 od_pstmt_t *pstmt);
 od_pstmt_t *od_client_get_portal(od_client_t *client, const char *portal_name);
 int od_client_remove_portal(od_client_t *client, const char *portal_name);
+
+/* as the plain counterparts, see od_client_get_pstmt_hash */
+od_pstmt_t *od_client_get_portal_hash(od_client_t *client,
+				      const char *portal_name, mm_hash_t hash);
+int od_client_add_portal_hash(od_client_t *client, const char *portal_name,
+			      mm_hash_t hash, od_pstmt_t *pstmt);
+int od_client_remove_portal_hash(od_client_t *client, const char *portal_name,
+				 mm_hash_t hash);
+
 void od_client_portals_clear(od_client_t *client);
 
 /*
@@ -182,7 +230,9 @@ void od_global_pstmt_foreach(od_global_pstmt_map_t *gm, od_global_pstmt_cb cb,
 			     void *arg);
 
 /* helpers */
-char *od_pstmt_name_from_parse(machine_msg_t *msg);
+/* name of the Parse msg, with its length (including the NUL)
+ * for od_hm_name_hash */
+char *od_pstmt_name_from_parse_len(machine_msg_t *msg, uint32_t *name_len);
 od_pstmt_desc_t od_pstmt_desc_from_parse(machine_msg_t *msg);
 
 machine_msg_t *od_pstmt_parse_of(const od_pstmt_t *pstmt);

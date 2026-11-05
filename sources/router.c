@@ -1162,9 +1162,18 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	mm_hashmap_keylock_t client_klock;
 	int rc;
-	rc = od_global_clients_map_lock(
-		client->global->instance->clients_by_key, &client->key,
-		&client_klock);
+	/*
+	 * only the per-key serialization against the cancel lookup is
+	 * needed here, so take the shard mutex without the chain
+	 * walk.  the client may already be unregistered from the map
+	 * (frontend cleanup removes it before unroute), but the lock
+	 * must still be taken: it also serializes with concurrent
+	 * lock_key users on the same shard, and the old found=0 path
+	 * silently skipped that
+	 */
+	rc = od_global_clients_map_lock_shard(
+		client->global->instance->clients_by_key, &client_klock,
+		client->key_hash);
 	(void)rc;
 	od_assert(rc == 0);
 
@@ -1195,11 +1204,9 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	od_route_signal_locked(route, server);
 
 	od_route_unlock(route);
-	if (client_klock.found) {
-		od_global_clients_map_unlock(
-			client->global->instance->clients_by_key,
-			&client_klock);
-	}
+
+	od_global_clients_map_unlock(client->global->instance->clients_by_key,
+				     &client_klock);
 
 	if (to_close != NULL) {
 		if (is_repl) {
@@ -1221,9 +1228,9 @@ void od_router_close(od_router_t *router, od_client_t *client)
 
 	mm_hashmap_keylock_t client_klock;
 	int rc;
-	rc = od_global_clients_map_lock(
-		client->global->instance->clients_by_key, &client->key,
-		&client_klock);
+	rc = od_global_clients_map_lock_shard(
+		client->global->instance->clients_by_key, &client_klock,
+		client->key_hash);
 	(void)rc;
 	od_assert(rc == 0);
 
@@ -1242,11 +1249,9 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	od_route_signal_locked(route, NULL);
 
 	od_route_unlock(route);
-	if (client_klock.found) {
-		od_global_clients_map_unlock(
-			client->global->instance->clients_by_key,
-			&client_klock);
-	}
+
+	od_global_clients_map_unlock(client->global->instance->clients_by_key,
+				     &client_klock);
 
 	/* Console readers cannot see this server after it leaves the pool. */
 	/* Terminate may wait on io, so send it without holding the pool lock. */

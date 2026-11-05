@@ -362,9 +362,15 @@ static mm_hashmap_kvp_t *kvp_find_locked(mm_hashmap_t *hm,
 int mm_hashmap_lock_key(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
 			const void *key, int flags)
 {
+	return mm_hashmap_lock_key_with_hash(hm, klock, key, hm->khash(key),
+					     flags);
+}
+
+int mm_hashmap_lock_key_with_hash(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
+				  const void *key, mm_hash_t hash, int flags)
+{
 	memset(klock, 0, sizeof(mm_hashmap_keylock_t));
 
-	mm_hash_t hash = hm->khash(key);
 	size_t bidx = bucket_idx(hm, hash);
 	mm_hashmap_bucket_t *bucket = &hm->buckets[bidx];
 
@@ -404,6 +410,20 @@ int mm_hashmap_lock_key(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
 	mm_list_append(&bucket->kvps, &newkvp->link);
 	klock->kvp = newkvp;
 	klock->found = 0;
+
+	return 0;
+}
+
+int mm_hashmap_lock_shard(mm_hashmap_t *hm, mm_hashmap_keylock_t *klock,
+			  mm_hash_t hash)
+{
+	memset(klock, 0, sizeof(mm_hashmap_keylock_t));
+
+	size_t bidx = bucket_idx(hm, hash);
+	mm_hashmap_bucket_t *bucket = &hm->buckets[bidx];
+
+	bucket_lock(bucket);
+	klock->bucket = bucket;
 
 	return 0;
 }

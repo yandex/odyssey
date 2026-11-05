@@ -341,6 +341,58 @@ static void run_scenario(const scenario_t *s)
 		mm_hashmap_unlock_key(hm, &kl);
 	}
 
+	/*
+	 * with_hash consistency: a hash computed by the map's own
+	 * khash must find entries inserted by the plain lock_key
+	 * (this pins the "cached hash == khash" invariant for every
+	 * production key shape); a hash differing in a masked bit
+	 * must not find anything.  also pins the no-lock-held-on-miss
+	 * contract of the no-create path.
+	 */
+	for (size_t i = 0; i < s->nkeys; i++) {
+		char keyobj[SCENARIO_KEY_MAX];
+
+		memset(keyobj, 0, sizeof(keyobj));
+		s->fill(keyobj, i);
+
+		mm_hash_t h = s->ctl.khash(keyobj);
+
+		mm_hashmap_keylock_t kl;
+		int rc = mm_hashmap_lock_key_with_hash(hm, &kl, keyobj, h, 0);
+		test(rc == 0);
+		test(kl.found == (i % 3 != 0));
+		if (kl.found) {
+			test(*(int64_t *)mm_hashmap_kvp_val(hm, kl.kvp) ==
+			     (int64_t)i);
+			mm_hashmap_unlock_key(hm, &kl);
+		}
+
+		rc = mm_hashmap_lock_key_with_hash(hm, &kl, keyobj, h ^ 1, 0);
+		test(rc == 0);
+		test(kl.found == 0);
+	}
+
+	/*
+	 * lock_shard: no lookup, always locked on success, points at
+	 * the bucket the key's hash selects; unlock via unlock_key
+	 */
+	for (size_t i = 0; i < s->nkeys; i += 11) {
+		char keyobj[SCENARIO_KEY_MAX];
+
+		memset(keyobj, 0, sizeof(keyobj));
+		s->fill(keyobj, i);
+
+		mm_hash_t h = s->ctl.khash(keyobj);
+
+		mm_hashmap_keylock_t kl;
+		int rc = mm_hashmap_lock_shard(hm, &kl, h);
+		test(rc == 0);
+		test(kl.found == 0);
+		test(kl.kvp == NULL);
+		test(kl.bucket == &hm->buckets[h & hm->bucket_mask]);
+		mm_hashmap_unlock_key(hm, &kl);
+	}
+
 	/* distribution: count, max chain, occupancy */
 	size_t remaining = s->nkeys - ((s->nkeys + 2) / 3);
 	size_t cnt = 0;
