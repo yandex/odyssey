@@ -1687,7 +1687,7 @@ static inline int od_console_show_rules(machine_msg_t *stream)
 				       rule->obsolete ? "t" : "f");
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc != OK_RESPONSE) {
-			return rc;
+			goto error;
 		}
 	}
 
