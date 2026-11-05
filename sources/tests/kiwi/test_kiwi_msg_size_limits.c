@@ -1,6 +1,10 @@
 /*
- * kiwi.
+ * Odyssey.
  *
+ * Scalable PostgreSQL connection pooler.
+ */
+
+/*
  * Message length limits, checked against PostgreSQL:
  * src/backend/tcop/backend_startup.c (ProcessStartupPacket),
  * src/backend/tcop/postgres.c (SocketBackend),
