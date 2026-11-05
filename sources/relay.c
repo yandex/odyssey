@@ -395,15 +395,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
 
-	od_instance_t *instance = client->global->instance;
-
-	od_config_query_parsing_t parsing = instance->config.query_parsing;
-	parsing.mode = od_query_parser_mode(client);
-
-	od_query_parse_fill_ctx(query, query_len - 1 /* zero included */, arena,
-				&client->query_ctx, &parsing);
-
-	status = try_virtual_process_query(client, query, query_len - 1);
+	status = try_virtual_process_query(client, query,
+					   query_len - 1 /* zero included */);
 	od_linear_alloc_reset(arena, 0);
 
 	if (status == OD_SKIP) {

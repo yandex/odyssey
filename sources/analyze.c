@@ -8,18 +8,13 @@
 
 #include <kiwi/kiwi.h>
 #include <client.h>
+#include <analyze.h>
 #include <global.h>
 #include <instance.h>
+#include <pstmt.h>
 #include <query.h>
 #include <worker.h>
-#include <analyze.h>
-#include <sql/minimal/parser.h>
 #include <sql/full/parser.h>
-
-static bool reserved_name(const char *name)
-{
-	return name != NULL && strncmp(name, "odyssey", 7) == 0;
-}
 
 /* the prepared statement a statement creates, executes or deallocates */
 const char *stmt_pstmt_name(Node *node)
@@ -51,64 +46,13 @@ const char *stmt_pstmt_name(Node *node)
 	return NULL;
 }
 
-static bool sql_reserved(od_client_t *client, const char *query, size_t len)
+static od_frontend_status_t analyze_query_ctx(od_client_t *client,
+					    const od_query_ctx_t *ctx,
+					    machine_msg_t **error)
 {
-	od_instance_t *instance = client->global->instance;
-	od_config_query_parsing_mode_t mode = od_query_parser_mode(client);
 	if (!client->rule->pool->reserve_prepared_statement ||
-	    mode == OD_CONFIG_QUERY_PARSING_MODE_DISABLED ||
-	    len > instance->config.query_parsing.max_query_len) {
-		return false;
-	}
-
-	/*XXX: support u&-style names later*/
-	if (strcasestr(query, "odyssey") == NULL) {
-		return false;
-	}
-	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
-	if (arena == NULL || arena->buf == NULL) {
-		return false;
-	}
-
-	if (mode == OD_CONFIG_QUERY_PARSING_MODE_MINIMAL) {
-		od_sql_minimal_node_t *node =
-			od_sql_minimal_parse(query, len, arena, NULL, NULL);
-		if (node == NULL) {
-			return false;
-		}
-		switch (node->type) {
-		case OD_SQL_MINIMAL_NODE_TYPE_PREPARE_STMT:
-			return reserved_name(
-				((od_sql_minimal_prepare_stmt_t *)node)->name);
-		case OD_SQL_MINIMAL_NODE_TYPE_EXECUTE_STMT:
-			return reserved_name(
-				((od_sql_minimal_execute_stmt_t *)node)->name);
-		case OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT:
-			return reserved_name(
-				((od_sql_minimal_deallocate_stmt_t *)node)
-					->name);
-		default:
-			return false;
-		}
-	}
-
-	List *tree = od_sql_full_parse(arena, query, len, NULL, NULL);
-	ListCell *cell;
-	foreach(cell, tree)
-	{
-		if (reserved_name(stmt_pstmt_name(
-			    lfirst_node(RawStmt, cell)->stmt))) {
-			return true;
-		}
-	}
-	return false;
-}
-
-od_frontend_status_t od_sql_analyze(od_client_t *client, const char *query,
-				    size_t len, machine_msg_t **error)
-{
-	*error = NULL;
-	if (!sql_reserved(client, query, len)) {
+	    od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR) ||
+	    !od_query_ctx_has(ctx, OD_QUERY_CTX_HAS_RESERVED_NAME)) {
 		return OD_OK;
 	}
 	static char message[] =
@@ -116,4 +60,40 @@ od_frontend_status_t od_sql_analyze(od_client_t *client, const char *query,
 	*error = kiwi_be_write_error(NULL, KIWI_RESERVED_NAME, message,
 				     sizeof(message) - 1);
 	return *error != NULL ? OD_SKIP : OD_EOOM;
+}
+
+od_frontend_status_t od_sql_analyze(od_client_t *client, const char *query,
+				    uint32_t query_len, const od_pstmt_t *pstmt,
+				    machine_msg_t **error)
+{
+	*error = NULL;
+	od_instance_t *instance = client->global->instance;
+	od_config_query_parsing_t parsing = instance->config.query_parsing;
+	parsing.mode = od_query_parser_mode(client);
+	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
+	if (pstmt != NULL &&
+	    (arena == NULL || arena->buf == NULL ||
+	     parsing.mode == OD_CONFIG_QUERY_PARSING_MODE_DISABLED ||
+	     query_len > parsing.max_query_len)) {
+		return OD_OK;
+	}
+
+	od_query_ctx_t temporary_ctx = { 0 };
+	const od_query_ctx_t *ctx =
+		pstmt != NULL ? &pstmt->query_ctx : &client->query_ctx;
+	/*
+	 * Query has no cached statement. Parse can reuse its first context unless
+	 * another grammar or an earlier length limit requires a fresh one.
+	 */
+	if (pstmt == NULL || pstmt->query_parser_mode != parsing.mode ||
+	    od_query_ctx_has(ctx, OD_QUERY_CTX_TOO_LONG)) {
+		od_query_ctx_t *parsed_ctx =
+			pstmt != NULL ? &temporary_ctx : &client->query_ctx;
+		od_query_parse_fill_ctx(query, query_len, arena, parsed_ctx,
+					&parsing);
+		ctx = parsed_ctx;
+	}
+	od_frontend_status_t status = analyze_query_ctx(client, ctx, error);
+	od_query_ctx_reset(&temporary_ctx);
+	return status;
 }

@@ -782,15 +782,6 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		return xplan_append_virtual_error_response(xp, msg, vresp);
 	}
 
-	machine_msg_t *error;
-	st = od_sql_analyze(client, desc.data, strlen(desc.data), &error);
-	if (st == OD_SKIP) {
-		return xplan_append_virtual_error_response(xp, msg, error);
-	}
-	if (st != OD_OK) {
-		return st;
-	}
-
 	od_global_pstmt_map_t *global_pstmts =
 		od_instance_get_pstmts_map(instance);
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
@@ -800,6 +791,16 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		return OD_EOOM;
 	}
 	/* we now hold the ref to pstmt */
+
+	machine_msg_t *error;
+	st = od_sql_analyze(client, desc.data, strlen(desc.data), pstmt, &error);
+	if (st != OD_OK) {
+		od_pstmt_unref(pstmt);
+		if (st == OD_SKIP) {
+			return xplan_append_virtual_error_response(xp, msg, error);
+		}
+		return st;
+	}
 
 	if (plan_server_has_pstmt(xp, server, pstmt)) {
 		/*

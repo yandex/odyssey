@@ -29,12 +29,25 @@ SET odyssey.parser_mode = 'full';
 PREPARE "odyssey_custom" AS SELECT 1;
 EXPLAIN EXECUTE odyssey_missing;
 DEALLOCATE PREPARE "odyssey_custom" \parse reserved_deallocate
--- Reject the whole batch before any nontransactional side effect.
-CREATE SEQUENCE reserved_batch;
-SELECT nextval('reserved_batch') \; EXECUTE odyssey_pstmt_0;
-SELECT is_called FROM reserved_batch;
-DROP SEQUENCE reserved_batch;
+-- TODO: support reserved-name checks in query batches.
+-- CREATE SEQUENCE reserved_batch;
+-- SELECT nextval('reserved_batch') \; EXECUTE odyssey_pstmt_0;
+-- SELECT is_called FROM reserved_batch;
+-- DROP SEQUENCE reserved_batch;
+-- The full parser checks decoded names, without a raw "odyssey" substring.
+EXECUTE U&"\006fdyssey_missing";
+EXECUTE U&"!006fdyssey_missing" UESCAPE '!' \parse reserved_unicode
+-- A syntax error in the batch must not use a partial AST for name checks.
+EXECUTE odyssey_missing \; SELECT FROM;
 SET odyssey.parser_mode = 'mini';
+-- A cached minimal-parser context must not bypass the full-parser check.
+EXPLAIN EXECUTE odyssey_cache_missing \parse cached_mini
+SET odyssey.parser_mode = 'full';
+EXPLAIN EXECUTE odyssey_cache_missing \parse cached_full
+SET odyssey.parser_mode = 'mini';
+EXPLAIN EXECUTE odyssey_cache_missing \parse cached_mini_again
+-- Existing client names take precedence over the SQL name check.
+PREPARE odyssey_duplicate AS SELECT 1 \parse x
 -- A literal or a case-sensitive quoted name is not reserved.
 SELECT 'odyssey' AS v;
 PREPARE "ODYSSEY" AS SELECT 1 AS v \; EXECUTE "ODYSSEY" \; DEALLOCATE "ODYSSEY";

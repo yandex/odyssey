@@ -48,6 +48,44 @@ static void test_refs(void)
 	od_global_pstmts_map_free(global);
 }
 
+static void test_pstmt_context_provenance(void)
+{
+	od_global_pstmt_map_t *global = od_global_pstmts_map_create(1);
+	test(global != NULL);
+	od_pstmt_desc_t desc = {
+		.data = "EXPLAIN EXECUTE odyssey_cache",
+		.len = sizeof("EXPLAIN EXECUTE odyssey_cache"),
+	};
+	od_pstmt_t *first =
+		od_pstmt_create_or_get(global, desc, &s_arena, &s_parsing);
+	test(first != NULL);
+	test(first->query_parser_mode == OD_CONFIG_QUERY_PARSING_MODE_MINIMAL);
+	test(od_query_ctx_has(&first->query_ctx, OD_QUERY_CTX_PARSE_ERROR));
+
+	od_config_query_parsing_t full = s_parsing;
+	full.mode = OD_CONFIG_QUERY_PARSING_MODE_FULL;
+	od_pstmt_t *shared =
+		od_pstmt_create_or_get(global, desc, &s_arena, &full);
+	test(shared == first);
+	/* A cache hit must not claim the caller's grammar parsed this entry. */
+	test(shared->query_parser_mode == OD_CONFIG_QUERY_PARSING_MODE_MINIMAL);
+	od_pstmt_unref(shared);
+	od_pstmt_unref(first);
+
+	od_config_query_parsing_t small = s_parsing;
+	small.max_query_len = 8;
+	first = od_pstmt_create_or_get(global, desc, &s_arena, &small);
+	test(first != NULL);
+	test(od_query_ctx_has(&first->query_ctx, OD_QUERY_CTX_TOO_LONG));
+	shared = od_pstmt_create_or_get(global, desc, &s_arena, &s_parsing);
+	test(shared == first);
+	/* A wider caller limit does not refresh a previously skipped parse. */
+	test(od_query_ctx_has(&shared->query_ctx, OD_QUERY_CTX_TOO_LONG));
+	od_pstmt_unref(shared);
+	od_pstmt_unref(first);
+	od_global_pstmts_map_free(global);
+}
+
 static void test_pstmt_global(void)
 {
 	od_global_pstmt_map_t *gm = od_global_pstmts_map_create(1);
@@ -715,6 +753,7 @@ static void test_impl(void *a)
 
 	test_pstmt_global();
 	test_refs();
+	test_pstmt_context_provenance();
 	test_pstmt_query_ctx();
 
 	test_pstmt_client_hashmap();

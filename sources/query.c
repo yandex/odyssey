@@ -17,6 +17,7 @@
 #include <client.h>
 #include <tsa.h>
 #include <util.h>
+#include <analyze.h>
 #include <sql/minimal/parser.h>
 #include <sql/full/parser.h>
 #include <sql/full/pg_constants.h>
@@ -886,6 +887,8 @@ static void parse_full(const char *query, uint32_t query_len,
 	if (node == NULL) {
 		goto error;
 	}
+
+	od_query_ctx_check_reserved_name(ctx, stmt_pstmt_name(node));
 
 	if (IsA(node, VariableShowStmt)) {
 		VariableShowStmt *vsstmt = castNode(VariableShowStmt, node);

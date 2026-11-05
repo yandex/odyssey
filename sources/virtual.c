@@ -820,14 +820,15 @@ static bool virtual_query_supported(od_client_t *client,
 }
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
-					       const char *query, size_t len)
+						     const char *query,
+						     uint32_t query_len)
 {
 	const od_query_ctx_t *ctx = &client->query_ctx;
 	od_frontend_status_t status;
 	od_virtual_portal_t portal;
 
 	virtual_portal_init(&portal);
-	status = od_sql_analyze(client, query, len, &portal.error);
+	status = od_sql_analyze(client, query, query_len, NULL, &portal.error);
 	if (status == OD_SKIP && virtual_portal_set_notice(&portal) != 0) {
 		status = OD_EOOM;
 	}
