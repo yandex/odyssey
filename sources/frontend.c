@@ -56,19 +56,6 @@ static inline void od_frontend_close(od_client_t *client)
 	od_client_free(client);
 }
 
-int od_frontend_info(od_client_t *client, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	machine_msg_t *msg;
-	msg = od_frontend_info_msg(client, NULL, fmt, args);
-	va_end(args);
-	if (msg == NULL) {
-		return -1;
-	}
-	return od_write(&client->io, msg);
-}
-
 int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 {
 	va_list args;

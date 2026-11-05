@@ -25,11 +25,6 @@ void od_pid_init(od_pid_t *pid)
 				   (int)pid->pid);
 }
 
-void od_pid_restart_new_set(od_pid_t *p, pid_t pid)
-{
-	atomic_store(&p->restart_new_pid, pid);
-}
-
 pid_t od_pid_restart_new_get(od_pid_t *p)
 {
 	return atomic_load(&p->restart_new_pid);

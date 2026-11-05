@@ -33,8 +33,6 @@ typedef struct {
 void od_cfg_diag_list_init(od_cfg_diag_list_t *diags);
 void od_cfg_diag_list_free(od_cfg_diag_list_t *diags);
 
-void od_cfg_diag_dumpf(FILE *file, const od_cfg_diag_list_t *diags);
-
 void od_cfg_diag_error(od_cfg_diag_list_t *diags, od_cfg_location_t location,
 		       const char *fmt, ...)
 	__attribute__((format(printf, 3, 4)));

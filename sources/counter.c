@@ -70,15 +70,6 @@ uint64_t od_counter_get_count(od_counter_t *counter, size_t value)
 	return atomic_load(&counter->value_to_count[value]);
 }
 
-od_retcode_t od_counter_reset(od_counter_t *counter, size_t value)
-{
-	check_value(counter, value);
-
-	atomic_store(&counter->value_to_count[value], 0ULL);
-
-	return OK_RESPONSE;
-}
-
 od_retcode_t od_counter_reset_all(od_counter_t *counter)
 {
 	for (size_t i = 0; i < counter->size; ++i) {

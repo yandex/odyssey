@@ -76,36 +76,6 @@ static inline void od_client_pool_set(od_client_pool_t *pool,
 	client->state = state;
 }
 
-static inline od_client_t *od_client_pool_next(od_client_pool_t *pool,
-					       od_client_state_t state)
-{
-	int target_count = 0;
-	od_list_t *target = NULL;
-	switch (state) {
-	case OD_CLIENT_ACTIVE:
-		target = &pool->active;
-		target_count = pool->count_active;
-		break;
-	case OD_CLIENT_QUEUE:
-		target = &pool->queue;
-		target_count = pool->count_queue;
-		break;
-	case OD_CLIENT_PENDING:
-		target = &pool->pending;
-		target_count = pool->count_pending;
-		break;
-	case OD_CLIENT_UNDEF:
-		od_assert(0);
-		break;
-	}
-	if (target_count == 0) {
-		return NULL;
-	}
-	od_client_t *client;
-	client = od_container_of(target->next, od_client_t, link_pool);
-	return client;
-}
-
 static inline od_client_t *od_client_pool_foreach(od_client_pool_t *pool,
 						  od_client_state_t state,
 						  od_client_pool_cb_t callback,
