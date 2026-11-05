@@ -182,7 +182,7 @@ od_instance_t *od_instance_create(void)
 
 	instance->pstmts = NULL;
 
-	atomic_store(&instance->shutdown_worker_id, INVALID_COROUTINE_ID);
+	atomic_init(&instance->shutdown_started, false);
 	atomic_store(&instance->config_load_failed, 0);
 
 	instance->cmdline.argc = 0;
@@ -625,14 +625,14 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-void od_instance_set_shutdown_worker_id(od_instance_t *instance, int64_t id)
+void od_instance_start_shutdown(od_instance_t *instance)
 {
-	atomic_store(&instance->shutdown_worker_id, id);
+	atomic_store(&instance->shutdown_started, true);
 }
 
-int64_t od_instance_get_shutdown_worker_id(od_instance_t *instance)
+bool od_instance_is_shutting_down(od_instance_t *instance)
 {
-	return atomic_load(&instance->shutdown_worker_id);
+	return atomic_load(&instance->shutdown_started);
 }
 
 od_global_pstmt_map_t *od_instance_get_pstmts_map(od_instance_t *instance)

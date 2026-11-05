@@ -1232,6 +1232,9 @@ static inline void od_system(void *arg)
 		}
 	}
 
+	/* Frontends use this marker to drain connections between transactions. */
+	od_instance_start_shutdown(instance);
+
 	if (instance->config.graceful_shutdown_timeout_ms != 0) {
 		start_timeout_thread(
 			instance->config.graceful_shutdown_timeout_ms);
