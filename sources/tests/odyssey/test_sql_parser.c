@@ -1130,15 +1130,23 @@ static void test_parse_fill_ctx_full(void)
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SELECT));
 	od_query_ctx_reset(&ctx);
 
-	/* multi statement — parse error */
+	/* Valid batches remain unclassified, for whole-query analysis only. */
 	fill_ctx_full("SHOW x; SHOW y", &ctx);
-	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
-	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_SHOW));
+	test(ctx.flags == 0);
 	od_query_ctx_reset(&ctx);
 
-	/* syntax error — parse error */
+	fill_ctx_full("SELECT nextval('seq'); EXECUTE odyssey_pstmt_0", &ctx);
+	test(ctx.flags == 0);
+	test(!od_query_ctx_standby_friendly(&ctx));
+	od_query_ctx_reset(&ctx);
+
+	/* A syntax error, including in a later statement, fails the whole parse. */
 	fill_ctx_full("FOO BAR", &ctx);
-	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(ctx.flags == OD_QUERY_CTX_PARSE_ERROR);
+	od_query_ctx_reset(&ctx);
+
+	fill_ctx_full("SHOW x; FOO BAR", &ctx);
+	test(ctx.flags == OD_QUERY_CTX_PARSE_ERROR);
 	od_query_ctx_reset(&ctx);
 
 	/* empty query — answered virtually, no parse error at all */

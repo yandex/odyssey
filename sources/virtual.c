@@ -823,10 +823,14 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 					       const char *query, size_t len)
 {
 	const od_query_ctx_t *ctx = &client->query_ctx;
-	od_frontend_status_t status;
+	od_frontend_status_t status = OD_OK;
 	od_virtual_portal_t portal;
 
 	virtual_portal_init(&portal);
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
+		goto done;
+	}
+
 	status = od_sql_analyze(client, query, len, &portal.error);
 	if (status == OD_SKIP && virtual_portal_set_notice(&portal) != 0) {
 		status = OD_EOOM;
@@ -835,8 +839,7 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 		goto reply;
 	}
 
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR) ||
-	    !virtual_query_supported(client, ctx)) {
+	if (!virtual_query_supported(client, ctx)) {
 		goto done;
 	}
 

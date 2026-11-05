@@ -873,8 +873,8 @@ static void parse_full(const char *query, uint32_t query_len,
 	}
 
 	if (list_length(tree) > 1) {
-		/* do not support multi statements now */
-		goto error;
+		/* Valid batch, deliberately unclassified: no partial processing. */
+		return;
 	}
 
 	RawStmt *rs = linitial(tree);
