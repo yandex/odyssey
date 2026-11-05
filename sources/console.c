@@ -1805,7 +1805,7 @@ static inline int od_console_show_rules(od_tuple_table_slot_t *tts)
 				       rule->obsolete ? "t" : "f");
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc != OK_RESPONSE) {
-			return rc;
+			goto error;
 		}
 	}
 
