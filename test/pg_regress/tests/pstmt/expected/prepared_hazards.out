@@ -23,6 +23,25 @@ SET odyssey.parser_mode = 'mini';
 NOTICE:  processed virtually by odyssey
 EXECUTE U&"\0078"(1+2);
 ERROR:  26000
+-- Batched EXECUTE does not resolve protocol statement aliases.
+SELECT 1 AS v \parse p1
+SELECT 2 AS v \parse p2
+EXECUTE p1;
+v
+1
+(1 row)
+EXECUTE p2;
+v
+2
+(1 row)
+EXECUTE p1 \; EXECUTE p2;
+ERROR:  26000
+SET odyssey.parser_mode = 'full';
+NOTICE:  processed virtually by odyssey
+EXECUTE p1 \; EXECUTE p2;
+ERROR:  26000
+SET odyssey.parser_mode = 'mini';
+NOTICE:  processed virtually by odyssey
 -- SQL names in Odyssey's namespace are reserved in either parser mode.
 PREPARE odyssey AS SELECT 1;
 NOTICE:  processed virtually by odyssey
