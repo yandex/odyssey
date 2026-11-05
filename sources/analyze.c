@@ -108,12 +108,19 @@ od_frontend_status_t od_sql_analyze(od_client_t *client, const char *query,
 				    size_t len, machine_msg_t **error)
 {
 	*error = NULL;
-	if (!sql_reserved(client, query, len)) {
+	char *code;
+	char *message;
+	if (sql_reserved(client, query, len)) {
+		code = KIWI_RESERVED_NAME;
+		message =
+			"prepared statement names starting with \"odyssey\" are reserved by odyssey";
+	} else if (client->sql_query.unsupported) {
+		code = KIWI_FEATURE_NOT_SUPPORTED;
+		message =
+			"SQL prepared statement syntax is not supported with pool_reserve_prepared_statement";
+	} else {
 		return OD_OK;
 	}
-	static char message[] =
-		"prepared statement names starting with \"odyssey\" are reserved by odyssey";
-	*error = kiwi_be_write_error(NULL, KIWI_RESERVED_NAME, message,
-				     sizeof(message) - 1);
+	*error = kiwi_be_write_error(NULL, code, message, strlen(message));
 	return *error != NULL ? OD_SKIP : OD_EOOM;
 }

@@ -36,7 +36,8 @@ DEALLOCATE odyssey_pstmt_0;
 NOTICE:  processed virtually by odyssey
 ERROR:  42939
 EXPLAIN EXECUTE odyssey_missing;
-ERROR:  26000
+NOTICE:  processed virtually by odyssey
+ERROR:  0A000
 SET odyssey.parser_mode = 'full';
 NOTICE:  processed virtually by odyssey
 PREPARE "odyssey_custom" AS SELECT 1;

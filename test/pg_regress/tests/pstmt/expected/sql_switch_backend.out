@@ -1,0 +1,125 @@
+-- statements created by SQL PREPARE stay usable after the client moves
+-- to other backends
+prepare sql_switch as select $1::int * 10 as v;
+execute sql_switch(1);
+ v  
+----
+ 10
+(1 row)
+
+-- move to another backend: terminate the current one directly in
+-- postgres and wait for it to exit; the next query gets another backend
+select pg_backend_pid() as old_pid \gset
+\setenv OLD_PID :old_pid
+\! psql "host=localhost port=5432 user=postgres dbname=postgres" -Atqc "select pg_terminate_backend($OLD_PID, 10000)"
+t
+select pg_backend_pid() <> :old_pid as switched;
+ switched 
+----------
+ t
+(1 row)
+
+execute sql_switch(2);
+ v  
+----
+ 20
+(1 row)
+
+-- several EXECUTEs in one query, as psycopg2 execute_batch sends them
+prepare sql_batch_a as select $1::int as a;
+prepare sql_batch_b as select $1::int * 2 as b;
+select pg_backend_pid() as old_pid \gset
+\setenv OLD_PID :old_pid
+\! psql "host=localhost port=5432 user=postgres dbname=postgres" -Atqc "select pg_terminate_backend($OLD_PID, 10000)"
+t
+select pg_backend_pid() <> :old_pid as switched;
+ switched 
+----------
+ t
+(1 row)
+
+execute sql_batch_a(1) \; execute sql_batch_b(2) \; execute sql_switch(3);
+ a 
+---
+ 1
+(1 row)
+
+ b 
+---
+ 4
+(1 row)
+
+ v  
+----
+ 30
+(1 row)
+
+-- several PREPAREs in one query, quoted names
+select 1 as one \; prepare sql_multi as select 'm' as v \; prepare "Sql Quoted" as select 'q' as v;
+ one 
+-----
+   1
+(1 row)
+
+select pg_backend_pid() as old_pid \gset
+\setenv OLD_PID :old_pid
+\! psql "host=localhost port=5432 user=postgres dbname=postgres" -Atqc "select pg_terminate_backend($OLD_PID, 10000)"
+t
+select pg_backend_pid() <> :old_pid as switched;
+ switched 
+----------
+ t
+(1 row)
+
+execute sql_multi;
+ v 
+---
+ m
+(1 row)
+
+execute "Sql Quoted";
+ v 
+---
+ q
+(1 row)
+
+-- names differing only in case are different statements
+prepare "Case" as select 'quoted' as v;
+prepare case_stmt as select 'unquoted' as v;
+prepare "case_stmt_2" as select 'quoted lower' as v;
+select pg_backend_pid() as old_pid \gset
+\setenv OLD_PID :old_pid
+\! psql "host=localhost port=5432 user=postgres dbname=postgres" -Atqc "select pg_terminate_backend($OLD_PID, 10000)"
+t
+select pg_backend_pid() <> :old_pid as switched;
+ switched 
+----------
+ t
+(1 row)
+
+execute "Case";
+   v    
+--------
+ quoted
+(1 row)
+
+execute case_stmt;
+    v     
+----------
+ unquoted
+(1 row)
+
+execute CASE_STMT;
+    v     
+----------
+ unquoted
+(1 row)
+
+execute CASE_STMT_2;
+      v       
+--------------
+ quoted lower
+(1 row)
+
+execute "CASE_STMT";
+ERROR:  prepared statement "CASE_STMT" does not exist
