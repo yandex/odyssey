@@ -295,8 +295,15 @@ stream_handle_message(stream_t *stream, od_server_t *server, char *data,
 		}
 
 		int64_t query_time = 0;
+		uint64_t now_us = machine_time_us();
+		if (route->stats.enable_quantiles) {
+			od_route_lock(route);
+		}
 		od_stat_query_end(&route->stats, &server->stats_state,
-				  server->is_transaction, &query_time);
+				  server->is_transaction, now_us, &query_time);
+		if (route->stats.enable_quantiles) {
+			od_route_unlock(route);
+		}
 		if (instance->config.log_debug && query_time > 0) {
 			od_debug(&instance->logger, server->client, server,
 				 "query time: %" PRIi64 " microseconds",
