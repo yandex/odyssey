@@ -621,6 +621,7 @@ error:
 		od_cron_free(&cron);
 	}
 	if (router_initialized) {
+		od_rules_cleanup(&router.rules);
 		od_router_free(&router);
 	}
 	od_extension_free(&instance->logger, extensions);
