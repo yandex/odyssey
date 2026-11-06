@@ -13,18 +13,6 @@
 
 typedef enum { OD_ADDRESS_TYPE_UNIX, OD_ADDRESS_TYPE_TCP } od_address_type_t;
 
-static inline const char *od_address_type_str(od_address_type_t type)
-{
-	switch (type) {
-	case OD_ADDRESS_TYPE_TCP:
-		return "tcp";
-	case OD_ADDRESS_TYPE_UNIX:
-		return "unix";
-	default:
-		abort();
-	}
-}
-
 struct od_address {
 	char *host; /* NULL - terminated */
 	int port;

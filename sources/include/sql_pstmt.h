@@ -34,6 +34,9 @@ typedef struct {
 	/* insertion order, the oldest first */
 	od_list_t link;
 	char *name;
+	/* cached hash of name as used by the name map, so the sync
+	 * loops never re-hash the names */
+	mm_hash_t name_hash;
 	/* NUL-terminated PREPARE statement; NULL in server maps */
 	char *text;
 	/* length of text without the terminating NUL */
@@ -61,6 +64,8 @@ typedef struct {
 	int stmt_idx;
 	/* NULL for DEALLOCATE ALL */
 	char *name;
+	/* cached hash of name as used by the name map */
+	mm_hash_t name_hash;
 	/* PREPARE only */
 	char *text;
 	size_t text_len;
@@ -104,11 +109,18 @@ void od_sql_pstmt_map_init(od_sql_pstmt_map_t *map);
 void od_sql_pstmt_map_free(od_sql_pstmt_map_t *map);
 void od_sql_pstmt_map_clear(od_sql_pstmt_map_t *map);
 od_sql_pstmt_t *od_sql_pstmt_map_get(od_sql_pstmt_map_t *map, const char *name);
+/* as _get, with the hash precomputed by the caller
+ * (see the cached name_hash fields on entries and ops) */
+od_sql_pstmt_t *od_sql_pstmt_map_get_hash(od_sql_pstmt_map_t *map,
+					  const char *name, mm_hash_t hash);
 /* adds or replaces the entry; text may be NULL */
 od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
 				     const char *text, size_t text_len,
 				     uint64_t hash);
 void od_sql_pstmt_map_remove(od_sql_pstmt_map_t *map, const char *name);
+/* as _remove, see od_sql_pstmt_map_get_hash */
+void od_sql_pstmt_map_remove_hash(od_sql_pstmt_map_t *map, const char *name,
+				  mm_hash_t hash);
 
 /*
  * query inspection

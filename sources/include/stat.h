@@ -81,17 +81,6 @@ static inline void od_stat_wait_time(od_stat_t *stat, uint64_t wait_time_us)
 	atomic_fetch_add_explicit(&stat->count_wait, 1, memory_order_relaxed);
 }
 
-static inline void od_stat_parse(od_stat_t *stat)
-{
-	atomic_fetch_add_explicit(&stat->count_parse, 1, memory_order_relaxed);
-}
-
-static inline void od_stat_parse_reuse(od_stat_t *stat)
-{
-	atomic_fetch_add_explicit(&stat->count_parse_reuse, 1,
-				  memory_order_relaxed);
-}
-
 static inline void od_stat_cancel(od_stat_t *stat)
 {
 	atomic_fetch_add_explicit(&stat->count_cancel, 1, memory_order_relaxed);

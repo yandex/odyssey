@@ -31,12 +31,14 @@ typedef struct {
 	 *   NOTICE "processed virtually by odyssey"
 	 *   RowDescription + DataRows   (SHOW-like answers)
 	 *   CommandComplete            (or ErrorResponse on a reject)
+	 *   EmptyQueryResponse          (an empty query, ";")
 	 *   ReadyForQuery              (assembled on the write path,
 	 *                               as the tx status is live)
 	 */
 	machine_msg_t *notice;
 	machine_msg_t *command_complete;
 	machine_msg_t *error;
+	machine_msg_t *empty;
 
 	/*
 	 * ReadyForQuery transaction status; when zero, it is taken from
@@ -49,5 +51,4 @@ void virtual_portal_init(od_virtual_portal_t *portal);
 void virtual_portal_free(od_virtual_portal_t *portal);
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
-					       const od_query_ctx_t *ctx,
-					       const char *query);
+					       const char *query, size_t len);

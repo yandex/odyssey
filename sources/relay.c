@@ -313,6 +313,72 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 }
 
 static od_frontend_status_t
+rewrite_sql_execute(od_client_t *client, const char *query, uint32_t query_len,
+		    machine_msg_t **rewritten, uint32_t timeout_ms)
+{
+	od_query_ctx_t *ctx = &client->query_ctx;
+	if (!client->rule->pool->reserve_prepared_statement ||
+	    !od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EXECUTE)) {
+		return OD_OK;
+	}
+
+	od_pstmt_t *pstmt = od_client_get_pstmt(client, ctx->s1);
+	if (pstmt == NULL) {
+		/* Keep native SQL PREPARE/EXECUTE behavior for other names. */
+		return OD_OK;
+	}
+
+	od_server_t *server = client->server;
+	if (!od_server_has_pstmt(server, pstmt)) {
+		machine_msg_t *parse = od_pstmt_parse_of(pstmt);
+		if (parse == NULL) {
+			return OD_EOOM;
+		}
+		machine_msg_t *sync = kiwi_fe_write_sync(parse);
+		if (sync == NULL) {
+			machine_msg_free(parse);
+			return OD_EOOM;
+		}
+		od_wait_event_start(OD_WAIT_DEPLOY_SERVER_WRITE);
+		int rc = od_write2(&server->io, sync, timeout_ms);
+		od_wait_event_end(OD_WAIT_DEPLOY_SERVER_WRITE);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		od_server_sync_request(server, 1);
+		od_frontend_status_t status =
+			od_service_stream_server_until_rfq(
+				server, 0 /* ignore errors */, timeout_ms,
+				OD_WAIT_DEPLOY_SERVER_READ);
+		if (status != OD_OK) {
+			return status;
+		}
+		if (od_server_add_pstmt(server, pstmt) == -1) {
+			return OD_EOOM;
+		}
+	}
+
+	/* Only the name changes: PostgreSQL evaluates the argument SQL. */
+	size_t start = ctx->name_location.start;
+	size_t end = ctx->name_location.end;
+	size_t name_len = strlen(pstmt->name);
+	size_t size = sizeof(kiwi_header_t) + query_len - (end - start) +
+		      name_len + 1;
+	*rewritten = machine_msg_create(size);
+	if (*rewritten == NULL) {
+		return OD_EOOM;
+	}
+	char *pos = machine_msg_data(*rewritten);
+	kiwi_write8(&pos, KIWI_FE_QUERY);
+	kiwi_write32(&pos, size - 1);
+	kiwi_write(&pos, query, start);
+	kiwi_write8(&pos, ' ');
+	kiwi_write(&pos, pstmt->name, name_len);
+	kiwi_write(&pos, query + end, query_len - end);
+	return OD_OK;
+}
+
+static od_frontend_status_t
 process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 {
 	od_client_t *client = relay->client;
@@ -341,7 +407,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	od_query_parse_fill_ctx(query, query_len - 1 /* zero included */, arena,
 				&client->query_ctx, &parsing);
 
-	status = try_virtual_process_query(client, &client->query_ctx, query);
+	status = try_virtual_process_query(client, query, query_len - 1);
 	od_linear_alloc_reset(arena, 0);
 
 	if (status == OD_SKIP) {
@@ -354,6 +420,18 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			return OD_ATTACH;
 		}
 
+		machine_msg_t *execute = NULL;
+		status = rewrite_sql_execute(client, query, query_len, &execute,
+					     timeout_ms);
+		if (status != OD_OK) {
+			return status;
+		}
+		if (execute != NULL) {
+			msg = execute;
+			query = (char *)machine_msg_data(execute) +
+				sizeof(kiwi_header_t);
+		}
+
 		if (client->pending_begin) {
 			/* End trailing line comments before separating statements. */
 			machine_msg_t *rewritten =
@@ -361,6 +439,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 							 client->pending_begin,
 							 "\n;", query, NULL);
 			if (rewritten == NULL) {
+				machine_msg_free_safe(execute);
 				return OD_EOOM;
 			}
 
@@ -373,6 +452,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			rc = od_io_write(&server->io, msg, timeout_ms);
 			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 		}
+		machine_msg_free_safe(execute);
 
 		if (rc != 0) {
 			return OD_ESERVER_WRITE;
@@ -524,7 +604,7 @@ static int parse_standby_friendly(od_relay_t *relay, od_xbuf_msg_t *m)
 }
 
 static int pstmt_standby_friendly_by_name(od_relay_t *relay, const char *name,
-					  size_t idx)
+					  mm_hash_t hash, size_t idx)
 {
 	if (xbuf_has_parse(relay, name, idx)) {
 		/*
@@ -536,7 +616,7 @@ static int pstmt_standby_friendly_by_name(od_relay_t *relay, const char *name,
 		return 1;
 	}
 
-	od_pstmt_t *pstmt = od_client_get_pstmt(relay->client, name);
+	od_pstmt_t *pstmt = od_client_get_pstmt_hash(relay->client, name, hash);
 	if (pstmt != NULL) {
 		return od_query_ctx_standby_friendly(&pstmt->query_ctx);
 	}
@@ -560,7 +640,9 @@ static int bind_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
 	(void)portal;
 	(void)portal_len;
 
-	return pstmt_standby_friendly_by_name(relay, pstmt_name, idx);
+	return pstmt_standby_friendly_by_name(
+		relay, pstmt_name, od_hm_name_hash(pstmt_name, pstmt_name_len),
+		idx);
 }
 
 static int execute_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
@@ -575,8 +657,6 @@ static int execute_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
 		return 0;
 	}
 
-	(void)portal_len;
-
 	if (xbuf_has_bind(relay, portal, idx)) {
 		/*
 		 * the portal is created by this very batch - the matching
@@ -586,7 +666,8 @@ static int execute_standby_friendly(od_relay_t *relay, machine_msg_t *msg,
 		return 1;
 	}
 
-	od_pstmt_t *pstmt = od_client_get_portal(relay->client, portal);
+	od_pstmt_t *pstmt = od_client_get_portal_hash(
+		relay->client, portal, od_hm_name_hash(portal, portal_len));
 	if (pstmt != NULL) {
 		return od_query_ctx_standby_friendly(&pstmt->query_ctx);
 	}
@@ -748,10 +829,11 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 	 * unnamed pstmt and unnamed portal on client
 	 */
 	if (relay->client->prep_stmt_ids != NULL) {
-		od_client_remove_pstmt(relay->client, "");
+		/* hash is unused: the unnamed fast path fires first */
+		od_client_remove_pstmt_hash(relay->client, "", 0);
 	}
 	if (relay->client->portals != NULL) {
-		od_client_remove_portal(relay->client, "");
+		od_client_remove_portal_hash(relay->client, "", 0);
 	}
 
 	return status;

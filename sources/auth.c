@@ -101,14 +101,14 @@ static inline int od_auth_frontend_external_authentication(od_client_t *client)
 
 	if (authentication_result == OD_EAUTH_DENIED) {
 		od_log(&instance->logger, client, NULL,
-		       "user '%s.%s' incorrect password",
+		       "user '%s.%s' from '%s' incorrect password",
 		       client->startup.database.value,
-		       client->startup.user.value);
+		       client->startup.user.value, client->peer);
 	} else {
 		od_log(&instance->logger, client, NULL,
-		       "user '%s.%s' external auth failed",
+		       "user '%s.%s' from '%s' external auth failed",
 		       client->startup.database.value,
-		       client->startup.user.value);
+		       client->startup.user.value, client->peer);
 	}
 
 	od_frontend_fatal(client, KIWI_INVALID_PASSWORD,
@@ -300,8 +300,9 @@ static inline int od_auth_frontend_cleartext(od_client_t *client)
 
 auth_failed:
 	od_log(&instance->logger, client, NULL,
-	       "user '%s.%s' incorrect password",
-	       client->startup.database.value, client->startup.user.value);
+	       "user '%s.%s' from '%s' incorrect password",
+	       client->startup.database.value, client->startup.user.value,
+	       client->peer);
 	od_frontend_fatal(client, KIWI_INVALID_PASSWORD,
 			  "password authentication failed for user \"%s\"",
 			  client->startup.user.value);
@@ -422,9 +423,9 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 		machine_msg_free(msg);
 		if (rc != OK_RESPONSE) {
 			od_log(&instance->logger, client, NULL,
-			       "user '%s.%s' incorrect password",
+			       "user '%s.%s' from '%s' incorrect password",
 			       client->startup.database.value,
-			       client->startup.user.value);
+			       client->startup.user.value, client->peer);
 			/* TODO: pass error from ldap here */
 			od_frontend_fatal(
 				client, KIWI_INVALID_PASSWORD,
@@ -461,9 +462,9 @@ static inline int od_auth_frontend_md5(od_client_t *client)
 
 	if (!check) {
 		od_log(&instance->logger, client, NULL,
-		       "user '%s.%s' incorrect password",
+		       "user '%s.%s' from '%s' incorrect password",
 		       client->startup.database.value,
-		       client->startup.user.value);
+		       client->startup.user.value, client->peer);
 		od_frontend_fatal(
 			client, KIWI_INVALID_PASSWORD,
 			"password authentication failed for user \"%s\"",
@@ -820,8 +821,10 @@ static inline int od_auth_frontend_cert(od_client_t *client)
 static inline int od_auth_frontend_block(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
-	od_log(&instance->logger, client, NULL, "user '%s.%s' is blocked",
-	       client->startup.database.value, client->startup.user.value);
+	od_log(&instance->logger, client, NULL,
+	       "user '%s.%s' from '%s' is blocked",
+	       client->startup.database.value, client->startup.user.value,
+	       client->peer);
 	od_frontend_fatal(client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
 			  "user blocked: %s %s", client->startup.database.value,
 			  client->startup.user.value);

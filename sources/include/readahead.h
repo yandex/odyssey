@@ -23,35 +23,9 @@ void od_readahead_free(od_readahead_t *readahead);
 
 int od_readahead_prepare(od_readahead_t *readahead);
 
-static inline size_t od_readahead_capacity(od_readahead_t *readahead)
-{
-	od_assert(readahead->buf);
-	return mm_virtual_rbuf_capacity(readahead->buf);
-}
-
-static inline int od_readahead_left(od_readahead_t *readahead)
-{
-	od_assert(readahead->buf);
-	return mm_virtual_rbuf_free_size(readahead->buf);
-}
-
 static inline int od_readahead_unread(od_readahead_t *readahead)
 {
 	return mm_virtual_rbuf_size(readahead->buf);
-}
-
-static inline int od_readahead_next_byte_is(od_readahead_t *readahead,
-					    uint8_t value)
-{
-	struct iovec rvec = mm_virtual_rbuf_read_begin(readahead->buf);
-	if (rvec.iov_len == 0) {
-		/* no bytes in buf */
-		return 0;
-	}
-
-	/* no read commit - just check first byte */
-
-	return ((uint8_t *)rvec.iov_base)[0] == value;
 }
 
 static inline struct iovec od_readahead_read_begin(od_readahead_t *readahead)
