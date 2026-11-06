@@ -3203,9 +3203,11 @@ static void od_frontend_cleanup(od_client_t *client,
 	od_server_t *server = client->server;
 	char ra_desc[256];
 
-	if (route != NULL) {
-		od_stat_client_lifetime(
-			&route->stats, machine_time_us() - client->time_accept);
+	if (route != NULL && route->stats.enable_quantiles) {
+		uint64_t lifetime_us = machine_time_us() - client->time_accept;
+		od_route_lock(route);
+		od_stat_client_lifetime(&route->stats, lifetime_us);
+		od_route_unlock(route);
 	}
 
 	if (od_frontend_status_is_err(status)) {

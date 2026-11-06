@@ -177,6 +177,7 @@ static inline void od_route_pool_stat(od_route_pool_t *pool,
 
 		od_stat_t current;
 		od_stat_init(&current);
+		od_route_lock(route);
 		od_stat_copy(&current, &route->stats);
 
 		/* calculate average */
@@ -197,6 +198,7 @@ static inline void od_route_pool_stat(od_route_pool_t *pool,
 
 		/* update route stats */
 		od_stat_update(&route->stats_prev, &current);
+		od_route_unlock(route);
 
 		if (callback) {
 			callback(route, &current, &avg,
