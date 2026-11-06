@@ -25,9 +25,6 @@ int od_reset(od_server_t *server)
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 
-	atomic_fetch_add_explicit(&instance->reset_calls, 1,
-				  memory_order_relaxed);
-
 	if (server->oom) {
 		od_debug(&instance->logger, server->client, server,
 			 "server in oom mode, closing and drop connection");

@@ -306,7 +306,7 @@ static inline int od_console_show_reset_stats(od_client_t *client,
 	od_assert(desc);
 	od_instance_t *instance = client->global->instance;
 
-	if (kiwi_be_write_row_descriptionf(desc, "sl", "reset_reason",
+	if (kiwi_be_write_row_descriptionf(desc, "sl", "backend_reset",
 					   "count") == NULL) {
 		return NOT_OK_RESPONSE;
 	}
@@ -338,8 +338,6 @@ static inline int od_console_show_reset_stats(od_client_t *client,
 		const char *name;
 		uint64_t count;
 	} totals[] = {
-		{ "total", atomic_load_explicit(&instance->reset_calls,
-						memory_order_relaxed) },
 		{ "errors", atomic_load_explicit(&instance->reset_errors,
 						 memory_order_relaxed) },
 	};

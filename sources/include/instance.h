@@ -41,7 +41,6 @@ struct od_instance {
 	int orig_argv_ptr_len;
 	/* last config load failed, so a restart would not come up */
 	atomic_int config_load_failed;
-	atomic_uint_fast64_t reset_calls;
 	atomic_uint_fast64_t reset_errors;
 	atomic_uint_fast64_t reset_stats[OD_RESET_REASON_COUNT];
 	struct {
