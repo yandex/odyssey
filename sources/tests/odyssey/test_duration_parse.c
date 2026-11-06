@@ -221,9 +221,6 @@ static void test_config_duration_strings(void)
 		int rc = od_cfg_parse_autoconf(path, &model, &diags);
 		test(unlink(path) == 0);
 		if (cases[i].seconds_ms >= 0) {
-			if (rc != 0) {
-				od_cfg_diag_dumpf(stderr, &diags);
-			}
 			test(rc == 0);
 			test(!od_cfg_diag_has_errors(&diags));
 			test(model.global.stats_interval_ms.value ==
