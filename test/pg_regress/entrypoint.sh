@@ -6,8 +6,10 @@ PG_REGRESS=$(pg_config --libdir)/postgresql/pgxs/src/test/regress/pg_regress
 REGRESS_DIR=/home/postgres/regress
 
 # The container runs as postgres, which cannot create logs in /.
-export ASAN_LOG_PREFIX=/tmp/asan-output.log
-export TSAN_LOG_PREFIX=/tmp/tsan-output.log
+SANITIZER_LOG_DIR=/tmp/odyssey-sanitizer
+mkdir -p "${SANITIZER_LOG_DIR}"
+export ASAN_LOG_PREFIX=${SANITIZER_LOG_DIR}/asan-output.log
+export TSAN_LOG_PREFIX=${SANITIZER_LOG_DIR}/tsan-output.log
 export ASAN_OPTIONS="log_path=${ASAN_LOG_PREFIX} fast_unwind_on_malloc=0"
 export TSAN_OPTIONS="log_path=${TSAN_LOG_PREFIX}"
 
