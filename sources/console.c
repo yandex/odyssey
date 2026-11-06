@@ -1739,16 +1739,11 @@ static inline int od_console_show_rules(od_tuple_table_slot_t *tts)
 	od_router_t *router = global->router;
 	od_rules_t *rules = &router->rules;
 
-	/*
-	 * The live rules list is mutated and freed by od_router_reconfigure()
-	 * under od_router_lock (od_rules_merge unrefs and od_free's rules
-	 * mid-list). Take the router lock here as well around the whole
-	 * iteration - the rules lock alone does not serialize against a
-	 * concurrent reconfigure (SIGHUP / console RELOAD / ALTER SYSTEM),
-	 * which led to a use-after-free during SHOW rules.
-	 */
+	/* The router lock protects the live rules list, including rule removal
+	 * during reconfigure. Do not take the storages lock (rules->mu) here:
+	 * reload holds it while waiting for group checkers, which also need
+	 * the router lock to finish. */
 	od_router_lock(router);
-	od_rules_lock(rules);
 
 	od_list_t *i, *n;
 	od_list_foreach_safe (&rules->rules, i, n) {
@@ -1818,13 +1813,11 @@ static inline int od_console_show_rules(od_tuple_table_slot_t *tts)
 		}
 	}
 
-	od_rules_unlock(rules);
 	od_router_unlock(router);
 
 	return kiwi_be_write_complete(stream, "SHOW", sizeof("SHOW"));
 
 error:
-	od_rules_unlock(rules);
 	od_router_unlock(router);
 	return NOT_OK_RESPONSE;
 }
@@ -2337,12 +2330,7 @@ static inline int od_console_show_storages(od_client_t *client,
 	int rc;
 	int offset;
 
-	/*
-	 * Like SHOW rules: the storages list is mutated/freed by a
-	 * concurrent reconfigure under the router lock; the rules lock
-	 * alone does not serialize against it.
-	 */
-	od_router_lock(router);
+	/* Serialize with od_rules_storage_merge(), which uses rules->mu. */
 	od_rules_lock(rules);
 
 	od_list_t *i;
@@ -2399,11 +2387,9 @@ static inline int od_console_show_storages(od_client_t *client,
 	}
 
 	od_rules_unlock(rules);
-	od_router_unlock(router);
 	return kiwi_be_write_complete(stream, "SHOW", 5);
 error:
 	od_rules_unlock(rules);
-	od_router_unlock(router);
 	return rc;
 }
 
