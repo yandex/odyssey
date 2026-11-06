@@ -1077,6 +1077,7 @@ error:
 
 	od_rules_unlock(&router->rules);
 	od_config_free(&config);
+	od_rules_cleanup(&rules);
 	od_rules_free(&rules);
 
 	od_error(&instance->logger, NULL, NULL,
