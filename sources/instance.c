@@ -387,6 +387,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	od_system_t *system = NULL;
 	od_global_t *global = NULL;
 	bool router_initialized = false;
+	bool cron_initialized = false;
 
 	extensions = od_extensions_create();
 	if (extensions == NULL) {
@@ -407,6 +408,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		od_error(&instance->logger, NULL, NULL, "failed to init cron");
 		goto error;
 	}
+	cron_initialized = true;
 
 	od_worker_pool_init(&worker_pool);
 
@@ -615,6 +617,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	return rc;
 
 error:
+	if (cron_initialized) {
+		od_cron_free(&cron);
+	}
 	if (router_initialized) {
 		od_router_free(&router);
 	}
