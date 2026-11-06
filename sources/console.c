@@ -1854,7 +1854,11 @@ static inline int od_console_show_rules(od_tuple_table_slot_t *tts)
 	od_router_t *router = global->router;
 	od_rules_t *rules = &router->rules;
 
-	od_rules_lock(rules);
+	/* The router lock protects the live rules list, including rule removal
+	 * during reconfigure. Do not take the storages lock (rules->mu) here:
+	 * reload holds it while waiting for group checkers, which also need
+	 * the router lock to finish. */
+	od_router_lock(router);
 
 	od_list_t *i, *n;
 	od_list_foreach_safe (&rules->rules, i, n) {
@@ -1924,12 +1928,12 @@ static inline int od_console_show_rules(od_tuple_table_slot_t *tts)
 		}
 	}
 
-	od_rules_unlock(rules);
+	od_router_unlock(router);
 
 	return kiwi_be_write_complete(stream, "SHOW", sizeof("SHOW"));
 
 error:
-	od_rules_unlock(rules);
+	od_router_unlock(router);
 	return NOT_OK_RESPONSE;
 }
 
@@ -2441,6 +2445,7 @@ static inline int od_console_show_storages(od_client_t *client,
 	int rc;
 	int offset;
 
+	/* Serialize with od_rules_storage_merge(), which uses rules->mu. */
 	od_rules_lock(rules);
 
 	od_list_t *i;
