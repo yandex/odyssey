@@ -182,7 +182,6 @@ od_instance_t *od_instance_create(void)
 
 	instance->pstmts = NULL;
 
-	atomic_store(&instance->shutdown_worker_id, INVALID_COROUTINE_ID);
 	atomic_store(&instance->config_load_failed, 0);
 
 	instance->cmdline.argc = 0;
@@ -623,16 +622,6 @@ error:
 	od_system_free(system);
 	/* TODO: clean up the remaining startup resources and started machines. */
 	return NOT_OK_RESPONSE;
-}
-
-void od_instance_set_shutdown_worker_id(od_instance_t *instance, int64_t id)
-{
-	atomic_store(&instance->shutdown_worker_id, id);
-}
-
-int64_t od_instance_get_shutdown_worker_id(od_instance_t *instance)
-{
-	return atomic_load(&instance->shutdown_worker_id);
 }
 
 od_global_pstmt_map_t *od_instance_get_pstmts_map(od_instance_t *instance)
