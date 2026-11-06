@@ -25,9 +25,13 @@ int od_reset(od_server_t *server)
 	od_instance_t *instance = server->global->instance;
 	od_route_t *route = server->route;
 
+	atomic_fetch_add_explicit(&instance->reset_calls, 1,
+				  memory_order_relaxed);
+
 	if (server->oom) {
 		od_debug(&instance->logger, server->client, server,
 			 "server in oom mode, closing and drop connection");
+		od_instance_reset_reason_inc(instance, OD_RESET_REASON_OOM);
 		goto drop;
 	}
 
@@ -35,6 +39,8 @@ int od_reset(od_server_t *server)
 		od_debug(
 			&instance->logger, server->client, server,
 			"server has broken cached plan, closing and drop connection");
+		od_instance_reset_reason_inc(
+			instance, OD_RESET_REASON_CACHED_PLAN_BROKEN);
 		goto drop;
 	}
 
@@ -47,6 +53,8 @@ int od_reset(od_server_t *server)
 	if (server->copy_mode) {
 		od_debug(&instance->logger, server->client, server,
 			 "server left in copy, closing and drop connection");
+		od_instance_reset_reason_inc(instance,
+					     OD_RESET_REASON_COPY_MODE);
 		goto drop;
 	}
 
@@ -54,6 +62,8 @@ int od_reset(od_server_t *server)
 		od_debug(
 			&instance->logger, server->client, server,
 			"server left with partly-read message, closing and drop connection");
+		od_instance_reset_reason_inc(instance,
+					     OD_RESET_REASON_MSG_BROKEN);
 		goto drop;
 	}
 
@@ -61,6 +71,8 @@ int od_reset(od_server_t *server)
 		od_debug(
 			&instance->logger, server->client, server,
 			"server left in extended-query pipeline, closing and drop connection");
+		od_instance_reset_reason_inc(instance,
+					     OD_RESET_REASON_XPROTO_MODE);
 		goto drop;
 	}
 
@@ -69,6 +81,8 @@ int od_reset(od_server_t *server)
 		if (server->is_transaction) {
 			od_debug(&instance->logger, server->client, server,
 				 "in active transaction, closing");
+			od_instance_reset_reason_inc(
+				instance, OD_RESET_REASON_IN_TRANSACTION);
 			goto drop;
 		}
 	}
@@ -91,6 +105,8 @@ int od_reset(od_server_t *server)
 		if (!route->rule->pool->cancel) {
 			od_debug(&instance->logger, server->client, server,
 				 "server left in query, closing");
+			od_instance_reset_reason_inc(
+				instance, OD_RESET_REASON_LEFT_IN_QUERY);
 			goto drop;
 		}
 
@@ -114,6 +130,8 @@ int od_reset(od_server_t *server)
 				&instance->logger, server->client, server,
 				"rfq waiting failed - closing, status = %d (%s)",
 				st, od_frontend_status_to_str(st));
+			od_instance_reset_reason_inc(
+				instance, OD_RESET_REASON_RFQ_WAIT_FAILED);
 			goto drop;
 		}
 
@@ -124,6 +142,8 @@ int od_reset(od_server_t *server)
 				"sync failed, server left in query (sync_reply = %" PRIu64
 				", sync_request = %" PRIu64 ") - closing",
 				server->sync_reply, server->sync_request);
+			od_instance_reset_reason_inc(
+				instance, OD_RESET_REASON_SYNC_FAILED);
 			goto drop;
 		}
 	}
@@ -237,5 +257,7 @@ int od_reset(od_server_t *server)
 drop:
 	return 0;
 error:
+	atomic_fetch_add_explicit(&instance->reset_errors, 1,
+				  memory_order_relaxed);
 	return -1;
 }
