@@ -3,8 +3,10 @@
 #  PROMHTTP_FOUND - promhttp was successfully found
 #  PROMHTTP_INCLUDE_DIR - promhttp include directory
 #  PROMHTTP_LIBRARY - promhttp library
+#  PROMHTTP_MICROHTTPD_LIBRARY - microhttpd library
 
 find_path(PROMHTTP_INCLUDE_DIR NAMES promhttp.h)
 find_library(PROMHTTP_LIBRARY promhttp)
+find_library(PROMHTTP_MICROHTTPD_LIBRARY microhttpd)
 
-find_package_handle_standard_args(Promhttp REQUIRED_VARS PROMHTTP_LIBRARY PROMHTTP_INCLUDE_DIR)
+find_package_handle_standard_args(Promhttp REQUIRED_VARS PROMHTTP_LIBRARY PROMHTTP_INCLUDE_DIR PROMHTTP_MICROHTTPD_LIBRARY)

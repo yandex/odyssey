@@ -246,7 +246,7 @@ find_package(Promhttp)
 if (PROM_FOUND AND PROMHTTP_FOUND)
     set(od_prom ${PROM_LIBRARY})
     include_directories(${PROM_INCLUDE_DIR})
-    set(od_promhttp ${PROMHTTP_LIBRARY})
+    set(od_promhttp ${PROMHTTP_LIBRARY} ${PROMHTTP_MICROHTTPD_LIBRARY})
     include_directories(${PROMHTTP_INCLUDE_DIR})
 endif()
 

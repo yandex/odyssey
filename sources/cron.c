@@ -327,23 +327,30 @@ od_retcode_t od_cron_init(od_cron_t *cron)
 	cron->startup_errors = 0;
 
 #ifdef PROM_FOUND
-	cron->metrics =
-		(od_prom_metrics_t *)od_malloc(sizeof(od_prom_metrics_t));
-	cron->metrics->port = 0;
-	cron->metrics->http_server = NULL;
+	cron->metrics = od_calloc(1, sizeof(od_prom_metrics_t));
+	if (cron->metrics == NULL) {
+		return -1;
+	}
 #endif
 
 	cron->online = machine_wait_flag_create();
 	if (cron->online == NULL) {
-		return -1;
+		goto error;
 	}
 
 	cron->can_be_freed = machine_wait_flag_create();
 	if (cron->can_be_freed == NULL) {
 		machine_wait_flag_destroy(cron->online);
-		return -1;
+		goto error;
 	}
 	return 0;
+
+error:
+#ifdef PROM_FOUND
+	od_prom_metrics_destroy(cron->metrics);
+	cron->metrics = NULL;
+#endif
+	return -1;
 }
 
 int od_cron_start(od_cron_t *cron, od_global_t *global)
@@ -367,6 +374,7 @@ od_retcode_t od_cron_stop(od_cron_t *cron)
 	machine_wait_flag_wait(cron->can_be_freed, UINT32_MAX);
 #ifdef PROM_FOUND
 	od_prom_metrics_destroy(cron->metrics);
+	cron->metrics = NULL;
 #endif
 	machine_wait_flag_destroy(cron->can_be_freed);
 	machine_wait_flag_destroy(cron->online);

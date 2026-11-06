@@ -429,6 +429,12 @@ extern int od_prom_metrics_destroy(od_prom_metrics_t *self)
 	if (self == NULL) {
 		return 1;
 	}
+#ifdef PROMHTTP_FOUND
+	if (self->http_server != NULL) {
+		MHD_stop_daemon(self->http_server);
+		self->http_server = NULL;
+	}
+#endif
 	prom_collector_registry_destroy(self->stat_general_metrics);
 	self->stat_general_metrics = NULL;
 
