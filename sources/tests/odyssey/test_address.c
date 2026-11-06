@@ -1,6 +1,10 @@
 #include <odyssey.h>
 
+#include <machinarium/machinarium.h>
+
 #include <address.h>
+#include <storage.h>
+#include <common_const.h>
 #include <tests/odyssey_test.h>
 
 typedef struct {
@@ -57,6 +61,32 @@ static inline void do_test(const char *line, int expected_rc,
 	free(addresses);
 
 	va_end(args);
+}
+
+static void test_storage_endpoint_limit(void)
+{
+	char hosts[2 * (OD_STORAGE_MAX_ENDPOINTS + 1)];
+	for (size_t i = 0; i < sizeof(hosts); i += 2) {
+		hosts[i] = 'a';
+		hosts[i + 1] = ',';
+	}
+	hosts[sizeof(hosts) - 1] = '\0';
+
+	od_storage_endpoint_t *endpoints = NULL;
+	size_t count = 0;
+	test(od_storage_parse_endpoints(hosts, &endpoints, &count) ==
+	     NOT_OK_RESPONSE);
+	test(endpoints == NULL);
+	test(count == 0);
+
+	hosts[2 * OD_STORAGE_MAX_ENDPOINTS - 1] = '\0';
+	test(od_storage_parse_endpoints(hosts, &endpoints, &count) ==
+	     OK_RESPONSE);
+	test(count == OD_STORAGE_MAX_ENDPOINTS);
+	for (size_t i = 0; i < count; ++i) {
+		od_address_destroy(&endpoints[i].address);
+	}
+	od_free(endpoints);
 }
 
 void odyssey_test_address_parse(void)
@@ -155,6 +185,8 @@ void odyssey_test_address_parse(void)
 		address("b", "", 0));
 	do_test(",a,,b,", OK_RESPONSE, 2, address("a", "", 0),
 		address("b", "", 0));
+
+	test_storage_endpoint_limit();
 }
 
 static inline int sign(int a)
