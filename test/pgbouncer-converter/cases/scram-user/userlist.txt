@@ -1,0 +1,2 @@
+"alice" "SCRAM-SHA-256$4096:salt$key:key"
+"bob" "secret"

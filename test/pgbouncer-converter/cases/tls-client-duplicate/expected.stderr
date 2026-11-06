@@ -1,0 +1,1 @@
+pgbouncer.ini:5: duplicate option or out of memory: client_tls_sslmode

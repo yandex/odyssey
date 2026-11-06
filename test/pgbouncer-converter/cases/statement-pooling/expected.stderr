@@ -1,0 +1,1 @@
+WARNING: pgbouncer.ini:0: unsupported pool_mode; using session placeholder, routes blocked: statement

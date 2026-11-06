@@ -1,0 +1,1 @@
+WARNING: pgbouncer.ini:0: forced user with multiple client users would change pool size; routes blocked: app
