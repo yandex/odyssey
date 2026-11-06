@@ -38,7 +38,6 @@ struct od_server {
 	/* Copy stmt state */
 	int copy_mode;
 	/**/
-	int deploy_sync;
 	od_stat_state_t stats_state;
 
 	od_multi_pool_element_t *pool_element;
@@ -61,6 +60,8 @@ struct od_server {
 	/* do not set this field directly, use od_server_attach_client */
 	od_client_t *client;
 	od_route_t *route;
+	/* A counted connection may leave its pool before its socket is closed. */
+	bool stats_connected;
 
 	od_global_t *global;
 	int offline;
@@ -94,7 +95,6 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->is_transaction = 0;
 	server->is_error_tx = 0;
 	server->copy_mode = 0;
-	server->deploy_sync = 0;
 	server->sync_request = 0;
 	server->sync_reply = 0;
 	server->init_time_us = machine_time_us();
@@ -142,6 +142,7 @@ static inline od_server_t *od_server_allocate(int reserve_prep_stmts)
 }
 
 void od_server_free(od_server_t *server);
+void od_server_stat_close(od_server_t *server);
 
 static inline void od_server_sync_request(od_server_t *server, uint64_t count)
 {
@@ -151,11 +152,6 @@ static inline void od_server_sync_request(od_server_t *server, uint64_t count)
 static inline void od_server_sync_reply(od_server_t *server)
 {
 	server->sync_reply++;
-}
-
-static inline int od_server_in_deploy(od_server_t *server)
-{
-	return server->deploy_sync > 0;
 }
 
 static inline int od_server_synchronized(od_server_t *server)

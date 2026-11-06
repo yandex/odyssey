@@ -18,6 +18,8 @@ server_lifetime 1h
 pool_timeout 500
 stats_interval 2min
 catchup_timeout 3s
+stats_interval "10s"
+pool_timeout "1.5 min"
 ```
 
 Exactly one optional unit is allowed, and units are case-sensitive,
@@ -25,6 +27,11 @@ like in PostgreSQL: `us`, `ms`, `s`, `min`, `h`, `d`.  Compound values
 (`1h30m`) are not supported.  Whitespace between the number and the
 unit is allowed (`30 min`), as are floating-point numbers (`1.5h`) and
 `0x`-hexadecimal integers (`0x10s`).
+
+Duration values may also be enclosed in double quotes. Quoting does not
+change their meaning: `stats_interval "10"` and `stats_interval 10`
+both mean 10 seconds, while `stats_interval "10ms"` uses milliseconds.
+Quoted values go through the same unit conversion and range checks.
 
 The value is rounded half-to-even to whole milliseconds, exactly like
 PostgreSQL rounds a GUC value to its base unit (`1500us` is 2 ms,
@@ -66,7 +73,7 @@ megabytes) and is rejected by time-valued options.
 | `promhttp_server_port`                     | int              | unset       | SIGHUP  | Enable Prometheus endpoint                            |
 | `log_general_stats_prom`                   | int (bool)       | `no`        | SIGHUP  | Prometheus general stats                              |
 | `log_route_stats_prom`                     | int (bool)       | `no`        | SIGHUP  | Prometheus per-route stats                            |
-| `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging; duration suffixes (`60s`, `1m`) are supported |
+| `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging; duration suffixes (`60s`, `1min`) are supported |
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
 | `readahead`                                | int (bytes)      | one page    | SIGHUP  | Per-connection read buffer                            |

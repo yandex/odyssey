@@ -28,7 +28,7 @@
 #include <worker_pool.h>
 #include <system.h>
 #include <extension.h>
-#include <od_error.h>
+#include <util.h>
 #include <cfg/reader.h>
 #include <cfg/convert.h>
 #include <cfg_import.h>
@@ -182,7 +182,6 @@ od_instance_t *od_instance_create(void)
 
 	instance->pstmts = NULL;
 
-	atomic_store(&instance->shutdown_worker_id, INVALID_COROUTINE_ID);
 	atomic_store(&instance->config_load_failed, 0);
 
 	instance->cmdline.argc = 0;
@@ -388,6 +387,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	od_system_t *system = NULL;
 	od_global_t *global = NULL;
 	bool router_initialized = false;
+	bool cron_initialized = false;
 
 	extensions = od_extensions_create();
 	if (extensions == NULL) {
@@ -408,6 +408,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		od_error(&instance->logger, NULL, NULL, "failed to init cron");
 		goto error;
 	}
+	cron_initialized = true;
 
 	od_worker_pool_init(&worker_pool);
 
@@ -616,6 +617,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	return rc;
 
 error:
+	if (cron_initialized) {
+		od_cron_free(&cron);
+	}
 	if (router_initialized) {
 		od_router_free(&router);
 	}
@@ -625,14 +629,45 @@ error:
 	return NOT_OK_RESPONSE;
 }
 
-void od_instance_set_shutdown_worker_id(od_instance_t *instance, int64_t id)
+void od_instance_reset_reason_inc(od_instance_t *instance,
+				  od_reset_reason_t reason)
 {
-	atomic_store(&instance->shutdown_worker_id, id);
+	atomic_fetch_add_explicit(&instance->reset_stats[reason], 1,
+				  memory_order_relaxed);
 }
 
-int64_t od_instance_get_shutdown_worker_id(od_instance_t *instance)
+uint64_t od_instance_reset_reason_get(od_instance_t *instance,
+				      od_reset_reason_t reason)
 {
-	return atomic_load(&instance->shutdown_worker_id);
+	return atomic_load_explicit(&instance->reset_stats[reason],
+				    memory_order_relaxed);
+}
+
+const char *od_reset_reason_to_str(od_reset_reason_t reason)
+{
+	switch (reason) {
+	case OD_RESET_REASON_OOM:
+		return "oom";
+	case OD_RESET_REASON_CACHED_PLAN_BROKEN:
+		return "cached_plan_broken";
+	case OD_RESET_REASON_COPY_MODE:
+		return "left_in_copy";
+	case OD_RESET_REASON_MSG_BROKEN:
+		return "partly_read_message";
+	case OD_RESET_REASON_XPROTO_MODE:
+		return "left_in_extended_query";
+	case OD_RESET_REASON_IN_TRANSACTION:
+		return "in_active_transaction";
+	case OD_RESET_REASON_LEFT_IN_QUERY:
+		return "left_in_query";
+	case OD_RESET_REASON_RFQ_WAIT_FAILED:
+		return "rfq_wait_failed";
+	case OD_RESET_REASON_SYNC_FAILED:
+		return "sync_failed";
+	case OD_RESET_REASON_COUNT:
+		break;
+	}
+	return "unknown";
 }
 
 od_global_pstmt_map_t *od_instance_get_pstmts_map(od_instance_t *instance)

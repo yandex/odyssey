@@ -229,6 +229,15 @@ static void entry_init_internal(od_xplan_entry_t *e, od_xplan_entry_type_t type,
 	e->delta.pstmt = pstmt;
 	e->delta.portal_name = portal_name;
 
+	if (client_pstmt != NULL) {
+		e->delta.client_pstmt_hash = od_hm_name_hash(
+			client_pstmt, (uint32_t)strlen(client_pstmt) + 1);
+	}
+	if (portal_name != NULL) {
+		e->delta.portal_name_hash = od_hm_name_hash(
+			portal_name, (uint32_t)strlen(portal_name) + 1);
+	}
+
 	if (e->delta.pstmt != NULL) {
 		od_pstmt_ref(e->delta.pstmt);
 	}
@@ -546,7 +555,8 @@ void od_xplan_clear(od_xplan_t *xp)
 }
 
 static od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp, od_client_t *client,
-					 const char *pstmt_name)
+					 const char *pstmt_name,
+					 mm_hash_t pstmt_name_hash)
 {
 	/*
 	 * searching from newest state to oldest,
@@ -572,21 +582,24 @@ static od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp, od_client_t *client,
 		case OD_XPLAN_DELTA_ADD_CLIENT_ONLY:
 			/* fallthrough */
 		case OD_XPLAN_DELTA_ADD_BOTH:
-			if (strcmp(pstmt_name, delta->client_pstmt) == 0) {
+			if (delta->client_pstmt_hash == pstmt_name_hash &&
+			    strcmp(pstmt_name, delta->client_pstmt) == 0) {
 				/* found adding of the pstmt */
 				return delta->pstmt;
 			}
 			break;
 
 		case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY:
-			if (strcmp(pstmt_name, delta->client_pstmt) == 0) {
+			if (delta->client_pstmt_hash == pstmt_name_hash &&
+			    strcmp(pstmt_name, delta->client_pstmt) == 0) {
 				/* found removing of the pstmt */
 				return NULL;
 			}
 			break;
 
 		case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME:
-			if (strcmp(pstmt_name, delta->client_pstmt) == 0) {
+			if (delta->client_pstmt_hash == pstmt_name_hash &&
+			    strcmp(pstmt_name, delta->client_pstmt) == 0) {
 				/* found removing of the pstmt */
 				return NULL;
 			}
@@ -602,11 +615,12 @@ static od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp, od_client_t *client,
 		}
 	}
 
-	return od_client_get_pstmt(client, pstmt_name);
+	return od_client_get_pstmt_hash(client, pstmt_name, pstmt_name_hash);
 }
 
 static od_pstmt_t *plan_client_get_portal(od_xplan_t *xp, od_client_t *client,
-					  const char *portal_name)
+					  const char *portal_name,
+					  mm_hash_t portal_name_hash)
 {
 	/*
 	 * searching from newest state to oldest,
@@ -632,14 +646,16 @@ static od_pstmt_t *plan_client_get_portal(od_xplan_t *xp, od_client_t *client,
 			break;
 
 		case OD_XPLAN_DELTA_ADD_PORTAL:
-			if (strcmp(portal_name, delta->portal_name) == 0) {
+			if (delta->portal_name_hash == portal_name_hash &&
+			    strcmp(portal_name, delta->portal_name) == 0) {
 				/* found portal -> pstmt mapping */
 				return delta->pstmt;
 			}
 			break;
 
 		case OD_XPLAN_DELTA_REMOVE_PORTAL:
-			if (strcmp(portal_name, delta->portal_name) == 0) {
+			if (delta->portal_name_hash == portal_name_hash &&
+			    strcmp(portal_name, delta->portal_name) == 0) {
 				/* found removing of the portal */
 				return NULL;
 			}
@@ -655,13 +671,15 @@ static od_pstmt_t *plan_client_get_portal(od_xplan_t *xp, od_client_t *client,
 		}
 	}
 
-	return od_client_get_portal(client, portal_name);
+	return od_client_get_portal_hash(client, portal_name, portal_name_hash);
 }
 
 static int plan_client_pstmt_exists(od_xplan_t *xp, od_client_t *client,
-				    const char *pstmt_name)
+				    const char *pstmt_name,
+				    mm_hash_t pstmt_name_hash)
 {
-	return plan_client_get_pstmt(xp, client, pstmt_name) != NULL;
+	return plan_client_get_pstmt(xp, client, pstmt_name, pstmt_name_hash) !=
+	       NULL;
 }
 
 static int plan_server_has_pstmt(od_xplan_t *xp, od_server_t *server,
@@ -736,10 +754,12 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 	od_frontend_status_t st;
 
 	machine_msg_t *msg = m->msg;
-	char *pstmt_name = od_pstmt_name_from_parse(msg);
+	uint32_t pstmt_name_len;
+	char *pstmt_name = od_pstmt_name_from_parse_len(msg, &pstmt_name_len);
 	if (pstmt_name == NULL) {
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
+	mm_hash_t pstmt_name_hash = od_hm_name_hash(pstmt_name, pstmt_name_len);
 
 	od_pstmt_desc_t desc = od_pstmt_desc_from_parse(msg);
 	if (desc.data == NULL) {
@@ -753,7 +773,7 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 	 * without getting any error about pstmt already exists
 	 */
 	if (pstmt_name[0] != '\0' &&
-	    plan_client_pstmt_exists(xp, client, pstmt_name)) {
+	    plan_client_pstmt_exists(xp, client, pstmt_name, pstmt_name_hash)) {
 		machine_msg_t *vresp = pstmt_already_exists_msg(pstmt_name);
 		if (vresp == NULL) {
 			return OD_EOOM;
@@ -834,7 +854,9 @@ static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
 	 * note: pstmt was returned without ref holded because
 	 * it already belongs to client or some xplan entry
 	 */
-	od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
+	od_pstmt_t *pstmt = plan_client_get_pstmt(
+		xp, client, pstmt_name,
+		od_hm_name_hash(pstmt_name, pstmt_name_len));
 	if (pstmt == NULL) {
 		/*
 		 * the client never parsed this pstmt in its session, and
@@ -891,9 +913,12 @@ static od_frontend_status_t plan_close(od_relay_t *relay, od_xplan_t *xp,
 		 * original message owned by xbuf) - no double free on cleanup.
 		 */
 		od_xplan_entry_t e;
-		entry_init_fwd(&e, msg, NULL /* no rewrite, forward clmsg */,
-			       OD_XPLAN_DELTA_REMOVE_PORTAL, NULL, NULL);
-		e.delta.portal_name = pstmt_name;
+		entry_init_internal(&e, OD_XPLAN_FORWARD, msg,
+				    NULL /* srvmsg: return the original
+					  * clmsg, no double free */
+				    ,
+				    NULL, OD_XPLAN_DELTA_REMOVE_PORTAL, NULL,
+				    NULL, pstmt_name);
 		int rc = xplan_append(xp, &e);
 		if (rc != 0) {
 			return OD_EOOM;
@@ -957,7 +982,9 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 	}
 
 	/* no ref to pstmt: already owned by client map or some plan entry */
-	od_pstmt_t *pstmt = plan_client_get_pstmt(xp, client, pstmt_name);
+	od_pstmt_t *pstmt = plan_client_get_pstmt(
+		xp, client, pstmt_name,
+		od_hm_name_hash(pstmt_name, pstmt_name_len));
 	if (pstmt == NULL) {
 		/*
 		 * the client never parsed this pstmt in its session, and
@@ -1029,7 +1056,9 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 	 * no ref was created on pstmt
 	 * it is already holded by client map or some plan entry
 	 */
-	od_pstmt_t *pstmt = plan_client_get_portal(xp, client, portal_name);
+	od_pstmt_t *pstmt = plan_client_get_portal(
+		xp, client, portal_name,
+		od_hm_name_hash(portal_name, portal_name_len));
 	if (pstmt == NULL) {
 		/*
 		 * portal not found - just forward, let the server
@@ -1341,16 +1370,21 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 	case OD_XPLAN_DELTA_NONE:
 		break;
 	case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY:
-		od_client_remove_pstmt(client, delta->client_pstmt);
+		od_client_remove_pstmt_hash(client, delta->client_pstmt,
+					    delta->client_pstmt_hash);
 		break;
 	case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME:
-		od_client_remove_pstmt(client, delta->client_pstmt);
+		od_client_remove_pstmt_hash(client, delta->client_pstmt,
+					    delta->client_pstmt_hash);
 		break;
 	case OD_XPLAN_DELTA_ADD_PORTAL:
-		od_client_add_portal(client, delta->portal_name, delta->pstmt);
+		od_client_add_portal_hash(client, delta->portal_name,
+					  delta->portal_name_hash,
+					  delta->pstmt);
 		break;
 	case OD_XPLAN_DELTA_REMOVE_PORTAL:
-		od_client_remove_portal(client, delta->portal_name);
+		od_client_remove_portal_hash(client, delta->portal_name,
+					     delta->portal_name_hash);
 		break;
 	case OD_XPLAN_DELTA_REMOVE_ALL:
 		od_client_pstmts_clear(client);

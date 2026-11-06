@@ -24,6 +24,7 @@
 #include <instance.h>
 #include <cron.h>
 #include <thread_global.h>
+#include <worker.h>
 #include <ejection.h>
 #include <stream.h>
 #include <module.h>
@@ -54,19 +55,6 @@ static inline void od_frontend_close(od_client_t *client)
 	}
 	od_io_close(&client->io);
 	od_client_free(client);
-}
-
-int od_frontend_info(od_client_t *client, char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	machine_msg_t *msg;
-	msg = od_frontend_info_msg(client, NULL, fmt, args);
-	va_end(args);
-	if (msg == NULL) {
-		return -1;
-	}
-	return od_write(&client->io, msg);
 }
 
 int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
@@ -1250,12 +1238,12 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 	if (instance->config.log_session) {
 		client->time_setup = machine_time_us();
 		od_log(&instance->logger, client, NULL,
-		       "login time: %" PRIu64 " microseconds",
-		       (client->time_setup - client->time_accept));
-		od_log(&instance->logger, client, NULL,
-		       "client connection from %s to route %s.%s accepted",
-		       client->peer, route->rule->db_name,
-		       route->rule->user_name);
+		       "client '%s.%s' from '%s' to route %s.%s accepted"
+		       " login time: %" PRIu64 " microseconds",
+		       client->startup.database.value,
+		       client->startup.user.value, client->peer,
+		       route->rule->db_name, route->rule->user_name,
+		       client->time_setup - client->time_accept);
 	}
 
 	return OD_OK;
@@ -1398,10 +1386,7 @@ od_process_drop_on_restart(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 
-	int64_t shut_worker_id = od_instance_get_shutdown_worker_id(instance);
-
-	if (od_likely(shut_worker_id == INVALID_COROUTINE_ID)) {
-		/* try to optimize likely path */
+	if (od_likely(!od_worker_is_shutting_down())) {
 		return OD_OK;
 	}
 
@@ -3172,15 +3157,15 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	if (instance->config.log_session) {
 		if (route != NULL) {
 			od_log(&instance->logger, client, server,
-			       "client disconnected addr '%s', io error = %s, status %s, route %s.%s, working time: %" PRIu64
+			       "client disconnected route %s.%s, addr '%s', io error = %s, status %s, working time: %" PRIu64
 			       "us",
+			       route->rule->db_name, route->rule->user_name,
 			       client->peer, od_io_error(&client->io),
 			       od_frontend_status_to_str(status),
-			       route->rule->db_name, route->rule->user_name,
 			       working_time_us);
 		} else {
 			od_log(&instance->logger, client, server,
-			       "client disconnected, addr '%s', io error = %s, status %s, working time %" PRIu64
+			       "client disconnected addr '%s', io error = %s, status %s, working time: %" PRIu64
 			       "us",
 			       client->peer, od_io_error(&client->io),
 			       od_frontend_status_to_str(status),
@@ -3200,8 +3185,6 @@ static void od_frontend_on_client_disconnect(od_frontend_status_t status,
 	rc = od_reset(server);
 	if (rc != 1) {
 		/* close backend connection */
-		od_log(&instance->logger, client, server,
-		       "reset unsuccessful, closing server connection");
 		od_router_close(router, client);
 		return;
 	}
@@ -3523,9 +3506,9 @@ void od_frontend(void *arg)
 		       1);
 
 	/* log client connection */
-	if (instance->config.log_session) {
-		od_log(&instance->logger, client, NULL,
-		       "new client connection %s", client->peer);
+	if (instance->config.log_session && instance->config.log_debug) {
+		od_debug(&instance->logger, client, NULL,
+			 "new client connection %s", client->peer);
 	}
 
 	/* attach client io to worker machine event loop */
@@ -3664,14 +3647,6 @@ void od_frontend(void *arg)
 					    rule->keepalive_keep_interval,
 					    rule->keepalive_probes,
 					    rule->keepalive_usr_timeout);
-		}
-
-		if (instance->config.log_session) {
-			od_log(&instance->logger, client, NULL,
-			       "route '%s.%s' to '%s.%s'",
-			       client->startup.database.value,
-			       client->startup.user.value, route->rule->db_name,
-			       route->rule->user_name);
 		}
 	} else {
 		if (od_router_status_is_err(router_status)) {

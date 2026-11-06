@@ -53,6 +53,8 @@ struct od_client {
 	kiwi_be_startup_t startup;
 	kiwi_vars_t vars;
 	kiwi_key_t key;
+	/* cached hash of key, set once by od_global_clients_map_add */
+	mm_hash_t key_hash;
 
 	/*
 	 * raw bytes of the startup packet, kept only when
