@@ -2900,7 +2900,20 @@ size_value:
  * od_duration_parse_ms().
  */
 time_value:
-	NUMBER
+	STRING
+		{
+			const char *hint = NULL;
+			if (!od_duration_parse_value($1, &$$, &hint)) {
+				od_cfg_diag_error_with_hint(ctx->diags, @1, hint,
+							    "invalid duration value '%s'", $1);
+				od_free($1);
+				$1 = NULL;
+				YYERROR;
+			}
+			od_free($1);
+			$1 = NULL;
+		}
+	| NUMBER
 		{
 			$$.has_unit = 0;
 			$$.is_real = 0;
