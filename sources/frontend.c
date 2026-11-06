@@ -24,6 +24,7 @@
 #include <instance.h>
 #include <cron.h>
 #include <thread_global.h>
+#include <worker.h>
 #include <ejection.h>
 #include <stream.h>
 #include <module.h>
@@ -1385,10 +1386,7 @@ od_process_drop_on_restart(od_client_t *client)
 	od_instance_t *instance = client->global->instance;
 	od_server_t *server = client->server;
 
-	int64_t shut_worker_id = od_instance_get_shutdown_worker_id(instance);
-
-	if (od_likely(shut_worker_id == INVALID_COROUTINE_ID)) {
-		/* try to optimize likely path */
+	if (od_likely(!od_worker_is_shutting_down())) {
 		return OD_OK;
 	}
 

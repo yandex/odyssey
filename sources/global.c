@@ -11,7 +11,7 @@
 #include <instance.h>
 #include <wait_event.h>
 
-od_global_t *current_global od_read_mostly = NULL;
+od_global_t *current_global OD_READ_MOSTLY = NULL;
 
 int od_global_init(od_global_t *global, od_instance_t *instance,
 		   od_system_t *system, od_router_t *router, od_cron_t *cron,
