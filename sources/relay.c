@@ -141,19 +141,18 @@ static int xbuf_append(od_relay_xbuf_t *xbuf, machine_msg_t *msg)
 	return rc;
 }
 
-static int xbuf_append_raw(od_relay_xbuf_t *xbuf, const void *data, size_t len)
+static int xbuf_append_deferred_begin(od_relay_xbuf_t *xbuf, const char *query)
 {
-	machine_msg_t *copy = machine_msg_create(len);
+	machine_msg_t *copy =
+		kiwi_fe_write_query(NULL, query, strlen(query) + 1);
 	if (copy == NULL) {
 		return -1;
 	}
 
-	char *d = machine_msg_data(copy);
-	memcpy(d, data, len);
-
 	od_xbuf_msg_t xmsg;
 	memset(&xmsg, 0, sizeof(od_xbuf_msg_t));
 	xmsg.msg = copy;
+	xmsg.is_deferred_begin = true;
 
 	int rc = mm_vector_append(&xbuf->msgs, &xmsg);
 	if (rc != 0) {
@@ -287,6 +286,11 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 			done = 1;
 			machine_msg_free(msg);
 			break;
+		case KIWI_BE_ERROR_RESPONSE:
+			/* Failed BEGIN has no CommandComplete; leave RFQ to the stream. */
+			od_backend_error(server, data, size);
+			rc = od_write(&client->io, msg);
+			return rc == 0 ? OD_OK : OD_ECLIENT_WRITE;
 		case KIWI_BE_PARAMETER_STATUS:
 			rc = od_backend_update_parameter(server, data, size, 0);
 			if (rc == -1) {
@@ -429,8 +433,11 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		}
 
 		if (client->pending_begin) {
-			machine_msg_t *rewritten = kiwi_fe_write_query_join(
-				NULL, "BEGIN;", query, NULL);
+			/* End trailing line comments before separating statements. */
+			machine_msg_t *rewritten =
+				kiwi_fe_write_query_join(NULL,
+							 client->pending_begin,
+							 "\n;", query, NULL);
 			if (rewritten == NULL) {
 				machine_msg_free_safe(execute);
 				return OD_EOOM;
@@ -458,6 +465,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	}
 
 	od_stat_query_start(&server->stats_state);
+	uint64_t errors_before = server->error_responses;
 
 	if (client->pending_begin) {
 		/*
@@ -469,10 +477,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		if (status != OD_OK) {
 			return status;
 		}
-		client->pending_begin = 0;
+		od_client_pending_begin_clear(client);
 	}
-
-	uint64_t errors_before = server->error_responses;
 
 	status = od_stream_server_until_rfq(server, timeout_ms,
 					    OD_WAIT_STREAM_SERVER_READ);
@@ -499,21 +505,17 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	return status;
 }
 
-uint8_t od_relay_deferred_begin_bytes[12] = { 'Q', 0,	0,   0,	  11,  'B',
-					      'E', 'G', 'I', 'N', ';', 0 };
-
 static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 {
 	od_client_t *client = relay->client;
 
 	if (client->pending_begin) {
-		size_t len = sizeof(od_relay_deferred_begin_bytes);
-		if (xbuf_append_raw(&relay->xbuf, od_relay_deferred_begin_bytes,
-				    len)) {
+		if (xbuf_append_deferred_begin(&relay->xbuf,
+					       client->pending_begin)) {
 			return -1;
 		}
 
-		client->pending_begin = 0;
+		od_client_pending_begin_clear(client);
 	}
 
 	if (xbuf_append(&relay->xbuf, msg)) {

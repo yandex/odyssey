@@ -5,6 +5,7 @@
 #include <sql/minimal/parser.h>
 #include <alloc/linear.h>
 #include <query.h>
+#include <client.h>
 
 #define PRINT_BUF_SIZE 1024
 #define ARENA_SIZE 8192
@@ -788,6 +789,32 @@ static void test_parse_fill_ctx_full(void)
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
 	od_query_ctx_reset(&ctx);
 
+	fill_ctx_full("BEGIN TRANSACTION;", &ctx);
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
+	od_query_ctx_reset(&ctx);
+
+	/* Virtual BEGIN must recognize transaction options for deferred replay. */
+	const char *begin_with_options[] = {
+		"BEGIN ISOLATION LEVEL SERIALIZABLE;",
+		"BEGIN ISOLATION LEVEL REPEATABLE READ;",
+		"BEGIN ISOLATION LEVEL READ COMMITTED;",
+		"BEGIN ISOLATION LEVEL READ UNCOMMITTED;",
+		"BEGIN WORK READ ONLY;",
+		"BEGIN TRANSACTION READ WRITE;",
+		"BEGIN DEFERRABLE;",
+		"BEGIN NOT DEFERRABLE;",
+		"BEGIN ISOLATION LEVEL SERIALIZABLE, READ ONLY, DEFERRABLE;",
+	};
+	for (size_t i = 0;
+	     i < sizeof(begin_with_options) / sizeof(begin_with_options[0]);
+	     i++) {
+		fill_ctx_full(begin_with_options[i], &ctx);
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
+		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
+		od_query_ctx_reset(&ctx);
+	}
+
 	/* UNLISTEN * */
 	fill_ctx_full("UNLISTEN *", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
@@ -1245,6 +1272,50 @@ static void test_parse_fill_ctx_modes(void)
 	}
 }
 
+static void test_pending_begin_storage(void)
+{
+	od_client_t *client = od_client_allocate();
+	test(client != NULL);
+	test(client->pending_begin == NULL);
+	od_client_pending_begin_clear(client);
+
+	/* Include the terminator: 127 bytes fit, 128 bytes need the heap. */
+	const size_t lengths[] = { 6, 127, 128, 511, 6 };
+	char query[512];
+	for (size_t i = 0; i < sizeof(lengths) / sizeof(lengths[0]); i++) {
+		size_t len = lengths[i];
+		memset(query, ' ', len);
+		memcpy(query, "BEGIN;", 6);
+		query[len] = '\0';
+		test(od_client_pending_begin_set(client, query) == 0);
+		test(strcmp(client->pending_begin, query) == 0);
+		test((client->pending_begin == client->pending_begin_buf) ==
+		     (len < 128));
+		/* The saved SQL must outlive the input message. */
+		query[0] = 'X';
+		test(client->pending_begin[0] == 'B');
+		od_client_pending_begin_clear(client);
+		test(client->pending_begin == NULL);
+	}
+
+	/* Disconnect must safely release both inline and heap-backed SQL. */
+	test(od_client_pending_begin_set(
+		     client,
+		     "BEGIN ISOLATION LEVEL SERIALIZABLE, READ ONLY, DEFERRABLE;") ==
+	     0);
+	test(client->pending_begin == client->pending_begin_buf);
+	od_client_free(client);
+
+	client = od_client_allocate();
+	test(client != NULL);
+	memset(query, ' ', sizeof(query) - 1);
+	memcpy(query, "BEGIN;", 6);
+	query[sizeof(query) - 1] = '\0';
+	test(od_client_pending_begin_set(client, query) == 0);
+	test(client->pending_begin != client->pending_begin_buf);
+	od_client_free(client);
+}
+
 static void test_prepare_locations(void)
 {
 	const char *sql =
@@ -1358,6 +1429,7 @@ static void test_execute_query_ctx(void)
 void odyssey_test_sql_minimal_parser(void)
 {
 	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
+	test_pending_begin_storage();
 	test_prepare_locations();
 	test_locations_after_comments();
 

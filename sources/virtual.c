@@ -707,6 +707,7 @@ static od_frontend_status_t process_vempty(od_client_t *client,
 }
 
 static od_frontend_status_t process_vbegin(od_client_t *client,
+					   const char *query,
 					   od_virtual_portal_t *portal)
 {
 	od_server_t *server = client->server;
@@ -720,8 +721,10 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
 	if (virtual_portal_set_complete(portal, "BEGIN") != 0) {
 		return OD_EOOM;
 	}
+	if (od_client_pending_begin_set(client, query) != 0) {
+		return OD_EOOM;
+	}
 	portal->txstatus_force = 'T';
-	client->pending_begin = 1;
 
 	return OD_SKIP;
 }
@@ -847,7 +850,7 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EMPTY)) {
 		status = process_vempty(client, &portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_BEGIN)) {
-		status = process_vbegin(client, &portal);
+		status = process_vbegin(client, query, &portal);
 	} else {
 		status = process_vdeallocate(client, ctx, &portal);
 	}
