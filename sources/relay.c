@@ -287,6 +287,25 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 			done = 1;
 			machine_msg_free(msg);
 			break;
+		case KIWI_BE_ERROR_RESPONSE:
+			/*
+			 * The deferred "BEGIN;<query>" batch is executed by
+			 * the server as a single Query. A statement that
+			 * fails parsing makes the server abandon the whole
+			 * batch without executing BEGIN, so no
+			 * CommandComplete is ever sent. Continuing to wait
+			 * for one would hang this relay on an idle server
+			 * until the server read timeout, keeping the pool
+			 * slot reserved for a client that has already gone.
+			 * Deliver the error and let the trailing
+			 * ReadyForQuery be relayed as usual.
+			 */
+			done = 1;
+			rc = od_write(&client->io, msg);
+			if (rc != 0) {
+				return OD_ECLIENT_READ;
+			}
+			break;
 		case KIWI_BE_PARAMETER_STATUS:
 			rc = od_backend_update_parameter(server, data, size, 0);
 			if (rc == -1) {
