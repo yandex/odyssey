@@ -78,8 +78,42 @@ expect_line '# log_debug yes'
 expect_line 'log_debug no'
 expect_value log_debug no
 
+# Duration strings preserve units and are applied only on reload.
+expect_value stats_interval 3
+console "alter system set stats_interval = '10s'"
+expect_line 'stats_interval "10s"'
+expect_value stats_interval 3
+console 'reload'
+expect_value stats_interval 10
+console "alter system set stats_interval = '1.5 min'"
+console 'reload'
+expect_value stats_interval 90
+console "alter system set stats_interval = '10'"
+console 'reload'
+expect_value stats_interval 10
+console "alter system set backend_connect_timeout_ms = '10'"
+console 'reload'
+expect_value backend_connect_timeout_ms 10
+console "alter system set backend_connect_timeout_ms = '10s'"
+console 'reload'
+expect_value backend_connect_timeout_ms 10000
+console "alter system set cancel_queue_timeout_ms = '-1'" 2>/dev/null
+expect_line 'cancel_queue_timeout_ms "-1"'
+
 # 4. rejected changes leave the file intact
 before=$(md5sum <"$AUTOCONF")
+expect_error "alter system set stats_interval = 'oops'" \
+	'invalid value for parameter "stats_interval"'
+expect_error "alter system set stats_interval = '1h30m'" \
+	'invalid value for parameter "stats_interval"'
+expect_error "alter system set stats_interval = '10S'" \
+	'invalid value for parameter "stats_interval"'
+expect_error "alter system set cancel_queue_timeout_ms = '-9223372036854775809'" \
+	'invalid value for parameter "cancel_queue_timeout_ms"'
+expect_error "alter system set stats_interval = '-1s'" \
+	'must be between'
+expect_error "alter system set stats_interval = '2147483648ms'" \
+	'must be between'
 expect_error 'alter system set nope = 1' \
 	'unrecognized configuration parameter "nope"'
 expect_error 'alter system set workers = abc' \
@@ -129,6 +163,10 @@ expect_line 'workers 4'
 console 'reload'
 expect_value workers 2
 
+# Quoted values must retain their units after restarting from autoconf.
+console "alter system set stats_interval = '10s'"
+console "alter system set backend_connect_timeout_ms = '10'"
+
 ody-stop
 
 # 7. the autoconf file with history parses on start and takes effect
@@ -137,6 +175,8 @@ sleep 1
 
 expect_value log_debug no
 expect_value workers 4
+expect_value stats_interval 10
+expect_value backend_connect_timeout_ms 10
 [ ! -e "$AUTOCONF.tmp" ] || fail "temporary file $AUTOCONF.tmp left behind"
 
 # 8. Concurrent writers must not overwrite each other's changes.

@@ -58,6 +58,8 @@ in PostgreSQL. It requires the `admin` role.
 alter system set workers = 4
 alter system set log_debug to yes
 alter system set availability_zone = 'eu-1'
+alter system set stats_interval = '10s'
+alter system set backend_connect_timeout_ms = '1.5s'
 alter system set log_debug = default
 alter system reset log_debug
 alter system reset all
@@ -68,6 +70,15 @@ configuration file. For `/etc/odyssey/odyssey.conf`, this is
 `/etc/odyssey/odyssey.conf.autoconf`. At startup and on `reload`, Odyssey
 reads the autoconf file after the main configuration, so its values
 take precedence.
+
+For duration parameters, quote values with units in the console, for example
+`alter system set stats_interval = '10s'`. Units are `us`, `ms`, `s`, `min`,
+`h` and `d`; fractions and a space before the unit are supported (`'1.5 min'`).
+Numbers without a unit use the parameter's default unit, with or without
+quotes: `stats_interval = '10'` means 10 seconds, while
+`backend_connect_timeout_ms = '10'` means 10 milliseconds. Odyssey saves the
+duration text in double quotes in the autoconf file and validates its range
+before replacing the file.
 
 `alter system` saves the value without changing the running configuration.
 Run `reload` to apply it. Parameters that `reload` cannot change require

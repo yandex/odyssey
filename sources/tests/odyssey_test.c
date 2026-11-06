@@ -29,6 +29,7 @@ extern void kiwi_test_be_read_query(void);
 extern void kiwi_test_backend_key_data(void);
 extern void kiwi_test_cancel_request(void);
 extern void kiwi_test_cancel_write(void);
+extern void kiwi_test_msg_size_limits(void);
 
 /* MACHINARIUM */
 extern void machinarium_test_init(void);
@@ -176,6 +177,7 @@ int main(int argc, char *argv[])
 	odyssey_test(kiwi_test_backend_key_data);
 	odyssey_test(kiwi_test_cancel_request);
 	odyssey_test(kiwi_test_cancel_write);
+	odyssey_test(kiwi_test_msg_size_limits);
 	odyssey_test(machinarium_test_init);
 	odyssey_test(machinarium_test_create0);
 	odyssey_test(machinarium_test_create1);

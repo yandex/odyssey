@@ -163,7 +163,8 @@ KIWI_API static inline uint32_t kiwi_read_startup_size(char *data,
 
 /* constants from PG sources */
 #define PQ_SMALL_MESSAGE_LIMIT 10000
-#define PQ_LARGE_MESSAGE_LIMIT ((size_t)0x3fffffff - 2)
+#define PQ_LARGE_MESSAGE_LIMIT ((size_t)0x3fffffff - 1)
+#define PG_MAX_AUTH_TOKEN_LENGTH 65535
 
 KIWI_API static inline int
 kiwi_validate_startup_header(char *data, uint32_t data_size, uint32_t *size)
@@ -210,7 +211,7 @@ kiwi_validate_fe_header(char *data, uint32_t data_size, uint32_t *size)
 		break;
 	}
 
-	if (kiwi_likely(*size > limit)) {
+	if (kiwi_unlikely(*size > limit)) {
 		return -1;
 	}
 
@@ -234,7 +235,7 @@ kiwi_validate_be_header(char *data, uint32_t data_size, uint32_t *size)
 		return -1;
 	}
 
-	if (kiwi_likely(*size > PQ_LARGE_MESSAGE_LIMIT)) {
+	if (kiwi_unlikely(*size > PQ_LARGE_MESSAGE_LIMIT)) {
 		return -1;
 	}
 
