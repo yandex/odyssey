@@ -276,12 +276,6 @@ int od_cfg_parse_file_with_autoconf(const char *path, const char *autoconf_path,
 	return od_cfg_validate_model(model, diags);
 }
 
-int od_cfg_parse_file(const char *path, od_cfg_model_t *model,
-		      od_cfg_diag_list_t *diags)
-{
-	return od_cfg_parse_file_with_autoconf(path, NULL, model, diags);
-}
-
 int od_cfg_parse_autoconf(const char *path, od_cfg_model_t *model,
 			  od_cfg_diag_list_t *diags)
 {

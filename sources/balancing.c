@@ -84,12 +84,6 @@ void od_storage_balancing_destroy(od_storage_balancing_t *b)
 	od_free(b->method.weighted_leastconn.weights);
 }
 
-void od_storage_balancing_copy(od_storage_balancing_t *dest,
-			       const od_storage_balancing_t *src)
-{
-	memcpy(dest, src, sizeof(od_storage_balancing_t));
-}
-
 static int in_same_az(od_instance_t *instance,
 		      const od_storage_endpoint_t *endp)
 {

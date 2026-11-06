@@ -82,6 +82,13 @@ typedef struct {
 	 * where it is an owned NUL-terminated copy (freed in plan_entry_destroy).
 	 */
 	const char *client_pstmt;
+	/*
+	 * cached od_hm_name_hash of client_pstmt / portal_name
+	 * (filled at entry creation), so the plan loops and the apply
+	 * step never re-hash or strcmp on hash mismatch
+	 */
+	mm_hash_t client_pstmt_hash;
+	mm_hash_t portal_name_hash;
 	od_pstmt_t *pstmt;
 	/*
 	 * portal name for ADD_PORTAL / REMOVE_PORTAL deltas
@@ -189,6 +196,15 @@ typedef struct {
 struct od_xplan {
 	/* od_xplan_entry_t[] */
 	mm_vector_t entries;
+
+	/*
+	 * set when a planned forward is known to fail on the backend
+	 * (e.g. Bind/Describe of a pstmt unknown to the client). the rest
+	 * of the batch must not be planned: the backend discards all
+	 * messages until Sync after an error, so executing or
+	 * virtualizing them would be wrong
+	 */
+	int errored;
 };
 
 void od_xplan_init(od_xplan_t *xp);

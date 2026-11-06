@@ -1339,14 +1339,19 @@ error:
 static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 						      void **argv)
 {
-	mm_hashmap_t *hm = server->prep_stmts;
+	od_server_pstmt_map_t *map = server->prep_stmts;
+	if (map == NULL) {
+		/* server without reserved prepared statements */
+		return 0;
+	}
 
 	void *eargv[2] = {
 		argv[0],
 		(void *)server,
 	};
 
-	int rc = mm_hashmap_foreach(hm, show_server_pstmt_cb_internal, eargv);
+	int rc = mm_hashmap_foreach(&map->hm, show_server_pstmt_cb_internal,
+				    eargv);
 
 	return rc;
 }
@@ -1800,7 +1805,7 @@ static inline int od_console_show_rules(od_tuple_table_slot_t *tts)
 				       rule->obsolete ? "t" : "f");
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc != OK_RESPONSE) {
-			return rc;
+			goto error;
 		}
 	}
 

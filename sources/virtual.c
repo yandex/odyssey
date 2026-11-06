@@ -30,6 +30,7 @@
 #include <tuple_table_slot.h>
 #include <console.h>
 #include <virtual.h>
+#include <analyze.h>
 
 #define APPLICATION_NAME_STR "application_name"
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
@@ -38,6 +39,7 @@
 #define ODYSSEY_OPPORTUNISTIC_ACQUIRE "odyssey.opportunistic_acquire"
 #define ODYSSEY_POOLING_MODE "odyssey.pooling_mode"
 #define ODYSSEY_VERSION_STR "odyssey.version"
+#define ODYSSEY_PARSER_MODE "odyssey.parser_mode"
 #define PROCESSED_BY_ODYSSEY_STR "processed virtually by odyssey"
 /* the formatted virtual ErrorResponse message buffer */
 #define VIRTUAL_ERROR_BUF_SIZE 128
@@ -82,6 +84,10 @@ void virtual_portal_free(od_virtual_portal_t *portal)
 		machine_msg_free(portal->error);
 		portal->error = NULL;
 	}
+	if (portal->empty != NULL) {
+		machine_msg_free(portal->empty);
+		portal->empty = NULL;
+	}
 }
 
 /*
@@ -121,9 +127,9 @@ static int virtual_portal_is_error(const od_virtual_portal_t *portal)
 	return portal->error != NULL;
 }
 
-__attribute__((format(printf, 3, 4))) static int
+__attribute__((format(printf, 4, 5))) static int
 virtual_portal_set_errorf(od_virtual_portal_t *portal, const char *sqlstate,
-			  const char *fmt, ...)
+			  const char *hint, const char *fmt, ...)
 {
 	/* a virtually processed answer always leads with the NOTICE */
 	if (virtual_portal_set_notice(portal) != 0) {
@@ -139,8 +145,10 @@ virtual_portal_set_errorf(od_virtual_portal_t *portal, const char *sqlstate,
 		return -1;
 	}
 
-	machine_msg_t *msg = kiwi_be_write_error_as(
-		NULL, "ERROR", sqlstate, NULL, 0, NULL, 0, buf, (size_t)len, 0);
+	machine_msg_t *msg =
+		kiwi_be_write_error_as(NULL, "ERROR", sqlstate, NULL, 0, hint,
+				       hint != NULL ? strlen(hint) : 0, buf,
+				       (size_t)len, 0);
 	if (msg == NULL) {
 		return -1;
 	}
@@ -156,7 +164,7 @@ static int virtual_portal_reject_guc(od_virtual_portal_t *portal,
 				     size_t option_value_len)
 {
 	return virtual_portal_set_errorf(
-		portal, KIWI_INVALID_PARAMETER_VALUE,
+		portal, KIWI_INVALID_PARAMETER_VALUE, NULL,
 		"invalid value for parameter \"%s\": \"%.*s\"", guc_name,
 		(int)option_value_len, option_value);
 }
@@ -437,6 +445,33 @@ static od_frontend_status_t process_vset(od_client_t *client,
 					 od_virtual_portal_t *portal)
 {
 	od_instance_t *instance = client->global->instance;
+	if (strcmp(ctx->s1, ODYSSEY_PARSER_MODE) == 0 &&
+	    instance->config.virtual_processing) {
+		int mode;
+		if (strcmp(ctx->s2, "full") == 0) {
+			mode = OD_CONFIG_QUERY_PARSING_MODE_FULL;
+		} else if (strcmp(ctx->s2, "mini") == 0) {
+			mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
+		} else if (strcmp(ctx->s2, "disabled") == 0) {
+			int rc = virtual_portal_set_errorf(
+				portal, KIWI_FEATURE_NOT_SUPPORTED,
+				"Use query_parsing_mode disabled in the Odyssey configuration.",
+				"disabling the SQL parser for a session is not supported");
+			return rc == 0 ? OD_SKIP : OD_EOOM;
+		} else if (ctx->s2[0] == '\0') {
+			mode = -1;
+		} else {
+			int rc = virtual_portal_reject_guc(
+				portal, ctx->s1, ctx->s2, strlen(ctx->s2));
+			return rc == 0 ? OD_SKIP : OD_EOOM;
+		}
+		if (virtual_portal_set_notice(portal) != 0 ||
+		    virtual_portal_set_complete(portal, "SET") != 0) {
+			return OD_EOOM;
+		}
+		client->parser_mode = mode;
+		return OD_SKIP;
+	}
 
 	if (strcmp(ctx->s1, APPLICATION_NAME_STR) == 0) {
 		if (client->rule->application_name_add_host) {
@@ -476,6 +511,7 @@ static od_frontend_status_t process_vset(od_client_t *client,
 		if (instance->config.virtual_processing) {
 			if (virtual_portal_set_errorf(
 				    portal, KIWI_CANT_CHANGE_RUNTIME_PARAM,
+				    NULL,
 				    "parameter \"%s\" cannot be changed now",
 				    ctx->s1) != 0) {
 				return OD_EOOM;
@@ -573,6 +609,12 @@ static od_frontend_status_t process_vshow(od_client_t *client,
 					  od_virtual_portal_t *portal)
 {
 	od_instance_t *instance = client->global->instance;
+	if (strcmp(ctx->s1, ODYSSEY_PARSER_MODE) == 0 &&
+	    instance->config.virtual_processing) {
+		static const char *names[] = { "disabled", "mini", "full" };
+		return build_show_str(client, portal, ctx->s1,
+				      names[od_query_parser_mode(client)]);
+	}
 
 	if (strcmp(ctx->s1, ODYSSEY_TARGET_SESSION_ATTRS_STR) == 0) {
 		if (instance->config.virtual_processing) {
@@ -648,6 +690,22 @@ static od_frontend_status_t process_vdeallocate(od_client_t *client,
 	return OD_SKIP;
 }
 
+static od_frontend_status_t process_vempty(od_client_t *client,
+					   od_virtual_portal_t *portal)
+{
+	od_instance_t *instance = client->global->instance;
+	od_debug(&instance->logger, client, client->server,
+		 "processed virtual empty query");
+
+	machine_msg_t *msg = kiwi_be_write_empty_query(NULL);
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+	portal->empty = msg;
+
+	return OD_SKIP;
+}
+
 static od_frontend_status_t process_vbegin(od_client_t *client,
 					   od_virtual_portal_t *portal)
 {
@@ -692,6 +750,7 @@ static od_frontend_status_t write_virtual_portal(od_client_t *client,
 		portal->notice,
 		portal->tts != NULL ? portal->tts->row_description : NULL,
 		portal->tts != NULL ? portal->tts->data_rows : NULL,
+		portal->empty,
 		virtual_portal_is_error(portal) ? portal->error :
 						  portal->command_complete,
 	};
@@ -726,8 +785,9 @@ static od_frontend_status_t write_virtual_portal(od_client_t *client,
 /*
  * does the query have a virtual handler at all, and is its config gate
  * open: SHOW/SET need virtual_processing (a SET may also go the
- * application_name_add_host rewrite way), BEGIN needs
- * virtual_transaction, DEALLOCATE needs reserve_prepared_statement
+ * application_name_add_host rewrite way), an empty query (";") needs
+ * virtual_processing too, BEGIN needs virtual_transaction, DEALLOCATE
+ * needs reserve_prepared_statement
  */
 static bool virtual_query_supported(od_client_t *client,
 				    const od_query_ctx_t *ctx)
@@ -735,6 +795,10 @@ static bool virtual_query_supported(od_client_t *client,
 	od_instance_t *instance = od_global_get_instance();
 
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SHOW)) {
+		return instance->config.virtual_processing;
+	}
+
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EMPTY)) {
 		return instance->config.virtual_processing;
 	}
 
@@ -756,30 +820,39 @@ static bool virtual_query_supported(od_client_t *client,
 }
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
-					       const od_query_ctx_t *ctx)
+					       const char *query, size_t len)
 {
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
-		return OD_OK;
-	}
-
-	if (!virtual_query_supported(client, ctx)) {
-		return OD_OK;
-	}
-
+	const od_query_ctx_t *ctx = &client->query_ctx;
 	od_frontend_status_t status;
 	od_virtual_portal_t portal;
+
 	virtual_portal_init(&portal);
+	status = od_sql_analyze(client, query, len, &portal.error);
+	if (status == OD_SKIP && virtual_portal_set_notice(&portal) != 0) {
+		status = OD_EOOM;
+	}
+	if (status != OD_OK) {
+		goto reply;
+	}
+
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR) ||
+	    !virtual_query_supported(client, ctx)) {
+		goto done;
+	}
 
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SHOW)) {
 		status = process_vshow(client, ctx, &portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET)) {
 		status = process_vset(client, ctx, &portal);
+	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EMPTY)) {
+		status = process_vempty(client, &portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_BEGIN)) {
 		status = process_vbegin(client, &portal);
 	} else {
 		status = process_vdeallocate(client, ctx, &portal);
 	}
 
+reply:
 	if (status == OD_SKIP) {
 		/* Preserve the write limit for virtual SET and error replies. */
 		uint32_t timeout_ms = UINT32_MAX;
@@ -790,6 +863,7 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 		status = write_virtual_portal(client, &portal, timeout_ms);
 	}
 
+done:
 	virtual_portal_free(&portal);
 
 	return status;

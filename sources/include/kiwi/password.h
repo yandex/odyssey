@@ -45,7 +45,13 @@ static inline int kiwi_password_compare(kiwi_password_t *a, kiwi_password_t *b)
 
 static inline uint32_t kiwi_password_salt(kiwi_key_t *key, uint32_t rand)
 {
-	return rand ^ key->key ^ key->key_pid;
+	uint32_t secret = 0;
+	uint32_t size = key->key_len;
+	char *pos = key->key;
+	if (size >= sizeof(secret)) {
+		kiwi_read32(&secret, &pos, &size);
+	}
+	return rand ^ secret ^ key->key_pid;
 }
 
 __attribute__((hot)) static inline int

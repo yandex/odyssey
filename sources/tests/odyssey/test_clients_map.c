@@ -19,8 +19,7 @@ static od_client_t *test_client_create(uint32_t key, uint32_t key_pid)
 {
 	od_client_t *client = od_client_allocate();
 	test(client != NULL);
-	client->key.key = key;
-	client->key.key_pid = key_pid;
+	kiwi_key_set32(&client->key, key_pid, key);
 	return client;
 }
 
@@ -87,8 +86,7 @@ static void test_clients_add_lookup_remove(void)
 	/* empty map: key is not found */
 	kiwi_key_t unknown;
 	kiwi_key_init(&unknown);
-	unknown.key = 777;
-	unknown.key_pid = 777;
+	kiwi_key_set32(&unknown, 777, 777);
 	test(test_clients_map_get(map, &unknown, &klock) == NULL);
 
 	/* add */
@@ -153,8 +151,7 @@ static void test_clients_get_key_val(void)
 	test(klock.found == 1);
 
 	kiwi_key_t got_key = od_global_clients_map_get_key(map, &klock);
-	test(got_key.key == c1->key.key);
-	test(got_key.key_pid == c1->key.key_pid);
+	test(kiwi_key_cmp(&got_key, &c1->key));
 
 	od_client_t *got_val = od_global_clients_map_get_val(map, &klock);
 	test(got_val == c1);
@@ -165,16 +162,14 @@ static void test_clients_get_key_val(void)
 	test(od_global_clients_map_lock(map, &c2->key, &klock) == 0);
 	test(klock.found == 1);
 	test(od_global_clients_map_get_val(map, &klock) == c2);
-	test(od_global_clients_map_get_key(map, &klock).key == c2->key.key);
-	test(od_global_clients_map_get_key(map, &klock).key_pid ==
-	     c2->key.key_pid);
+	got_key = od_global_clients_map_get_key(map, &klock);
+	test(kiwi_key_cmp(&got_key, &c2->key));
 	od_global_clients_map_unlock(map, &klock);
 
 	/* unknown key: not found, get_key/get_val must not be used */
 	kiwi_key_t unknown;
 	kiwi_key_init(&unknown);
-	unknown.key = 777;
-	unknown.key_pid = 777;
+	kiwi_key_set32(&unknown, 777, 777);
 	test(od_global_clients_map_lock(map, &unknown, &klock) == 0);
 	test(klock.found == 0);
 	od_global_clients_map_unlock(map, &klock);
@@ -188,6 +183,62 @@ static void test_clients_get_key_val(void)
 	od_client_free(c1);
 	od_client_free(c2);
 
+	od_global_clients_map_free(map);
+}
+
+static void test_clients_variable_length_keys(void)
+{
+	od_global_clients_map_t *map = od_global_clients_map_create(4);
+	test(map != NULL);
+	od_client_t *clients[4];
+	for (size_t i = 0; i < 4; i++) {
+		clients[i] = test_client_create(100, 1);
+	}
+	clients[0]->key.key_len = 256;
+	for (size_t i = 0; i < 256; i++) {
+		clients[0]->key.key[i] = (char)(i * 73);
+	}
+	for (size_t i = 1; i < 4; i++) {
+		clients[i]->key = clients[0]->key;
+	}
+	clients[1]->key.key[255] ^= 1; /* same prefix, different last byte */
+	clients[2]->key.key_len = 255; /* same prefix, different length */
+	clients[3]->key.key_pid++; /* same secret, different PID */
+	for (size_t i = 0; i < 4; i++) {
+		test(od_global_clients_map_add(map, clients[i]) == 0);
+		mm_hashmap_keylock_t klock;
+		test(test_clients_map_get(map, &clients[i]->key, &klock) ==
+		     clients[i]);
+		od_global_clients_map_unlock(map, &klock);
+	}
+	test(clients_map_count(map) == 4);
+
+	mm_hashmap_keylock_t klock;
+	kiwi_key_t lookup = clients[2]->key;
+	lookup.key[255] ^=
+		1; /* unused bytes must affect neither hash nor equality */
+	test(kiwi_key_cmp(&lookup, &clients[2]->key));
+	test(test_clients_map_get(map, &lookup, &klock) == clients[2]);
+	od_global_clients_map_unlock(map, &klock);
+	od_client_t *duplicate = test_client_create(0, 0);
+	duplicate->key = lookup;
+	test(od_global_clients_map_add(map, duplicate) == -1);
+	od_client_free(duplicate);
+
+	lookup = clients[0]->key;
+	lookup.key[32] ^= 1;
+	test(!kiwi_key_cmp(&lookup, &clients[0]->key));
+	test(test_clients_map_get(map, &lookup, &klock) == NULL);
+	lookup = clients[0]->key;
+	lookup.key_len = 4; /* a valid prefix is not a valid cancel key */
+	test(!kiwi_key_cmp(&lookup, &clients[0]->key));
+	test(test_clients_map_get(map, &lookup, &klock) == NULL);
+
+	for (size_t i = 0; i < 4; i++) {
+		test(od_global_clients_map_remove(map, clients[i]) == 0);
+		od_client_free(clients[i]);
+	}
+	test(clients_map_count(map) == 0);
 	od_global_clients_map_free(map);
 }
 
@@ -263,6 +314,7 @@ static void test_impl(void *a)
 	test_clients_map_create();
 	test_clients_add_lookup_remove();
 	test_clients_get_key_val();
+	test_clients_variable_length_keys();
 	test_clients_concurrent();
 }
 

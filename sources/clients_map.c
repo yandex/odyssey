@@ -11,27 +11,30 @@
 #include <od_memory.h>
 #include <clients_map.h>
 #include <client.h>
-
-static inline mm_hash_t od_global_clients_map_hm_hash(const void *a)
+mm_hash_t od_global_clients_map_hash_key(const void *keyptr)
 {
-	const kiwi_key_t *key = a;
-	uint32_t buf[2] = { key->key_pid, key->key };
-	return mm_xxh64_hash(buf, sizeof(buf), 0);
+	const kiwi_key_t *key = keyptr;
+	return mm_xxh64_hash(key->key, key->key_len, key->key_pid);
 }
 
 static inline int od_global_clients_map_hm_cmp(const void *a, const void *b)
 {
 	const kiwi_key_t *x = a, *y = b;
-	return !(x->key_pid == y->key_pid && x->key == y->key);
+	return !kiwi_key_cmp(x, y);
 }
 
 od_global_clients_map_t *od_global_clients_map_create(size_t nlocks)
 {
-	mm_hashmap_t *hm = mm_hashmap_create(
-		32768, nlocks, sizeof(kiwi_key_t), sizeof(od_client_t *),
-		od_global_clients_map_hm_cmp, od_global_clients_map_hm_hash,
-		NULL, NULL, NULL,
-		0 /* nfree_max: default, capped at nbuckets */);
+	mm_hashmap_ctl_t ctl = {
+		.nbuckets = 32768,
+		.keysz = sizeof(kiwi_key_t),
+		.valsz = sizeof(od_client_t *),
+		.kcmp = od_global_clients_map_hm_cmp,
+		.khash = od_global_clients_map_hash_key,
+		.nlocks = nlocks,
+	};
+
+	mm_hashmap_t *hm = mm_hashmap_create(&ctl, MM_HM_NLOCKS);
 	if (hm == NULL) {
 		return NULL;
 	}
@@ -57,11 +60,26 @@ void od_global_clients_map_free(od_global_clients_map_t *map)
 	od_free(map);
 }
 
+int od_global_clients_map_lock_hash(od_global_clients_map_t *map,
+				    const kiwi_key_t *key, mm_hash_t hash,
+				    mm_hashmap_keylock_t *klock)
+{
+	return mm_hashmap_lock_key_with_hash(map->hm, klock, key, hash, 0);
+}
+
+int od_global_clients_map_lock_shard(od_global_clients_map_t *map,
+				     mm_hashmap_keylock_t *klock,
+				     mm_hash_t hash)
+{
+	return mm_hashmap_lock_shard(map->hm, klock, hash);
+}
+
 int od_global_clients_map_lock(od_global_clients_map_t *map,
 			       const kiwi_key_t *key,
 			       mm_hashmap_keylock_t *klock)
 {
-	return mm_hashmap_lock_key(map->hm, klock, key, 0);
+	return od_global_clients_map_lock_hash(
+		map, key, od_global_clients_map_hash_key(key), klock);
 }
 
 void od_global_clients_map_unlock(od_global_clients_map_t *map,
@@ -72,9 +90,16 @@ void od_global_clients_map_unlock(od_global_clients_map_t *map,
 
 int od_global_clients_map_add(od_global_clients_map_t *map, od_client_t *client)
 {
+	/*
+	 * the key is immutable from here on: cache its hash so
+	 * detach/close/remove do not re-hash the key bytes
+	 */
+	client->key_hash = od_global_clients_map_hash_key(&client->key);
+
 	mm_hashmap_keylock_t klock;
-	int rc = mm_hashmap_lock_key(map->hm, &klock, &client->key,
-				     MM_HASHMAP_CREATE);
+	int rc = mm_hashmap_lock_key_with_hash(map->hm, &klock, &client->key,
+					       client->key_hash,
+					       MM_HASHMAP_CREATE);
 	if (rc == -1) {
 		return -1;
 	}
@@ -92,7 +117,8 @@ int od_global_clients_map_remove(od_global_clients_map_t *map,
 				 od_client_t *client)
 {
 	mm_hashmap_keylock_t klock;
-	int rc = od_global_clients_map_lock(map, &client->key, &klock);
+	int rc = od_global_clients_map_lock_hash(map, &client->key,
+						 client->key_hash, &klock);
 	if (rc == -1) {
 		return rc;
 	}

@@ -29,6 +29,7 @@
 #include <client.h>
 #include <msg.h>
 #include <extension.h>
+#include <util.h>
 #include <router.h>
 #include <dns.h>
 #include <hba_rule.h>
@@ -43,7 +44,6 @@
 #include <autoconf.h>
 #include <tls.h>
 #include <memory.h>
-#include <od_error.h>
 #include <systemd_notify.h>
 #include <rate.h>
 #include <restart_sync.h>
@@ -413,6 +413,8 @@ static inline void od_system_server(void *arg)
 		if (client == NULL) {
 			od_error(&instance->logger, NULL, NULL,
 				 "failed to allocate client object");
+			atomic_fetch_sub(&server->clients, 1);
+			atomic_fetch_sub(&global->router->clients, 1);
 			mm_io_close(client_io);
 			mm_io_free(client_io);
 			continue;
@@ -437,6 +439,8 @@ static inline void od_system_server(void *arg)
 		if (msg == NULL) {
 			od_error(&instance->logger, NULL, NULL,
 				 "failed to allocate client message");
+			atomic_fetch_sub(&server->clients, 1);
+			atomic_fetch_sub(&global->router->clients, 1);
 			od_io_close(&client->io);
 			od_client_free(client);
 			continue;
@@ -457,6 +461,8 @@ static inline void od_system_server(void *arg)
 			 * let it be more clear 'server closed the connection unexpectedly'
 			 */
 			machine_msg_free(msg);
+			atomic_fetch_sub(&server->clients, 1);
+			atomic_fetch_sub(&global->router->clients, 1);
 			od_io_close(&client->io);
 			od_client_free(client);
 			continue;

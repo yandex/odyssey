@@ -33,10 +33,11 @@
 #define od_likely(EXPR) __builtin_expect(!!(EXPR), 1)
 #define od_unlikely(EXPR) __builtin_expect(!!(EXPR), 0)
 
-#if defined(__linux__)
-#define od_read_mostly __attribute__((__section__(".data.read_mostly")))
+#if defined(__linux__) || defined(__FreeBSD__)
+#define OD_READ_MOSTLY \
+	__attribute__((__section__(".data.read_mostly"), aligned(128)))
 #else
-#define od_read_mostly
+#define OD_READ_MOSTLY __attribute__((aligned(128)))
 #endif
 
 #define od_container_of(N, T, F) ((T *)((char *)(N) - __builtin_offsetof(T, F)))

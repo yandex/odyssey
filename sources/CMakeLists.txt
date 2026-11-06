@@ -109,6 +109,7 @@ set(od_src
     reset.c
     pstmt.c
     sql_pstmt.c
+    analyze.c
     clients_map.c
     frontend.c
     backend.c
@@ -387,6 +388,7 @@ set(od_test_src
     tests/kiwi/test_kiwi_pgoptions.c
     tests/kiwi/test_kiwi_fe_read_auth.c
     tests/kiwi/test_kiwi_be_read_query.c
+    tests/kiwi/test_kiwi_cancel.c
     tests/machinarium/test_init.c
     tests/machinarium/test_create0.c
     tests/machinarium/test_create1.c
@@ -439,6 +441,7 @@ set(od_test_src
     tests/machinarium/test_wait_flag_simple.c
     tests/machinarium/test_wait_flag_timeout.c
     tests/machinarium/test_hm_hash.c
+    tests/machinarium/test_hm_dist.c
     tests/machinarium/test_getaddrinfo0.c
     tests/machinarium/test_getaddrinfo1.c
     tests/machinarium/test_getaddrinfo2.c
@@ -475,6 +478,7 @@ set(od_test_src
     tests/machinarium/test_mutex_bench.c
     tests/machinarium/test_queue.c
     tests/machinarium/test_heap.c
+    tests/machinarium/test_clock.c
     tests/machinarium/test_lf_stack.c
     tests/machinarium/test_sem.c
     tests/odyssey/test_attribute.c

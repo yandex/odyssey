@@ -19,7 +19,6 @@ typedef struct {
 } od_cfg_seen_t;
 
 void od_cfg_seen_set(od_cfg_seen_t *seen, od_cfg_location_t location);
-void od_cfg_seen_reset(od_cfg_seen_t *seen);
 void od_cfg_seen_free(od_cfg_seen_t *seen);
 
 typedef struct {
@@ -519,8 +518,6 @@ typedef struct {
 void od_cfg_model_init(od_cfg_model_t *model);
 void od_cfg_model_free(od_cfg_model_t *model);
 void od_cfg_global_free(od_cfg_global_t *g);
-
-void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model);
 
 int od_cfg_validate_model(od_cfg_model_t *model, od_cfg_diag_list_t *diags);
 
