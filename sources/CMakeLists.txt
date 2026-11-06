@@ -236,6 +236,14 @@ set_source_files_properties(${FLEX_sql_full_scanner_OUTPUTS} PROPERTIES
 set_source_files_properties(${BISON_sql_full_parser_OUTPUTS} PROPERTIES
     COMPILE_FLAGS "-Wno-macro-redefined -Wno-unused-but-set-variable -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-unused-value -Wno-unused-parameter -Wno-int-to-pointer-cast -Wno-constant-conversion -Wno-shift-count-overflow"
 )
+if (HAVE_ASAN)
+    # Clang ASAN at -O0 gives the generated parser a ~190 KiB stack frame,
+    # exceeding the default coroutine stack. Keep sanitizers enabled while
+    # allowing the compiler to reuse its many temporary stack slots.
+    set_source_files_properties(${BISON_sql_full_parser_OUTPUTS} PROPERTIES
+        COMPILE_OPTIONS "-O1"
+    )
+endif()
 list(APPEND od_src
     ${FLEX_sql_full_scanner_OUTPUTS}
     ${BISON_sql_full_parser_OUTPUTS}

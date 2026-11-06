@@ -793,11 +793,13 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 	/* we now hold the ref to pstmt */
 
 	machine_msg_t *error;
-	st = od_sql_analyze(client, desc.data, strlen(desc.data), pstmt, &error);
+	st = od_sql_analyze(client, desc.data, strlen(desc.data), pstmt,
+			    &error);
 	if (st != OD_OK) {
 		od_pstmt_unref(pstmt);
 		if (st == OD_SKIP) {
-			return xplan_append_virtual_error_response(xp, msg, error);
+			return xplan_append_virtual_error_response(xp, msg,
+								   error);
 		}
 		return st;
 	}

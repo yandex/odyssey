@@ -125,7 +125,7 @@ typedef struct {
 #define od_query_ctx_clear(ctx, flag) ((ctx)->flags &= ~(uint64_t)(flag))
 
 static inline void od_query_ctx_check_reserved_name(od_query_ctx_t *ctx,
-						 const char *name)
+						    const char *name)
 {
 	if (name != NULL && strncmp(name, "odyssey", 7) == 0) {
 		od_query_ctx_set(ctx, OD_QUERY_CTX_HAS_RESERVED_NAME);

@@ -47,8 +47,8 @@ const char *stmt_pstmt_name(Node *node)
 }
 
 static od_frontend_status_t analyze_query_ctx(od_client_t *client,
-					    const od_query_ctx_t *ctx,
-					    machine_msg_t **error)
+					      const od_query_ctx_t *ctx,
+					      machine_msg_t **error)
 {
 	if (!client->rule->pool->reserve_prepared_statement ||
 	    od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR) ||

@@ -820,8 +820,8 @@ static bool virtual_query_supported(od_client_t *client,
 }
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
-						     const char *query,
-						     uint32_t query_len)
+					       const char *query,
+					       uint32_t query_len)
 {
 	const od_query_ctx_t *ctx = &client->query_ctx;
 	od_frontend_status_t status;

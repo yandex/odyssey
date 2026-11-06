@@ -1375,8 +1375,8 @@ static void test_reserved_query_ctx(void)
 		{ "-- EXECUTE odyssey_pstmt_0\nSELECT 1", 0, 0 },
 		{ "EXPLAIN EXECUTE odyssey_pstmt_0", 0, 1 },
 		{ "CREATE TABLE t AS EXECUTE odyssey_pstmt_0", 0, 1 },
-		{ "EXPLAIN ANALYZE CREATE TABLE t AS EXECUTE odyssey_pstmt_0", 0,
-		  1 },
+		{ "EXPLAIN ANALYZE CREATE TABLE t AS EXECUTE odyssey_pstmt_0",
+		  0, 1 },
 		{ "SELECT nextval('s'); EXECUTE odyssey_pstmt_0", 0, 0 },
 		{ "EXECUTE odyssey_pstmt_0; SELECT 1", 0, 0 },
 		{ "EXECUTE odyssey_pstmt_0; SELECT FROM", 0, 0 },
@@ -1390,9 +1390,10 @@ static void test_reserved_query_ctx(void)
 			od_linear_alloc_reset(&s_full_arena, 0);
 			od_query_parse_fill_ctx(cases[i].query,
 						strlen(cases[i].query),
-						&s_full_arena, &ctx, modes[mode]);
+						&s_full_arena, &ctx,
+						modes[mode]);
 			int expected = mode == 0 ? cases[i].minimal_reserved :
-						  cases[i].full_reserved;
+						   cases[i].full_reserved;
 			test(od_query_ctx_has(&ctx,
 					      OD_QUERY_CTX_HAS_RESERVED_NAME) ==
 			     expected);
