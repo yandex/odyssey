@@ -30,6 +30,7 @@ sleep 1
 
 sleep 1
 
+# Normalize workload-dependent connection totals, retaining names and labels.
 curl tester:9876/metrics -s \
 	| grep 'odyssey_' \
 	| grep -v '#' \
@@ -46,7 +47,8 @@ curl tester:9876/metrics -s \
 	| grep -v 'odyssey_database_avg_wait_time_seconds{database="postgres"}' \
 	| grep -v 'odyssey_route_tcp_connections_total' \
 	| grep -v 'odyssey_wait_events_count' \
-	| grep -v 'odyssey_errors_total{type="OD_ECLIENT_READ"}' > result.out
+	| grep -v 'odyssey_errors_total{type="OD_ECLIENT_READ"}' \
+	| sed -E 's/^(odyssey_route_(client_connections_(created|closed)|server_connections_(created|closed|returned))_total\{database="postgres",user="postgres"\}) [0-9]+$/\1 COUNTER/' > result.out
 
 echo EXPECTED START
 cat expected.out

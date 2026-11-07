@@ -38,7 +38,6 @@ struct od_server {
 	/* Copy stmt state */
 	int copy_mode;
 	/**/
-	int deploy_sync;
 	od_stat_state_t stats_state;
 
 	od_multi_pool_element_t *pool_element;
@@ -53,6 +52,7 @@ struct od_server {
 	int idle_time;
 
 	kiwi_key_t key;
+	uint32_t proto_version;
 	kiwi_key_t key_client;
 	kiwi_vars_t vars;
 
@@ -60,6 +60,8 @@ struct od_server {
 	/* do not set this field directly, use od_server_attach_client */
 	od_client_t *client;
 	od_route_t *route;
+	/* A counted connection may leave its pool before its socket is closed. */
+	bool stats_connected;
 
 	od_global_t *global;
 	int offline;
@@ -73,11 +75,7 @@ struct od_server {
 	int xproto_err;
 	int cached_plan_broken;
 	int oom;
-	mm_hashmap_t *prep_stmts;
-	/* SIEVE eviction queue over the reserved statements */
-	od_list_t pstmt_fifo;
-	od_list_t *pstmt_hand;
-	size_t pstmt_count;
+	od_server_pstmt_map_t *prep_stmts;
 
 	/* number of ErrorResponse messages received */
 	uint64_t error_responses;
@@ -97,7 +95,6 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->is_transaction = 0;
 	server->is_error_tx = 0;
 	server->copy_mode = 0;
-	server->deploy_sync = 0;
 	server->sync_request = 0;
 	server->sync_reply = 0;
 	server->init_time_us = machine_time_us();
@@ -119,16 +116,13 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 
 	od_io_init(&server->io);
 	od_list_init(&server->link);
-	od_list_init(&server->pstmt_fifo);
-	server->pstmt_hand = &server->pstmt_fifo;
-	server->pstmt_count = 0;
 	memset(&server->id, 0, sizeof(server->id));
 
 	server->xproto_mode = 0;
 	server->xproto_err = 0;
 	server->cached_plan_broken = 0;
 	if (reserve_prep_stmts) {
-		server->prep_stmts = od_server_pstmt_hashmap_create();
+		server->prep_stmts = od_server_pstmt_map_create();
 	} else {
 		server->prep_stmts = NULL;
 	}
@@ -148,6 +142,7 @@ static inline od_server_t *od_server_allocate(int reserve_prep_stmts)
 }
 
 void od_server_free(od_server_t *server);
+void od_server_stat_close(od_server_t *server);
 
 static inline void od_server_sync_request(od_server_t *server, uint64_t count)
 {
@@ -157,11 +152,6 @@ static inline void od_server_sync_request(od_server_t *server, uint64_t count)
 static inline void od_server_sync_reply(od_server_t *server)
 {
 	server->sync_reply++;
-}
-
-static inline int od_server_in_deploy(od_server_t *server)
-{
-	return server->deploy_sync > 0;
 }
 
 static inline int od_server_synchronized(od_server_t *server)

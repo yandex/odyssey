@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include <cfg/diag.h>
+#include <duration.h>
 
 struct od_cfg_parse_ctx;
 
@@ -19,7 +20,6 @@ typedef struct {
 } od_cfg_seen_t;
 
 void od_cfg_seen_set(od_cfg_seen_t *seen, od_cfg_location_t location);
-void od_cfg_seen_reset(od_cfg_seen_t *seen);
 void od_cfg_seen_free(od_cfg_seen_t *seen);
 
 typedef struct {
@@ -42,22 +42,7 @@ typedef struct {
 	od_cfg_seen_t seen;
 } od_cfg_u64_field_t;
 
-/*
- * Value of a configuration option that accepts either a bare number or a
- * PostgreSQL GUC-style duration ("500ms", "30 min", "1.5h" — see
- * duration.h).  For a bare value the grammar action records the literal
- * (possibly negative) number; the actual scaling to milliseconds happens
- * in od_cfg_set_time_*_ms() using the per-rule bare_unit_ms factor, so
- * every option keeps its historic base unit for unitless values.  Values
- * with an explicit unit arrive already converted to milliseconds.
- */
-typedef struct {
-	int has_unit; /* explicit unit given, `ms` is valid */
-	int is_real; /* bare value is a float (`real`), not `bare` */
-	int64_t bare;
-	double real;
-	int64_t ms;
-} od_cfg_time_value_t;
+typedef od_duration_value_t od_cfg_time_value_t;
 
 typedef struct {
 	char *value;
@@ -519,8 +504,6 @@ typedef struct {
 void od_cfg_model_init(od_cfg_model_t *model);
 void od_cfg_model_free(od_cfg_model_t *model);
 void od_cfg_global_free(od_cfg_global_t *g);
-
-void od_cfg_model_dumpf(FILE *file, const od_cfg_model_t *model);
 
 int od_cfg_validate_model(od_cfg_model_t *model, od_cfg_diag_list_t *diags);
 

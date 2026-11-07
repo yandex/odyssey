@@ -207,6 +207,7 @@ static inline int od_console_show_help(machine_msg_t *stream)
 		"\tSHOW STATS|HELP|POOLS|POOLS_EXTENDED|DATABASES|SERVER_PREP_STMTS|SERVERS|CLIENTS|HOST_UTILIZATION\n"
 		"\tSHOW LISTS|INSTANCE|ERRORS|ERRORS_PER_ROUTE|VERSION|VERSION_EXTENDED|LISTEN|STORAGES\n"
 		"\tSHOW CONFIG|RULES|IS_PAUSED|GLOBAL_PREPARED_STATEMENTS|TSA_CACHE|WAIT_EVENTS\n"
+		"\tSHOW BACKEND_RESET_STATS\n"
 		"\tKILL_CLIENT <client_id>\n"
 		"\tRELOAD\n"
 		"\tGC\n"
@@ -246,9 +247,11 @@ static inline int od_console_show_stats(od_client_t *client,
 	}
 
 	void *argv[] = { stream };
+	od_router_lock(router);
 	od_route_pool_stat_database(&router->route_pool,
 				    od_console_show_stats_cb,
 				    cron->stat_time_us, argv);
+	od_router_unlock(router);
 
 	int rc = kiwi_be_write_complete(stream, "SHOW", 5);
 	if (rc == NOT_OK_RESPONSE) {
@@ -292,6 +295,73 @@ static inline od_retcode_t od_console_show_errors(od_client_t *client,
 
 	rc = kiwi_be_write_complete(stream, "SHOW", 5);
 	return rc;
+}
+
+static inline int od_console_show_reset_stats(od_client_t *client,
+					      od_tuple_table_slot_t *tts)
+{
+	machine_msg_t *desc = tts->row_description;
+	machine_msg_t *stream = tts->data_rows;
+	od_assert(stream);
+	od_assert(desc);
+	od_instance_t *instance = client->global->instance;
+
+	if (kiwi_be_write_row_descriptionf(desc, "sl", "backend_reset",
+					   "count") == NULL) {
+		return NOT_OK_RESPONSE;
+	}
+
+	char data[64];
+	for (od_reset_reason_t reason = 0; reason != OD_RESET_REASON_COUNT;
+	     reason++) {
+		const char *reason_str = od_reset_reason_to_str(reason);
+		uint64_t count = od_instance_reset_reason_get(instance, reason);
+		int offset;
+		machine_msg_t *msg = kiwi_be_write_data_row(stream, &offset);
+		if (msg == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+		int rc = kiwi_be_write_data_row_add(stream, offset, reason_str,
+						    strlen(reason_str));
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+		int data_len =
+			od_snprintf(data, sizeof(data), "%" PRIu64, count);
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	struct {
+		const char *name;
+		uint64_t count;
+	} totals[] = {
+		{ "errors", atomic_load_explicit(&instance->reset_errors,
+						 memory_order_relaxed) },
+	};
+
+	for (size_t i = 0; i < sizeof(totals) / sizeof(totals[0]); i++) {
+		int offset;
+		machine_msg_t *msg = kiwi_be_write_data_row(stream, &offset);
+		if (msg == NULL) {
+			return NOT_OK_RESPONSE;
+		}
+		int rc = kiwi_be_write_data_row_add(
+			stream, offset, totals[i].name, strlen(totals[i].name));
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+		int data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+					   totals[i].count);
+		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
+		if (rc == NOT_OK_RESPONSE) {
+			return NOT_OK_RESPONSE;
+		}
+	}
+
+	return kiwi_be_write_complete(stream, "SHOW", 5);
 }
 
 static inline int od_console_show_errors_per_route_cb(od_route_t *route,
@@ -774,6 +844,28 @@ static inline int od_console_show_pools_add_cb(od_route_t *route, void **argv)
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
 		}
+
+		uint64_t connections[] = {
+			atomic_load_explicit(&route->stats.client_connections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.client_disconnections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.server_connections,
+					     memory_order_relaxed),
+			atomic_load_explicit(&route->stats.server_disconnections,
+					     memory_order_relaxed),
+			route->stats.server_detaches,
+		};
+		for (size_t i = 0;
+		     i < sizeof(connections) / sizeof(connections[0]); i++) {
+			data_len = od_snprintf(data, sizeof(data), "%" PRIu64,
+					       connections[i]);
+			rc = kiwi_be_write_data_row_add(stream, offset, data,
+							data_len);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+		}
 	}
 	td_safe_free(transactions_hgram);
 	td_safe_free(queries_hgram);
@@ -1031,6 +1123,21 @@ static inline int od_console_show_pools(od_client_t *client,
 				return NOT_OK_RESPONSE;
 			}
 		}
+
+		char *connections[] = {
+			"client_connections", "client_disconnections",
+			"server_connections", "server_disconnections",
+			"server_detaches",
+		};
+		for (size_t i = 0;
+		     i < sizeof(connections) / sizeof(connections[0]); i++) {
+			rc = kiwi_be_write_row_description_add(
+				msg, 0, connections[i], strlen(connections[i]),
+				0, 0, PG_INT8OID, PG_INT8_LEN, 0, 0);
+			if (rc == NOT_OK_RESPONSE) {
+				return NOT_OK_RESPONSE;
+			}
+		}
 	}
 
 	td_histogram_t *transactions_hgram = NULL;
@@ -1088,6 +1195,14 @@ static inline int od_console_show_pools(od_client_t *client,
 					       client_lifetime_hgram);
 		if (rc == NOT_OK_RESPONSE) {
 			goto error;
+		}
+		/* Connection counters are per-route, not aggregated. */
+		for (size_t i = 0; i < 5; ++i) {
+			rc = kiwi_be_write_data_row_add(stream, offset, NULL,
+							NULL_MSG_LEN);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
 		}
 	}
 	td_safe_free(transactions_hgram);
@@ -1339,14 +1454,19 @@ error:
 static inline int od_console_show_server_prep_stmt_cb(od_server_t *server,
 						      void **argv)
 {
-	mm_hashmap_t *hm = server->prep_stmts;
+	od_server_pstmt_map_t *map = server->prep_stmts;
+	if (map == NULL) {
+		/* server without reserved prepared statements */
+		return 0;
+	}
 
 	void *eargv[2] = {
 		argv[0],
 		(void *)server,
 	};
 
-	int rc = mm_hashmap_foreach(hm, show_server_pstmt_cb_internal, eargv);
+	int rc = mm_hashmap_foreach(&map->hm, show_server_pstmt_cb_internal,
+				    eargv);
 
 	return rc;
 }
@@ -1800,7 +1920,7 @@ static inline int od_console_show_rules(od_tuple_table_slot_t *tts)
 				       rule->obsolete ? "t" : "f");
 		rc = kiwi_be_write_data_row_add(stream, offset, data, data_len);
 		if (rc != OK_RESPONSE) {
-			return rc;
+			goto error;
 		}
 	}
 
@@ -2533,6 +2653,7 @@ typedef enum {
 	OD_SHOW_CONFIG,
 	OD_SHOW_TSA_CACHE,
 	OD_SHOW_WAITS,
+	OD_SHOW_RESET_STATS,
 } od_show_target_id_t;
 
 static od_show_target_id_t od_console_show_target_lookup(const char *name)
@@ -2564,6 +2685,7 @@ static od_show_target_id_t od_console_show_target_lookup(const char *name)
 		{ "config", OD_SHOW_CONFIG },
 		{ "tsa_cache", OD_SHOW_TSA_CACHE },
 		{ "wait_events", OD_SHOW_WAITS },
+		{ "backend_reset_stats", OD_SHOW_RESET_STATS },
 	};
 
 	for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
@@ -2631,6 +2753,8 @@ static inline int od_console_show(od_client_t *client,
 		return od_console_show_tsa_cache(client, tts);
 	case OD_SHOW_WAITS:
 		return od_console_show_wait_events(tts);
+	case OD_SHOW_RESET_STATS:
+		return od_console_show_reset_stats(client, tts);
 	default:
 		od_frontend_errorf(client, tts->data_rows, KIWI_SYNTAX_ERROR,
 				   "unknown show target: %s", name);

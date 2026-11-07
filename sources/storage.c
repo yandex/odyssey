@@ -451,23 +451,20 @@ int od_storage_parse_endpoints(const char *host_str,
 			       od_storage_endpoint_t **out, size_t *count)
 {
 	od_address_t *addrs = NULL;
+	size_t c = 0;
 
-	if (od_parse_addresses(host_str, &addrs, count) != OK_RESPONSE) {
+	if (od_parse_addresses(host_str, &addrs, &c) != OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
 
-	size_t c = *count;
-
 	if (c > OD_STORAGE_MAX_ENDPOINTS) {
-		od_free(addrs);
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
 
 	od_storage_endpoint_t *result =
 		od_malloc(c * sizeof(od_storage_endpoint_t));
 	if (result == NULL) {
-		od_free(addrs);
-		return NOT_OK_RESPONSE;
+		goto error;
 	}
 
 	for (size_t i = 0; i < c; ++i) {
@@ -479,7 +476,14 @@ int od_storage_parse_endpoints(const char *host_str,
 	od_free(addrs);
 
 	*out = result;
-	/* count is set in od_parse_addresses */
+	*count = c;
 
 	return OK_RESPONSE;
+
+error:
+	for (size_t i = 0; i < c; ++i) {
+		od_address_destroy(&addrs[i]);
+	}
+	od_free(addrs);
+	return NOT_OK_RESPONSE;
 }

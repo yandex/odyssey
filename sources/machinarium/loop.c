@@ -5,8 +5,18 @@
  * cooperative multitasking engine.
  */
 
+#include <string.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/loop.h>
+
+/*
+ * Do not sleep longer than one second even if the next timer is far away.
+ * This keeps the value safely within epoll_wait()/kevent() int timeout and
+ * bounds the loop reaction to a clock jump. One extra wakeup per second is
+ * negligible for the Odyssey event loop.
+ */
+#define MM_LOOP_MAX_SLEEP_MS 1000
 
 #if defined(__linux__)
 #include <machinarium/epoll.h>
@@ -60,25 +70,29 @@ int mm_loop_step(mm_loop_t *loop)
 		}
 	}
 
+	/* run timers */
+	int fired = mm_clock_step(&loop->clock);
+
 	/*
-	 get minimal timer timeout
-	 in case of no timers - just poll for 1 sec,
-	 this will not create cpu load
-	*/
-	int timeout_ms = 1000;
-	mm_timer_t *next;
-	next = mm_clock_timer_min(&loop->clock);
-	if (next) {
-		int64_t diff = next->timeout - loop->clock.time_ms;
-		if (diff <= 0) {
-			timeout_ms = 0;
-		} else {
-			timeout_ms = diff;
+	 * Get timeout until the next timer. If some timers have just fired,
+	 * poll with zero timeout so the woken coroutines are scheduled
+	 * immediately. In case of no timers - just poll for 1 sec,
+	 * this will not create cpu load.
+	 */
+	int timeout_ms = 0;
+	if (fired == 0) {
+		timeout_ms = MM_LOOP_MAX_SLEEP_MS;
+
+		uint64_t next = mm_clock_next_timeout(&loop->clock);
+		if (next != UINT64_MAX) {
+			uint64_t now = loop->clock.time_ms;
+			uint64_t diff = next > now ? next - now : 0;
+
+			if (diff < MM_LOOP_MAX_SLEEP_MS) {
+				timeout_ms = (int)diff;
+			}
 		}
 	}
-
-	/* run timers */
-	mm_clock_step(&loop->clock);
 
 	/* poll for events */
 	rc = loop->poll->iface->step(loop->poll, timeout_ms);

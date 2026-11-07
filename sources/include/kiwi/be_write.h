@@ -315,10 +315,13 @@ kiwi_be_write_authentication_sasl_final(machine_msg_t *msg, char *data,
 }
 
 KIWI_API static inline machine_msg_t *
-kiwi_be_write_backend_key_data(machine_msg_t *msg, uint32_t pid, uint32_t key)
+kiwi_be_write_backend_key_data(machine_msg_t *msg, const kiwi_key_t *key)
 {
-	size_t size =
-		sizeof(kiwi_header_t) + sizeof(uint32_t) + sizeof(uint32_t);
+	if (kiwi_unlikely(key->key_len < KIWI_CANCEL_KEY_MIN_LEN ||
+			  key->key_len > KIWI_CANCEL_KEY_MAX_LEN)) {
+		return NULL;
+	}
+	size_t size = sizeof(kiwi_header_t) + sizeof(uint32_t) + key->key_len;
 	int offset = 0;
 	if (msg) {
 		offset = machine_msg_size(msg);
@@ -330,10 +333,9 @@ kiwi_be_write_backend_key_data(machine_msg_t *msg, uint32_t pid, uint32_t key)
 	char *pos;
 	pos = (char *)machine_msg_data(msg) + offset;
 	kiwi_write8(&pos, KIWI_BE_BACKEND_KEY_DATA);
-	kiwi_write32(&pos,
-		     sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t));
-	kiwi_write32(&pos, pid);
-	kiwi_write32(&pos, key);
+	kiwi_write32(&pos, size - 1);
+	kiwi_write32(&pos, key->key_pid);
+	kiwi_write(&pos, key->key, key->key_len);
 	return msg;
 }
 

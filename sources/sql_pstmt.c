@@ -19,6 +19,7 @@
 #include <io.h>
 #include <pstmt.h>
 #include <sql_pstmt.h>
+#include <analyze.h>
 #include <sql/full/parser.h>
 #include <wait_event.h>
 
@@ -28,11 +29,20 @@ static const uint64_t hash_seed = 0;
  * name -> entry maps
  */
 
+/*
+ * canonical hash of a name key as used by the sql_pstmt maps
+ * (strlen-based; sql_name_hash(name, strlen(name)) == name_hash)
+ */
+static mm_hash_t sql_name_hash(const char *name, uint32_t name_len)
+{
+	return mm_xxh64_hash(name, name_len, hash_seed);
+}
+
 static mm_hash_t name_hash(const void *key)
 {
 	const char *name = *(const char **)key;
 
-	return mm_xxh64_hash(name, strlen(name), hash_seed);
+	return sql_name_hash(name, (uint32_t)strlen(name));
 }
 
 static int name_cmp(const void *k1, const void *k2)
@@ -82,12 +92,20 @@ void od_sql_pstmt_map_free(od_sql_pstmt_map_t *map)
 
 od_sql_pstmt_t *od_sql_pstmt_map_get(od_sql_pstmt_map_t *map, const char *name)
 {
+	return od_sql_pstmt_map_get_hash(
+		map, name, sql_name_hash(name, (uint32_t)strlen(name)));
+}
+
+od_sql_pstmt_t *od_sql_pstmt_map_get_hash(od_sql_pstmt_map_t *map,
+					  const char *name, mm_hash_t hash)
+{
 	if (map->hm == NULL) {
 		return NULL;
 	}
 
 	mm_hashmap_keylock_t klock;
-	mm_hashmap_lock_key(map->hm, &klock, &name, 0 /* do not create */);
+	mm_hashmap_lock_key_with_hash(map->hm, &klock, &name, hash,
+				      0 /* do not create */);
 	if (!klock.found) {
 		/* lock is not held if key not found */
 		return NULL;
@@ -102,12 +120,20 @@ od_sql_pstmt_t *od_sql_pstmt_map_get(od_sql_pstmt_map_t *map, const char *name)
 
 void od_sql_pstmt_map_remove(od_sql_pstmt_map_t *map, const char *name)
 {
+	od_sql_pstmt_map_remove_hash(
+		map, name, sql_name_hash(name, (uint32_t)strlen(name)));
+}
+
+void od_sql_pstmt_map_remove_hash(od_sql_pstmt_map_t *map, const char *name,
+				  mm_hash_t hash)
+{
 	if (map->hm == NULL) {
 		return;
 	}
 
 	mm_hashmap_keylock_t klock;
-	mm_hashmap_lock_key(map->hm, &klock, &name, 0 /* do not create */);
+	mm_hashmap_lock_key_with_hash(map->hm, &klock, &name, hash,
+				      0 /* do not create */);
 	if (!klock.found) {
 		return;
 	}
@@ -127,13 +153,15 @@ od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
 {
 	if (map->hm == NULL) {
 		/* maps are owned by one client or server - no locks needed */
-		map->hm = mm_hashmap_create(64, 0 /* nlocks */, sizeof(char *),
-					    sizeof(od_sql_pstmt_t *), name_cmp,
-					    name_hash, NULL /* key dtor */,
-					    NULL /* value dtor */,
-					    NULL /* key copy */,
-					    0 /* nfree_max: default, capped
-					       * at nbuckets */);
+		mm_hashmap_ctl_t ctl = {
+			.nbuckets = 64,
+			.keysz = sizeof(char *),
+			.valsz = sizeof(od_sql_pstmt_t *),
+			.kcmp = name_cmp,
+			.khash = name_hash,
+		};
+
+		map->hm = mm_hashmap_create(&ctl, 0);
 		if (map->hm == NULL) {
 			return NULL;
 		}
@@ -155,6 +183,8 @@ od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
 		entry_free(e);
 		return NULL;
 	}
+	/* cache the name hash: the sync loops look entries up by name */
+	e->name_hash = sql_name_hash(e->name, (uint32_t)strlen(e->name));
 
 	if (text != NULL) {
 		e->text = od_malloc(text_len + 1);
@@ -169,8 +199,8 @@ od_sql_pstmt_t *od_sql_pstmt_map_set(od_sql_pstmt_map_t *map, const char *name,
 
 	mm_hashmap_keylock_t klock;
 	const char *key = e->name;
-	if (mm_hashmap_lock_key(map->hm, &klock, &key, MM_HASHMAP_CREATE) ==
-	    -1) {
+	if (mm_hashmap_lock_key_with_hash(map->hm, &klock, &key, e->name_hash,
+					  MM_HASHMAP_CREATE) == -1) {
 		entry_free(e);
 		return NULL;
 	}
@@ -261,36 +291,6 @@ void od_sql_pstmt_query_reset(od_sql_pstmt_query_t *q)
 	memset(q, 0, sizeof(od_sql_pstmt_query_t));
 }
 
-/* the prepared statement a statement creates, executes or deallocates */
-static const char *stmt_pstmt_name(Node *node)
-{
-	/* EXPLAIN [ANALYZE] CREATE TABLE ... AS EXECUTE nests two levels */
-	while (node != NULL &&
-	       (IsA(node, ExplainStmt) || IsA(node, CreateTableAsStmt))) {
-		if (IsA(node, ExplainStmt)) {
-			node = castNode(ExplainStmt, node)->query;
-		} else {
-			node = castNode(CreateTableAsStmt, node)->query;
-		}
-	}
-
-	if (node == NULL) {
-		return NULL;
-	}
-
-	if (IsA(node, PrepareStmt)) {
-		return castNode(PrepareStmt, node)->name;
-	}
-	if (IsA(node, ExecuteStmt)) {
-		return castNode(ExecuteStmt, node)->name;
-	}
-	if (IsA(node, DeallocateStmt)) {
-		return castNode(DeallocateStmt, node)->name;
-	}
-
-	return NULL;
-}
-
 static int is_reserved_name(const char *name)
 {
 	return name != NULL && strncmp(name, OD_PSTMT_NAME_PREFIX,
@@ -311,7 +311,12 @@ static int op_from_stmt(od_sql_pstmt_op_t *op, RawStmt *rs, const char *query,
 
 		op->type = OD_SQL_PSTMT_OP_DEALLOCATE;
 		op->name = od_strdup(d->name);
-		return op->name == NULL ? -1 : 0;
+		if (op->name == NULL) {
+			return -1;
+		}
+		op->name_hash =
+			sql_name_hash(op->name, (uint32_t)strlen(op->name));
+		return 0;
 	}
 
 	PrepareStmt *p = castNode(PrepareStmt, node);
@@ -336,6 +341,7 @@ static int op_from_stmt(od_sql_pstmt_op_t *op, RawStmt *rs, const char *query,
 	op->text[stmt_len] = '\0';
 	op->text_len = stmt_len;
 	op->hash = mm_xxh64_hash(op->text, stmt_len, hash_seed);
+	op->name_hash = sql_name_hash(op->name, (uint32_t)strlen(op->name));
 
 	return 0;
 }
@@ -421,7 +427,8 @@ int od_sql_pstmt_op_must_forward(od_sql_pstmt_client_t *client,
 {
 	switch (op->type) {
 	case OD_SQL_PSTMT_OP_DEALLOCATE:
-		return od_sql_pstmt_map_get(&client->stmts, op->name) != NULL;
+		return od_sql_pstmt_map_get_hash(&client->stmts, op->name,
+						 op->name_hash) != NULL;
 	case OD_SQL_PSTMT_OP_DEALLOCATE_ALL:
 		return client->stmts.count > 0;
 	default:
@@ -467,9 +474,11 @@ int od_sql_pstmt_apply(od_sql_pstmt_client_t *client,
 		}
 		break;
 	case OD_SQL_PSTMT_OP_DEALLOCATE:
-		od_sql_pstmt_map_remove(&client->stmts, op->name);
+		od_sql_pstmt_map_remove_hash(&client->stmts, op->name,
+					     op->name_hash);
 		if (server != NULL) {
-			od_sql_pstmt_map_remove(&server->stmts, op->name);
+			od_sql_pstmt_map_remove_hash(&server->stmts, op->name,
+						     op->name_hash);
 		}
 		break;
 	case OD_SQL_PSTMT_OP_DEALLOCATE_ALL:
@@ -653,8 +662,8 @@ int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 	/* statements of other clients, or of this client with other text */
 	od_list_foreach (&srv->stmts.order, i) {
 		od_sql_pstmt_t *held = od_container_of(i, od_sql_pstmt_t, link);
-		od_sql_pstmt_t *own =
-			od_sql_pstmt_map_get(&client->stmts, held->name);
+		od_sql_pstmt_t *own = od_sql_pstmt_map_get_hash(
+			&client->stmts, held->name, held->name_hash);
 
 		if (own != NULL && own->hash == held->hash) {
 			continue;
@@ -670,8 +679,8 @@ int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 	/* statements of this client the backend does not hold */
 	od_list_foreach (&client->stmts.order, i) {
 		od_sql_pstmt_t *own = od_container_of(i, od_sql_pstmt_t, link);
-		od_sql_pstmt_t *held =
-			od_sql_pstmt_map_get(&srv->stmts, own->name);
+		od_sql_pstmt_t *held = od_sql_pstmt_map_get_hash(
+			&srv->stmts, own->name, own->name_hash);
 
 		if (held != NULL && held->hash == own->hash) {
 			continue;
@@ -711,7 +720,8 @@ int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 			    strcmp(code, KIWI_INVALID_SQL_STATEMENT_NAME) ==
 				    0) {
 				/* deallocated now, or already gone */
-				od_sql_pstmt_map_remove(&srv->stmts, e->name);
+				od_sql_pstmt_map_remove_hash(
+					&srv->stmts, e->name, e->name_hash);
 			} else {
 				od_glog(server->client, server,
 					"failed to deallocate prepared statement \"%s\" (%s)",
@@ -751,7 +761,8 @@ int od_sql_pstmt_attach(od_sql_pstmt_client_t *client,
 		od_glog(server->client, server,
 			"failed to restore prepared statement \"%s\" on the server (%s), dropping it",
 			e->name, code);
-		od_sql_pstmt_map_remove(&client->stmts, e->name);
+		od_sql_pstmt_map_remove_hash(&client->stmts, e->name,
+					     e->name_hash);
 	}
 
 	if (unknown_state) {

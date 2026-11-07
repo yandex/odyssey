@@ -2,26 +2,42 @@
 #include <tests/odyssey_test.h>
 #include <stdatomic.h>
 
+#define WAIT_TIMEOUT_MS 10000
+
 atomic_uint_fast64_t flag;
 
 typedef struct {
 	machine_wait_flag_t *flag;
 	machine_wait_group_t *group;
 
-	/* only for consumer */
-	uint32_t estimated_wait_time_lower_bound;
-	uint32_t estimated_wait_time_upper_bound;
+	/* non-NULL for a consumer which must wait before set */
+	machine_wait_group_t *ready;
 } doner_arg_t;
+
+static void consumer_ready(void *arg)
+{
+	doner_arg_t *darg = arg;
+	test(atomic_load(&flag) == 0);
+	machine_wait_group_done(darg->ready);
+}
 
 static inline void consumer(void *arg)
 {
 	doner_arg_t *darg = arg;
 
-	uint32_t start_time = machine_time_ms();
-	test(machine_wait_flag_wait(darg->flag, UINT32_MAX) == 0);
-	uint32_t wait_time = machine_time_ms() - start_time;
-	test(wait_time >= darg->estimated_wait_time_lower_bound);
-	test(darg->estimated_wait_time_upper_bound >= wait_time);
+	if (darg->ready != NULL) {
+		/*
+		 * This coroutine runs on the same machine, so it can only
+		 * signal readiness after we yield in wait_flag_wait below.
+		 * The producer is not started until then.
+		 */
+		int64_t id = machine_coroutine_create(consumer_ready, darg);
+		test(id != -1);
+	}
+
+	/* An already-set flag must also succeed with a zero timeout. */
+	uint32_t timeout_ms = darg->ready != NULL ? WAIT_TIMEOUT_MS : 0;
+	test(machine_wait_flag_wait(darg->flag, timeout_ms) == 0);
 	test(atomic_load(&flag) == 1);
 	machine_wait_group_done(darg->group);
 }
@@ -39,37 +55,37 @@ static inline void test_wait_flag_simple_coroutines(void *arg)
 	(void)arg;
 
 	machine_wait_flag_t *flag = machine_wait_flag_create();
+	test(flag != NULL);
 
 	machine_wait_group_t *group = machine_wait_group_create();
+	test(group != NULL);
+	machine_wait_group_t *ready = machine_wait_group_create();
+	test(ready != NULL);
+	machine_wait_group_add(ready);
 
 	/* wait before set */
-	doner_arg_t arg1 = { .flag = flag,
-			     .group = group,
-			     .estimated_wait_time_lower_bound = 100,
-			     .estimated_wait_time_upper_bound = 105 };
+	doner_arg_t arg1 = { .flag = flag, .group = group, .ready = ready };
 	machine_wait_group_add(group);
 	int id1 = machine_coroutine_create(consumer, &arg1);
 	test(id1 != -1);
 
-	machine_sleep(100);
+	test(machine_wait_group_wait(ready, WAIT_TIMEOUT_MS) == 0);
+	test(machine_wait_group_count(group) == 1);
 
 	doner_arg_t arg2 = { .flag = flag, .group = group };
 	machine_wait_group_add(group);
 	int id2 = machine_coroutine_create(producer, &arg2);
 	test(id2 != -1);
 
-	machine_sleep(100);
+	test(machine_wait_group_wait(group, WAIT_TIMEOUT_MS) == 0);
 
 	/* wait after set */
-	doner_arg_t arg3 = { .flag = flag,
-			     .group = group,
-			     .estimated_wait_time_lower_bound = 0,
-			     .estimated_wait_time_upper_bound = 5 };
+	doner_arg_t arg3 = { .flag = flag, .group = group };
 	machine_wait_group_add(group);
 	int id3 = machine_coroutine_create(consumer, &arg3);
 	test(id3 != -1);
 
-	machine_sleep(100);
+	test(machine_wait_group_wait(group, WAIT_TIMEOUT_MS) == 0);
 
 	/* second set */
 	doner_arg_t arg4 = { .flag = flag, .group = group };
@@ -77,8 +93,11 @@ static inline void test_wait_flag_simple_coroutines(void *arg)
 	int id4 = machine_coroutine_create(producer, &arg4);
 	test(id4 != -1);
 
-	machine_wait_group_wait(group, 1000);
+	test(machine_wait_group_wait(group, WAIT_TIMEOUT_MS) == 0);
+	test(machine_wait_flag_wait(flag, 0) == 0);
 
+	machine_wait_group_destroy(ready);
+	machine_wait_group_destroy(group);
 	machine_wait_flag_destroy(flag);
 }
 
@@ -87,37 +106,37 @@ static inline void test_wait_flag_simple_threads(void *arg)
 	(void)arg;
 
 	machine_wait_flag_t *flag = machine_wait_flag_create();
+	test(flag != NULL);
 
 	machine_wait_group_t *group = machine_wait_group_create();
+	test(group != NULL);
+	machine_wait_group_t *ready = machine_wait_group_create();
+	test(ready != NULL);
+	machine_wait_group_add(ready);
 
 	/* wait before set */
-	doner_arg_t arg1 = { .flag = flag,
-			     .group = group,
-			     .estimated_wait_time_lower_bound = 100,
-			     .estimated_wait_time_upper_bound = 105 };
+	doner_arg_t arg1 = { .flag = flag, .group = group, .ready = ready };
 	machine_wait_group_add(group);
 	int id1 = machine_create("test_wait_flag_consumer_1", consumer, &arg1);
 	test(id1 != -1);
 
-	machine_sleep(100);
+	test(machine_wait_group_wait(ready, WAIT_TIMEOUT_MS) == 0);
+	test(machine_wait_group_count(group) == 1);
 
 	doner_arg_t arg2 = { .flag = flag, .group = group };
 	machine_wait_group_add(group);
 	int id2 = machine_create("test_wait_flag_producer_1", producer, &arg2);
 	test(id2 != -1);
 
-	machine_sleep(100);
+	test(machine_wait_group_wait(group, WAIT_TIMEOUT_MS) == 0);
 
 	/* wait after set */
-	doner_arg_t arg3 = { .flag = flag,
-			     .group = group,
-			     .estimated_wait_time_lower_bound = 0,
-			     .estimated_wait_time_upper_bound = 5 };
+	doner_arg_t arg3 = { .flag = flag, .group = group };
 	machine_wait_group_add(group);
 	int id3 = machine_create("test_wait_flag_consumer_2", consumer, &arg3);
 	test(id3 != -1);
 
-	machine_sleep(100);
+	test(machine_wait_group_wait(group, WAIT_TIMEOUT_MS) == 0);
 
 	/* second set */
 	doner_arg_t arg4 = { .flag = flag, .group = group };
@@ -125,13 +144,16 @@ static inline void test_wait_flag_simple_threads(void *arg)
 	int id4 = machine_create("test_wait_flag_producer_2", producer, &arg4);
 	test(id4 != -1);
 
-	machine_wait_group_wait(group, 1000);
+	test(machine_wait_group_wait(group, WAIT_TIMEOUT_MS) == 0);
+	test(machine_wait_flag_wait(flag, 0) == 0);
 
 	test(machine_wait(id1) != -1);
 	test(machine_wait(id2) != -1);
 	test(machine_wait(id3) != -1);
 	test(machine_wait(id4) != -1);
 
+	machine_wait_group_destroy(ready);
+	machine_wait_group_destroy(group);
 	machine_wait_flag_destroy(flag);
 }
 

@@ -428,9 +428,9 @@ static inline int od_router_create_idle_server(od_route_t *route,
 	od_server_set_pool_state(server, OD_SERVER_IDLE);
 
 	od_logger_t *logger = &server->global->instance->logger;
-	od_log(logger, NULL, server,
-	       "idle server connection preallocated for %s.%s",
-	       route->id.database, route->id.user);
+	od_debug(logger, NULL, server,
+		 "idle server connection preallocated for %s.%s",
+		 route->id.database, route->id.user);
 
 	return OK_RESPONSE;
 }
@@ -795,6 +795,9 @@ od_router_status_t od_router_route(od_router_t *router, od_client_t *client)
 	/* add client to route client pool */
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 	client->route = route;
+	if (client->type == OD_POOL_CLIENT_EXTERNAL) {
+		od_stat_client_connect(&route->stats);
+	}
 
 	od_route_unlock(route);
 	return OD_ROUTER_OK;
@@ -811,6 +814,9 @@ void od_router_unroute(od_router_t *router, od_client_t *client)
 	od_route_t *route = client->route;
 	od_route_lock(route);
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_UNDEF);
+	if (client->type == OD_POOL_CLIENT_EXTERNAL) {
+		od_stat_client_disconnect(&route->stats);
+	}
 	client->route = NULL;
 	od_route_unlock(route);
 }
@@ -1162,9 +1168,18 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 
 	mm_hashmap_keylock_t client_klock;
 	int rc;
-	rc = od_global_clients_map_lock(
-		client->global->instance->clients_by_key, &client->key,
-		&client_klock);
+	/*
+	 * only the per-key serialization against the cancel lookup is
+	 * needed here, so take the shard mutex without the chain
+	 * walk.  the client may already be unregistered from the map
+	 * (frontend cleanup removes it before unroute), but the lock
+	 * must still be taken: it also serializes with concurrent
+	 * lock_key users on the same shard, and the old found=0 path
+	 * silently skipped that
+	 */
+	rc = od_global_clients_map_lock_shard(
+		client->global->instance->clients_by_key, &client_klock,
+		client->key_hash);
 	(void)rc;
 	od_assert(rc == 0);
 
@@ -1185,21 +1200,21 @@ void od_router_detach(od_router_t *router, od_client_t *client)
 	od_server_detach_client(server);
 
 	if (offline || is_repl) {
-		server->route = NULL;
 		od_server_set_pool_state(server, OD_SERVER_UNDEF);
+		server->route = NULL;
 		to_close = server;
 		server = NULL;
+	} else if (server->stats_connected) {
+		od_stat_server_detach(&route->stats);
 	}
 
 	od_client_pool_set(&route->client_pool, client, OD_CLIENT_PENDING);
 	od_route_signal_locked(route, server);
 
 	od_route_unlock(route);
-	if (client_klock.found) {
-		od_global_clients_map_unlock(
-			client->global->instance->clients_by_key,
-			&client_klock);
-	}
+
+	od_global_clients_map_unlock(client->global->instance->clients_by_key,
+				     &client_klock);
 
 	if (to_close != NULL) {
 		if (is_repl) {
@@ -1221,9 +1236,9 @@ void od_router_close(od_router_t *router, od_client_t *client)
 
 	mm_hashmap_keylock_t client_klock;
 	int rc;
-	rc = od_global_clients_map_lock(
-		client->global->instance->clients_by_key, &client->key,
-		&client_klock);
+	rc = od_global_clients_map_lock_shard(
+		client->global->instance->clients_by_key, &client_klock,
+		client->key_hash);
 	(void)rc;
 	od_assert(rc == 0);
 
@@ -1242,11 +1257,9 @@ void od_router_close(od_router_t *router, od_client_t *client)
 	od_route_signal_locked(route, NULL);
 
 	od_route_unlock(route);
-	if (client_klock.found) {
-		od_global_clients_map_unlock(
-			client->global->instance->clients_by_key,
-			&client_klock);
-	}
+
+	od_global_clients_map_unlock(client->global->instance->clients_by_key,
+				     &client_klock);
 
 	/* Console readers cannot see this server after it leaves the pool. */
 	/* Terminate may wait on io, so send it without holding the pool lock. */

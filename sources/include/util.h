@@ -189,12 +189,6 @@ static inline char *od_next_line(char **cursor)
 	return line;
 }
 
-static inline uint32_t od_bswap32(uint32_t x)
-{
-	return ((x << 24) & 0xff000000) | ((x << 8) & 0x00ff0000) |
-	       ((x >> 8) & 0x0000ff00) | ((x >> 24) & 0x000000ff);
-}
-
 static inline void od_array_reverse_p(void **arr, size_t start, size_t end)
 {
 	while (start < end) {

@@ -25,6 +25,10 @@ extern void kiwi_test_pgoptions(void);
 extern void kiwi_test_be_read_startup_options(void);
 extern void kiwi_test_fe_read_auth(void);
 extern void kiwi_test_be_read_query(void);
+extern void kiwi_test_backend_key_data(void);
+extern void kiwi_test_cancel_request(void);
+extern void kiwi_test_cancel_write(void);
+extern void kiwi_test_msg_size_limits(void);
 
 /* MACHINARIUM */
 extern void machinarium_test_init(void);
@@ -83,6 +87,7 @@ extern void machinarium_test_read_cancel(void);
 extern void machinarium_test_read_var(void);
 extern void machinarium_test_read_close(void);
 extern void machinarium_test_hm_hash(void);
+extern void machinarium_test_hm_dist(void);
 extern void machinarium_test_tls0(void);
 extern void machinarium_test_tls_verify_error(void);
 extern void machinarium_test_tls_cache(void);
@@ -110,6 +115,7 @@ extern void machinarium_test_wait_flag_timeout(void);
 extern void machinarium_test_ring_buffer(void);
 extern void machinarium_test_vrb(void);
 extern void machinarium_test_heap(void);
+extern void machinarium_test_clock(void);
 extern void machinarium_test_lf_stack(void);
 extern void machinarium_test_queue(void);
 extern void machinarium_vrb_benchmark(void);
@@ -166,6 +172,10 @@ int main(int argc, char *argv[])
 	odyssey_test(kiwi_test_be_read_startup_options);
 	odyssey_test(kiwi_test_fe_read_auth);
 	odyssey_test(kiwi_test_be_read_query);
+	odyssey_test(kiwi_test_backend_key_data);
+	odyssey_test(kiwi_test_cancel_request);
+	odyssey_test(kiwi_test_cancel_write);
+	odyssey_test(kiwi_test_msg_size_limits);
 	odyssey_test(machinarium_test_init);
 	odyssey_test(machinarium_test_create0);
 	odyssey_test(machinarium_test_create1);
@@ -222,6 +232,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_read_var);
 	odyssey_test(machinarium_test_read_close);
 	odyssey_test(machinarium_test_hm_hash);
+	odyssey_test(machinarium_test_hm_dist);
 	odyssey_test(machinarium_test_tls0);
 	odyssey_test(machinarium_test_tls_verify_error);
 	odyssey_test(machinarium_test_tls_cache);
@@ -251,6 +262,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_vrb);
 	odyssey_test(machinarium_test_queue);
 	odyssey_test(machinarium_test_heap);
+	odyssey_test(machinarium_test_clock);
 	odyssey_test(machinarium_test_lf_stack);
 	odyssey_playground_test(machinarium_vrb_benchmark);
 	odyssey_playground_test(machinarium_mutex_benchmark);

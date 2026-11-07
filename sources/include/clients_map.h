@@ -30,14 +30,30 @@ od_global_clients_map_t *od_global_clients_map_create(size_t nlocks);
 void od_global_clients_map_free(od_global_clients_map_t *map);
 
 /*
- * lock the bucket for the key; klock.found tells whether
- * a client with such key is registered
- * 
- * if klock.found = 0, then the unlock will occur automatically
+ * hash of the key as used by the map (xxh64 with key_pid as the
+ * seed); stable for the lifetime of the key
  */
+mm_hash_t od_global_clients_map_hash_key(const void *key);
+
 int od_global_clients_map_lock(od_global_clients_map_t *map,
 			       const kiwi_key_t *key,
 			       mm_hashmap_keylock_t *klock);
+
+/* as _lock, but with the hash supplied by the caller */
+int od_global_clients_map_lock_hash(od_global_clients_map_t *map,
+				    const kiwi_key_t *key, mm_hash_t hash,
+				    mm_hashmap_keylock_t *klock);
+
+/*
+ * take the per-key shard mutex without the bucket chain walk:
+ * klock.found is always 0.  for callers that only need to
+ * serialize against lock/lock_hash under the same key (router
+ * detach/close); release with od_global_clients_map_unlock
+ */
+int od_global_clients_map_lock_shard(od_global_clients_map_t *map,
+				     mm_hashmap_keylock_t *klock,
+				     mm_hash_t hash);
+
 void od_global_clients_map_unlock(od_global_clients_map_t *map,
 				  mm_hashmap_keylock_t *klock);
 

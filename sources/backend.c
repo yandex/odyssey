@@ -58,6 +58,7 @@ static inline int od_backend_terminate(od_server_t *server)
 static void od_backend_disconnect(od_server_t *server, int graceful)
 {
 	od_assert(server != NULL);
+	od_server_stat_close(server);
 	if (!od_backend_not_connected(server)) {
 		if (graceful && mm_io_connected(server->io.io)) {
 			od_backend_terminate(server);
@@ -403,6 +404,8 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 	}
 
 	machine_msg_t *msg;
+	/* Offer the maximum version; PostgreSQL may negotiate down to 3.0. */
+	server->proto_version = PG_PROTOCOL_LATEST;
 	msg = kiwi_fe_write_startup_message(NULL, argc, argv);
 	if (msg == NULL) {
 		return -1;
@@ -448,10 +451,27 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 				return -1;
 			}
 			break;
+		case KIWI_BE_NEGOTIATE_PROTOCOL_VERSION:
+			rc = kiwi_fe_read_protocol_negotiation(
+				machine_msg_data(msg), machine_msg_size(msg),
+				&server->proto_version);
+			machine_msg_free(msg);
+			if (rc == -1) {
+				od_error(
+					&instance->logger, client, server,
+					"invalid protocol negotiation message");
+				return -1;
+			}
+			od_debug(&instance->logger, client, server,
+				 "server negotiated protocol %d.%d",
+				 PG_PROTOCOL_MAJOR(server->proto_version),
+				 PG_PROTOCOL_MINOR(server->proto_version));
+			break;
 		case KIWI_BE_BACKEND_KEY_DATA:
 			rc = kiwi_fe_read_key(machine_msg_data(msg),
 					      machine_msg_size(msg),
-					      &server->key);
+					      &server->key,
+					      server->proto_version);
 			machine_msg_free(msg);
 			if (rc == -1) {
 				od_error(
@@ -742,6 +762,11 @@ int od_backend_connect_to(od_server_t *server, const od_address_t *address,
 	/* publish server io after successful connect (stable fd), under
 	 * route lock: console readers traverse the pool under the same lock */
 	if (server->route != NULL) {
+		/* The event loop may already have consumed a failed connect's SO_ERROR. */
+		if (io->error == 0) {
+			od_stat_server_connect(&server->route->stats);
+			server->stats_connected = true;
+		}
 		od_route_lock(server->route);
 	}
 	rc = od_io_prepare(&server->io, io);
@@ -752,6 +777,7 @@ int od_backend_connect_to(od_server_t *server, const od_address_t *address,
 		od_error(&instance->logger, NULL, server,
 			 "failed to set server io, errno = %d (%s)",
 			 machine_errno(), strerror(machine_errno()));
+		od_server_stat_close(server);
 		mm_io_close(io);
 		mm_io_free(io);
 		return -1;
@@ -1085,7 +1111,7 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 
 	/* send cancel request */
 	machine_msg_t *msg;
-	msg = kiwi_fe_write_cancel(NULL, key->key_pid, key->key);
+	msg = kiwi_fe_write_cancel(NULL, key);
 	if (msg == NULL) {
 		return -1;
 	}

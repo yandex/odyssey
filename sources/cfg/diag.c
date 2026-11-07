@@ -133,28 +133,3 @@ void od_cfg_diag_deprecated_ignored(od_cfg_diag_list_t *diags,
 			    "option '%s' is deprecated and ignored",
 			    option_name);
 }
-
-void od_cfg_diag_dumpf(FILE *file, const od_cfg_diag_list_t *diags)
-{
-	for (size_t i = 0; i < diags->count; i++) {
-		const od_cfg_diag_t *diag = &diags->items[i];
-
-		const char *level =
-			diag->level == OD_CFG_DIAG_ERROR ? "error" : "warning";
-
-		if (diag->location.filename != NULL) {
-			fprintf(file, "%s:%d:%d: %s: %s\n",
-				diag->location.filename,
-				diag->location.first_line,
-				diag->location.first_column, level,
-				diag->message ? diag->message : "");
-		} else {
-			fprintf(file, "%s: %s\n", level,
-				diag->message ? diag->message : "");
-		}
-
-		if (diag->hint != NULL) {
-			fprintf(file, "  hint: %s\n", diag->hint);
-		}
-	}
-}

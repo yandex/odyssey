@@ -92,16 +92,13 @@ INTEGER     -?{DIGIT}+
     TAIL_TOUCH(0);
 }
 "/*"         { SET_YYLLOC();
-               int c;
-               while ((c = input(yyscanner)) != 0) {
-                   if (c == '*') {
-                       int next = input(yyscanner);
-                       if (next == 0) break;
-                       if (next == '/') goto comment_done;
-                       unput(next);
-                   }
+               int depth = 1, previous = 0, c;
+               while (depth && (c = input(yyscanner)) != 0) {
+                   if (previous == '/' && c == '*') { depth++; previous = 0; }
+                   else if (previous == '*' && c == '/') { depth--; previous = 0; }
+                   else previous = c;
                }
-               comment_done:;
+               if (depth) return ERROR_TOKEN;
                /* skip block comment */
              }
 

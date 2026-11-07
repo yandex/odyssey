@@ -31,6 +31,8 @@
 static OD_THREAD_LOCAL uint8_t *linear_alloc_buf = NULL;
 static OD_THREAD_LOCAL od_linear_alloc_t linear_alloc;
 
+OD_THREAD_LOCAL bool worker_shutting_down = false;
+
 static void setup_affinity(od_instance_t *instance, int wid)
 {
 	const od_affinity_config_t *config = instance->config.cpu_affinity;
@@ -107,8 +109,6 @@ static inline void od_worker(void *arg)
 
 	(*gl)->wid = worker->id;
 
-	bool run = true;
-
 	memset(&linear_alloc, 0, sizeof(linear_alloc));
 	if (instance->config.query_parsing.mode !=
 	    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
@@ -126,7 +126,7 @@ static inline void od_worker(void *arg)
 		mm_machine_atexit(od_free, (void *)linear_alloc_buf);
 	}
 
-	while (run) {
+	while (!worker_shutting_down) {
 		machine_msg_t *msg;
 		/*
 		 * Prefer newer clients: their connection timeouts are less likely
@@ -228,7 +228,8 @@ static inline void od_worker(void *arg)
 			od_log(&instance->logger, NULL, NULL,
 			       "worker[%d]: shutdown message received",
 			       worker->id);
-			run = false;
+
+			worker_shutting_down = true;
 			break;
 		default:
 			od_assert(0);
