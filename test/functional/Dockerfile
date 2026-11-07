@@ -58,7 +58,7 @@ WORKDIR /prep_stmts
 RUN go mod download && cd pkg && CGO_ENABLED=0 go build -o pstmts-test
 
 WORKDIR /config-validation
-RUN go mod download && cd pkg && go build -o config-validation
+RUN go mod download && go test ./... && cd pkg && go build -o config-validation
 
 WORKDIR /external_auth
 RUN go mod download && cd pkg && go build -o external-auth-agent
