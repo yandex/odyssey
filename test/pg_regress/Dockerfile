@@ -56,6 +56,8 @@ COPY ./test/bin/ody-stop /usr/bin/ody-stop
 
 FROM odyssey-build AS runner
 
+ARG build_type
+
 RUN useradd -ms /bin/bash postgres
 RUN mkdir regress
 WORKDIR /home/postgres
@@ -65,6 +67,11 @@ COPY ./test/pg_regress/conf /home/postgres/regress/conf
 COPY ./test/pg_regress/tests /home/postgres/regress/tests
 COPY ./test/pg_regress/schedule /home/postgres/regress/schedule
 COPY ./test/isolation /home/postgres/isolation
+
+# The full parser at -O0 needs more coroutine stack under ASAN.
+RUN if [ "$build_type" = "build_asan" ]; then \
+    echo 'coroutine_stack_size 256' >> /home/postgres/regress/conf/_base; \
+    fi
 
 RUN chown -R postgres /home/postgres/regress
 RUN chown -R postgres /home/postgres/isolation
