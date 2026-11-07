@@ -820,14 +820,28 @@ static bool virtual_query_supported(od_client_t *client,
 }
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
-					       const char *query, size_t len)
+					       const char *query,
+					       uint32_t query_len)
 {
-	const od_query_ctx_t *ctx = &client->query_ctx;
+	od_instance_t *instance = client->global->instance;
+	if (query_len > instance->config.query_parsing.max_query_len ||
+	    od_query_parser_mode(client) ==
+		    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
+		od_query_ctx_reset(&client->query_ctx);
+		return OD_OK;
+	}
+
+	const od_query_ctx_t *ctx = od_sql_parse(client, query, query_len, NULL,
+						 &client->query_ctx);
+	if (ctx == NULL || od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
+		return OD_OK;
+	}
+
 	od_frontend_status_t status;
 	od_virtual_portal_t portal;
 
 	virtual_portal_init(&portal);
-	status = od_sql_analyze(client, query, len, &portal.error);
+	status = od_sql_analyze(client, ctx, &portal.error);
 	if (status == OD_SKIP && virtual_portal_set_notice(&portal) != 0) {
 		status = OD_EOOM;
 	}
@@ -835,8 +849,7 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 		goto reply;
 	}
 
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR) ||
-	    !virtual_query_supported(client, ctx)) {
+	if (!virtual_query_supported(client, ctx)) {
 		goto done;
 	}
 

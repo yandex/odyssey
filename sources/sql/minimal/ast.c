@@ -173,6 +173,7 @@ void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 		if (n->is_all) {
 			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL);
 		} else if (n->name != NULL) {
+			od_query_ctx_check_reserved_name(ctx, n->name);
 			od_query_ctx_set(ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME);
 			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", n->name);
 		}
@@ -181,9 +182,16 @@ void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 	case OD_SQL_MINIMAL_NODE_TYPE_EXECUTE_STMT: {
 		const od_sql_minimal_execute_stmt_t *n =
 			(const od_sql_minimal_execute_stmt_t *)ast;
+		od_query_ctx_check_reserved_name(ctx, n->name);
 		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_EXECUTE);
 		od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", n->name);
 		ctx->name_location = n->name_location;
+		break;
+	}
+	case OD_SQL_MINIMAL_NODE_TYPE_PREPARE_STMT: {
+		const od_sql_minimal_prepare_stmt_t *n =
+			(const od_sql_minimal_prepare_stmt_t *)ast;
+		od_query_ctx_check_reserved_name(ctx, n->name);
 		break;
 	}
 	default:

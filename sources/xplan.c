@@ -4,6 +4,7 @@
 
 #include <pstmt.h>
 #include <analyze.h>
+#include <query.h>
 #include <server.h>
 #include <client.h>
 #include <global.h>
@@ -782,15 +783,6 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		return xplan_append_virtual_error_response(xp, msg, vresp);
 	}
 
-	machine_msg_t *error;
-	st = od_sql_analyze(client, desc.data, strlen(desc.data), &error);
-	if (st == OD_SKIP) {
-		return xplan_append_virtual_error_response(xp, msg, error);
-	}
-	if (st != OD_OK) {
-		return st;
-	}
-
 	od_global_pstmt_map_t *global_pstmts =
 		od_instance_get_pstmts_map(instance);
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
@@ -800,6 +792,30 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 		return OD_EOOM;
 	}
 	/* we now hold the ref to pstmt */
+
+	size_t query_len = strlen(desc.data);
+	if (query_len <= instance->config.query_parsing.max_query_len &&
+	    od_query_parser_mode(client) !=
+		    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
+		od_query_ctx_t parsed_ctx = { 0 };
+		const od_query_ctx_t *ctx = od_sql_parse(
+			client, desc.data, query_len, pstmt, &parsed_ctx);
+		machine_msg_t *error = NULL;
+		st = OD_OK;
+		if (ctx != NULL &&
+		    !od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
+			st = od_sql_analyze(client, ctx, &error);
+		}
+		od_query_ctx_reset(&parsed_ctx);
+		if (st != OD_OK) {
+			od_pstmt_unref(pstmt);
+			if (st == OD_SKIP) {
+				return xplan_append_virtual_error_response(
+					xp, msg, error);
+			}
+			return st;
+		}
+	}
 
 	if (plan_server_has_pstmt(xp, server, pstmt)) {
 		/*

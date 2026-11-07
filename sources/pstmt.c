@@ -991,6 +991,7 @@ od_pstmt_t *od_pstmt_create_or_get(od_global_pstmt_map_t *pstmts,
 		od_query_parse_fill_ctx(value->desc.data,
 					strlen(value->desc.data), arena,
 					&value->query_ctx, parsing);
+		value->query_parser_mode = parsing->mode;
 	} else {
 		/* the key already exists and has a copy of desc.data, do nothing */
 		value = *slot;

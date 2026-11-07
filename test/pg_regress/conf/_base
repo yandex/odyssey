@@ -20,6 +20,9 @@ stats_interval 60
 workers 1
 resolvers 1
 
+# Leave enough stack for the full parser under ASAN at -O0.
+coroutine_stack_size 256
+
 readahead 4096
 
 cache_coroutine 0

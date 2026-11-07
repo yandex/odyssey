@@ -70,11 +70,13 @@ struct od_pstmt {
 	mm_hash_t name_hash;
 
 	/*
-	 * query context flags, parsed once from desc.data via
-	 * od_sql_minimal_parse at pstmt creation time.
+	 * Query context parsed once from desc.data at pstmt creation time.
+	 * Remember its grammar: clients sharing this statement can select
+	 * a different parser for the reserved-name check.
 	 * deallocate_name is stored inplace (no heap allocation).
 	 */
 	od_query_ctx_t query_ctx;
+	od_config_query_parsing_mode_t query_parser_mode;
 
 	/*
 	 * holded by:
