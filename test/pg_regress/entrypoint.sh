@@ -5,6 +5,14 @@ set -eux
 PG_REGRESS=$(pg_config --libdir)/postgresql/pgxs/src/test/regress/pg_regress
 REGRESS_DIR=/home/postgres/regress
 
+# The container runs as postgres, which cannot create logs in /.
+SANITIZER_LOG_DIR=/tmp/odyssey-sanitizer
+mkdir -p "${SANITIZER_LOG_DIR}"
+export ASAN_LOG_PREFIX=${SANITIZER_LOG_DIR}/asan-output.log
+export TSAN_LOG_PREFIX=${SANITIZER_LOG_DIR}/tsan-output.log
+export ASAN_OPTIONS="log_path=${ASAN_LOG_PREFIX} fast_unwind_on_malloc=0"
+export TSAN_OPTIONS="log_path=${TSAN_LOG_PREFIX}"
+
 PGDIR=/home/postgres/pgdir
 PGDIRREPL1=/home/postgres/pgrepl1
 PGDIRREPL2=/home/postgres/pgrepl2
@@ -21,8 +29,6 @@ do_test() {
     local port=$2
     local user=$3
 
-    export ASAN_OPTIONS="log_path=/asan-output.log fast_unwind_on_malloc=0"
-    export TSAN_OPTIONS="log_path=/tsan-output.log"
     PGPORT="$port" ody-start "${REGRESS_DIR}/conf/${name}" postgres postgres
 
     PGTEST_PORT="${port}" PGTEST_DIR="${REGRESS_DIR}/tests/${name}" PGTEST_USER="${user}" PGTEST_DB=postgres PGTEST_CONF="${REGRESS_DIR}/conf/${name}" ${PG_REGRESS} \
@@ -51,8 +57,6 @@ do_test() {
 do_isolation_test() {
     local port=6432
 
-    export ASAN_OPTIONS="log_path=/asan-output.log fast_unwind_on_malloc=0"
-    export TSAN_OPTIONS="log_path=/tsan-output.log"
     odyssey ${REGRESS_DIR}/conf/isolation
 
     local it=0
