@@ -77,8 +77,10 @@ NOTICE:  processed virtually by odyssey
 ERROR:  42939
 EXECUTE U&"!006fdyssey_missing" UESCAPE '!' \parse reserved_unicode
 ERROR:  42939
--- A syntax error in the batch must not use a partial AST for name checks.
-EXECUTE odyssey_missing \; SELECT FROM;
+-- A malformed EXECUTE must reach PostgreSQL without a reserved-name error.
+EXECUTE odyssey_missing 6 + 7;
+ERROR:  42601
+EXECUTE odyssey_missing 6 + 7 \parse invalid_execute
 ERROR:  42601
 SET odyssey.parser_mode = 'mini';
 NOTICE:  processed virtually by odyssey
@@ -91,7 +93,7 @@ ERROR:  42939
 SET odyssey.parser_mode = 'mini';
 NOTICE:  processed virtually by odyssey
 EXPLAIN EXECUTE odyssey_cache_missing \parse cached_mini_again
--- Existing client names take precedence over the SQL name check.
+-- Protocol name "x" already exists: 42P05 must precede reserved SQL name 42939.
 PREPARE odyssey_duplicate AS SELECT 1 \parse x
 ERROR:  42P05
 -- A literal or a case-sensitive quoted name is not reserved.

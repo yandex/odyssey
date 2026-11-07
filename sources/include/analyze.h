@@ -5,6 +5,7 @@
 #include <types.h>
 #include <status.h>
 #include <machinarium/msg.h>
+#include <sql/minimal/ast.h>
 
 struct Node;
 
@@ -12,9 +13,17 @@ const char *stmt_pstmt_name(struct Node *node);
 
 /*
  * Reuse the statement's context when its grammar matches the client.
- * NULL pstmt represents a simple Query: parse into client->query_ctx.
+ * Otherwise parse into parsed_ctx, which the caller initializes and resets.
+ * NULL pstmt represents a simple Query. NULL result means no parser arena.
+ */
+const od_query_ctx_t *od_sql_parse(od_client_t *client, const char *query,
+				   uint32_t query_len, const od_pstmt_t *pstmt,
+				   od_query_ctx_t *parsed_ctx);
+
+/*
+ * Call only for a successfully parsed query within the client's length limit.
  * OD_SKIP returns an ErrorResponse in *error, owned by the caller.
  */
-od_frontend_status_t od_sql_analyze(od_client_t *client, const char *query,
-				    uint32_t query_len, const od_pstmt_t *pstmt,
+od_frontend_status_t od_sql_analyze(od_client_t *client,
+				    const od_query_ctx_t *ctx,
 				    machine_msg_t **error);

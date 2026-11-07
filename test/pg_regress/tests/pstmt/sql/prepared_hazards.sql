@@ -37,8 +37,9 @@ DEALLOCATE PREPARE "odyssey_custom" \parse reserved_deallocate
 -- The full parser checks decoded names, without a raw "odyssey" substring.
 EXECUTE U&"\006fdyssey_missing";
 EXECUTE U&"!006fdyssey_missing" UESCAPE '!' \parse reserved_unicode
--- A syntax error in the batch must not use a partial AST for name checks.
-EXECUTE odyssey_missing \; SELECT FROM;
+-- A malformed EXECUTE must reach PostgreSQL without a reserved-name error.
+EXECUTE odyssey_missing 6 + 7;
+EXECUTE odyssey_missing 6 + 7 \parse invalid_execute
 SET odyssey.parser_mode = 'mini';
 -- A cached minimal-parser context must not bypass the full-parser check.
 EXPLAIN EXECUTE odyssey_cache_missing \parse cached_mini
@@ -46,7 +47,7 @@ SET odyssey.parser_mode = 'full';
 EXPLAIN EXECUTE odyssey_cache_missing \parse cached_full
 SET odyssey.parser_mode = 'mini';
 EXPLAIN EXECUTE odyssey_cache_missing \parse cached_mini_again
--- Existing client names take precedence over the SQL name check.
+-- Protocol name "x" already exists: 42P05 must precede reserved SQL name 42939.
 PREPARE odyssey_duplicate AS SELECT 1 \parse x
 -- A literal or a case-sensitive quoted name is not reserved.
 SELECT 'odyssey' AS v;
