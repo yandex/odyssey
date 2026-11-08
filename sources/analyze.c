@@ -8,18 +8,13 @@
 
 #include <kiwi/kiwi.h>
 #include <client.h>
+#include <analyze.h>
 #include <global.h>
 #include <instance.h>
+#include <pstmt.h>
 #include <query.h>
 #include <worker.h>
-#include <analyze.h>
-#include <sql/minimal/parser.h>
 #include <sql/full/parser.h>
-
-static bool reserved_name(const char *name)
-{
-	return name != NULL && strncmp(name, "odyssey", 7) == 0;
-}
 
 /* the prepared statement a statement creates, executes or deallocates */
 const char *stmt_pstmt_name(Node *node)
@@ -51,64 +46,62 @@ const char *stmt_pstmt_name(Node *node)
 	return NULL;
 }
 
-static bool sql_reserved(od_client_t *client, const char *query, size_t len)
+static const od_query_ctx_t *od_sql_parse(od_client_t *client,
+					  const char *query, uint32_t query_len,
+					  const od_pstmt_t *pstmt,
+					  od_query_ctx_t *parsed_ctx)
 {
 	od_instance_t *instance = client->global->instance;
-	od_config_query_parsing_mode_t mode = od_query_parser_mode(client);
-	if (!client->rule->pool->reserve_prepared_statement ||
-	    mode == OD_CONFIG_QUERY_PARSING_MODE_DISABLED ||
-	    len > instance->config.query_parsing.max_query_len) {
-		return false;
-	}
-
-	/*XXX: support u&-style names later*/
-	if (strcasestr(query, "odyssey") == NULL) {
-		return false;
-	}
+	od_config_query_parsing_t parsing = instance->config.query_parsing;
+	parsing.mode = od_query_parser_mode(client);
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
 	if (arena == NULL || arena->buf == NULL) {
-		return false;
+		/*
+		 * For now, forward the query without local parsing or analysis
+		 * if the worker's linear allocator is unavailable.
+		 */
+		od_query_ctx_reset(parsed_ctx);
+		return NULL;
 	}
 
-	if (mode == OD_CONFIG_QUERY_PARSING_MODE_MINIMAL) {
-		od_sql_minimal_node_t *node =
-			od_sql_minimal_parse(query, len, arena, NULL, NULL);
-		if (node == NULL) {
-			return false;
-		}
-		switch (node->type) {
-		case OD_SQL_MINIMAL_NODE_TYPE_PREPARE_STMT:
-			return reserved_name(
-				((od_sql_minimal_prepare_stmt_t *)node)->name);
-		case OD_SQL_MINIMAL_NODE_TYPE_EXECUTE_STMT:
-			return reserved_name(
-				((od_sql_minimal_execute_stmt_t *)node)->name);
-		case OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT:
-			return reserved_name(
-				((od_sql_minimal_deallocate_stmt_t *)node)
-					->name);
-		default:
-			return false;
-		}
+	if (pstmt != NULL && pstmt->query_parser_mode == parsing.mode) {
+		return &pstmt->query_ctx;
 	}
 
-	List *tree = od_sql_full_parse(arena, query, len, NULL, NULL);
-	ListCell *cell;
-	foreach(cell, tree)
-	{
-		if (reserved_name(stmt_pstmt_name(
-			    lfirst_node(RawStmt, cell)->stmt))) {
-			return true;
-		}
-	}
-	return false;
+	/* Parse Query text, or use the client's grammar for a shared statement. */
+	od_query_parse_fill_ctx(query, query_len, arena, parsed_ctx, &parsing);
+	return parsed_ctx;
 }
 
-od_frontend_status_t od_sql_analyze(od_client_t *client, const char *query,
-				    size_t len, machine_msg_t **error)
+const od_query_ctx_t *od_sql_parse_for_analysis(od_client_t *client,
+						const char *query,
+						uint32_t query_len,
+						const od_pstmt_t *pstmt,
+						od_query_ctx_t *parsed_ctx)
+{
+	od_instance_t *instance = client->global->instance;
+	if (query_len > instance->config.query_parsing.max_query_len ||
+	    od_query_parser_mode(client) ==
+		    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
+		od_query_ctx_reset(parsed_ctx);
+		return NULL;
+	}
+
+	const od_query_ctx_t *ctx =
+		od_sql_parse(client, query, query_len, pstmt, parsed_ctx);
+	if (ctx == NULL || od_query_ctx_has(ctx, OD_QUERY_CTX_PARSE_ERROR)) {
+		return NULL;
+	}
+	return ctx;
+}
+
+od_frontend_status_t od_sql_analyze(od_client_t *client,
+				    const od_query_ctx_t *ctx,
+				    machine_msg_t **error)
 {
 	*error = NULL;
-	if (!sql_reserved(client, query, len)) {
+	if (!client->rule->pool->reserve_prepared_statement ||
+	    !od_query_ctx_has(ctx, OD_QUERY_CTX_HAS_RESERVED_NAME)) {
 		return OD_OK;
 	}
 	static char message[] =

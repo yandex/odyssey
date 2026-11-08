@@ -10,6 +10,7 @@
 
 #include <alloc/linear.h>
 #include <id.h>
+#include <string.h>
 
 typedef enum {
 	OD_SQL_MINIMAL_NODE_TYPE_INVALID = 0,
@@ -102,6 +103,7 @@ typedef enum {
 	OD_QUERY_CTX_TOO_LONG = 1 << 9,
 	OD_QUERY_CTX_IS_EMPTY = 1 << 10,
 	OD_QUERY_CTX_IS_EXECUTE = 1 << 11,
+	OD_QUERY_CTX_HAS_RESERVED_NAME = 1 << 12,
 } od_query_ctx_flags_t;
 
 typedef struct {
@@ -121,6 +123,14 @@ typedef struct {
 #define od_query_ctx_has(ctx, flag) (((ctx)->flags & (flag)) != 0)
 #define od_query_ctx_set(ctx, flag) ((ctx)->flags |= (flag))
 #define od_query_ctx_clear(ctx, flag) ((ctx)->flags &= ~(uint64_t)(flag))
+
+static inline void od_query_ctx_check_reserved_name(od_query_ctx_t *ctx,
+						    const char *name)
+{
+	if (name != NULL && strncmp(name, "odyssey", 7) == 0) {
+		od_query_ctx_set(ctx, OD_QUERY_CTX_HAS_RESERVED_NAME);
+	}
+}
 
 static inline int od_query_ctx_standby_friendly(const od_query_ctx_t *ctx)
 {
