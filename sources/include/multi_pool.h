@@ -13,6 +13,7 @@
 #include <stdatomic.h>
 
 #include <machinarium/mutex.h>
+#include <machinarium/wait_list.h>
 
 #include <types.h>
 #include <address.h>
@@ -33,6 +34,14 @@ struct od_multi_pool_element {
 	od_server_pool_t pool;
 	mm_wait_list_t wait_bus;
 	od_list_t link;
+
+	/*
+	 * wait bus shard heads, embedded at the tail of the same
+	 * allocation; the wait bus waiters are placed into the shard of
+	 * their worker machine, so that freeing a server connection
+	 * wakes a same-machine waiter when possible
+	 */
+	mm_wl_shard_t wait_shards[];
 };
 
 typedef int (*od_multi_pool_element_cb_t)(od_multi_pool_element_t *, void **);
@@ -61,6 +70,12 @@ static inline uint64_t od_multi_pool_version(od_multi_pool_t *mpool)
 {
 	return atomic_load(&mpool->version);
 }
+
+/*
+ * Number of wait bus shards per pool element (derived from the number
+ * of workers); waiters are placed into shards[mm_self->id % n].
+ */
+int od_multi_pool_wait_shards_count(void);
 
 void od_multi_pool_signal_locked(od_multi_pool_t *mpool,
 				 od_multi_pool_element_t *el,

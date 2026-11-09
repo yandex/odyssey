@@ -13,6 +13,9 @@
 #include <worker.h>
 #include <od_memory.h>
 
+void od_worker_pool_verify_wait_shards(od_worker_pool_t *pool,
+				       od_global_t *global);
+
 struct od_worker_pool {
 	od_worker_t *pool;
 	atomic_uint_fast64_t round_robin;
@@ -30,6 +33,16 @@ static inline od_retcode_t od_worker_pool_start(od_worker_pool_t *pool,
 						od_global_t *global,
 						uint32_t count)
 {
+	/*
+	 * reserve the worker machine ids as one consecutive block: the
+	 * pool wait bus shards are indexed by machine id, and consecutive
+	 * ids keep every worker in its own shard
+	 */
+	int64_t base_id = machine_reserve_ids((int)count);
+	if (base_id == -1) {
+		return NOT_OK_RESPONSE;
+	}
+
 	pool->pool = od_malloc(sizeof(od_worker_t) * count);
 	if (pool->pool == NULL) {
 		return -1;
@@ -40,11 +53,14 @@ static inline od_retcode_t od_worker_pool_start(od_worker_pool_t *pool,
 		od_worker_t *worker = &pool->pool[i];
 		od_worker_init(worker, global, i);
 		int rc;
-		rc = od_worker_start(worker);
+		rc = od_worker_start(worker, base_id + i);
 		if (rc == -1) {
 			return NOT_OK_RESPONSE;
 		}
 	}
+
+	od_worker_pool_verify_wait_shards(pool, global);
+
 	return 0;
 }
 

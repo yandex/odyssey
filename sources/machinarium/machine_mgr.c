@@ -39,6 +39,20 @@ void mm_machinemgr_add(mm_machinemgr_t *mgr, mm_machine_t *machine)
 	mm_spinlock_unlock(&mgr->lock);
 }
 
+void mm_machinemgr_add_with_id(mm_machinemgr_t *mgr, mm_machine_t *machine,
+			       uint64_t id)
+{
+	/*
+	 * the id is expected to be reserved in advance via
+	 * machine_reserve_ids(), the sequence counter is not touched
+	 */
+	mm_spinlock_lock(&mgr->lock);
+	machine->id = id;
+	mm_list_append(&mgr->list, &machine->link);
+	mgr->count++;
+	mm_spinlock_unlock(&mgr->lock);
+}
+
 void mm_machinemgr_delete(mm_machinemgr_t *mgr, mm_machine_t *machine)
 {
 	mm_spinlock_lock(&mgr->lock);

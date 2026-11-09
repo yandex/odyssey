@@ -15,7 +15,9 @@
 
 #include <status.h>
 #include <worker.h>
+#include <worker_pool.h>
 #include <global.h>
+#include <multi_pool.h>
 #include <thread_global.h>
 #include <client.h>
 #include <instance.h>
@@ -251,7 +253,7 @@ void od_worker_init(od_worker_t *worker, od_global_t *global, int id)
 	worker->clients_processed = 0;
 }
 
-int od_worker_start(od_worker_t *worker)
+int od_worker_start(od_worker_t *worker, uint64_t machine_id)
 {
 	od_instance_t *instance = worker->global->instance;
 
@@ -264,7 +266,8 @@ int od_worker_start(od_worker_t *worker)
 
 	char name[32];
 	od_snprintf(name, sizeof(name), "worker: %d", worker->id);
-	worker->machine = machine_create(name, od_worker, worker);
+	worker->machine =
+		machine_create_at(machine_id, name, od_worker, worker);
 	if (worker->machine == -1) {
 		machine_channel_free(worker->task_channel);
 		od_error(&instance->logger, NULL, NULL,
@@ -287,4 +290,43 @@ void od_worker_shutdown(od_worker_t *worker)
 	msg = machine_msg_create(0);
 	machine_msg_set_type(msg, OD_MSG_SHUTDOWN);
 	machine_channel_write(worker->task_channel, msg);
+}
+
+void od_worker_pool_verify_wait_shards(od_worker_pool_t *pool,
+				       od_global_t *global)
+{
+	/*
+	 * the pool wait bus places waiters into shards by their machine
+	 * id (machine id % n_shards) and a server connection freeing
+	 * worker prefers to wake a waiter of its own shard.  The worker
+	 * ids are reserved as a consecutive block (machine_reserve_ids),
+	 * so this can only fire when workers > shard cap
+	 * (MM_WL_MAX_SHARDS) - same-machine wakeup affinity degrades,
+	 * correctness is not affected
+	 */
+	int n_shards = od_multi_pool_wait_shards_count();
+
+	/* n_shards is capped at 256 by od_multi_pool_wait_shards_count */
+	uint64_t seen[256 / 64] = { 0 };
+	uint32_t collisions = 0;
+
+	uint32_t i;
+	for (i = 0; i < pool->count; i++) {
+		uint64_t shard =
+			(uint64_t)pool->pool[i].machine % (uint64_t)n_shards;
+		uint64_t bit = 1ULL << (shard & 63);
+		if (seen[shard >> 6] & bit) {
+			collisions++;
+			continue;
+		}
+		seen[shard >> 6] |= bit;
+	}
+
+	if (collisions != 0) {
+		od_instance_t *instance = global->instance;
+		od_log(&instance->logger, NULL, NULL,
+		       "wait bus: %u of %u workers share a wait shard "
+		       "(shards=%d), same-machine wakeup affinity degraded",
+		       collisions, pool->count, n_shards);
+	}
 }
