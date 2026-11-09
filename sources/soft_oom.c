@@ -19,6 +19,7 @@
 #include <config.h>
 #include <od_memory.h>
 #include <util.h>
+#include <injection.h>
 
 #define SOFT_OOM_LOG_CONTEXT "soft-oom"
 #define PROC_DIR_PATH "/proc"
@@ -482,6 +483,11 @@ int od_soft_oom_is_in_soft_oom(od_soft_oom_checker_t *checker,
 			       uint64_t *used_memory)
 {
 	*used_memory = atomic_load(&checker->current_memory_usage);
+	uint64_t limit = checker->config->limit_bytes;
 
-	return *used_memory >= checker->config->limit_bytes;
+	if (*used_memory < limit && od_injection_is_active("soft_oom_force")) {
+		*used_memory = limit;
+	}
+
+	return *used_memory >= limit;
 }
