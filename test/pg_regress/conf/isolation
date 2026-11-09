@@ -16,4 +16,17 @@ database "postgres" {
 		client_fwd_error yes
 		client_show_id no
 	}
+
+	user "rollback" {
+		authentication "none"
+		storage "postgres_server"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 1
+		pool_rollback yes
+		pool_reset_timeout_ms 10000
+		pool_discard no
+		client_fwd_error yes
+		client_show_id no
+	}
 }
