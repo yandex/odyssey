@@ -544,7 +544,8 @@ static machine_msg_t *write_deallocate(machine_msg_t *stream, const char *name)
 	}
 
 	char *pos = query;
-	pos += sprintf(pos, "DEALLOCATE \"");
+	pos += snprintf(pos, sizeof("DEALLOCATE \"") + 2 * len,
+			"DEALLOCATE \"");
 	for (size_t i = 0; i < len; ++i) {
 		if (name[i] == '"') {
 			*pos++ = '"';

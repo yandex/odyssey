@@ -5,8 +5,12 @@
  */
 
 #include <odyssey.h>
+#include <string.h>
 
 #include <multi_pool.h>
+#include <client.h>
+#include <global.h>
+#include <instance.h>
 #include <wait_event.h>
 
 static inline void key_init(od_multi_pool_key_t *key)
@@ -90,19 +94,59 @@ static inline int key_cmp(const od_multi_pool_key_t *a,
 	return od_address_cmp(&a->address, &b->address);
 }
 
+int od_multi_pool_wait_shards_count(void)
+{
+	/*
+	 * one shard per worker machine, power of two; the floor keeps
+	 * spare capacity for deployments with more workers, the machine
+	 * ids of the workers are reserved as a consecutive block (see
+	 * machine_reserve_ids()), so with n_shards >= workers every
+	 * worker gets its own shard
+	 */
+	int workers = od_global_get_instance()->config.workers;
+	int n = 16;
+	while (n < workers && n < MM_WL_MAX_SHARDS) {
+		n *= 2;
+	}
+	return n;
+}
+
 static inline od_multi_pool_element_t *
 od_multi_pool_element_create(atomic_uint_fast64_t *version)
 {
+	int n_shards = od_multi_pool_wait_shards_count();
+
 	od_multi_pool_element_t *element =
 		od_malloc(sizeof(od_multi_pool_element_t));
 	if (element == NULL) {
 		return NULL;
 	}
 
+	/*
+	 * the shard heads, the non-empty bitmap and the per-shard service
+	 * counters live in their own cache line aligned allocation, so
+	 * they neither share a cache line with the wait bus fields nor
+	 * depend on the element struct layout; layout:
+	 * [nonempty bitmap][served counters][shard heads]
+	 */
+	size_t bitmap_words = ((size_t)n_shards + 63) / 64;
+	size_t size = (bitmap_words + (size_t)n_shards) * sizeof(uint64_t) +
+		      sizeof(mm_wl_shard_t) * n_shards;
+	uint64_t *nonempty = mm_malloc_aligned(size, 64);
+	if (nonempty == NULL) {
+		od_free(element);
+		return NULL;
+	}
+	memset(nonempty, 0, bitmap_words * sizeof(uint64_t));
+	uint64_t *served = nonempty + bitmap_words;
+	memset(served, 0, (size_t)n_shards * sizeof(uint64_t));
+	mm_wl_shard_t *shards = (mm_wl_shard_t *)(served + n_shards);
+
 	key_init(&element->key);
 	od_server_pool_init(&element->pool);
 	od_list_init(&element->link);
-	mm_wait_list_init(&element->wait_bus, version);
+	mm_wait_list_init_sharded(&element->wait_bus, version, nonempty, served,
+				  shards, n_shards);
 
 	return element;
 }
@@ -113,6 +157,7 @@ static inline void od_multi_pool_element_free(od_multi_pool_element_t *element,
 	key_destroy(&element->key);
 	free_fn(&element->pool);
 	mm_wait_list_destroy(&element->wait_bus);
+	mm_free(element->wait_bus.nonempty);
 	od_free(element);
 }
 
@@ -317,8 +362,8 @@ void od_multi_pool_signal_locked(od_multi_pool_t *mpool,
 {
 	if (e != NULL && server != NULL && server->state != OD_SERVER_UNDEF) {
 		atomic_fetch_add(&mpool->version, 1);
-		mm_wait_list_notify_cb(&e->wait_bus, attach_freed_server_now,
-				       server);
+		mm_wait_list_notify_cb_affinity(
+			&e->wait_bus, attach_freed_server_now, server);
 		return;
 	}
 
@@ -328,7 +373,7 @@ void od_multi_pool_signal_locked(od_multi_pool_t *mpool,
 			od_container_of(i, od_multi_pool_element_t, link);
 
 		atomic_fetch_add(&mpool->version, 1);
-		mm_wait_list_notify(&el->wait_bus);
+		mm_wait_list_notify_cb_affinity(&el->wait_bus, NULL, NULL);
 	}
 }
 
