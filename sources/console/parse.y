@@ -116,6 +116,7 @@ typedef int od_console_yyltype_t;
 %token KW_KILL_CLIENT
 %token KW_RELOAD
 %token KW_LOAD
+%token KW_WAIT
 %token KW_PAUSE
 %token KW_RESUME
 %token KW_SET
@@ -243,7 +244,7 @@ kill_client_stmt:
 	;
 
 /*
- * RELOAD
+ * LOAD <point> [WAIT]
  */
 load_stmt:
 	  KW_LOAD col_id
@@ -252,6 +253,15 @@ load_stmt:
 				OD_CONSOLE_NODE_TYPE_LOAD_STMT);
 			if (n == NULL) YYABORT;
 			n->name = $2; $2 = NULL;
+			$$ = (od_console_node_t *)n;
+		}
+	| KW_LOAD col_id KW_WAIT
+		{
+			od_console_load_stmt_t *n = ALLOC_NODE(ctx, load,
+				OD_CONSOLE_NODE_TYPE_LOAD_STMT);
+			if (n == NULL) YYABORT;
+			n->name = $2; $2 = NULL;
+			n->wait = true;
 			$$ = (od_console_node_t *)n;
 		}
 	;
@@ -414,6 +424,11 @@ col_id:
 		{
 			$$ = $1;
 			$1 = NULL;
+		}
+	| KW_WAIT
+		{
+			$$ = arena_str(ctx, "wait", 4);
+			if ($$ == NULL) YYABORT;
 		}
 	| KW_SERVERS
 		{

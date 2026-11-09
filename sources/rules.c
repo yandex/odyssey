@@ -27,6 +27,7 @@
 #include <util.h>
 #include <port.h>
 #include <attach.h>
+#include <injection.h>
 
 const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
 {
@@ -2530,6 +2531,8 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 				    old_storage->watchdog_coro_id != -1) {
 					od_storage_watchdog_set_offline(
 						old_storage->watchdog);
+					od_injection_wait(
+						"watchdog_before_join");
 					machine_join(
 						old_storage->watchdog_coro_id);
 				}
@@ -2553,6 +2556,7 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 		if (!s->mark) {
 			if (s->watchdog != NULL && s->watchdog_coro_id != -1) {
 				od_storage_watchdog_set_offline(s->watchdog);
+				od_injection_wait("watchdog_before_join");
 				machine_join(s->watchdog_coro_id);
 			}
 			od_list_unlink(&s->link);

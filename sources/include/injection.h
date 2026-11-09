@@ -10,17 +10,9 @@
 
 #ifdef ENABLE_INJECTION_POINTS
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdatomic.h>
-
-typedef struct {
-	char name[64];
-	bool loaded;
-	atomic_uint_fast64_t tokens;
-} od_injection_point_t;
-
-void od_injection_load(const char *name);
+/* LOAD toggles a point; WAIT acknowledges a parked coroutine. */
+int od_injection_load(const char *name);
+int od_injection_await(const char *name, unsigned timeout_ms);
 void od_injection_wait(const char *name);
 
 #else

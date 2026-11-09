@@ -57,8 +57,8 @@ int od_console_node_print(const od_console_node_t *node, char *buf,
 	case OD_CONSOLE_NODE_TYPE_LOAD_STMT: {
 		const od_console_load_stmt_t *n =
 			(const od_console_load_stmt_t *)node;
-		return snprintf(buf, buflen, "(load %s)",
-				n->name ? n->name : "");
+		return snprintf(buf, buflen, "(load %s%s)",
+				n->name ? n->name : "", n->wait ? " wait" : "");
 	}
 
 	case OD_CONSOLE_NODE_TYPE_RELOAD_STMT:

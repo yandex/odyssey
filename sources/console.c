@@ -2800,17 +2800,27 @@ static inline int od_console_kill_client(od_client_t *client,
 }
 
 static inline int od_console_load(od_client_t *client, machine_msg_t *stream,
-				  const char *name)
+				  const od_console_load_stmt_t *stmt)
 {
 #ifdef ENABLE_INJECTION_POINTS
 	od_instance_t *instance = client->global->instance;
 
-	od_log(&instance->logger, NULL, NULL, "LOAD %s", name);
-	od_injection_load(name);
+	od_log(&instance->logger, NULL, NULL, "LOAD %s%s", stmt->name,
+	       stmt->wait ? " WAIT" : "");
+	int rc = stmt->wait ? od_injection_await(stmt->name, 10000) :
+			      od_injection_load(stmt->name);
+	if (rc != 0) {
+		machine_msg_t *msg = od_frontend_errorf(
+			client, stream, KIWI_INVALID_PARAMETER_VALUE,
+			"could not %s injection point \"%s\"",
+			stmt->wait ? "observe a waiter at" : "toggle",
+			stmt->name);
+		return msg == NULL ? NOT_OK_RESPONSE : OK_RESPONSE;
+	}
 
 	return kiwi_be_write_complete(stream, "LOAD", 5);
 #else
-	(void)name;
+	(void)stmt;
 	machine_msg_t *msg = od_frontend_errorf(
 		client, stream, KIWI_FEATURE_NOT_SUPPORTED,
 		"LOAD is disabled: injection points are not enabled in this build");
@@ -3176,7 +3186,7 @@ int od_console_query(od_client_t *client, od_tuple_table_slot_t *tts,
 			goto incorrect_role;
 		}
 		rc = od_console_load(client, stream,
-				     ((od_console_load_stmt_t *)ast)->name);
+				     (od_console_load_stmt_t *)ast);
 		if (rc == NOT_OK_RESPONSE) {
 			goto bad_query;
 		}

@@ -12,4 +12,4 @@ mkdir -p "$OUT"
 exec "$REGRESS_BIN" --inputdir="$DIR" --outputdir="$OUT" --use-existing \
     --dbname="${PGDATABASE:-postgres}" --host="${PGHOST:-127.0.0.1}" \
     --port="${PGPORT:-6432}" --user="${PGUSER:-postgres}" \
-    --schedule="$DIR/schedule" "$@"
+    --schedule="${ISOLATION_SCHEDULE:-$DIR/schedule}" "$@"

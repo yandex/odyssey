@@ -238,8 +238,12 @@ static void test_select_from_errors(void)
 static void test_load(void)
 {
 	test(strcmp(parse_ok("LOAD pdbg_point"), "(load pdbg_point)") == 0);
+	test(strcmp(parse_ok("LOAD pdbg_point WAIT"),
+		    "(load pdbg_point wait)") == 0);
+	test(strcmp(parse_ok("LOAD wait WAIT"), "(load wait wait)") == 0);
 	parse_fail("LOAD");
 	parse_fail("LOAD 42");
+	parse_fail("LOAD pdbg_point WAIT extra");
 }
 
 /*

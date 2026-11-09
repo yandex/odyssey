@@ -43,6 +43,7 @@ typedef struct {
 typedef struct {
 	od_console_node_tag_t type;
 	char *name;
+	bool wait;
 } od_console_load_stmt_t;
 
 typedef struct {

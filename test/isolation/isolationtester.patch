@@ -1,6 +1,49 @@
 --- a/src/test/isolation/isolationtester.c
 +++ b/src/test/isolation/isolationtester.c
-@@ -185,17 +185,17 @@
+@@ -40,6 +40,9 @@
+ static IsoConnInfo *conns = NULL;
+ static int	nconns = 0;
+ 
++/* Console specs use explicit (*) steps and injection barriers, not PG locks. */
++static bool odyssey_console = false;
++
+ /* Flag indicating some new NOTICE has arrived */
+ static bool any_new_notice = false;
+ 
+@@ -132,6 +135,8 @@
+ 	env_wait = getenv("PG_TEST_TIMEOUT_DEFAULT");
+ 	if (env_wait != NULL)
+ 		max_step_wait = 2 * ((int64) atoi(env_wait)) * USECS_PER_SEC;
++	odyssey_console = getenv("ODYSSEY_ISOLATION_CONSOLE") != NULL &&
++		strcmp(getenv("ODYSSEY_ISOLATION_CONSOLE"), "1") == 0;
+ 
+ 	/* Read the test spec from stdin */
+ 	spec_yyparse();
+@@ -153,6 +158,7 @@
+ 	for (i = 0; i < nconns; i++)
+ 	{
+ 		const char *sessionname;
++		const char *session_conninfo = NULL;
+ 
+ 		if (i == 0)
+ 			sessionname = "control connection";
+@@ -161,7 +167,14 @@
+ 
+ 		conns[i].sessionname = sessionname;
+ 
+-		conns[i].conn = PQconnectdb(conninfo);
++		/* Console specs may also coordinate direct backend connections. */
++		if (odyssey_console && i != 0)
++		{
++			char *env_name = psprintf("ODYSSEY_ISOLATION_CONNINFO_%s", sessionname);
++			session_conninfo = getenv(env_name);
++			pg_free(env_name);
++		}
++		conns[i].conn = PQconnectdb(session_conninfo ? session_conninfo : conninfo);
+ 		if (PQstatus(conns[i].conn) != CONNECTION_OK)
+ 		{
+ 			fprintf(stderr, "Connection %d failed: %s",
+@@ -185,17 +198,19 @@
  								 NULL);
  
  		/*
@@ -13,6 +56,8 @@
  		 */
 +		conns[i].backend_pid = PQbackendPID(conns[i].conn);
 +		conns[i].backend_pid_str = psprintf("%d", conns[i].backend_pid);
++		if (odyssey_console)
++			continue;
  		res = PQexecParams(conns[i].conn,
  						   "SELECT set_config('application_name',\n"
 -						   "  current_setting('application_name') || '/' || $1,\n"
@@ -24,7 +69,7 @@
  						   NULL, NULL, 0);
  		if (PQresultStatus(res) != PGRES_TUPLES_OK)
  		{
-@@ -204,9 +204,7 @@
+@@ -204,9 +219,7 @@
  			exit(1);
  		}
  
@@ -35,27 +80,87 @@
  	}
  
  	/*
-@@ -219,12 +217,19 @@
+@@ -217,24 +230,34 @@
+ 	 * occasionally take AccessExclusiveLock to truncate a table, and we must
+ 	 * ignore that transient wait.
  	 */
- 	initPQExpBuffer(&wait_query);
- 	appendPQExpBufferStr(&wait_query,
+-	initPQExpBuffer(&wait_query);
+-	appendPQExpBufferStr(&wait_query,
 -						 "SELECT pg_catalog.pg_isolation_test_session_is_blocked($1, '{");
-+						 "SELECT EXISTS ("
-+						 "SELECT 1 FROM pg_catalog.pg_stat_activity AS waiting, "
-+						 "pg_catalog.pg_stat_activity AS blocker "
-+						 "WHERE waiting.application_name = 'odyssey-isolation/' || $1 "
-+						 "AND blocker.pid = ANY (pg_catalog.pg_blocking_pids(waiting.pid)) "
-+						 "AND blocker.application_name = ANY ('{");
- 	/* The spec syntax requires at least one session; assume that here. */
+-	/* The spec syntax requires at least one session; assume that here. */
 -	appendPQExpBufferStr(&wait_query, conns[1].backend_pid_str);
-+	appendPQExpBuffer(&wait_query, "odyssey-isolation/%s",
-+					 conns[1].backend_pid_str);
- 	for (i = 2; i < nconns; i++)
+-	for (i = 2; i < nconns; i++)
 -		appendPQExpBuffer(&wait_query, ",%s", conns[i].backend_pid_str);
 -	appendPQExpBufferStr(&wait_query, "}')");
-+		appendPQExpBuffer(&wait_query, ",odyssey-isolation/%s",
-+						 conns[i].backend_pid_str);
-+	appendPQExpBufferStr(&wait_query, "}'))");
+-
+-	res = PQprepare(conns[0].conn, PREP_WAITING, wait_query.data, 0, NULL);
+-	if (PQresultStatus(res) != PGRES_COMMAND_OK)
+-	{
+-		fprintf(stderr, "prepare of lock wait query failed: %s",
+-				PQerrorMessage(conns[0].conn));
+-		exit(1);
+-	}
+-	PQclear(res);
+-	termPQExpBuffer(&wait_query);
++	if (!odyssey_console)
++	{
++		initPQExpBuffer(&wait_query);
++		appendPQExpBufferStr(&wait_query,
++							 "SELECT EXISTS ("
++							 "SELECT 1 FROM pg_catalog.pg_stat_activity AS waiting, "
++							 "pg_catalog.pg_stat_activity AS blocker "
++							 "WHERE waiting.application_name = 'odyssey-isolation/' || $1 "
++							 "AND blocker.pid = ANY (pg_catalog.pg_blocking_pids(waiting.pid)) "
++							 "AND blocker.application_name = ANY ('{");
++		/* The spec syntax requires at least one session; assume that here. */
++		appendPQExpBuffer(&wait_query, "odyssey-isolation/%s",
++						 conns[1].backend_pid_str);
++		for (i = 2; i < nconns; i++)
++			appendPQExpBuffer(&wait_query, ",odyssey-isolation/%s",
++							 conns[i].backend_pid_str);
++		appendPQExpBufferStr(&wait_query, "}'))");
++
++		res = PQprepare(conns[0].conn, PREP_WAITING, wait_query.data, 0, NULL);
++		if (PQresultStatus(res) != PGRES_COMMAND_OK)
++		{
++			fprintf(stderr, "prepare of lock wait query failed: %s",
++					PQerrorMessage(conns[0].conn));
++			exit(1);
++		}
++		PQclear(res);
++		termPQExpBuffer(&wait_query);
++	}
  
- 	res = PQprepare(conns[0].conn, PREP_WAITING, wait_query.data, 0, NULL);
- 	if (PQresultStatus(res) != PGRES_COMMAND_OK)
+ 	/*
+ 	 * Run the permutations specified in the spec, or all if none were
+@@ -880,7 +903,11 @@
+ 			int64		td;
+ 
+ 			/* If it's OK for the step to block, check whether it has. */
+-			if (flags & STEP_NONBLOCK)
++			if (odyssey_console && (flags & STEP_NONBLOCK) &&
++				pstep->nblockers > 0)
++				return true;
++
++			if (!odyssey_console && (flags & STEP_NONBLOCK))
+ 			{
+ 				bool		waiting;
+ 
+@@ -1114,6 +1141,17 @@
+ {
+ 	PQprintOpt	popt;
+ 
++	/* Keep the cache's never-updated zero visible, mask elapsed timestamps. */
++	if (odyssey_console)
++	{
++		int col = PQfnumber(res, "last_update_ms");
++		if (col >= 0)
++			for (int row = 0; row < PQntuples(res); row++)
++				if (!PQgetisnull(res, row, col) &&
++					strcmp(PQgetvalue(res, row, col), "0") != 0)
++					PQsetvalue(res, row, col, "<updated>", 9);
++	}
++
+ 	memset(&popt, 0, sizeof(popt));
+ 	popt.header = true;
+ 	popt.align = true;

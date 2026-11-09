@@ -1,0 +1,13 @@
+storage "watched" {
+	type "remote"
+	host "localhost:5432"
+	endpoints_status_poll_interval 100
+	watchdog {
+		authentication "none"
+		storage "watched"
+		storage_db "postgres"
+		storage_user "postgres"
+		pool "transaction"
+		pool_routing "internal"
+	}
+}

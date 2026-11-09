@@ -20,6 +20,7 @@ static const od_console_keyword_t keywords[] = {
 	{ "kill_client", KW_KILL_CLIENT },
 	{ "reload", KW_RELOAD },
 	{ "load", KW_LOAD },
+	{ "wait", KW_WAIT },
 	{ "pause", KW_PAUSE },
 	{ "resume", KW_RESUME },
 	{ "set", KW_SET },

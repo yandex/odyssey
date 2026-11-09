@@ -30,6 +30,7 @@
 #include <stream.h>
 #include <tls.h>
 #include <wait_event.h>
+#include <injection.h>
 
 #define TTT_SESSION_OWNS_TEMP_RELS_STR "ttt.owns_session_objs"
 
@@ -992,6 +993,9 @@ int od_backend_update_endpoint_status(od_instance_t *instance,
 	}
 	machine_msg_free(msg);
 
+	if (client->is_watchdog) {
+		od_injection_wait("watchdog_before_status_publish");
+	}
 	status.last_update_time_ms = machine_time_ms();
 	status.alive = 1;
 

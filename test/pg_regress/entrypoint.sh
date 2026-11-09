@@ -56,23 +56,27 @@ do_test() {
 # Run the native isolation suite in the same container as pg_regress.
 do_isolation_test() {
     local port=6432
+    local name=${1:-isolation}
+    local database=${2:-postgres}
+    local schedule=${3:-schedule}
+    local console=0
+    local output=/home/postgres/isolation/output
+    if [ "$database" = console ]; then
+        console=1
+        output=$output/$name
+    fi
 
-    odyssey ${REGRESS_DIR}/conf/isolation
+    ody-start "${REGRESS_DIR}/conf/${name}" postgres "$database"
 
-    local it=0
-    until (( it == 50 )) || pg_isready -h localhost -p ${port} -U postgres -d postgres; do
-        echo 'Wait for odyssey...'
-        echo "$(( it++ ))"
-        sleep 0.1
-    done
-    (( it < 50 ))
-
+    ODYSSEY_ISOLATION_CONSOLE=$console PG_TEST_TIMEOUT_DEFAULT=15 \
     PG_ISOLATION_REGRESS=/postgres/src/test/isolation/pg_isolation_regress \
-    PGHOST=localhost PGPORT=${port} PGUSER=postgres PGDATABASE=postgres \
+    PGHOST=localhost PGPORT=${port} PGUSER=postgres PGDATABASE=$database \
+    ISOLATION_SCHEDULE=/home/postgres/isolation/$schedule \
+    ISOLATION_OUTPUTDIR=$output \
         /home/postgres/isolation/run_tests.sh || {
             echo '====== ISOLATION DIFFS ======='
-            cat /home/postgres/isolation/output/regression.diffs || true
-            cat /home/postgres/isolation/output/regression.out || true
+            cat "$output/regression.diffs" || true
+            cat "$output/regression.out" || true
             ody-stop
             exit 1
         }
@@ -146,3 +150,9 @@ do_test az_aware 6432 postgres
 do_test tsa_promote 6432 postgres
 
 do_isolation_test
+
+export ODYSSEY_ISOLATION_CONNINFO_primary='host=localhost port=5432 user=postgres dbname=postgres'
+export ODYSSEY_ISOLATION_CONNINFO_standby='host=localhost port=5435 user=postgres dbname=postgres'
+export ODYSSEY_ISOLATION_CONNINFO_client='host=localhost port=6432 user=postgres dbname=postgres'
+do_isolation_test isolation_watchdog_reload console schedule-watchdog-reload
+do_isolation_test isolation_watchdog_promote console schedule-watchdog-promote

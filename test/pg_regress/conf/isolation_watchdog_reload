@@ -1,0 +1,3 @@
+include "/home/postgres/regress/conf/_base"
+include "/home/postgres/regress/conf/isolation_watchdog_base"
+include "/home/postgres/regress/conf/isolation_watchdog_storage"

@@ -1,0 +1,16 @@
+include "/home/postgres/regress/conf/_base"
+include "/home/postgres/regress/conf/isolation_watchdog_base"
+
+storage "watched" {
+	type "remote"
+	host "localhost:5435"
+	endpoints_status_poll_interval 100
+	watchdog {
+		authentication "none"
+		storage "watched"
+		storage_db "postgres"
+		storage_user "postgres"
+		pool "transaction"
+		pool_routing "internal"
+	}
+}

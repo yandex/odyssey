@@ -47,7 +47,8 @@ WORKDIR /build_dir
 
 COPY . .
 
-RUN CC=${odyssey_cc} make clean && make ${build_type}
+RUN CC=${odyssey_cc} make clean && \
+    CC=${odyssey_cc} make ${build_type} ODYSSEY_CMAKE_EXTRA=-DENABLE_INJECTION_POINTS=ON
 
 RUN cp /build_dir/build/sources/odyssey /usr/bin/odyssey
 COPY ./sources/machinarium/gdb/machinarium-gdb.py /gdb.py

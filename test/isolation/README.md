@@ -9,6 +9,41 @@ schedule live in this directory. The suite runs through Odyssey as part of
 locks. Both permutations require a waiting step to complete after the other
 session commits.
 
+## Watchdog isolation tests
+
+The regression Docker build enables `ENABLE_INJECTION_POINTS`. It stays OFF
+by default in other builds, where console `LOAD` commands return an error.
+
+`LOAD <point>` arms a point and the next call releases it. It can be armed
+again once its waiters leave. `LOAD <point> WAIT` waits up to ten seconds
+for a parked coroutine and errors if the point is not reached. The registry
+is synchronized across workers; specs do not use sleeps or log polling.
+
+`watchdog_reload` parks an old watchdog immediately before publishing a
+primary's status, replaces that storage with a standby, and coordinates the
+old watchdog's final poll, exit and join. After reload, a complete new poll
+must publish read-only status for the replacement endpoint.
+
+`watchdog_promote` promotes a real standby while its watchdog holds a
+read-only result. It allows that old result to publish, then requires the
+next complete poll to update the same cache entry to read-write. A client
+requiring `target_session_attrs=read-write` must reach the promoted backend.
+
+These schedules run at the end of `make regress_test`. The promotion uses
+the replica on port 5435. The reload spec overwrites only the container's
+`/home/postgres/regress/conf/isolation_watchdog_storage` fixture.
+
+The patched tester's console mode (`ODYSSEY_ISOLATION_CONSOLE=1`) skips the
+PostgreSQL-only setup and lock probe. Annotate asynchronous console steps
+with `(*)`; unannotated steps wait for their result, making `LOAD ... WAIT`
+a barrier. A next step on the same session joins an asynchronous command.
+`ODYSSEY_ISOLATION_CONNINFO_<session>` overrides a named session's complete
+libpq connection string so a spec can coordinate Odyssey and PostgreSQL.
+The watchdog specs use direct `primary`/`standby` connections, and promotion
+also uses a `client` connection through Odyssey. Nonzero `last_update_ms`
+values in console results are printed as `<updated>`; zero stays visible,
+so the expected output still requires a published status.
+
 ## Lock detection through Odyssey
 
 Odyssey's `BackendKeyData` contains a virtual PID, so PostgreSQL's usual

@@ -1,2 +1,4 @@
 # Unified diffs prefix PostgreSQL's indentation with a context marker.
 *.patch -whitespace
+# Native PQprint output pads columns with spaces.
+expected/*.out -whitespace

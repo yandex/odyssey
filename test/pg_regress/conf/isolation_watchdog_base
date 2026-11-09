@@ -1,0 +1,11 @@
+database "postgres" {
+	user "postgres" {
+		authentication "none"
+		storage "watched"
+		storage_db "postgres"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 4
+		client_show_id no
+	}
+}

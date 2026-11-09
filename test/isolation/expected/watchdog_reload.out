@@ -1,0 +1,30 @@
+Parsed test spec with 3 sessions
+
+starting permutation: await_old_result replace_storage reload await_join release_old_result await_old_poll release_old_poll await_old_exit arm_new_result arm_new_poll release_join release_old_exit reload_done await_new_result release_new_result await_new_poll new_cache release_new_poll
+step await_old_result: LOAD watchdog_before_status_publish WAIT;
+step replace_storage: 
+  COPY (SELECT 'storage "watched" ' || chr(123) || ' type "remote" host "localhost:5435" endpoints_status_poll_interval 100 watchdog ' || chr(123) || ' authentication "none" storage "watched" storage_db "postgres" storage_user "postgres" pool "transaction" pool_routing "internal" ' || chr(125) || chr(125))
+  TO '/home/postgres/regress/conf/isolation_watchdog_storage';
+
+step reload: RELOAD; <waiting ...>
+step await_join: LOAD watchdog_before_join WAIT;
+step release_old_result: LOAD watchdog_before_status_publish;
+step await_old_poll: LOAD watchdog_after_poll WAIT;
+step release_old_poll: LOAD watchdog_after_poll;
+step await_old_exit: LOAD watchdog_before_exit WAIT;
+step arm_new_result: LOAD watchdog_before_status_publish;
+step arm_new_poll: LOAD watchdog_after_poll;
+step release_join: LOAD watchdog_before_join;
+step release_old_exit: LOAD watchdog_before_exit;
+step reload: <... completed>
+step reload_done: SET isolation = done;
+step await_new_result: LOAD watchdog_before_status_publish WAIT;
+step release_new_result: LOAD watchdog_before_status_publish;
+step await_new_poll: LOAD watchdog_after_poll WAIT;
+step new_cache: SHOW tsa_cache;
+storage|host     |port|alive|state    |repl_lag_sec|last_update_ms
+-------+---------+----+-----+---------+------------+--------------
+watched|localhost|5435|yes  |read-only|           0|<updated>     
+(1 row)
+
+step release_new_poll: LOAD watchdog_after_poll;
