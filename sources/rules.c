@@ -457,6 +457,7 @@ static void do_group_check(void *arg)
 					 group_checker_client);
 	}
 
+	od_injection_wait("group_checker_before_unroute");
 	od_router_unroute(router, group_checker_client);
 	od_client_free_extended(group_checker_client);
 	od_group_free(group);

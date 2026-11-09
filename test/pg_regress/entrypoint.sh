@@ -150,6 +150,7 @@ do_test az_aware 6432 postgres
 do_test tsa_promote 6432 postgres
 
 do_isolation_test
+do_isolation_test isolation_console console schedule-console
 
 export ODYSSEY_ISOLATION_CONNINFO_primary='host=localhost port=5432 user=postgres dbname=postgres'
 export ODYSSEY_ISOLATION_CONNINFO_standby='host=localhost port=5435 user=postgres dbname=postgres'

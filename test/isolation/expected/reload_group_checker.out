@@ -1,0 +1,20 @@
+Parsed test spec with 3 sessions
+
+starting permutation: reload await_checker show await_show release_checker reload_done release_show show_done
+step reload: RELOAD; <waiting ...>
+step await_checker: LOAD group_checker_before_unroute WAIT;
+step show: SHOW rules; <waiting ...>
+step await_show: LOAD rules_lock_wait WAIT;
+step release_checker: LOAD group_checker_before_unroute;
+step reload: <... completed>
+step reload_done: SET isolation = done;
+step release_show: LOAD rules_lock_wait;
+step show: <... completed>
+database       |user             |address  |connection_type|obsolete
+---------------+-----------------+---------+---------------+--------
+isolation_group|group_members    |<default>|all            |f       
+postgres       |isolation_checker|<default>|all            |f       
+console        |<default>        |<default>|all            |f       
+(3 rows)
+
+step show_done: SET isolation = done;

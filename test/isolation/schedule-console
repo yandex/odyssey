@@ -1,0 +1,2 @@
+test: reload_show_rules
+test: reload_group_checker

@@ -18,6 +18,7 @@
 #include <logger.h>
 #include <tsa.h>
 #include <od_memory.h>
+#include <injection.h>
 
 #include <od_ldap.h>
 #include <ldap_endpoint.h>
@@ -243,6 +244,12 @@ struct od_rules {
 
 static inline void od_rules_lock(od_rules_t *rules)
 {
+#ifdef ENABLE_INJECTION_POINTS
+	/* Let isolation tests observe contention before waiting for the mutex. */
+	if (mm_sem_in_use(&rules->mu.sem) != 0) {
+		od_injection_wait("rules_lock_wait");
+	}
+#endif
 	mm_mutex_lock2(&rules->mu);
 }
 

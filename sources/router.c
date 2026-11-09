@@ -123,6 +123,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	 * reload waits under rules->mu for group checkers that need router. */
 	od_rules_lock(&router->rules);
 	od_router_lock(router);
+	od_injection_wait("router_reconfigure_locked");
 
 	int updates;
 	od_list_t added;

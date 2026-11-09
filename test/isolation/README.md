@@ -44,6 +44,21 @@ also uses a `client` connection through Odyssey. Nonzero `last_update_ms`
 values in console results are printed as `<updated>`; zero stays visible,
 so the expected output still requires a published status.
 
+## SHOW rules and reload isolation tests
+
+`reload_show_rules` parks reconfiguration while it holds the live rules mutex,
+then requires `SHOW rules` to reach the contended mutex. Reconfiguration must
+finish before SHOW proceeds. Removing the reconfiguration lock makes the
+`LOAD rules_lock_wait WAIT` barrier fail.
+
+`reload_group_checker` parks a stopping group checker before it takes the
+router lock. Reload must finish while SHOW is still waiting for rules. Taking
+router before rules in SHOW prevents the checker from finishing and times out
+this permutation. The checker has a long polling interval; RELOAD wakes it.
+
+Both specs run with `conf/isolation_console` and `schedule-console`, using the
+same console mode and injection barriers as the watchdog tests.
+
 ## Lock detection through Odyssey
 
 Odyssey's `BackendKeyData` contains a virtual PID, so PostgreSQL's usual

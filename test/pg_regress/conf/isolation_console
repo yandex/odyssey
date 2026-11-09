@@ -1,0 +1,33 @@
+include "/home/postgres/regress/conf/_base"
+
+storage "postgres_server" {
+	type "remote"
+	host "localhost:5432"
+}
+
+# RELOAD wakes and joins the checker before this interval expires.
+group_checker_interval 60000
+
+database "postgres" {
+	user "isolation_checker" {
+		authentication "none"
+		storage "postgres_server"
+		storage_db "postgres"
+		storage_user "postgres"
+		pool "session"
+		pool_routing "internal"
+	}
+}
+
+database "isolation_group" {
+	group "members" {
+		authentication "none"
+		storage "postgres_server"
+		storage_db "postgres"
+		storage_user "postgres"
+		pool "transaction"
+		group_query "SELECT 'postgres'"
+		group_query_user "isolation_checker"
+		group_query_db "postgres"
+	}
+}
