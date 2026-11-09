@@ -116,11 +116,19 @@ void kiwi_test_vars_cas(void)
 				  "SET search_path=\"$user\", public;");
 		check_search_path("\"$$\", \"$a$\", public", smart,
 				  "SET search_path=\"$$\", \"$a$\", public;");
+		/* Dollar signs inside identifiers cannot open a dollar-quoted string. */
+		check_search_path(
+			"tenant$tag$, tenant$$, public$", smart,
+			"SET search_path=tenant$tag$, tenant$$, public$;");
 		check_search_path(
 			"PUBLIC, \"MixedCase\", public", smart,
 			"SET search_path=PUBLIC, \"MixedCase\", public;");
 		check_search_path("users, \"user\", public", smart,
 				  "SET search_path=users, \"user\", public;");
+		/* Non-reserved keywords and keyword prefixes remain valid names. */
+		check_search_path(
+			"abort, between, authorization, use, users", smart,
+			"SET search_path=abort, between, authorization, use, users;");
 	}
 	/* Complex values keep the legacy escaped SET when smart mode is off. */
 	check_search_path("\"my-schema\", public", 0,
@@ -141,6 +149,16 @@ void kiwi_test_vars_cas(void)
 	check_search_path("$user", 0, "SET search_path=E'$user';");
 	check_search_path("1abc", 0, "SET search_path=E'1abc';");
 	check_search_path("ALL, public", 0, "SET search_path=E'ALL, public';");
+	check_search_path("CoLlAtE, public", 0,
+			  "SET search_path=E'CoLlAtE, public';");
+	check_search_path("$tag$public$tag$", 0,
+			  "SET search_path=E'$tag$public$tag$';");
+	check_search_path(
+		"CoLlAtE, public", 1,
+		"SELECT pg_catalog.set_config('search_path',E'CoLlAtE, public',false);");
+	check_search_path(
+		"$tag$public$tag$", 1,
+		"SELECT pg_catalog.set_config('search_path',E'$tag$public$tag$',false);");
 	check_search_path(
 		"UsEr", 1,
 		"SELECT pg_catalog.set_config('search_path',E'UsEr',false);");

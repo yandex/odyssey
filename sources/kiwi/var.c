@@ -6,87 +6,14 @@
 
 #include <kiwi/kiwi.h>
 #include <od_memory.h>
+#include <sql/full/keywords.h>
 
 #include <limits.h>
-
-static inline int find_id_end(const char *str, int len, int pos)
-{
-	/*
-	 * return the end position of id
-	 *
-	 * https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-DOLLAR-QUOTING
-	 * https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
-	 */
-
-	static const char *id_start_alphabet =
-		"qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_";
-	static const char *identifier_alphabet =
-		"qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_0123456789";
-
-	if (pos >= len) {
-		return pos;
-	}
-
-	/* must start with letter or _ */
-	if (strchr(id_start_alphabet, str[pos]) == NULL) {
-		return pos;
-	}
-
-	++pos;
-
-	while (pos < len && strchr(identifier_alphabet, str[pos]) != NULL) {
-		++pos;
-	}
-
-	return pos;
-}
 
 static int kiwi_search_path_is_safe(const char *str, int len)
 {
 	static const char *allowed_alphabet =
 		"qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM_0123456789,$ ";
-	/* Conservatively treat PostgreSQL 18 reserved words as complex. Keep sorted. */
-	static const char *const reserved[] = {
-		"all",		"analyse",
-		"analyze",	"and",
-		"any",		"array",
-		"as",		"asc",
-		"asymmetric",	"both",
-		"case",		"cast",
-		"check",	"collate",
-		"column",	"constraint",
-		"create",	"current_catalog",
-		"current_date", "current_role",
-		"current_time", "current_timestamp",
-		"current_user", "default",
-		"deferrable",	"desc",
-		"distinct",	"do",
-		"else",		"end",
-		"except",	"false",
-		"fetch",	"for",
-		"foreign",	"from",
-		"grant",	"group",
-		"having",	"in",
-		"initially",	"intersect",
-		"into",		"lateral",
-		"leading",	"limit",
-		"localtime",	"localtimestamp",
-		"not",		"null",
-		"offset",	"on",
-		"only",		"or",
-		"order",	"placing",
-		"primary",	"references",
-		"returning",	"select",
-		"session_user", "some",
-		"symmetric",	"system_user",
-		"table",	"then",
-		"to",		"trailing",
-		"true",		"union",
-		"unique",	"user",
-		"using",	"variadic",
-		"when",		"where",
-		"window",	"with"
-	};
 	int i = 0;
 	int end = len - 1;
 	for (;;) {
@@ -104,6 +31,7 @@ static int kiwi_search_path_is_safe(const char *str, int len)
 			     str[i] == '_')) {
 			return 0;
 		}
+		/* Inside an identifier, '$' cannot start a dollar-quoted string. */
 		int start = i;
 		int name_len = 0;
 		int closed = !quoted;
@@ -124,17 +52,8 @@ static int kiwi_search_path_is_safe(const char *str, int len)
 				if (strchr(allowed_alphabet, c) == NULL) {
 					return 0;
 				}
-				if (!quoted && c == '$') {
-					int id_end =
-						find_id_end(str, end, i + 1);
-					if (id_end < end &&
-					    str[id_end] == '$') {
-						return 0;
-					}
-					/* Still check every byte: '$' must not hide punctuation. */
-				}
 			}
-			if (++name_len > 63) {
+			if (++name_len >= NAMEDATALEN) {
 				return 0;
 			}
 			i++;
@@ -143,23 +62,13 @@ static int kiwi_search_path_is_safe(const char *str, int len)
 			return 0;
 		}
 		if (!quoted) {
-			int low = 0;
-			int high = sizeof(reserved) / sizeof(reserved[0]);
-			while (low < high) {
-				int mid = low + (high - low) / 2;
-				int cmp = strncasecmp(str + start,
-						      reserved[mid], name_len);
-				if (cmp == 0) {
-					if (reserved[mid][name_len] == 0) {
-						return 0;
-					}
-					cmp = -1;
-				}
-				if (cmp < 0) {
-					high = mid;
-				} else {
-					low = mid + 1;
-				}
+			char name[NAMEDATALEN];
+			memcpy(name, str + start, name_len);
+			name[name_len] = 0;
+			int keyword = ScanKeywordLookup(name, &ScanKeywords);
+			if (keyword >= 0 && ScanKeywordCategories[keyword] ==
+						    RESERVED_KEYWORD) {
+				return 0;
 			}
 		}
 		while (i < end && str[i] == ' ') {
