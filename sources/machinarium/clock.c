@@ -13,32 +13,7 @@
 #include <machinarium/machinarium.h>
 #include <machinarium/timer.h>
 #include <machinarium/clock.h>
-
-#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
-#include <intrin.h>
-#endif
-
-static inline int mm_clock_ctz64(uint64_t bits)
-{
-	assert(bits != 0);
-
-#if defined(__GNUC__) || defined(__clang__)
-	return __builtin_ctzll(bits);
-#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_ARM64))
-	unsigned long index;
-
-	_BitScanForward64(&index, bits);
-	return (int)index;
-#else
-	int index = 0;
-
-	while ((bits & 1) == 0) {
-		bits >>= 1;
-		index++;
-	}
-	return index;
-#endif
-}
+#include <machinarium/port.h>
 
 static inline int mm_clock_mask_test(const mm_clock_t *clock, int level,
 				     int slot)
@@ -74,7 +49,7 @@ static int mm_clock_mask_first(const uint64_t *mask, int from)
 			bits &= ~0ULL << (from & MM_WHEEL_MASK_BIT_MASK);
 		}
 		if (bits != 0) {
-			return word * MM_WHEEL_MASK_BITS + mm_clock_ctz64(bits);
+			return word * MM_WHEEL_MASK_BITS + mm_ctz64(bits);
 		}
 	}
 	return -1;
@@ -239,7 +214,7 @@ static void mm_clock_collect_level(mm_clock_t *clock, int level, uint64_t last,
 			uint64_t bits = clock->wheel_mask[level][word];
 
 			while (bits != 0) {
-				int bit = mm_clock_ctz64(bits);
+				int bit = mm_ctz64(bits);
 				int slot = word * MM_WHEEL_MASK_BITS + bit;
 				mm_list_t *bucket = &clock->wheel[level][slot];
 				mm_timer_t *timer;
