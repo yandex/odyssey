@@ -11,3 +11,4 @@ test: select_from
 test: console_error_position
 test: failed_discard_all
 test: virtual_parser_mode
+test: pool_rollback
