@@ -119,6 +119,9 @@ static inline int od_drop_obsolete_rule_connections_cb(od_route_t *route,
 int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 {
 	od_instance_t *instance = router->global->instance;
+	/* Serialize rule-list changes with SHOW rules. Take rules before router:
+	 * reload waits under rules->mu for group checkers that need router. */
+	od_rules_lock(&router->rules);
 	od_router_lock(router);
 
 	int updates;
@@ -212,6 +215,7 @@ int od_router_reconfigure(od_router_t *router, od_rules_t *rules)
 	}
 
 	od_router_unlock(router);
+	od_rules_unlock(&router->rules);
 	return updates;
 }
 
