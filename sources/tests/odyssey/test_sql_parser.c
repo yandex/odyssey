@@ -1355,6 +1355,67 @@ static void test_execute_query_ctx(void)
 	od_query_ctx_reset(&ctx);
 }
 
+static void test_reserved_query_ctx(void)
+{
+	static const struct {
+		const char *query;
+		int minimal_reserved;
+		int full_reserved;
+	} cases[] = {
+		{ "PREPARE odyssey AS SELECT 1", 1, 1 },
+		{ "PREPARE ODYSSEY_custom AS SELECT 1", 1, 1 },
+		{ "EXECUTE odyssey_pstmt_0", 1, 1 },
+		{ "DEALLOCATE PREPARE \"odyssey_custom\"", 1, 1 },
+		{ "EXECUTE U&\"\\006fdyssey_pstmt_0\"", 0, 1 },
+		{ "EXECUTE U&\"!006fdyssey_pstmt_0\" UESCAPE '!'", 0, 1 },
+		{ "DEALLOCATE ALL", 0, 0 },
+		{ "PREPARE ordinary AS SELECT 'odyssey'", 0, 0 },
+		{ "PREPARE \"ODYSSEY\" AS SELECT 1", 0, 0 },
+		{ "SELECT 'EXECUTE odyssey_pstmt_0'", 0, 0 },
+		{ "-- EXECUTE odyssey_pstmt_0\nSELECT 1", 0, 0 },
+		{ "EXPLAIN EXECUTE odyssey_pstmt_0", 0, 1 },
+		{ "CREATE TABLE t AS EXECUTE odyssey_pstmt_0", 0, 1 },
+		{ "EXPLAIN ANALYZE CREATE TABLE t AS EXECUTE odyssey_pstmt_0",
+		  0, 1 },
+		{ "SELECT nextval('s'); EXECUTE odyssey_pstmt_0", 0, 0 },
+		{ "EXECUTE odyssey_pstmt_0; SELECT 1", 0, 0 },
+		{ "EXECUTE odyssey_pstmt_0; SELECT FROM", 0, 0 },
+		{ "PREPARE odyssey AS SELECT FROM", 1, 0 },
+	};
+	od_query_ctx_t ctx = { 0 };
+	const od_config_query_parsing_t *modes[] = { &s_minimal_parsing,
+						     &s_full_parsing };
+	for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		for (size_t mode = 0; mode < 2; mode++) {
+			od_linear_alloc_reset(&s_full_arena, 0);
+			od_query_parse_fill_ctx(cases[i].query,
+						strlen(cases[i].query),
+						&s_full_arena, &ctx,
+						modes[mode]);
+			int expected = mode == 0 ? cases[i].minimal_reserved :
+						   cases[i].full_reserved;
+			test(od_query_ctx_has(&ctx,
+					      OD_QUERY_CTX_HAS_RESERVED_NAME) ==
+			     expected);
+			od_query_ctx_reset(&ctx);
+		}
+	}
+	/* Length and disabled policies cannot leave a previous reserved flag. */
+	const char *query = "EXECUTE odyssey_pstmt_0";
+	for (size_t i = 0; i < 2; i++) {
+		const od_config_query_parsing_t *policy =
+			i == 0 ? &s_disabled_parsing : &s_small_parsing;
+		od_linear_alloc_reset(&s_full_arena, 0);
+		od_query_parse_fill_ctx(query, strlen(query), &s_full_arena,
+					&ctx, &s_full_parsing);
+		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_HAS_RESERVED_NAME));
+		od_query_parse_fill_ctx(query, strlen(query), &s_full_arena,
+					&ctx, policy);
+		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_HAS_RESERVED_NAME));
+	}
+	od_query_ctx_reset(&ctx);
+}
+
 void odyssey_test_sql_minimal_parser(void)
 {
 	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
@@ -1423,4 +1484,5 @@ void odyssey_test_sql_minimal_parser(void)
 
 	test_unclosed_comments();
 	test_execute_query_ctx();
+	test_reserved_query_ctx();
 }

@@ -387,6 +387,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	od_system_t *system = NULL;
 	od_global_t *global = NULL;
 	bool router_initialized = false;
+	bool cron_initialized = false;
 
 	extensions = od_extensions_create();
 	if (extensions == NULL) {
@@ -407,6 +408,7 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		od_error(&instance->logger, NULL, NULL, "failed to init cron");
 		goto error;
 	}
+	cron_initialized = true;
 
 	od_worker_pool_init(&worker_pool);
 
@@ -615,13 +617,59 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	return rc;
 
 error:
+	if (cron_initialized) {
+		od_cron_free(&cron);
+	}
 	if (router_initialized) {
+		/* od_rules_free() would be done in od_router_free */
+		od_rules_cleanup(&router.rules);
 		od_router_free(&router);
 	}
 	od_extension_free(&instance->logger, extensions);
 	od_system_free(system);
 	/* TODO: clean up the remaining startup resources and started machines. */
 	return NOT_OK_RESPONSE;
+}
+
+void od_instance_reset_reason_inc(od_instance_t *instance,
+				  od_reset_reason_t reason)
+{
+	atomic_fetch_add_explicit(&instance->reset_stats[reason], 1,
+				  memory_order_relaxed);
+}
+
+uint64_t od_instance_reset_reason_get(od_instance_t *instance,
+				      od_reset_reason_t reason)
+{
+	return atomic_load_explicit(&instance->reset_stats[reason],
+				    memory_order_relaxed);
+}
+
+const char *od_reset_reason_to_str(od_reset_reason_t reason)
+{
+	switch (reason) {
+	case OD_RESET_REASON_OOM:
+		return "oom";
+	case OD_RESET_REASON_CACHED_PLAN_BROKEN:
+		return "cached_plan_broken";
+	case OD_RESET_REASON_COPY_MODE:
+		return "left_in_copy";
+	case OD_RESET_REASON_MSG_BROKEN:
+		return "partly_read_message";
+	case OD_RESET_REASON_XPROTO_MODE:
+		return "left_in_extended_query";
+	case OD_RESET_REASON_IN_TRANSACTION:
+		return "in_active_transaction";
+	case OD_RESET_REASON_LEFT_IN_QUERY:
+		return "left_in_query";
+	case OD_RESET_REASON_RFQ_WAIT_FAILED:
+		return "rfq_wait_failed";
+	case OD_RESET_REASON_SYNC_FAILED:
+		return "sync_failed";
+	case OD_RESET_REASON_COUNT:
+		break;
+	}
+	return "unknown";
 }
 
 od_global_pstmt_map_t *od_instance_get_pstmts_map(od_instance_t *instance)

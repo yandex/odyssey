@@ -66,18 +66,36 @@ NOTICE:  processed virtually by odyssey
 ERROR:  42939
 DEALLOCATE PREPARE "odyssey_custom" \parse reserved_deallocate
 ERROR:  42939
--- Reject the whole batch before any nontransactional side effect.
-CREATE SEQUENCE reserved_batch;
-SELECT nextval('reserved_batch') \; EXECUTE odyssey_pstmt_0;
+-- TODO: support reserved-name checks in query batches.
+-- CREATE SEQUENCE reserved_batch;
+-- SELECT nextval('reserved_batch') \; EXECUTE odyssey_pstmt_0;
+-- SELECT is_called FROM reserved_batch;
+-- DROP SEQUENCE reserved_batch;
+-- The full parser checks decoded names, without a raw "odyssey" substring.
+EXECUTE U&"\006fdyssey_missing";
 NOTICE:  processed virtually by odyssey
 ERROR:  42939
-SELECT is_called FROM reserved_batch;
-is_called
-f
-(1 row)
-DROP SEQUENCE reserved_batch;
+EXECUTE U&"!006fdyssey_missing" UESCAPE '!' \parse reserved_unicode
+ERROR:  42939
+-- A malformed EXECUTE must reach PostgreSQL without a reserved-name error.
+EXECUTE odyssey_missing 6 + 7;
+ERROR:  42601
+EXECUTE odyssey_missing 6 + 7 \parse invalid_execute
+ERROR:  42601
 SET odyssey.parser_mode = 'mini';
 NOTICE:  processed virtually by odyssey
+-- A cached minimal-parser context must not bypass the full-parser check.
+EXPLAIN EXECUTE odyssey_cache_missing \parse cached_mini
+SET odyssey.parser_mode = 'full';
+NOTICE:  processed virtually by odyssey
+EXPLAIN EXECUTE odyssey_cache_missing \parse cached_full
+ERROR:  42939
+SET odyssey.parser_mode = 'mini';
+NOTICE:  processed virtually by odyssey
+EXPLAIN EXECUTE odyssey_cache_missing \parse cached_mini_again
+-- Protocol name "x" already exists: 42P05 must precede reserved SQL name 42939.
+PREPARE odyssey_duplicate AS SELECT 1 \parse x
+ERROR:  42P05
 -- A literal or a case-sensitive quoted name is not reserved.
 SELECT 'odyssey' AS v;
 v

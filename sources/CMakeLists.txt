@@ -436,6 +436,7 @@ set(od_test_src
     tests/machinarium/test_wait_list_one_producer_multiple_consumers.c
     tests/machinarium/test_wait_list_one_producer_multiple_consumers_threads.c
     tests/machinarium/test_wait_list_notify_all.c
+    tests/machinarium/test_machine_reserve_ids.c
     tests/machinarium/test_wait_group_simple.c
     tests/machinarium/test_wait_group_timeout.c
     tests/machinarium/test_wait_group_lifetime.c
