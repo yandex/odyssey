@@ -25,6 +25,7 @@ void mm_machinemgr_init(mm_machinemgr_t *);
 void mm_machinemgr_free(mm_machinemgr_t *);
 int mm_machinemgr_count(mm_machinemgr_t *);
 void mm_machinemgr_add(mm_machinemgr_t *, mm_machine_t *);
+void mm_machinemgr_add_with_id(mm_machinemgr_t *, mm_machine_t *, uint64_t id);
 void mm_machinemgr_delete(mm_machinemgr_t *, mm_machine_t *);
 mm_machine_t *mm_machinemgr_delete_by_id(mm_machinemgr_t *, uint64_t);
 mm_machine_t *mm_machinemgr_find_by_id(mm_machinemgr_t *, uint64_t);

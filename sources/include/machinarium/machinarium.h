@@ -87,6 +87,19 @@ MACHINE_API void machinarium_free(void);
 
 MACHINE_API int64_t machine_create(char *name, machine_coroutine_t, void *arg);
 
+/*
+ * Reserve a consecutive block of machine ids: the next `count` ids are
+ * taken atomically under the machine manager lock and can then be
+ * assigned to machines created via machine_create_at().  Machines
+ * created between the reservation and the block creation get ids after
+ * the reserved block.
+ */
+MACHINE_API int64_t machine_reserve_ids(int count);
+
+/* create a machine with an id reserved by machine_reserve_ids() */
+MACHINE_API int64_t machine_create_at(uint64_t machine_id, char *name,
+				      machine_coroutine_t, void *arg);
+
 MACHINE_API void machine_stop_current(void);
 
 MACHINE_API int machine_active(void);
