@@ -3493,14 +3493,301 @@ static void od_frontend_cancel_close(od_client_t *client)
 	od_frontend_close(client);
 }
 
+static int od_frontend_route(od_client_t *client)
+{
+	od_global_t *global = client->global;
+	od_instance_t *instance = global->instance;
+	od_router_t *router = global->router;
+
+	/* route client */
+	od_router_status_t router_status;
+	router_status = od_router_route(router, client);
+
+	/* routing is over */
+	od_routing_slot_release(global);
+
+	if (od_likely(router_status == OD_ROUTER_OK)) {
+		od_route_t *route = client->route;
+		if (route->rule->application_name_add_host) {
+			od_application_name_add_host(client);
+		}
+
+		/* override clients pg options if configured */
+		int rc;
+		rc = kiwi_vars_override(&client->vars, &route->rule->vars);
+		if (rc == -1) {
+			return rc;
+		}
+
+		/* set network options */
+		od_rule_t *rule = route->rule;
+		if (rule->keepalive > 0) {
+			mm_io_set_keepalive(client->io.io, 1, rule->keepalive,
+					    rule->keepalive_keep_interval,
+					    rule->keepalive_probes,
+					    rule->keepalive_usr_timeout);
+		}
+	} else {
+		if (od_router_status_is_err(router_status)) {
+			od_error_logger_store_err(router->router_err_logger,
+						  router_status);
+		}
+
+		switch (router_status) {
+		case OD_ROUTER_ERROR:
+			od_error(&instance->logger, client, NULL,
+				 "routing failed for '%s' client, closing",
+				 client->peer);
+			od_frontend_error(client, KIWI_SYSTEM_ERROR,
+					  "client routing failed");
+			break;
+		case OD_ROUTER_INSUFFICIENT_ACCESS:
+			/*
+			 * disabling blind ldapsearch via odyssey error messages
+			 * to collect user account attributes
+			 */
+			od_error(
+				&instance->logger, client, NULL,
+				"route for '%s.%s' is not found by ldapsearch for '%s' client, closing",
+				client->startup.database.value,
+				client->startup.user.value, client->peer);
+			od_frontend_fatal(
+				client, KIWI_SYSTEM_ERROR,
+				"ldap authentication failed for user \"%s\": insufficient access",
+				client->startup.user.value);
+			break;
+		case OD_ROUTER_ERROR_NOT_FOUND:
+			od_error(
+				&instance->logger, client, NULL,
+				"route for '%s.%s' is not found for '%s' client, closing",
+				client->startup.database.value,
+				client->startup.user.value, client->peer);
+			od_frontend_error(client, KIWI_UNDEFINED_DATABASE,
+					  "route for '%s.%s' is not found",
+					  client->startup.database.value,
+					  client->startup.user.value);
+			break;
+		case OD_ROUTER_ERROR_LIMIT:
+			od_error(
+				&instance->logger, client, NULL,
+				"global connection limit reached for '%s' client, closing",
+				client->peer);
+
+			od_frontend_error(
+				client, KIWI_TOO_MANY_CONNECTIONS,
+				"too many client tcp connections (global client_max)");
+			break;
+		case OD_ROUTER_ERROR_LIMIT_ROUTE:
+			od_error(
+				&instance->logger, client, NULL,
+				"route connection limit reached for client '%s', closing",
+				client->peer);
+			od_frontend_error(
+				client, KIWI_TOO_MANY_CONNECTIONS,
+				"too many client tcp connections (client_max for user %s.%s "
+				"%d)",
+				client->startup.database.value,
+				client->startup.user.value,
+				client->rule != NULL ?
+					client->rule->client_max :
+					-1);
+			break;
+		case OD_ROUTER_ERROR_REPLICATION:
+			od_error(
+				&instance->logger, client, NULL,
+				"invalid value for parameter \"replication\" for client '%s'",
+				client->peer);
+
+			od_frontend_error(
+				client, KIWI_CONNECTION_FAILURE,
+				"invalid value for parameter \"replication\"");
+			break;
+		default:
+			od_assert(0);
+			break;
+		}
+
+		return -1;
+	}
+
+	return 0;
+}
+
+static int od_frontend_pre_auth(od_client_t *client)
+{
+	od_global_t *global = client->global;
+	od_extension_t *extensions = global->extensions;
+	od_module_t *modules = extensions->modules;
+
+	/* pre-auth callback */
+	od_list_t *i;
+	od_list_foreach (&modules->link, i) {
+		od_module_t *module;
+		module = od_container_of(i, od_module_t, link);
+		if (module->auth_attempt_cb(client) ==
+		    OD_MODULE_CB_FAIL_RETCODE) {
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int od_frontend_auth(od_client_t *client)
+{
+	od_global_t *global = client->global;
+	od_instance_t *instance = global->instance;
+	od_extension_t *extensions = global->extensions;
+	od_module_t *modules = extensions->modules;
+
+	/* HBA check */
+	int rc;
+	rc = od_hba_process(client);
+
+	char client_ip[64];
+	od_getpeername(client->io.io, client_ip, sizeof(client_ip), 1, 0);
+
+	/* client authentication */
+	if (rc == OK_RESPONSE) {
+		/* Check for replication lag and reject query if too big before auth */
+		od_frontend_status_t catchup_status =
+			od_frontend_check_replica_catchup(instance, client);
+		if (od_frontend_status_is_err(catchup_status)) {
+			od_error(&instance->logger, client, NULL,
+				 "replication lag too big (%" PRId64
+				 "), connection rejected: %s %s",
+				 client->last_catchup_lag,
+				 client->startup.database.value,
+				 client->startup.user.value);
+
+			od_frontend_fatal_detailed(
+				client, KIWI_CONNECTION_FAILURE,
+				"replication lag of the node you are trying to connect is too big, connection rejected",
+				"wait until the replica catches up with the primary",
+				"replication lag too big (%" PRId64
+				" seconds), connection rejected: %s %s",
+				client->last_catchup_lag,
+				client->startup.database.value,
+				client->startup.user.value);
+			rc = NOT_OK_RESPONSE;
+		} else {
+			rc = od_auth_frontend(client);
+
+			if (instance->config.log_session &&
+			    instance->config.hba_file) {
+				od_log(&instance->logger, client, NULL,
+				       "ip '%s' user '%s.%s': host based authentication allowed",
+				       client_ip,
+				       client->startup.database.value,
+				       client->startup.user.value);
+			}
+		}
+	} else {
+		od_error(
+			&instance->logger, client, NULL,
+			"ip '%s' user '%s.%s': host based authentication rejected",
+			client_ip, client->startup.database.value,
+			client->startup.user.value);
+
+		od_frontend_error(client, KIWI_INVALID_PASSWORD,
+				  "host based authentication rejected");
+	}
+
+	uint64_t used_memory = 0;
+	od_rule_storage_type_t storage_type =
+		client->route->rule->storage->storage_type;
+	if (storage_type == OD_RULE_STORAGE_REMOTE &&
+	    od_global_is_in_soft_oom(global, &used_memory)) {
+		od_frontend_fatal(client, KIWI_OUT_OF_MEMORY,
+				  "soft out of memory");
+		od_error(&instance->logger, client, NULL,
+			 "drop connection due to soft oom (usage is %" PRIu64
+			 " KB)",
+			 used_memory / 1024);
+		rc = NOT_OK_RESPONSE;
+	}
+
+	od_list_t *i;
+	if (rc != OK_RESPONSE) {
+		/* rc == -1
+		 * here we ignore module retcode because auth already failed
+		 * we just inform side modules that usr was trying to log in
+		 */
+		od_list_foreach (&modules->link, i) {
+			od_module_t *module;
+			module = od_container_of(i, od_module_t, link);
+			module->auth_complete_cb(client, rc);
+		}
+		return -1;
+	}
+
+	/* auth result callback */
+	od_list_foreach (&modules->link, i) {
+		od_module_t *module;
+		module = od_container_of(i, od_module_t, link);
+		rc = module->auth_complete_cb(client, rc);
+		if (rc != OD_MODULE_CB_OK_RETCODE) {
+			/* user blocked from module callback */
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int od_frontend_run(od_client_t *client)
+{
+	od_global_t *global = client->global;
+	od_router_t *router = global->router;
+	od_extension_t *extensions = global->extensions;
+	od_module_t *modules = extensions->modules;
+
+	/* setup client and run main loop */
+	od_route_t *route = client->route;
+
+	od_frontend_status_t status;
+	status = OD_UNDEF;
+	switch (route->rule->storage->storage_type) {
+	case OD_RULE_STORAGE_LOCAL: {
+		status = od_frontend_local_setup(client);
+		if (status != OD_OK) {
+			break;
+		}
+
+		status = od_frontend_local(client);
+		break;
+	}
+	case OD_RULE_STORAGE_REMOTE: {
+		status = od_frontend_setup(client);
+		if (status != OD_OK) {
+			break;
+		}
+
+		status = od_frontend_remote(client);
+		break;
+	}
+	}
+	od_error_logger_t *l;
+	l = router->route_pool.err_logger;
+
+	od_frontend_cleanup(client, status, l);
+
+	od_list_t *i;
+	od_list_foreach (&modules->link, i) {
+		od_module_t *module;
+		module = od_container_of(i, od_module_t, link);
+		module->disconnect_cb(client, status);
+	}
+
+	return 0;
+}
+
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
 	od_global_t *global = client->global;
 	od_instance_t *instance = global->instance;
 	od_router_t *router = global->router;
-	od_extension_t *extensions = global->extensions;
-	od_module_t *modules = extensions->modules;
 
 	od_getpeername(client->io.io, client->peer, OD_CLIENT_MAX_PEERLEN, 1,
 		       1);
@@ -3621,263 +3908,27 @@ void od_frontend(void *arg)
 		return;
 	}
 
-	/* route client */
-	od_router_status_t router_status;
-	router_status = od_router_route(router, client);
-
-	/* routing is over */
-	od_routing_slot_release(global);
-
-	if (od_likely(router_status == OD_ROUTER_OK)) {
-		od_route_t *route = client->route;
-		if (route->rule->application_name_add_host) {
-			od_application_name_add_host(client);
-		}
-
-		/* override clients pg options if configured */
-		rc = kiwi_vars_override(&client->vars, &route->rule->vars);
-		if (rc == -1) {
-			goto cleanup;
-		}
-
-		/* set network options */
-		od_rule_t *rule = route->rule;
-		if (rule->keepalive > 0) {
-			mm_io_set_keepalive(client->io.io, 1, rule->keepalive,
-					    rule->keepalive_keep_interval,
-					    rule->keepalive_probes,
-					    rule->keepalive_usr_timeout);
-		}
-	} else {
-		if (od_router_status_is_err(router_status)) {
-			od_error_logger_store_err(router->router_err_logger,
-						  router_status);
-		}
-
-		switch (router_status) {
-		case OD_ROUTER_ERROR:
-			od_error(&instance->logger, client, NULL,
-				 "routing failed for '%s' client, closing",
-				 client->peer);
-			od_frontend_error(client, KIWI_SYSTEM_ERROR,
-					  "client routing failed");
-			break;
-		case OD_ROUTER_INSUFFICIENT_ACCESS:
-			/*
-			 * disabling blind ldapsearch via odyssey error messages
-			 * to collect user account attributes
-			 */
-			od_error(
-				&instance->logger, client, NULL,
-				"route for '%s.%s' is not found by ldapsearch for '%s' client, closing",
-				client->startup.database.value,
-				client->startup.user.value, client->peer);
-			od_frontend_fatal(
-				client, KIWI_SYSTEM_ERROR,
-				"ldap authentication failed for user \"%s\": insufficient access",
-				client->startup.user.value);
-			break;
-		case OD_ROUTER_ERROR_NOT_FOUND:
-			od_error(
-				&instance->logger, client, NULL,
-				"route for '%s.%s' is not found for '%s' client, closing",
-				client->startup.database.value,
-				client->startup.user.value, client->peer);
-			od_frontend_error(client, KIWI_UNDEFINED_DATABASE,
-					  "route for '%s.%s' is not found",
-					  client->startup.database.value,
-					  client->startup.user.value);
-			break;
-		case OD_ROUTER_ERROR_LIMIT:
-			od_error(
-				&instance->logger, client, NULL,
-				"global connection limit reached for '%s' client, closing",
-				client->peer);
-
-			od_frontend_error(
-				client, KIWI_TOO_MANY_CONNECTIONS,
-				"too many client tcp connections (global client_max)");
-			break;
-		case OD_ROUTER_ERROR_LIMIT_ROUTE:
-			od_error(
-				&instance->logger, client, NULL,
-				"route connection limit reached for client '%s', closing",
-				client->peer);
-			od_frontend_error(
-				client, KIWI_TOO_MANY_CONNECTIONS,
-				"too many client tcp connections (client_max for user %s.%s "
-				"%d)",
-				client->startup.database.value,
-				client->startup.user.value,
-				client->rule != NULL ?
-					client->rule->client_max :
-					-1);
-			break;
-		case OD_ROUTER_ERROR_REPLICATION:
-			od_error(
-				&instance->logger, client, NULL,
-				"invalid value for parameter \"replication\" for client '%s'",
-				client->peer);
-
-			od_frontend_error(
-				client, KIWI_CONNECTION_FAILURE,
-				"invalid value for parameter \"replication\"");
-			break;
-		default:
-			od_assert(0);
-			break;
-		}
-
-		od_global_clients_map_remove(instance->clients_by_key, client);
-		od_frontend_close(client);
-		return;
+	rc = od_frontend_route(client);
+	if (rc == -1) {
+		goto cleanup_registered;
 	}
 
-	/* pre-auth callback */
-	od_list_t *i;
-	od_list_foreach (&modules->link, i) {
-		od_module_t *module;
-		module = od_container_of(i, od_module_t, link);
-		if (module->auth_attempt_cb(client) ==
-		    OD_MODULE_CB_FAIL_RETCODE) {
-			goto cleanup;
-		}
+	rc = od_frontend_pre_auth(client);
+	if (rc == -1) {
+		goto cleanup_registered;
 	}
 
-	/* HBA check */
-	rc = od_hba_process(client);
-
-	char client_ip[64];
-	od_getpeername(client->io.io, client_ip, sizeof(client_ip), 1, 0);
-
-	/* client authentication */
-	if (rc == OK_RESPONSE) {
-		/* Check for replication lag and reject query if too big before auth */
-		od_frontend_status_t catchup_status =
-			od_frontend_check_replica_catchup(instance, client);
-		if (od_frontend_status_is_err(catchup_status)) {
-			od_error(&instance->logger, client, NULL,
-				 "replication lag too big (%" PRId64
-				 "), connection rejected: %s %s",
-				 client->last_catchup_lag,
-				 client->startup.database.value,
-				 client->startup.user.value);
-
-			od_frontend_fatal_detailed(
-				client, KIWI_CONNECTION_FAILURE,
-				"replication lag of the node you are trying to connect is too big, connection rejected",
-				"wait until the replica catches up with the primary",
-				"replication lag too big (%" PRId64
-				" seconds), connection rejected: %s %s",
-				client->last_catchup_lag,
-				client->startup.database.value,
-				client->startup.user.value);
-			rc = NOT_OK_RESPONSE;
-		} else {
-			rc = od_auth_frontend(client);
-
-			if (instance->config.log_session &&
-			    instance->config.hba_file) {
-				od_log(&instance->logger, client, NULL,
-				       "ip '%s' user '%s.%s': host based authentication allowed",
-				       client_ip,
-				       client->startup.database.value,
-				       client->startup.user.value);
-			}
-		}
-	} else {
-		od_error(
-			&instance->logger, client, NULL,
-			"ip '%s' user '%s.%s': host based authentication rejected",
-			client_ip, client->startup.database.value,
-			client->startup.user.value);
-
-		od_frontend_error(client, KIWI_INVALID_PASSWORD,
-				  "host based authentication rejected");
+	rc = od_frontend_auth(client);
+	if (rc == -1) {
+		goto cleanup_registered;
 	}
 
-	uint64_t used_memory = 0;
-	od_rule_storage_type_t storage_type =
-		client->route->rule->storage->storage_type;
-	if (storage_type == OD_RULE_STORAGE_REMOTE &&
-	    od_global_is_in_soft_oom(global, &used_memory)) {
-		od_frontend_fatal(client, KIWI_OUT_OF_MEMORY,
-				  "soft out of memory");
-		od_error(&instance->logger, client, NULL,
-			 "drop connection due to soft oom (usage is %" PRIu64
-			 " KB)",
-			 used_memory / 1024);
-		rc = NOT_OK_RESPONSE;
-	}
+	od_frontend_run(client);
 
-	if (rc != OK_RESPONSE) {
-		/* rc == -1
-		 * here we ignore module retcode because auth already failed
-		 * we just inform side modules that usr was trying to log in
-		 */
-		od_list_foreach (&modules->link, i) {
-			od_module_t *module;
-			module = od_container_of(i, od_module_t, link);
-			module->auth_complete_cb(client, rc);
-		}
-		goto cleanup;
-	}
-
-	/* auth result callback */
-	od_list_foreach (&modules->link, i) {
-		od_module_t *module;
-		module = od_container_of(i, od_module_t, link);
-		rc = module->auth_complete_cb(client, rc);
-		if (rc != OD_MODULE_CB_OK_RETCODE) {
-			/* user blocked from module callback */
-			goto cleanup;
-		}
-	}
-
-	/* setup client and run main loop */
-	od_route_t *route = client->route;
-
-	od_frontend_status_t status;
-	status = OD_UNDEF;
-	switch (route->rule->storage->storage_type) {
-	case OD_RULE_STORAGE_LOCAL: {
-		status = od_frontend_local_setup(client);
-		if (status != OD_OK) {
-			break;
-		}
-
-		status = od_frontend_local(client);
-		break;
-	}
-	case OD_RULE_STORAGE_REMOTE: {
-		status = od_frontend_setup(client);
-		if (status != OD_OK) {
-			break;
-		}
-
-		status = od_frontend_remote(client);
-		break;
-	}
-	}
-	od_error_logger_t *l;
-	l = router->route_pool.err_logger;
-
-	od_frontend_cleanup(client, status, l);
-
-	od_list_foreach (&modules->link, i) {
-		od_module_t *module;
-		module = od_container_of(i, od_module_t, link);
-		module->disconnect_cb(client, status);
-	}
-
-	/* cleanup */
-
-cleanup:
+cleanup_registered:
 	od_global_clients_map_remove(instance->clients_by_key, client);
-
-	/* detach client from its route */
-	od_router_unroute(router, client);
-
-	/* close frontend connection */
+	if (client->route != NULL) {
+		od_router_unroute(router, client);
+	}
 	od_frontend_close(client);
 }
