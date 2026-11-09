@@ -83,15 +83,11 @@ static int kiwi_search_path_is_safe(const char *str, int len)
 	}
 }
 
-static int kiwi_var_cas(kiwi_var_t *var, kiwi_var_t *server_var, char **query,
-			char *query_buf, int *query_capacity, int pos,
+static int kiwi_var_cas(kiwi_var_t *var, char **query, char *query_buf,
+			int *query_capacity, int pos,
 			int smart_enquoting_search_path,
 			int *normalize_search_path)
 {
-	if (var->type == KIWI_VAR_UNDEF || kiwi_var_compare(var, server_var)) {
-		return pos;
-	}
-
 	if (var->value_len <= 0) {
 		return -1;
 	}
@@ -188,9 +184,12 @@ int kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server, char **query,
 		    type == KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS) {
 			continue;
 		}
-		pos = kiwi_var_cas(kiwi_vars_of(client, type),
-				   kiwi_vars_of(server, type), query, query_buf,
-				   &query_buf_len, pos,
+		kiwi_var_t *var = kiwi_vars_of(client, type);
+		if (var->type == KIWI_VAR_UNDEF ||
+		    kiwi_var_compare(var, kiwi_vars_of(server, type))) {
+			continue;
+		}
+		pos = kiwi_var_cas(var, query, query_buf, &query_buf_len, pos,
 				   smart_enquoting_search_path,
 				   normalize_search_path);
 		if (pos == -1) {
@@ -199,12 +198,16 @@ int kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server, char **query,
 	}
 
 	/* SELECT takes a snapshot: apply transaction settings before it. */
-	pos = kiwi_var_cas(kiwi_vars_of(client, KIWI_VAR_SEARCH_PATH),
-			   kiwi_vars_of(server, KIWI_VAR_SEARCH_PATH), query,
-			   query_buf, &query_buf_len, pos,
-			   smart_enquoting_search_path, normalize_search_path);
-	if (pos == -1) {
-		goto error;
+	kiwi_var_t *var = kiwi_vars_of(client, KIWI_VAR_SEARCH_PATH);
+	if (var->type != KIWI_VAR_UNDEF &&
+	    !kiwi_var_compare(var,
+			      kiwi_vars_of(server, KIWI_VAR_SEARCH_PATH))) {
+		pos = kiwi_var_cas(var, query, query_buf, &query_buf_len, pos,
+				   smart_enquoting_search_path,
+				   normalize_search_path);
+		if (pos == -1) {
+			goto error;
+		}
 	}
 	if (pos == 0) {
 		*query = NULL;
