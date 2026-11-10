@@ -174,14 +174,27 @@ int mm_eventmgr_signal(mm_event_t *event)
 		mm_sleeplock_unlock(&mgr->lock);
 		return 0;
 	}
-	int fd = 0;
-	if (mgr->count_ready == 0) {
-		fd = mm_eventmgr_wakeup_fd(mgr);
-	}
 	assert(event->state == MM_EVENT_WAIT);
 	mm_list_unlink(&event->link);
 	mgr->count_wait--;
 
+	if (mgr == &mm_self->event_mgr) {
+		/*
+		 * same machine: wake the coroutine directly, the
+		 * eventfd round trip is not needed - this thread runs
+		 * the scheduler before it can sleep in the poll, and
+		 * the waiter resumes with the event active
+		 */
+		event->state = MM_EVENT_ACTIVE;
+		mm_scheduler_wakeup(&mm_self->scheduler, event->call.coroutine);
+		mm_sleeplock_unlock(&mgr->lock);
+		return 0;
+	}
+
+	int fd = 0;
+	if (mgr->count_ready == 0) {
+		fd = mm_eventmgr_wakeup_fd(mgr);
+	}
 	event->state = MM_EVENT_READY;
 	mm_list_append(&mgr->list_ready, &event->link);
 	mgr->count_ready++;
