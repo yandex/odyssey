@@ -1698,6 +1698,25 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 			}
 		}
 
+		/*
+		 * Postgres skips every message until Sync after an
+		 * ErrorResponse received while in extended protocol
+		 * mode. Forwarding this Query would make the server
+		 * silently swallow it, and the coroutine would sleep
+		 * waiting for the reply forever. Drop it instead: like
+		 * direct PG, the client sees no reply to this Query; the
+		 * client's pending Sync closes the skip window and
+		 * brings ReadyForQuery.
+		 */
+		if (client->server != NULL && client->server->xproto_err) {
+			/*
+			 * do not free msg: it belongs to client->read_msg
+			 * which the caller keeps as a read buffer
+			 */
+			status = OD_OK;
+			break;
+		}
+
 		if (instance->config.log_query || route->rule->log_query) {
 			char *query;
 			uint32_t query_len;
