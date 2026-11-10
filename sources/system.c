@@ -881,8 +881,11 @@ void od_system_config_reload(od_system_t *system)
 	od_log(&instance->logger, NULL, NULL, "importing changes from '%s'",
 	       instance->config_file);
 
-	od_rules_lock(&router->rules);
-
+	/*
+	 * No lock here: stop_checkers self-synchronizes with the group
+	 * checkers via wait flags, and the checkers need the router lock
+	 * to finish, so it must not be held here.
+	 */
 	od_rules_stop_checkers(&router->rules);
 
 	od_config_t config;
@@ -933,10 +936,27 @@ void od_system_config_reload(od_system_t *system)
 	 * this, rules in the freshly parsed config reference the correct
 	 * storages, so od_rules_merge can compare origin->storage and
 	 * rule->storage by pointer.
+	 *
+	 * The router lock protects the storages list against concurrent
+	 * readers (attach, console SHOW).  Watchdog joins are deferred
+	 * until the lock is released: a stopping watchdog needs the
+	 * router lock for its final polling step.
 	 */
-	od_rules_storage_merge(&router->rules, &rules);
+	od_list_t retired_watchdogs;
+	od_list_init(&retired_watchdogs);
 
-	od_rules_unlock(&router->rules);
+	od_router_lock(router);
+	od_rules_storage_merge(&router->rules, &rules, &retired_watchdogs);
+	od_router_unlock(router);
+
+	od_list_t *wit, *wn;
+	od_list_foreach_safe (&retired_watchdogs, wit, wn) {
+		od_rules_watchdog_join_t *join;
+		join = od_container_of(wit, od_rules_watchdog_join_t, link);
+		od_list_unlink(&join->link);
+		machine_join(join->coro_id);
+		od_free(join);
+	}
 
 	machine_tls_cache_invalidate();
 
@@ -1050,9 +1070,9 @@ void od_system_config_reload(od_system_t *system)
 
 	/* start watchdogs and group checkers for new/changed storages
 	 * and rules — directly in system thread scheduler */
-	od_rules_lock(&router->rules);
+	od_router_lock(router);
 	od_rules_storages_watchdogs_run(&instance->logger, &router->rules);
-	od_rules_unlock(&router->rules);
+	od_router_unlock(router);
 
 	od_router_lock(router);
 	od_rules_groups_checkers_run(&instance->logger, &router->rules);
@@ -1075,7 +1095,6 @@ error:
 	 */
 	atomic_store(&instance->config_load_failed, 1);
 
-	od_rules_unlock(&router->rules);
 	od_config_free(&config);
 	od_rules_free(&rules);
 

@@ -8,7 +8,7 @@
 
 #include <stdatomic.h>
 
-#include <machinarium/mutex.h>
+#include <machinarium/list.h>
 
 #include <address.h>
 #include <pam.h>
@@ -231,8 +231,18 @@ struct od_rule {
 	machine_wait_flag_t *group_checker_finished;
 };
 
+/*
+ * Watchdog coroutine that was signalled offline during a rules/storages
+ * merge.  The join is deferred to the caller: a stopping watchdog needs
+ * the router lock for its final polling step, so it must not be joined
+ * while the router lock is held.
+ */
+typedef struct {
+	int64_t coro_id;
+	od_list_t link;
+} od_rules_watchdog_join_t;
+
 struct od_rules {
-	mm_mutex_t mu;
 	od_list_t storages;
 #ifdef LDAP_FOUND
 	od_list_t ldap_endpoints;
@@ -240,16 +250,6 @@ struct od_rules {
 	od_list_t rules;
 	int next_order;
 };
-
-static inline void od_rules_lock(od_rules_t *rules)
-{
-	mm_mutex_lock2(&rules->mu);
-}
-
-static inline void od_rules_unlock(od_rules_t *rules)
-{
-	mm_mutex_unlock(&rules->mu);
-}
 
 /* rules */
 
@@ -264,7 +264,8 @@ void od_rules_print(od_rules_t *, od_logger_t *);
 
 void od_rules_stop_checkers(od_rules_t *rules);
 int od_rules_cleanup(od_rules_t *rules);
-int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src);
+int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src,
+			   od_list_t *retired_watchdogs);
 
 int od_rules_sort_for_matching(od_rules_t *rules);
 
