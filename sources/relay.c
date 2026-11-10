@@ -312,23 +312,9 @@ static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
 	return OD_OK;
 }
 
-static od_frontend_status_t
-rewrite_sql_execute(od_client_t *client, const char *query, uint32_t query_len,
-		    machine_msg_t **rewritten, uint32_t timeout_ms)
+static od_frontend_status_t deploy_pstmt(od_server_t *server, od_pstmt_t *pstmt,
+					 uint32_t timeout_ms)
 {
-	od_query_ctx_t *ctx = &client->query_ctx;
-	if (!client->rule->pool->reserve_prepared_statement ||
-	    !od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EXECUTE)) {
-		return OD_OK;
-	}
-
-	od_pstmt_t *pstmt = od_client_get_pstmt(client, ctx->s1);
-	if (pstmt == NULL) {
-		/* Keep native SQL PREPARE/EXECUTE behavior for other names. */
-		return OD_OK;
-	}
-
-	od_server_t *server = client->server;
 	if (!od_server_has_pstmt(server, pstmt)) {
 		machine_msg_t *parse = od_pstmt_parse_of(pstmt);
 		if (parse == NULL) {
@@ -356,6 +342,97 @@ rewrite_sql_execute(od_client_t *client, const char *query, uint32_t query_len,
 		if (od_server_add_pstmt(server, pstmt) == -1) {
 			return OD_EOOM;
 		}
+	}
+	return OD_OK;
+}
+
+static od_frontend_status_t
+process_sql_prepare(od_client_t *client, const char *query, uint32_t timeout_ms)
+{
+	od_query_ctx_t *ctx = &client->query_ctx;
+	od_server_t *server = client->server;
+	/* PoC: a single untyped PREPARE outside explicit transactions. */
+	if (!client->rule->pool->reserve_prepared_statement ||
+	    !od_query_ctx_has(ctx, OD_QUERY_CTX_IS_PREPARE) ||
+	    client->pending_begin || server->is_transaction) {
+		return OD_OK;
+	}
+
+	machine_msg_t *reply;
+	if (od_client_has_pstmt(client, ctx->s1)) {
+		char message[] = "prepared statement already exists";
+		reply = kiwi_be_write_error(NULL, KIWI_DUPLICATE_PSTATEMENT,
+					    message, sizeof(message) - 1);
+	} else {
+		/* The exact Parse description: SQL, NUL, zero parameter OIDs. */
+		size_t len =
+			ctx->query_location.end - ctx->query_location.start;
+		char *data = od_malloc(len + 3);
+		if (data == NULL) {
+			return OD_EOOM;
+		}
+		memcpy(data, query + ctx->query_location.start, len);
+		memset(data + len, 0, 3);
+		od_instance_t *instance = client->global->instance;
+		od_pstmt_desc_t desc = { .data = data, .len = len + 3 };
+		od_pstmt_t *pstmt = od_pstmt_create_or_get(
+			od_instance_get_pstmts_map(instance), desc,
+			od_worker_get_local_linear_alloc(),
+			&instance->config.query_parsing);
+		od_free(data);
+		if (pstmt == NULL) {
+			return OD_EOOM;
+		}
+		od_frontend_status_t status =
+			deploy_pstmt(server, pstmt, timeout_ms);
+		if (status == OD_OK &&
+		    od_client_add_pstmt(client, ctx->s1, pstmt) == -1) {
+			status = OD_EOOM;
+		}
+		od_pstmt_unref(pstmt);
+		if (status != OD_OK) {
+			return status;
+		}
+		reply = machine_msg_create(0);
+		if (reply != NULL &&
+		    kiwi_be_write_complete(reply, "PREPARE",
+					   sizeof("PREPARE")) == -1) {
+			machine_msg_free(reply);
+			return OD_EOOM;
+		}
+	}
+	if (reply == NULL) {
+		return OD_EOOM;
+	}
+	if (kiwi_be_write_ready(reply, 'I') == NULL) {
+		machine_msg_free(reply);
+		return OD_EOOM;
+	}
+	return od_write2(&client->io, reply, timeout_ms) == 0 ?
+		       OD_SKIP :
+		       OD_ECLIENT_WRITE;
+}
+
+static od_frontend_status_t
+rewrite_sql_execute(od_client_t *client, const char *query, uint32_t query_len,
+		    machine_msg_t **rewritten, uint32_t timeout_ms)
+{
+	od_query_ctx_t *ctx = &client->query_ctx;
+	if (!client->rule->pool->reserve_prepared_statement ||
+	    !od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EXECUTE)) {
+		return OD_OK;
+	}
+
+	od_pstmt_t *pstmt = od_client_get_pstmt(client, ctx->s1);
+	if (pstmt == NULL) {
+		/* Keep native SQL PREPARE/EXECUTE behavior for other names. */
+		return OD_OK;
+	}
+
+	od_frontend_status_t status =
+		deploy_pstmt(client->server, pstmt, timeout_ms);
+	if (status != OD_OK) {
+		return status;
 	}
 
 	/* Only the name changes: PostgreSQL evaluates the argument SQL. */
@@ -411,6 +488,11 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	} else if (status == OD_OK) {
 		if (server == NULL) {
 			return OD_ATTACH;
+		}
+
+		status = process_sql_prepare(client, query, timeout_ms);
+		if (status != OD_OK) {
+			return status == OD_SKIP ? OD_OK : status;
 		}
 
 		machine_msg_t *execute = NULL;

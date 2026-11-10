@@ -192,6 +192,11 @@ void od_sql_minimal_extract_query_ctx(const od_sql_minimal_node_t *ast,
 		const od_sql_minimal_prepare_stmt_t *n =
 			(const od_sql_minimal_prepare_stmt_t *)ast;
 		od_query_ctx_check_reserved_name(ctx, n->name);
+		if (n->types_location.start == -1) {
+			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_PREPARE);
+			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", n->name);
+			ctx->query_location = n->query_location;
+		}
 		break;
 	}
 	default:

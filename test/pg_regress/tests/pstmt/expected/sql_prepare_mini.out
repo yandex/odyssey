@@ -1,0 +1,56 @@
+\pset format unaligned
+SET odyssey.parser_mode = 'mini';
+NOTICE:  processed virtually by odyssey
+\getenv test_dir PGTEST_DIR
+\i :test_dir/sql/sql_prepare_body.sql
+-- A SQL alias can be used by both SQL EXECUTE and protocol Bind.
+PREPARE poc_sql AS SELECT $1::int AS v;
+BEGIN;
+SELECT count(*) AS copies, bool_and(NOT from_sql) AS protocol_parse
+FROM pg_prepared_statements WHERE statement = 'SELECT $1::int AS v';
+copies|protocol_parse
+1|t
+(1 row)
+COMMIT;
+EXECUTE poc_sql(7);
+v
+7
+(1 row)
+\bind_named poc_sql 8
+\g
+v
+8
+(1 row)
+-- The equivalent Parse has zero OIDs and shares the same backend statement.
+SELECT $1::int AS v \parse poc_protocol
+BEGIN;
+SELECT count(*) AS copies, bool_and(NOT from_sql) AS protocol_parse
+FROM pg_prepared_statements WHERE statement = 'SELECT $1::int AS v';
+copies|protocol_parse
+1|t
+(1 row)
+COMMIT;
+-- A new backend receives the same protocol Parse on first use.
+SELECT pg_backend_pid() AS old_pid \gset
+\setenv OLD_PID :old_pid
+\! psql "host=localhost port=5432 user=postgres dbname=postgres" -Atqc "select pg_terminate_backend($OLD_PID, 10000)"
+t
+SELECT pg_backend_pid() <> :old_pid AS switched;
+switched
+t
+(1 row)
+EXECUTE poc_sql(9);
+v
+9
+(1 row)
+\bind_named poc_sql 10
+\g
+v
+10
+(1 row)
+DEALLOCATE poc_sql;
+EXECUTE poc_protocol(11);
+v
+11
+(1 row)
+\close_prepared poc_protocol

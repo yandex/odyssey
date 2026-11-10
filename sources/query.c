@@ -952,6 +952,13 @@ static void parse_full(const char *query, uint32_t query_len,
 			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s",
 				    dstmt->name);
 		}
+	} else if (IsA(node, PrepareStmt)) {
+		/* Reuse the existing body offsets without changing the full grammar. */
+		od_sql_minimal_node_t *ast = od_sql_minimal_parse(
+			query, query_len, arena, NULL, NULL);
+		if (ast != NULL) {
+			od_sql_minimal_extract_query_ctx(ast, ctx);
+		}
 	} else if (IsA(node, ExecuteStmt)) {
 		ExecuteStmt *estmt = castNode(ExecuteStmt, node);
 		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_EXECUTE);
