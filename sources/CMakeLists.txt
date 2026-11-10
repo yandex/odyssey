@@ -383,6 +383,7 @@ set(od_test_binary odyssey_test)
 set(od_test_src
     tests/odyssey_test.c
     tests/kiwi/test_kiwi_enquote.c
+    tests/kiwi/test_kiwi_vars.c
     tests/kiwi/test_kiwi_pgoptions.c
     tests/kiwi/test_kiwi_fe_read_auth.c
     tests/kiwi/test_kiwi_be_read_query.c

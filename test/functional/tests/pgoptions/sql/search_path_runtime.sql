@@ -1,0 +1,16 @@
+\set ON_ERROR_STOP on
+\pset format unaligned
+\pset tuples_only on
+CREATE SCHEMA "odyssey runtime path";
+CREATE SCHEMA "odyssey-runtime-path";
+SELECT set_config('search_path', '"odyssey runtime path", "odyssey-runtime-path", public', false) IS NOT NULL AS set_path;
+SELECT current_schemas(false) = ARRAY['odyssey runtime path', 'odyssey-runtime-path', 'public']::name[] AS schema_order;
+\! PGOPTIONS='-c search_path=pg_catalog' psql -XqAt -v ON_ERROR_STOP=1 -c "SELECT current_setting('search_path') = 'pg_catalog'"
+\if :SHELL_ERROR
+SELECT 1/0;
+\endif
+SELECT current_setting('search_path') = '"odyssey runtime path", "odyssey-runtime-path", public' AS restored_path;
+SELECT current_schemas(false) = ARRAY['odyssey runtime path', 'odyssey-runtime-path', 'public']::name[] AS restored_order;
+SELECT set_config('search_path', 'public', false) IS NOT NULL AS reset_path;
+DROP SCHEMA "odyssey runtime path";
+DROP SCHEMA "odyssey-runtime-path";
