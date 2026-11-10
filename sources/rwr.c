@@ -16,6 +16,7 @@
 #include <server.h>
 #include <backend.h>
 #include <storage.h>
+#include <rules.h>
 #include <query.h>
 #include <util.h>
 #include <wait_event.h>
@@ -98,16 +99,16 @@ static od_retcode_t od_rwr_lsn_is_valid(const char *lsn)
 }
 
 /*
- * Upper bound for the rwr side queries (ms): the per-storage
- * rwr_wait_timeout option; 0 means no limit
+ * Rule overrides the global timeout, including an explicit 0 (no limit).
  */
-static uint32_t od_rwr_timeout_ms(od_storage_endpoint_t *endpoint)
+static uint32_t od_rwr_timeout_ms(od_client_t *client)
 {
-	od_rule_storage_t *storage = endpoint->storage;
-	if (storage == NULL || storage->rwr_wait_timeout_ms <= 0) {
-		return UINT32_MAX;
+	od_instance_t *instance = client->global->instance;
+	uint64_t timeout_ms = instance->config.rwr_wait_timeout_ms;
+	if (client->rule->rwr_wait_timeout_ms >= 0) {
+		timeout_ms = client->rule->rwr_wait_timeout_ms;
 	}
-	return (uint32_t)storage->rwr_wait_timeout_ms;
+	return timeout_ms == 0 ? UINT32_MAX : (uint32_t)timeout_ms;
 }
 
 /*
@@ -146,7 +147,7 @@ static od_retcode_t od_rwr_endpoint_status(od_client_t *client,
 				return NOT_OK_RESPONSE;
 			}
 			if (od_backend_ready_wait(server,
-						  od_rwr_timeout_ms(endpoint),
+						  od_rwr_timeout_ms(client),
 						  OD_WAIT_RESET_SERVER_READ) ==
 			    NOT_OK_RESPONSE) {
 				od_error(&instance->logger, client, server,
@@ -242,7 +243,7 @@ od_retcode_t od_rwr_capture_lsn(od_client_t *client, od_server_t *server)
 	od_retcode_t rc;
 	rc = od_rwr_side_query(client, server,
 			       "SELECT pg_current_wal_insert_lsn()",
-			       od_rwr_timeout_ms(endpoint), &msg);
+			       od_rwr_timeout_ms(client), &msg);
 	if (rc != OK_RESPONSE) {
 		client->rwr_last_lsn_valid = false;
 		return NOT_OK_RESPONSE;
@@ -328,8 +329,8 @@ od_retcode_t od_rwr_wait_lsn(od_client_t *client, od_server_t *server)
 
 	machine_msg_t *msg = NULL;
 	od_retcode_t rc;
-	rc = od_rwr_side_query(client, server, query,
-			       od_rwr_timeout_ms(endpoint), &msg);
+	rc = od_rwr_side_query(client, server, query, od_rwr_timeout_ms(client),
+			       &msg);
 	if (msg != NULL) {
 		machine_msg_free(msg);
 	}

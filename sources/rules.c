@@ -557,6 +557,7 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 
 	rule->auto_route_ro_on_standby = 0;
+	rule->rwr_wait_timeout_ms = -1;
 
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
@@ -1306,11 +1307,6 @@ int od_rules_storage_compare(od_rule_storage_t *a, od_rule_storage_t *b)
 		return 0;
 	}
 
-	/* rwr_wait_timeout_ms */
-	if (a->rwr_wait_timeout_ms != b->rwr_wait_timeout_ms) {
-		return 0;
-	}
-
 	/* endpoints count */
 	if (a->endpoints_count != b->endpoints_count) {
 		return 0;
@@ -1549,6 +1545,9 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	}
 
 	if (a->catchup_checks != b->catchup_checks) {
+		return 0;
+	}
+	if (a->rwr_wait_timeout_ms != b->rwr_wait_timeout_ms) {
 		return 0;
 	}
 
@@ -2651,8 +2650,6 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		od_log(logger, NULL, NULL,
 		       "  endpoints_status_poll_interval_ms %d",
 		       storage->endpoints_status_poll_interval_ms);
-		od_log(logger, NULL, NULL, "  rwr_wait_timeout_ms %d",
-		       storage->rwr_wait_timeout_ms);
 		for (size_t ep_i = 0; ep_i < storage->endpoints_count; ep_i++) {
 			char ep_str[256];
 			od_address_to_str(&storage->endpoints[ep_i].address,
@@ -2953,6 +2950,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		if (rule->catchup_checks) {
 			od_log(logger, NULL, NULL, "  catchup checks    %d",
 			       rule->catchup_checks);
+		}
+		if (rule->rwr_wait_timeout_ms >= 0) {
+			od_log(logger, NULL, NULL, "  rwr_wait_timeout_ms %d",
+			       rule->rwr_wait_timeout_ms);
 		}
 
 		od_log(logger, NULL, NULL,

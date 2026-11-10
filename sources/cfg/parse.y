@@ -850,6 +850,15 @@ top_item:
 						@1,
 						"backend_connect_timeout_ms");
 		}
+	| RWR_WAIT_TIMEOUT time_value
+		{
+			od_cfg_set_time_u64_ms(
+				ctx->diags,
+				&ctx->model->global.rwr_wait_timeout_ms,
+				&$2, 1, 0, INT_MAX,
+				@1,
+				"rwr_wait_timeout");
+		}
 	| CANCEL_TIMEOUT_MS time_value
 		{
 			od_cfg_set_time_u64_ms(ctx->diags,
@@ -1781,6 +1790,15 @@ route_item:
 							@1,
 							"pool_rollback");
 		}
+	| RWR_WAIT_TIMEOUT time_value
+		{
+			od_cfg_set_time_u64_ms(
+				ctx->diags,
+				&ctx->current_user->rwr_wait_timeout_ms,
+				&$2, 1, 0, INT_MAX,
+				@1,
+				"rwr_wait_timeout");
+		}
 	| POOL_RESET_TIMEOUT_MS time_value
 		{
 			od_cfg_set_time_u64_ms(ctx->diags,
@@ -2435,15 +2453,6 @@ storage_item:
 				&$2, 1, 1, INT_MAX,
 				@1,
 				"endpoints_status_poll_interval");
-		}
-	| RWR_WAIT_TIMEOUT time_value
-		{
-			od_cfg_set_time_u64_ms(
-				ctx->diags,
-				&ctx->current_storage->rwr_wait_timeout_ms,
-				&$2, 1, 0, INT_MAX,
-				@1,
-				"rwr_wait_timeout");
 		}
 	| WATCHDOG
 		{

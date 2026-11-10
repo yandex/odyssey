@@ -112,6 +112,7 @@ typedef struct od_cfg_global {
 	od_cfg_i64_field_t keepalive_usr_timeout_ms;
 	od_cfg_int_field_t max_sigterms_to_die;
 	od_cfg_u64_field_t backend_connect_timeout_ms;
+	od_cfg_u64_field_t rwr_wait_timeout_ms;
 	od_cfg_u64_field_t cancel_timeout_ms;
 	od_cfg_i64_field_t cancel_queue_timeout_ms;
 	od_cfg_int_field_t cancel_max_inflight;
@@ -208,7 +209,6 @@ typedef struct od_cfg_storage {
 
 	od_cfg_int_field_t server_max_routing;
 	od_cfg_u64_field_t endpoints_status_poll_interval_ms;
-	od_cfg_u64_field_t rwr_wait_timeout_ms;
 
 	od_cfg_balancing_t balancing;
 
@@ -394,6 +394,7 @@ struct od_cfg_route {
 	od_cfg_bool_field_t pool_cancel;
 	od_cfg_bool_field_t pool_rollback;
 	od_cfg_u64_field_t pool_reset_timeout_ms;
+	od_cfg_u64_field_t rwr_wait_timeout_ms;
 	od_cfg_bool_field_t pool_reserve_prepared_statement;
 	od_cfg_int_field_t server_pstmt_cache_size;
 	od_cfg_bool_field_t pool_pin_on_listen;

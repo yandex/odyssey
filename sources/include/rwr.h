@@ -19,8 +19,8 @@
  * forwarding any client commands, so the read observes all the writes done
  * so far.
  *
- * Both the capture and the wait are bounded by the per-storage
- * rwr_wait_timeout option (rwr_wait_timeout_ms; 0 = no limit): a side
+ * Both the capture and the wait are bounded by rwr_wait_timeout
+ * (milliseconds; 0 = no limit). A rule overrides the global value. A side
  * query that does not fit the budget makes the backend connection
  * unusable and is reported to the relay.
  *

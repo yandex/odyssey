@@ -2,6 +2,9 @@ include "/home/postgres/regress/conf/_base"
 
 log_config no
 
+# The paused-replay checks need the rule override to outlast this deadline.
+rwr_wait_timeout 1ms
+
 query_parsing_mode minimal
 query_parsing_max_query_len 128
 
@@ -22,6 +25,7 @@ database "postgres" {
 		storage "postgres_server"
 		storage_user "postgres"
 		pool "transaction"
+		rwr_wait_timeout 10s
 		pool_reserve_prepared_statement yes
 		pool_size 32
 		pool_timeout 1000
