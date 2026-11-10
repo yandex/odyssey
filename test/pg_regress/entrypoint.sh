@@ -145,6 +145,7 @@ do_test rwr_5node 6432 postgres
 
 do_test az_aware 6432 postgres
 
-do_test tsa_promote 6432 postgres
-
+# Run before tsa_promote stops the replica used by rwr_replay.
 do_isolation_test
+
+do_test tsa_promote 6432 postgres
