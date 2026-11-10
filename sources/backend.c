@@ -430,18 +430,19 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 		 * disconnects go unnoticed. Bound the wait by the backend
 		 * connect timeout instead.
 		 */
-		msg = od_read(&server->io,
-			      (uint32_t)instance->config
-				      .backend_connect_timeout_ms,
-			      OD_READ_BE);
+		msg = od_read(
+			&server->io,
+			(uint32_t)instance->config.backend_connect_timeout_ms,
+			OD_READ_BE);
 		od_wait_event_end(OD_WAIT_AUTH_SERVER_READ);
 		if (msg == NULL) {
 			if (machine_timedout()) {
-				od_error(&instance->logger, client, server,
-					 "backend startup timed out after %" PRIu64
-					 " ms",
-					 instance->config
-						 .backend_connect_timeout_ms);
+				od_error(
+					&instance->logger, client, server,
+					"backend startup timed out after %" PRIu64
+					" ms",
+					instance->config
+						.backend_connect_timeout_ms);
 				return -1;
 			}
 			od_error(&instance->logger, client, server,
