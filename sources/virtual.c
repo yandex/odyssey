@@ -31,6 +31,7 @@
 #include <console.h>
 #include <virtual.h>
 #include <analyze.h>
+#include <tsa.h>
 
 #define APPLICATION_NAME_STR "application_name"
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
@@ -811,7 +812,9 @@ static bool virtual_query_supported(od_client_t *client,
 	}
 
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_BEGIN)) {
-		return instance->config.virtual_transaction;
+		/* A later statement can write, so do not route by the first SELECT. */
+		return instance->config.virtual_transaction &&
+		       !od_tsa_auto_route_ro_enabled(client);
 	}
 
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL) ||

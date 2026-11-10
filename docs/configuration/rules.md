@@ -816,6 +816,11 @@ traffic is routed to the primary. Has no effect when `target_session_attrs`
 is set for the connection (rule, listen or client
 `odyssey.target_session_attrs`).
 
+Explicit transactions are routed to the primary, even when their first
+statements only read. With automatic routing enabled, `BEGIN` is sent to the
+backend immediately instead of being deferred by `virtual_transaction`, so
+later writes in the same transaction use the same primary.
+
 Specifying `target_session_attrs` and `auto_route_ro_on_standby` in the same
 section is a configuration error.
 
