@@ -48,7 +48,24 @@ storage "rr-hosts" {
 	}
 }
 
+storage "tx-hosts" {
+	type "remote"
+	host "localhost:5432,localhost:5433,localhost:5434"
+}
+
 database "postgres" {
+	user "txuser" {
+		authentication "none"
+		storage "tx-hosts"
+		storage_user "postgres"
+		pool "transaction"
+		pool_size 32
+		pool_timeout 1000
+		pool_reserve_prepared_statement yes
+		auto_route_ro_on_standby yes
+		client_show_id no
+	}
+
 	user "rruser" {
 		authentication "none"
 		storage "rr-hosts"

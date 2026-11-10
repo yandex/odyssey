@@ -851,6 +851,27 @@ static int is_select_select(const od_config_query_parsing_t *parsing,
 	return !has_function_calls(parsing, (Node *)sstmt);
 }
 
+static bool begin_requires_primary(const TransactionStmt *stmt)
+{
+	ListCell *lc;
+	foreach(lc, stmt->options)
+	{
+		DefElem *opt = lfirst_node(DefElem, lc);
+		A_Const *value = castNode(A_Const, opt->arg);
+
+		/* Hot standby supports neither SERIALIZABLE nor READ WRITE. */
+		if (strcmp(opt->defname, "transaction_isolation") == 0 &&
+		    strcmp(value->val.sval.sval, "serializable") == 0) {
+			return true;
+		}
+		if (strcmp(opt->defname, "transaction_read_only") == 0 &&
+		    !value->val.ival.ival) {
+			return true;
+		}
+	}
+	return false;
+}
+
 static void parse_full(const char *query, uint32_t query_len,
 		       od_linear_alloc_t *arena, od_query_ctx_t *ctx,
 		       const od_config_query_parsing_t *parsing)
@@ -932,6 +953,11 @@ static void parse_full(const char *query, uint32_t query_len,
 		TransactionStmt *tstmt = castNode(TransactionStmt, node);
 		if (tstmt->kind == TRANS_STMT_BEGIN) {
 			od_query_ctx_set(ctx, OD_QUERY_CTX_IS_BEGIN);
+			if (begin_requires_primary(tstmt)) {
+				od_query_ctx_set(
+					ctx,
+					OD_QUERY_CTX_BEGIN_REQUIRES_PRIMARY);
+			}
 		}
 	} else if (IsA(node, UnlistenStmt)) {
 		UnlistenStmt *ustmt = castNode(UnlistenStmt, node);

@@ -104,6 +104,7 @@ typedef enum {
 	OD_QUERY_CTX_IS_EMPTY = 1 << 10,
 	OD_QUERY_CTX_IS_EXECUTE = 1 << 11,
 	OD_QUERY_CTX_HAS_RESERVED_NAME = 1 << 12,
+	OD_QUERY_CTX_BEGIN_REQUIRES_PRIMARY = 1 << 13,
 } od_query_ctx_flags_t;
 
 typedef struct {

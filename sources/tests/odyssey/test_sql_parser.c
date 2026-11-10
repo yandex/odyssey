@@ -782,6 +782,7 @@ static void test_parse_fill_ctx_full(void)
 	fill_ctx_full("BEGIN", &ctx);
 	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 	test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
+	test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_BEGIN_REQUIRES_PRIMARY));
 	od_query_ctx_reset(&ctx);
 
 	fill_ctx_full("BEGIN WORK", &ctx);
@@ -795,23 +796,31 @@ static void test_parse_fill_ctx_full(void)
 	od_query_ctx_reset(&ctx);
 
 	/* Virtual BEGIN must recognize transaction options for deferred replay. */
-	const char *begin_with_options[] = {
-		"BEGIN ISOLATION LEVEL SERIALIZABLE;",
-		"BEGIN ISOLATION LEVEL REPEATABLE READ;",
-		"BEGIN ISOLATION LEVEL READ COMMITTED;",
-		"BEGIN ISOLATION LEVEL READ UNCOMMITTED;",
-		"BEGIN WORK READ ONLY;",
-		"BEGIN TRANSACTION READ WRITE;",
-		"BEGIN DEFERRABLE;",
-		"BEGIN NOT DEFERRABLE;",
-		"BEGIN ISOLATION LEVEL SERIALIZABLE, READ ONLY, DEFERRABLE;",
+	const struct {
+		const char *query;
+		bool requires_primary;
+	} begin_with_options[] = {
+		{ "BEGIN ISOLATION LEVEL SERIALIZABLE;", true },
+		{ "BEGIN ISOLATION LEVEL REPEATABLE READ;", false },
+		{ "BEGIN ISOLATION LEVEL READ COMMITTED;", false },
+		{ "BEGIN ISOLATION LEVEL READ UNCOMMITTED;", false },
+		{ "BEGIN WORK READ ONLY;", false },
+		{ "BEGIN TRANSACTION READ WRITE;", true },
+		{ "BEGIN DEFERRABLE;", false },
+		{ "BEGIN NOT DEFERRABLE;", false },
+		{ "BEGIN ISOLATION LEVEL SERIALIZABLE, READ ONLY, DEFERRABLE;",
+		  true },
+		{ "BEGIN WORK READ ONLY ISOLATION LEVEL SERIALIZABLE;", true },
 	};
 	for (size_t i = 0;
 	     i < sizeof(begin_with_options) / sizeof(begin_with_options[0]);
 	     i++) {
-		fill_ctx_full(begin_with_options[i], &ctx);
+		fill_ctx_full(begin_with_options[i].query, &ctx);
 		test(!od_query_ctx_has(&ctx, OD_QUERY_CTX_PARSE_ERROR));
 		test(od_query_ctx_has(&ctx, OD_QUERY_CTX_IS_BEGIN));
+		test(od_query_ctx_has(&ctx,
+				      OD_QUERY_CTX_BEGIN_REQUIRES_PRIMARY) ==
+		     begin_with_options[i].requires_primary);
 		od_query_ctx_reset(&ctx);
 	}
 

@@ -816,6 +816,11 @@ traffic is routed to the primary. Has no effect when `target_session_attrs`
 is set for the connection (rule, listen or client
 `odyssey.target_session_attrs`).
 
+With `virtual_transaction` enabled, a deferred `BEGIN` normally lets the first
+query choose the server. `BEGIN` with `ISOLATION LEVEL SERIALIZABLE` or explicit
+`READ WRITE` is sent to the primary immediately, since these transaction modes
+are unavailable on a hot standby.
+
 Specifying `target_session_attrs` and `auto_route_ro_on_standby` in the same
 section is a configuration error.
 
