@@ -6,6 +6,7 @@
 typedef struct {
 	mm_wait_list_t *wl;
 	atomic_uint_fast64_t *wl_word;
+	machine_wait_group_t *wg;
 } test_arg_t;
 
 static void *opaque = (void *)0xdeadbeefcafebabe;
@@ -27,6 +28,7 @@ static inline void producer(void *arg)
 	machine_sleep(500);
 	atomic_store(wl_word, 1);
 	test(mm_wait_list_notify_cb(wl, opaque_check, opaque) == opaque);
+	machine_wait_group_done(t_arg->wg);
 }
 
 static inline void consumer(void *arg)
@@ -44,7 +46,8 @@ static inline void consumer(void *arg)
 	test(rc == 0);
 	total_time = end - start;
 	test(total_time > 400 && total_time < 1000);
-	test(atomic_load(wl_word) == 1)
+	test(atomic_load(wl_word) == 1);
+	machine_wait_group_done(t_arg->wg);
 }
 
 static inline void test_notify_after_compare_wait_coroutines(void *arg)
@@ -56,9 +59,14 @@ static inline void test_notify_after_compare_wait_coroutines(void *arg)
 
 	mm_wait_list_t *wl = mm_wait_list_create(&atomic);
 
+	machine_wait_group_t *wg = machine_wait_group_create();
+
 	test_arg_t t_arg;
 	t_arg.wl = wl;
 	t_arg.wl_word = &atomic;
+	t_arg.wg = wg;
+	machine_wait_group_add(wg); /* consumer */
+	machine_wait_group_add(wg); /* producer */
 
 	int consumer_id;
 	consumer_id = machine_coroutine_create(consumer, &t_arg);
@@ -68,13 +76,17 @@ static inline void test_notify_after_compare_wait_coroutines(void *arg)
 	producer_id = machine_coroutine_create(producer, &t_arg);
 	test(producer_id != -1);
 
+	/*
+	 * wait for both coroutines to complete; machine_join() is not
+	 * used on purpose: a coroutine may complete before the joiner
+	 * gets to join it (completed coroutines are not findable), and
+	 * the completion order depends on the wakeup dispatch details
+	 */
 	int rc;
-	rc = machine_join(producer_id);
+	rc = machine_wait_group_wait(wg, 5000);
 	test(rc == 0);
 
-	rc = machine_join(consumer_id);
-	test(rc == 0);
-
+	machine_wait_group_destroy(wg);
 	mm_wait_list_free(wl);
 }
 
@@ -87,9 +99,14 @@ static inline void test_notify_after_compare_wait_threads(void *arg)
 
 	mm_wait_list_t *wl = mm_wait_list_create(&atomic);
 
+	machine_wait_group_t *wg = machine_wait_group_create();
+
 	test_arg_t t_arg;
 	t_arg.wl = wl;
 	t_arg.wl_word = &atomic;
+	t_arg.wg = wg;
+	machine_wait_group_add(wg); /* consumer */
+	machine_wait_group_add(wg); /* producer */
 
 	int consumer_id;
 	consumer_id = machine_create("consumer_thread", consumer, &t_arg);
@@ -100,9 +117,14 @@ static inline void test_notify_after_compare_wait_threads(void *arg)
 	test(producer_id != -1);
 
 	int rc;
-	rc = machine_wait(producer_id);
+	rc = machine_wait_group_wait(wg, 5000);
 	test(rc == 0);
 
+	machine_wait_group_destroy(wg);
+
+	/* reap the machines */
+	rc = machine_wait(producer_id);
+	test(rc == 0);
 	rc = machine_wait(consumer_id);
 	test(rc == 0);
 
