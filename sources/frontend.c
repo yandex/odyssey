@@ -1104,18 +1104,7 @@ od_frontend_status_t od_frontend_attach(od_client_t *client,
 od_frontend_status_t od_frontend_attach_and_deploy(od_client_t *client)
 {
 	/* attach and maybe connect server, then deploy params */
-	od_frontend_status_t status =
-		attach_impl(client, NULL, 1 /* is_deploy */);
-	if (status != OD_OK) {
-		return status;
-	}
-
-	/* Wait before any client command, including an extended-query pipeline
-	 * or BEGIN, can establish a snapshot on the newly attached backend. */
-	if (od_rwr_wait_lsn(client, client->server) != OK_RESPONSE) {
-		return OD_ESERVER_READ;
-	}
-	return OD_OK;
+	return attach_impl(client, NULL, 1 /* is_deploy */);
 }
 
 static inline od_frontend_status_t od_frontend_setup_params(od_client_t *client)

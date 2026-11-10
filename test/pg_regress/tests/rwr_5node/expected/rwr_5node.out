@@ -111,6 +111,29 @@ NOTICE:  select host tcp://localhost:5434
 
 \! ${PGTEST_DIR}/sql/replay.sh check
 observed Odyssey blocked on WAIT FOR LSN before resuming replay
+-- WAIT must precede the deferred BEGIN and its first snapshot-taking query.
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+\! ${PGTEST_DIR}/sql/replay.sh pause
+replica replay is paused
+INSERT INTO rwr_test VALUES (46);
+NOTICE:  select host tcp://localhost:5432
+\! ${PGTEST_DIR}/sql/replay.sh observe &
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SET odyssey.parser_mode TO 'full';
+NOTICE:  processed virtually by odyssey
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT count(*) FROM rwr_test \bind \g
+NOTICE:  select host tcp://localhost:5434
+ count 
+-------
+     5
+(1 row)
+
+\! ${PGTEST_DIR}/sql/replay.sh check
+observed Odyssey blocked on WAIT FOR LSN before resuming replay
+COMMIT;
 SET odyssey.execute_on_host TO DEFAULT;
 NOTICE:  processed virtually by odyssey
 SET odyssey.rwr_consistent TO 'off';

@@ -35,6 +35,9 @@ struct od_server {
 	od_io_t io;
 	int is_transaction;
 	int is_error_tx;
+	/* ParameterStatus in_hot_standby; -1 on servers that do not report it. */
+	int in_hot_standby;
+	bool rwr_wait_pending;
 	/* Copy stmt state */
 	int copy_mode;
 	/**/
@@ -94,6 +97,7 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->idle_time = 0;
 	server->is_transaction = 0;
 	server->is_error_tx = 0;
+	server->in_hot_standby = -1;
 	server->copy_mode = 0;
 	server->sync_request = 0;
 	server->sync_reply = 0;

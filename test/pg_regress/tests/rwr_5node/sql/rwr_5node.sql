@@ -43,6 +43,17 @@ INSERT INTO rwr_test VALUES (45) /* This query deliberately exceeds the parser l
 SET odyssey.execute_on_host TO 'localhost:5434';
 SELECT count(*) FROM rwr_test /* This query also exceeds the parser length limit of 128 bytes: its read must still wait until the replica has replayed our write. */;
 \! ${PGTEST_DIR}/sql/replay.sh check
+-- WAIT must precede the deferred BEGIN and its first snapshot-taking query.
+SET odyssey.execute_on_host TO 'localhost:5432';
+\! ${PGTEST_DIR}/sql/replay.sh pause
+INSERT INTO rwr_test VALUES (46);
+\! ${PGTEST_DIR}/sql/replay.sh observe &
+SET odyssey.execute_on_host TO 'localhost:5434';
+SET odyssey.parser_mode TO 'full';
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT count(*) FROM rwr_test \bind \g
+\! ${PGTEST_DIR}/sql/replay.sh check
+COMMIT;
 SET odyssey.execute_on_host TO DEFAULT;
 SET odyssey.rwr_consistent TO 'off';
 SHOW odyssey.rwr_consistent;

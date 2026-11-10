@@ -200,6 +200,7 @@ static inline void od_backend_reset_for_retry(od_server_t *server)
 	kiwi_key_init(&server->key);
 	kiwi_vars_free(&server->vars);
 	kiwi_vars_init(&server->vars);
+	server->in_hot_standby = -1;
 
 	/*
 	 * do not reset client key here
@@ -507,7 +508,12 @@ int od_backend_startup(od_server_t *server, kiwi_params_t *route_params,
 					name);
 			}
 
-			/* cache server major version on the endpoint */
+			/* Track the current backend role and cache the endpoint version. */
+			if (name_len == sizeof("in_hot_standby") &&
+			    memcmp(name, "in_hot_standby", name_len) == 0) {
+				server->in_hot_standby =
+					strcmp(value, "on") == 0;
+			}
 			if (server->endpoint != NULL &&
 			    name_len == sizeof("server_version") &&
 			    strncmp(name, "server_version", name_len) == 0) {
@@ -1174,6 +1180,10 @@ int od_backend_update_parameter(od_server_t *server, char *data, uint32_t size,
 	}
 
 	/* update server only or client and server parameter */
+	if (name_len == sizeof("in_hot_standby") &&
+	    memcmp(name, "in_hot_standby", name_len) == 0) {
+		server->in_hot_standby = strcmp(value, "on") == 0;
+	}
 	od_debug(&instance->logger, client, server, "%.*s = %.*s", name_len,
 		 name, value_len, value);
 
