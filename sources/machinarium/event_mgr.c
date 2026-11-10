@@ -178,7 +178,7 @@ int mm_eventmgr_signal(mm_event_t *event)
 	mm_list_unlink(&event->link);
 	mgr->count_wait--;
 
-	if (mgr == &mm_self->event_mgr) {
+	if (mm_self != NULL && mgr == &mm_self->event_mgr) {
 		/*
 		 * same machine: wake the coroutine directly, the
 		 * eventfd round trip is not needed - this thread runs
