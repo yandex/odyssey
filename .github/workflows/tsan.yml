@@ -1,0 +1,43 @@
+name: TSan
+
+on:
+  push:
+    branches: [master, 'REL_*']
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/tsan.yml'
+      - 'sources/**'
+      - 'test/tsan/**'
+      - 'CMakeLists.txt'
+      - 'Makefile'
+      - 'cmake/**'
+      - 'docker/**'
+      - 'modules/**'
+
+jobs:
+  tsan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            bison flex cmake build-essential libssl-dev
+
+      - name: Run TSan
+        run: ./test/tsan/run.sh
+
+      - name: Save TSan output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsan-output
+          if-no-files-found: error
+          path: tsan-out/
