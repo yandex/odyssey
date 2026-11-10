@@ -251,7 +251,7 @@ void od_worker_init(od_worker_t *worker, od_global_t *global, int id)
 	worker->clients_processed = 0;
 }
 
-int od_worker_start(od_worker_t *worker)
+int od_worker_start(od_worker_t *worker, uint64_t machine_id)
 {
 	od_instance_t *instance = worker->global->instance;
 
@@ -264,7 +264,8 @@ int od_worker_start(od_worker_t *worker)
 
 	char name[32];
 	od_snprintf(name, sizeof(name), "worker: %d", worker->id);
-	worker->machine = machine_create(name, od_worker, worker);
+	worker->machine =
+		machine_create_at(machine_id, name, od_worker, worker);
 	if (worker->machine == -1) {
 		machine_channel_free(worker->task_channel);
 		od_error(&instance->logger, NULL, NULL,
