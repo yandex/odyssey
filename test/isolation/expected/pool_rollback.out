@@ -1,0 +1,69 @@
+Parsed test spec with 2 sessions
+
+starting permutation: write next_query disconnect rollback_paused invariants wake next_result
+dblink_exec
+-----------
+INSERT 0 1 
+(1 row)
+
+step write: 
+  SELECT dblink_exec('owner', $q$
+    BEGIN;
+    INSERT INTO rollback_data VALUES (1);
+    DO $body$ BEGIN
+      PERFORM injection_points_set_local();
+      PERFORM injection_points_attach('transaction-abort-after-clog', 'wait');
+    END $body$;
+  $q$);
+
+dblink_exec
+-----------
+DO         
+(1 row)
+
+step next_query: 
+  SELECT dblink_send_query('next', 'SELECT pg_backend_pid() = (SELECT pid FROM rollback_backend) AS same_backend, count(*) AS rows FROM rollback_data');
+
+dblink_send_query
+-----------------
+                1
+(1 row)
+
+step disconnect: SELECT dblink_disconnect('owner');
+dblink_disconnect
+-----------------
+OK               
+(1 row)
+
+step rollback_paused: SELECT wait_for_rollback();
+wait_for_rollback
+-----------------
+                 
+(1 row)
+
+step invariants: 
+  SELECT dblink_is_busy('next');
+  SELECT * FROM rollback_pool;
+
+dblink_is_busy
+--------------
+             1
+(1 row)
+
+cl_queue|sv_active|sv_idle
+--------+---------+-------
+       1|        1|      0
+(1 row)
+
+step wake: 
+  SELECT FROM injection_points_detach('transaction-abort-after-clog');
+  SELECT FROM injection_points_wakeup('transaction-abort-after-clog');
+
+step next_result: 
+  SELECT * FROM dblink_get_result('next') AS r(same_backend boolean, rows bigint);
+
+same_backend|rows
+------------+----
+t           |   0
+(1 row)
+
