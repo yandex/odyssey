@@ -42,10 +42,15 @@ int od_sql_minimal_keyword_lookup(const char *str, size_t len)
 	switch (str[0] | 0x20) {
 	case 'a':
 		KW("all", KW_ALL);
+		KW("and", KW_AND);
 		KW("as", KW_AS);
 		break;
 	case 'b':
 		KW("begin", KW_BEGIN);
+		break;
+	case 'c':
+		KW("chain", KW_CHAIN);
+		KW("commit", KW_COMMIT);
 		break;
 	case 'd':
 		KW("deallocate", KW_DEALLOCATE);
@@ -61,6 +66,9 @@ int od_sql_minimal_keyword_lookup(const char *str, size_t len)
 	case 'l':
 		KW("local", KW_LOCAL);
 		break;
+	case 'n':
+		KW("no", KW_NO);
+		break;
 	case 'o':
 		KW("off", KW_OFF);
 		KW("on", KW_ON);
@@ -68,6 +76,9 @@ int od_sql_minimal_keyword_lookup(const char *str, size_t len)
 	case 'p':
 		KW("plans", KW_PLANS);
 		KW("prepare", KW_PREPARE);
+		break;
+	case 'r':
+		KW("rollback", KW_ROLLBACK);
 		break;
 	case 's':
 		KW("sequences", KW_SEQUENCES);

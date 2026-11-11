@@ -35,6 +35,8 @@ struct od_server {
 	od_io_t io;
 	int is_transaction;
 	int is_error_tx;
+	int virtual_error;
+	int virtual_xproto_error;
 	/* Copy stmt state */
 	int copy_mode;
 	/**/
@@ -94,6 +96,8 @@ static inline void od_server_init(od_server_t *server, int reserve_prep_stmts)
 	server->idle_time = 0;
 	server->is_transaction = 0;
 	server->is_error_tx = 0;
+	server->virtual_error = 0;
+	server->virtual_xproto_error = 0;
 	server->copy_mode = 0;
 	server->sync_request = 0;
 	server->sync_reply = 0;

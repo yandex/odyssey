@@ -58,6 +58,17 @@ int od_sql_minimal_node_print(const od_sql_minimal_node_t *node, char *buf,
 
 	case OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT:
 		return snprintf(buf, buflen, "(begin)");
+	case OD_SQL_MINIMAL_NODE_TYPE_COMMIT_STMT:
+	case OD_SQL_MINIMAL_NODE_TYPE_ROLLBACK_STMT: {
+		const od_sql_minimal_transaction_stmt_t *n =
+			(const od_sql_minimal_transaction_stmt_t *)node;
+		return snprintf(
+			buf, buflen, "(%s%s)",
+			node->type == OD_SQL_MINIMAL_NODE_TYPE_COMMIT_STMT ?
+				"commit" :
+				"rollback",
+			n->chain ? " chain" : "");
+	}
 
 	case OD_SQL_MINIMAL_NODE_TYPE_EMPTY_STMT:
 		return snprintf(buf, buflen, "(empty)");

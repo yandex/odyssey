@@ -18,9 +18,54 @@
 #include <util.h>
 #include <worker.h>
 #include <wait_event.h>
+#include <query.h>
+#include <sql/full/parser.h>
+#include <sql/full/pg_constants.h>
 
 /* max plan entries sent without a heap-allocated iovec array */
 #define OD_XPLAN_IOVEC_INLINE_MAX 32
+
+static bool tx_query_is_exit(od_tx_query_kind_t kind)
+{
+	return kind == OD_TX_QUERY_COMMIT || kind == OD_TX_QUERY_ROLLBACK;
+}
+
+/* Extended BEGIN/START may contain options that the mini parser skips. */
+static od_tx_query_kind_t tx_query_completed_kind(const char *query,
+						  bool *chain)
+{
+	*chain = false;
+	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
+	List *tree = od_sql_full_parse(arena, query, strlen(query), NULL, NULL);
+	od_tx_query_kind_t kind = OD_TX_QUERY_OTHER;
+	if (tree != NULL && list_length(tree) == 1) {
+		RawStmt *raw = linitial(tree);
+		if (raw != NULL && IsA(raw->stmt, TransactionStmt)) {
+			TransactionStmt *stmt =
+				castNode(TransactionStmt, raw->stmt);
+			*chain = stmt->chain;
+			switch (stmt->kind) {
+			case TRANS_STMT_BEGIN:
+			case TRANS_STMT_START:
+				kind = OD_TX_QUERY_BEGIN;
+				break;
+			case TRANS_STMT_COMMIT:
+				kind = OD_TX_QUERY_COMMIT;
+				break;
+			case TRANS_STMT_ROLLBACK:
+				kind = OD_TX_QUERY_ROLLBACK;
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	od_linear_alloc_reset(arena, 0);
+	return kind;
+}
+
+static od_frontend_status_t xplan_append_tx_error(od_xplan_t *xp,
+						  machine_msg_t *msg);
 
 static inline kiwi_be_type_t msg_be_type(machine_msg_t *msg)
 {
@@ -443,6 +488,25 @@ xplan_append_virtual_error_response(od_xplan_t *xp, machine_msg_t *original,
 	return OD_OK;
 }
 
+static od_frontend_status_t xplan_append_tx_error(od_xplan_t *xp,
+						  machine_msg_t *msg)
+{
+	static char message[] =
+		"current transaction is aborted, commands ignored until end of transaction block";
+	machine_msg_t *error =
+		kiwi_be_write_error(NULL, KIWI_IN_FAILED_SQL_TRANSACTION,
+				    message, sizeof(message) - 1);
+	if (error == NULL) {
+		return OD_EOOM;
+	}
+	od_frontend_status_t status =
+		xplan_append_virtual_error_response(xp, msg, error);
+	if (status != OD_OK) {
+		machine_msg_free(error);
+	}
+	return status;
+}
+
 static inline od_frontend_status_t
 xplan_append_virtual_parse_complete(od_xplan_t *xp, const char *client_pstmt,
 				    od_pstmt_t *pstmt, machine_msg_t *original)
@@ -542,6 +606,8 @@ void od_xplan_clear(od_xplan_t *xp)
 	mm_vector_clear(&xp->entries);
 	mm_vector_shrink_to_fit(&xp->entries);
 	xp->errored = 0;
+	xp->virtual_tx_error = false;
+	xp->track_transaction_state = false;
 }
 
 static od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp, od_client_t *client,
@@ -755,6 +821,14 @@ static od_frontend_status_t plan_parse(od_relay_t *relay, od_xplan_t *xp,
 	if (desc.data == NULL) {
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
+	if (xp->virtual_tx_error) {
+		const char *query = desc.data;
+		int kind =
+			od_query_transaction_kind(query, strlen(query), NULL);
+		if (!tx_query_is_exit(kind)) {
+			return xplan_append_tx_error(xp, msg);
+		}
+	}
 
 	/*
 	 * special case for unnamed stmt - it should not be check for duplication
@@ -844,9 +918,18 @@ static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
 	if (type == KIWI_FE_DESCRIBE_PORTAL) {
-		/* skip this, we only need to rewrite statement */
-		return xplan_append_fwd_no_delta(xp, msg,
-						 NULL /* no rewrite */);
+		if (xp->virtual_tx_error) {
+			od_pstmt_t *portal = plan_client_get_portal(
+				xp, client, pstmt_name,
+				od_hm_name_hash(pstmt_name, pstmt_name_len));
+			if (portal == NULL ||
+			    !tx_query_is_exit(od_query_transaction_kind(
+				    portal->desc.data,
+				    strlen(portal->desc.data), NULL))) {
+				return xplan_append_tx_error(xp, msg);
+			}
+		}
+		return xplan_append_fwd_no_delta(xp, msg, NULL);
 	}
 
 	/*
@@ -856,6 +939,12 @@ static od_frontend_status_t plan_describe(od_relay_t *relay, od_xplan_t *xp,
 	od_pstmt_t *pstmt = plan_client_get_pstmt(
 		xp, client, pstmt_name,
 		od_hm_name_hash(pstmt_name, pstmt_name_len));
+	if (xp->virtual_tx_error &&
+	    (pstmt == NULL ||
+	     !tx_query_is_exit(od_query_transaction_kind(
+		     pstmt->desc.data, strlen(pstmt->desc.data), NULL)))) {
+		return xplan_append_tx_error(xp, msg);
+	}
 	if (pstmt == NULL) {
 		/*
 		 * the client never parsed this pstmt in its session, and
@@ -985,6 +1074,9 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 		xp, client, pstmt_name,
 		od_hm_name_hash(pstmt_name, pstmt_name_len));
 	if (pstmt == NULL) {
+		if (xp->virtual_tx_error) {
+			return xplan_append_tx_error(xp, msg);
+		}
 		/*
 		 * the client never parsed this pstmt in its session, and
 		 * the backend only knows odyssey_pstmt_N names - forward
@@ -997,20 +1089,59 @@ static od_frontend_status_t plan_bind(od_relay_t *relay, od_xplan_t *xp,
 						 NULL /* no rewrite */);
 	}
 
+	bool rollback_commit = false;
+	bool commit_chain = false;
+	if (xp->virtual_tx_error) {
+		int kind = od_query_transaction_kind(pstmt->desc.data,
+						     strlen(pstmt->desc.data),
+						     &commit_chain);
+		if (!tx_query_is_exit(kind)) {
+			return xplan_append_tx_error(xp, msg);
+		}
+		rollback_commit = kind == OD_TX_QUERY_COMMIT;
+	}
+
 	int pstmt_start_offset = kiwi_be_bind_opname_offset(data, size);
 	if (pstmt_start_offset < 0) {
 		return OD_ECLIENT_PROTOCOL_ERROR;
 	}
 
+	od_pstmt_t *server_pstmt = pstmt;
+	if (rollback_commit) {
+		static const char rollback_desc[] = "ROLLBACK\0\0";
+		static const char chain_desc[] = "ROLLBACK AND CHAIN\0\0";
+		od_pstmt_desc_t desc = {
+			.data = (void *)(commit_chain ? chain_desc :
+							rollback_desc),
+			.len = commit_chain ? sizeof(chain_desc) :
+					      sizeof(rollback_desc),
+		};
+		od_instance_t *instance = client->global->instance;
+		server_pstmt = od_pstmt_create_or_get(
+			od_instance_get_pstmts_map(instance), desc,
+			od_worker_get_local_linear_alloc(),
+			&instance->config.query_parsing);
+		if (server_pstmt == NULL) {
+			return OD_EOOM;
+		}
+	}
 	/* predeploy will create ref to pstmt if needed */
-	od_frontend_status_t st = plan_predeploy_pstmt(xp, server, msg, pstmt);
+	od_frontend_status_t st =
+		plan_predeploy_pstmt(xp, server, msg, server_pstmt);
 	if (st != OD_OK) {
+		if (rollback_commit) {
+			od_pstmt_unref(server_pstmt);
+		}
 		return st;
 	}
 
 	machine_msg_t *bmsg =
 		rewrite_bind_msg(data, size, pstmt_start_offset, pstmt_name_len,
-				 pstmt->name, strlen(pstmt->name) + 1);
+				 server_pstmt->name,
+				 strlen(server_pstmt->name) + 1);
+	if (rollback_commit) {
+		od_pstmt_unref(server_pstmt);
+	}
 	if (bmsg == NULL) {
 		return OD_EOOM;
 	}
@@ -1059,6 +1190,9 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 		xp, client, portal_name,
 		od_hm_name_hash(portal_name, portal_name_len));
 	if (pstmt == NULL) {
+		if (xp->virtual_tx_error) {
+			return xplan_append_tx_error(xp, msg);
+		}
 		/*
 		 * portal not found - just forward, let the server
 		 * produce the appropriate ErrorResponse
@@ -1066,6 +1200,35 @@ static od_frontend_status_t plan_execute(od_relay_t *relay, od_xplan_t *xp,
 		xp->errored = 1;
 		return xplan_append_fwd_no_delta(xp, msg,
 						 NULL /* no rewrite */);
+	}
+	if (xp->virtual_tx_error) {
+		bool new_portal = false;
+		for (size_t i = mm_vector_size(&xp->entries); i > 0; --i) {
+			od_xplan_entry_t *entry =
+				mm_vector_get(&xp->entries, i - 1);
+			if (entry->delta.portal_name == NULL ||
+			    strcmp(entry->delta.portal_name, portal_name) !=
+				    0) {
+				continue;
+			}
+			if (entry->delta.type == OD_XPLAN_DELTA_ADD_PORTAL) {
+				new_portal = true;
+				break;
+			}
+			if (entry->delta.type == OD_XPLAN_DELTA_REMOVE_PORTAL) {
+				break;
+			}
+		}
+		if (!new_portal &&
+		    !od_client_virtual_portal_has(client, portal_name)) {
+			return xplan_append_tx_error(xp, msg);
+		}
+		int kind = od_query_transaction_kind(
+			pstmt->desc.data, strlen(pstmt->desc.data), NULL);
+		if (!tx_query_is_exit(kind)) {
+			return xplan_append_tx_error(xp, msg);
+		}
+		xp->virtual_tx_error = false;
 	}
 
 	/*
@@ -1201,6 +1364,7 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 {
 	od_frontend_status_t status = OD_OK;
 	od_relay_xbuf_t *xbuf = &relay->xbuf;
+	xp->virtual_tx_error = relay->client->server->virtual_error;
 	size_t count = mm_vector_size(&xbuf->msgs);
 
 	if (od_unlikely(count == 0)) {
@@ -1309,6 +1473,10 @@ od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay)
 	od_route_t *route = client->route;
 	od_rule_t *rule = route->rule;
 	int reserve_prepared = rule->pool->reserve_prepared_statement;
+	if (reserve_prepared && od_worker_ensure_local_linear_alloc(
+					client->global->instance) != 0) {
+		return OD_EOOM;
+	}
 
 	if (server->is_error_tx) {
 		/*
@@ -1593,6 +1761,16 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 		switch (type) {
 		case KIWI_BE_READY_FOR_QUERY:
 			done = 1;
+			if (!failed) {
+				int txstatus;
+				if (kiwi_fe_read_ready(data, size, &txstatus) ==
+				    -1) {
+					machine_msg_free(msg);
+					return OD_ESERVER_READ;
+				}
+				server->is_transaction = txstatus != 'I';
+				server->is_error_tx = txstatus == 'E';
+			}
 			/* fallthrough */
 		case KIWI_BE_COMMAND_COMPLETE:
 			machine_msg_free(msg);
@@ -1658,6 +1836,35 @@ static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
 	if (!server->xproto_err) {
 		status = delta_apply(&entry->delta, client, server);
 		apply_delta = 1;
+		if (status == OD_OK && server->virtual_error &&
+		    type == KIWI_BE_BIND_COMPLETE &&
+		    entry->delta.type == OD_XPLAN_DELTA_ADD_PORTAL &&
+		    od_client_virtual_portal_add(
+			    client, entry->delta.portal_name) == -1) {
+			return OD_EOOM;
+		}
+		if (server->virtual_error && type == KIWI_BE_CLOSE_COMPLETE &&
+		    entry->delta.type == OD_XPLAN_DELTA_REMOVE_PORTAL) {
+			od_client_virtual_portal_remove(
+				client, entry->delta.portal_name);
+		}
+		if (type == KIWI_BE_COMMAND_COMPLETE &&
+		    msg_fe_type(entry->clmsg) == KIWI_FE_EXECUTE &&
+		    entry->delta.pstmt != NULL &&
+		    (xp->track_transaction_state || server->virtual_error)) {
+			const char *query = entry->delta.pstmt->desc.data;
+			bool chain = false;
+			od_tx_query_kind_t kind =
+				tx_query_completed_kind(query, &chain);
+			if (kind == OD_TX_QUERY_BEGIN) {
+				server->is_transaction = 1;
+			} else if (kind == OD_TX_QUERY_COMMIT ||
+				   kind == OD_TX_QUERY_ROLLBACK) {
+				server->is_transaction = chain;
+				server->virtual_error = false;
+				od_client_virtual_portals_clear(client);
+			}
+		}
 	}
 
 	if (instance->config.log_debug || rule->log_debug) {
@@ -1763,9 +1970,129 @@ run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
 	return status;
 }
 
+static od_frontend_status_t virtual_error_sync(od_client_t *client,
+					       uint32_t timeout_ms)
+{
+	od_server_t *server = client->server;
+	bool rollback_implicit = !server->is_transaction;
+	int rollback_responses = 0;
+	machine_msg_t *msg = NULL;
+	if (rollback_implicit) {
+		char empty[] = "";
+		static const char sql[] = "ROLLBACK";
+		msg = kiwi_fe_write_parse(NULL, empty, sizeof(empty), sql,
+					  sizeof(sql), 0, NULL);
+		if (msg == NULL) {
+			return OD_EOOM;
+		}
+		machine_msg_t *next =
+			kiwi_fe_write_bind(msg, empty, sizeof(empty), empty,
+					   sizeof(empty), 0, NULL, 0, NULL, 0,
+					   NULL, NULL);
+		if (next == NULL) {
+			machine_msg_free(msg);
+			return OD_EOOM;
+		}
+		msg = next;
+		next = kiwi_fe_write_execute(msg, empty, sizeof(empty), 0);
+		if (next == NULL) {
+			machine_msg_free(msg);
+			return OD_EOOM;
+		}
+		msg = next;
+	}
+	machine_msg_t *sync = kiwi_fe_write_sync(msg);
+	if (sync == NULL) {
+		machine_msg_free_safe(msg);
+		return OD_EOOM;
+	}
+	if (od_write2(&server->io, sync, timeout_ms) != 0) {
+		return OD_ESERVER_WRITE;
+	}
+
+	for (;;) {
+		msg = od_read(&server->io, timeout_ms, OD_READ_BE);
+		if (msg == NULL) {
+			return OD_ESERVER_READ;
+		}
+		char *data = machine_msg_data(msg);
+		int size = machine_msg_size(msg);
+		kiwi_be_type_t type = *data;
+		if (type == KIWI_BE_READY_FOR_QUERY) {
+			if (rollback_implicit && rollback_responses != 3) {
+				machine_msg_free(msg);
+				return OD_ESERVER_READ;
+			}
+			if (od_backend_ready(server, data, size) == -1) {
+				machine_msg_free(msg);
+				return OD_ESERVER_READ;
+			}
+			server->xproto_mode = 0;
+			server->xproto_err = 0;
+			server->virtual_xproto_error = false;
+			if (!server->virtual_error && server->is_transaction) {
+				od_client_virtual_portals_clear(client);
+			}
+			server->virtual_error = server->is_transaction;
+			data[size - 1] = server->virtual_error ? 'E' : 'I';
+			int64_t query_time = 0;
+			od_stat_query_end(&client->route->stats,
+					  &server->stats_state,
+					  server->is_transaction, &query_time);
+			return od_write2(&client->io, msg, timeout_ms) == 0 ?
+				       OD_OK :
+				       OD_ECLIENT_WRITE;
+		}
+		if (type == KIWI_BE_ERROR_RESPONSE) {
+			od_backend_error(server, data, size);
+			machine_msg_free(msg);
+			return OD_ESERVER_READ;
+		}
+		if (type == KIWI_BE_PARAMETER_STATUS) {
+			if (od_backend_update_parameter(server, data, size,
+							0) == -1) {
+				machine_msg_free(msg);
+				return OD_ESERVER_READ;
+			}
+		}
+		if (rollback_implicit && type == KIWI_BE_NOTICE_RESPONSE) {
+			kiwi_fe_error_t notice;
+			data[0] = KIWI_BE_ERROR_RESPONSE;
+			int rc = kiwi_fe_read_error(data, size, &notice);
+			data[0] = KIWI_BE_NOTICE_RESPONSE;
+			if (rc == 0 && notice.code != NULL &&
+			    strcmp(notice.code,
+				   KIWI_NO_ACTIVE_SQL_TRANSACTION) == 0) {
+				machine_msg_free(msg);
+				continue;
+			}
+		}
+		if (type == KIWI_BE_NOTIFICATION_RESPONSE ||
+		    type == KIWI_BE_PARAMETER_STATUS ||
+		    type == KIWI_BE_NOTICE_RESPONSE) {
+			if (od_write2(&client->io, msg, timeout_ms) != 0) {
+				return OD_ECLIENT_WRITE;
+			}
+		} else if (rollback_implicit &&
+			   ((rollback_responses == 0 &&
+			     type == KIWI_BE_PARSE_COMPLETE) ||
+			    (rollback_responses == 1 &&
+			     type == KIWI_BE_BIND_COMPLETE) ||
+			    (rollback_responses == 2 &&
+			     type == KIWI_BE_COMMAND_COMPLETE))) {
+			rollback_responses++;
+			machine_msg_free(msg);
+		} else {
+			machine_msg_free(msg);
+			return OD_ESERVER_READ;
+		}
+	}
+}
+
 static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 					  size_t max_responses,
-					  uint32_t timeout_ms)
+					  uint32_t timeout_ms,
+					  bool deferred_tail)
 {
 	/* TODO: use this to check correctness */
 	(void)max_responses;
@@ -1810,6 +2137,29 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	int forward_begin = -1;
 
 	for (size_t i = 0; i < count; ++i) {
+		if (deferred_tail && i == count - 1) {
+			if (forward_begin != -1) {
+				status = run_forward_batch(
+					xp, (size_t)forward_begin, i, client,
+					server, timeout_ms);
+				if (status != OD_OK) {
+					return status;
+				}
+			}
+			od_xplan_entry_t *last = mm_vector_get(&xp->entries, i);
+			kiwi_fe_type_t type = msg_fe_type(last->clmsg);
+			if (type == KIWI_FE_SYNC &&
+			    (server->virtual_xproto_error ||
+			     (server->virtual_error && !server->xproto_err))) {
+				return virtual_error_sync(client, timeout_ms);
+			}
+			if (od_io_write(&server->io, last->clmsg, timeout_ms) !=
+			    0) {
+				return OD_ESERVER_WRITE;
+			}
+			return run_forward_batch(xp, i, count, client, server,
+						 timeout_ms);
+		}
 		if (server->xproto_err && i != count - 1) {
 			/* if error is met, skip all until Flush/Sync */
 			continue;
@@ -1832,6 +2182,9 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 				return status;
 			}
 			forward_begin = -1;
+			if (server->xproto_err) {
+				continue;
+			}
 		}
 
 		switch (entry->type) {
@@ -1847,6 +2200,8 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 			break;
 		case OD_XPLAN_VIRTUAL_ERROR_RESPONSE:
 			server->xproto_err = 1;
+			server->virtual_xproto_error = true;
+			server->virtual_error = true;
 
 			status = run_virtual_error(entry, client, timeout_ms);
 			break;
@@ -1900,6 +2255,17 @@ send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
 {
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
+	bool defer_tail = server->virtual_xproto_error || server->virtual_error;
+	for (size_t i = 0; i < mm_vector_size(&xp->entries); ++i) {
+		od_xplan_entry_t *entry = mm_vector_get(&xp->entries, i);
+		if (entry->type == OD_XPLAN_VIRTUAL_ERROR_RESPONSE) {
+			defer_tail = true;
+			break;
+		}
+	}
+	od_xplan_entry_t *tail = mm_vector_back(&xp->entries);
+	xp->track_transaction_state =
+		defer_tail || msg_fe_type(tail->clmsg) == KIWI_FE_FLUSH;
 
 	od_xplan_entry_t *first = mm_vector_get(&xp->entries, 0);
 	if (first->type == OD_XPLAN_DEFERRED_BEGIN) {
@@ -1919,6 +2285,7 @@ send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
 			server->xproto_err = 1;
 			iovecs += niovecs - 1;
 			niovecs = 1;
+			defer_tail = false;
 		} else if (status == OD_OK) {
 			iovecs++;
 			niovecs--;
@@ -1928,17 +2295,28 @@ send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
 	}
 
 	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-	int rc = od_io_writev(&server->io, iovecs, niovecs, timeout_ms, 0);
+	size_t send_count = niovecs - (defer_tail ? 1 : 0);
+	int rc = send_count == 0 ? 0 :
+				   od_io_writev(&server->io, iovecs, send_count,
+						timeout_ms, 0);
 	od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 	if (rc == -1) {
 		return OD_ESERVER_WRITE;
+	}
+	if (defer_tail && send_count > 0) {
+		static const uint8_t flush[] = { KIWI_FE_FLUSH, 0, 0, 0, 4 };
+		size_t unused;
+		if (od_io_write_raw(&server->io, flush, sizeof(flush), &unused,
+				    timeout_ms, 0) != 0) {
+			return OD_ESERVER_WRITE;
+		}
 	}
 
 	/*
 	 * use niovecs because it shows real number of how much responses we are awaiting
 	 * (some might have been skipped after virtual error response)
 	 */
-	return run_plan_impl(xp, relay, niovecs, timeout_ms);
+	return run_plan_impl(xp, relay, niovecs, timeout_ms, defer_tail);
 }
 
 static inline void log_plan_debug(od_instance_t *instance, od_xplan_t *xp,

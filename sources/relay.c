@@ -379,6 +379,52 @@ rewrite_sql_execute(od_client_t *client, const char *query, uint32_t query_len,
 }
 
 static od_frontend_status_t
+process_virtual_tx_error(od_client_t *client, const char *query,
+			 uint32_t query_len, machine_msg_t **rewritten,
+			 bool *handled, uint32_t timeout_ms)
+{
+	*handled = false;
+	od_server_t *server = client->server;
+	if (server == NULL || !server->virtual_error) {
+		return OD_OK;
+	}
+	bool chain = false;
+	od_tx_query_kind_t kind =
+		od_query_transaction_kind(query, query_len - 1, &chain);
+	if (kind == OD_TX_QUERY_COMMIT || kind == OD_TX_QUERY_ROLLBACK) {
+		if (kind == OD_TX_QUERY_COMMIT) {
+			const char *rollback =
+				chain ? "ROLLBACK AND CHAIN" : "ROLLBACK";
+			*rewritten =
+				kiwi_fe_write_query_join(NULL, rollback, NULL);
+			if (*rewritten == NULL) {
+				return OD_EOOM;
+			}
+		}
+		server->virtual_error = false;
+		od_client_virtual_portals_clear(client);
+		return OD_OK;
+	}
+	static char message[] =
+		"current transaction is aborted, commands ignored until end of transaction block";
+	machine_msg_t *reply =
+		kiwi_be_write_error(NULL, KIWI_IN_FAILED_SQL_TRANSACTION,
+				    message, sizeof(message) - 1);
+	if (reply == NULL) {
+		return OD_EOOM;
+	}
+	machine_msg_t *ready = kiwi_be_write_ready(reply, 'E');
+	if (ready == NULL) {
+		machine_msg_free(reply);
+		return OD_EOOM;
+	}
+	*handled = true;
+	return od_write2(&client->io, ready, timeout_ms) == 0 ?
+		       OD_OK :
+		       OD_ECLIENT_WRITE;
+}
+
+static od_frontend_status_t
 process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 {
 	od_client_t *client = relay->client;
@@ -398,18 +444,34 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	}
 
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
+	machine_msg_t *virtual_tx_query = NULL;
+	bool handled = false;
+	status = process_virtual_tx_error(client, query, query_len,
+					  &virtual_tx_query, &handled,
+					  timeout_ms);
+	if (status != OD_OK || handled) {
+		return status;
+	}
+	if (virtual_tx_query != NULL) {
+		msg = virtual_tx_query;
+		query = (char *)machine_msg_data(msg) + sizeof(kiwi_header_t);
+		query_len = machine_msg_size(msg) - sizeof(kiwi_header_t);
+	}
 
 	status = try_virtual_process_query(client, query,
 					   query_len - 1 /* zero included */);
 	od_linear_alloc_reset(arena, 0);
 
 	if (status == OD_SKIP) {
+		machine_msg_free_safe(virtual_tx_query);
 		/* query must not be sent to backend */
 		return OD_OK;
 	} else if (status == OD_REPLACED) {
+		machine_msg_free_safe(virtual_tx_query);
 		/* replaced query was sent, wait rfq but no writing the query */
 	} else if (status == OD_OK) {
 		if (server == NULL) {
+			machine_msg_free_safe(virtual_tx_query);
 			return OD_ATTACH;
 		}
 
@@ -417,6 +479,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		status = rewrite_sql_execute(client, query, query_len, &execute,
 					     timeout_ms);
 		if (status != OD_OK) {
+			machine_msg_free_safe(virtual_tx_query);
 			return status;
 		}
 		if (execute != NULL) {
@@ -433,6 +496,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 							 "\n;", query, NULL);
 			if (rewritten == NULL) {
 				machine_msg_free_safe(execute);
+				machine_msg_free_safe(virtual_tx_query);
 				return OD_EOOM;
 			}
 
@@ -446,6 +510,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 		}
 		machine_msg_free_safe(execute);
+		machine_msg_free_safe(virtual_tx_query);
 
 		if (rc != 0) {
 			return OD_ESERVER_WRITE;
@@ -453,6 +518,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 		od_server_sync_request(server, 1);
 	} else {
+		machine_msg_free_safe(virtual_tx_query);
 		/* not skip, not replace and not ok - need handle on higher level */
 		return status;
 	}

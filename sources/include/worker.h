@@ -26,6 +26,7 @@ int od_worker_start(od_worker_t *, uint64_t machine_id);
 void od_worker_shutdown(od_worker_t *);
 
 od_linear_alloc_t *od_worker_get_local_linear_alloc(void);
+int od_worker_ensure_local_linear_alloc(od_instance_t *instance);
 
 extern OD_THREAD_LOCAL bool worker_shutting_down;
 static inline bool od_worker_is_shutting_down(void)

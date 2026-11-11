@@ -120,6 +120,7 @@ struct od_client {
 	/* SQL of a virtual BEGIN; owned heap storage only if it exceeds the buffer. */
 	char *pending_begin;
 	char pending_begin_buf[128];
+	mm_vector_t virtual_recovery_portals;
 
 	/*
 	 * Per-connection debug log sampling decision:
@@ -154,6 +155,10 @@ static inline od_retcode_t od_client_init_hm(od_client_t *client)
 }
 
 void od_client_init(od_client_t *client);
+int od_client_virtual_portal_add(od_client_t *client, const char *name);
+bool od_client_virtual_portal_has(od_client_t *client, const char *name);
+void od_client_virtual_portal_remove(od_client_t *client, const char *name);
+void od_client_virtual_portals_clear(od_client_t *client);
 
 static inline od_client_t *od_client_allocate(void)
 {

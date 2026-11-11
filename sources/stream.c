@@ -289,6 +289,10 @@ stream_handle_message(stream_t *stream, od_server_t *server, char *data,
 		server->xproto_err = 0;
 
 		od_backend_ready(server, data, size);
+		if (client != NULL && server->is_error_tx) {
+			server->virtual_error = false;
+			od_client_virtual_portals_clear(client);
+		}
 
 		if (is_service) {
 			break;
