@@ -1409,6 +1409,9 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 
 static size_t prepare_send_iovecs(od_xplan_t *xp, struct iovec *iovecs)
 {
+	/* An invalid unnamed Parse makes PostgreSQL enter the same error state. */
+	static const uint8_t error_parse[] = { KIWI_FE_PARSE, 0, 0, 0, 9, 0,
+					       ')',	      0, 0, 0 };
 	size_t nentries = mm_vector_size(&xp->entries);
 	size_t written = 0;
 	int errored = 0;
@@ -1423,6 +1426,8 @@ static size_t prepare_send_iovecs(od_xplan_t *xp, struct iovec *iovecs)
 
 		if (e->type == OD_XPLAN_VIRTUAL_ERROR_RESPONSE) {
 			errored = 1;
+			iovecs[written].iov_base = (void *)error_parse;
+			iovecs[written++].iov_len = sizeof(error_parse);
 			continue;
 		}
 
@@ -1437,8 +1442,57 @@ static size_t prepare_send_iovecs(od_xplan_t *xp, struct iovec *iovecs)
 
 static od_frontend_status_t run_virtual_error(od_xplan_entry_t *error,
 					      od_client_t *client,
+					      od_server_t *server,
 					      uint32_t timeout_ms)
 {
+	/* Consume the deliberately failing Parse before sending our error. */
+	for (;;) {
+		machine_msg_t *msg =
+			od_read(&server->io, timeout_ms, OD_READ_BE);
+		if (msg == NULL) {
+			return OD_ESERVER_READ;
+		}
+		kiwi_be_type_t type = msg_be_type(msg);
+		if (type == KIWI_BE_ERROR_RESPONSE) {
+			kiwi_fe_error_t parsed;
+			int rc = kiwi_fe_read_error(machine_msg_data(msg),
+						    machine_msg_size(msg),
+						    &parsed);
+			if (rc != 0 || parsed.code == NULL) {
+				machine_msg_free(msg);
+				return OD_ESERVER_READ;
+			}
+			if (strcmp(parsed.code, KIWI_SYNTAX_ERROR) != 0 &&
+			    strcmp(parsed.code,
+				   KIWI_IN_FAILED_SQL_TRANSACTION) != 0) {
+				od_backend_error(server, machine_msg_data(msg),
+						 machine_msg_size(msg));
+				return od_write2(&client->io, msg,
+						 timeout_ms) == 0 ?
+					       OD_OK :
+					       OD_ECLIENT_WRITE;
+			}
+			machine_msg_free(msg);
+			break;
+		}
+		if (type == KIWI_BE_PARAMETER_STATUS &&
+		    od_backend_update_parameter(server, machine_msg_data(msg),
+						machine_msg_size(msg),
+						0) == -1) {
+			machine_msg_free(msg);
+			return OD_ESERVER_READ;
+		}
+		if (type != KIWI_BE_PARAMETER_STATUS &&
+		    type != KIWI_BE_NOTICE_RESPONSE &&
+		    type != KIWI_BE_NOTIFICATION_RESPONSE) {
+			machine_msg_free(msg);
+			return OD_ESERVER_READ;
+		}
+		if (od_write2(&client->io, msg, timeout_ms) != 0) {
+			return OD_ECLIENT_WRITE;
+		}
+	}
+
 	int rc = od_io_write(&client->io, error->vresp, timeout_ms);
 	if (rc != 0) {
 		return OD_ECLIENT_WRITE;
@@ -1832,6 +1886,9 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 				return status;
 			}
 			forward_begin = -1;
+			if (server->xproto_err) {
+				continue;
+			}
 		}
 
 		switch (entry->type) {
@@ -1848,7 +1905,8 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		case OD_XPLAN_VIRTUAL_ERROR_RESPONSE:
 			server->xproto_err = 1;
 
-			status = run_virtual_error(entry, client, timeout_ms);
+			status = run_virtual_error(entry, client, server,
+						   timeout_ms);
 			break;
 		case OD_XPLAN_VIRTUAL_PARSE_COMPLETE:
 			status = run_virtual_parse_complete(entry, client,
