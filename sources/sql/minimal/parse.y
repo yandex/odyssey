@@ -144,9 +144,10 @@ typedef od_sql_location_t od_sql_minimal_yyltype_t;
 %token <str> KW_OFF
 %token <str> KW_BEGIN
 
-/* transaction control (only BEGIN) */
+/* transaction control */
 %token <str> KW_WORK
 %token <str> KW_TRANSACTION
+%token <str> KW_COMMIT KW_ROLLBACK KW_AND KW_NO KW_CHAIN
 
 /* prepared statements */
 %token <str> KW_DEALLOCATE
@@ -167,6 +168,8 @@ typedef od_sql_location_t od_sql_minimal_yyltype_t;
 %type <node> set_stmt
 %type <node> show_stmt
 %type <node> begin_stmt
+%type <node> transaction_end_stmt
+%type <ival> opt_chain
 %type <node> deallocate_stmt
 %type <node> discard_stmt
 %type <node> unlisten_stmt
@@ -205,6 +208,7 @@ stmt:
 	  set_stmt
 	| show_stmt
 	| begin_stmt
+	| transaction_end_stmt
 	| deallocate_stmt
 	| discard_stmt
 	| unlisten_stmt
@@ -220,6 +224,10 @@ name:
 
 unreserved_keyword:
       KW_BEGIN
+    | KW_COMMIT
+    | KW_ROLLBACK
+    | KW_CHAIN
+    | KW_NO
     | KW_DEALLOCATE
     | KW_DISCARD
     | KW_EXECUTE
@@ -353,6 +361,31 @@ opt_transaction:
 	  %empty
 	| KW_WORK
 	| KW_TRANSACTION
+	;
+
+transaction_end_stmt:
+	  KW_COMMIT opt_transaction opt_chain
+		{
+			od_sql_minimal_transaction_stmt_t *n =
+				ALLOC_NODE(ctx, transaction, OD_SQL_MINIMAL_NODE_TYPE_COMMIT_STMT);
+			if (n == NULL) YYABORT;
+			n->chain = $3;
+			$$ = (od_sql_minimal_node_t *)n;
+		}
+	| KW_ROLLBACK opt_transaction opt_chain
+		{
+			od_sql_minimal_transaction_stmt_t *n =
+				ALLOC_NODE(ctx, transaction, OD_SQL_MINIMAL_NODE_TYPE_ROLLBACK_STMT);
+			if (n == NULL) YYABORT;
+			n->chain = $3;
+			$$ = (od_sql_minimal_node_t *)n;
+		}
+	;
+
+opt_chain:
+	  %empty { $$ = 0; }
+	| KW_AND KW_CHAIN { $$ = 1; }
+	| KW_AND KW_NO KW_CHAIN { $$ = 0; }
 	;
 
 /*

@@ -95,6 +95,18 @@ static void parse_fail(const char *input)
 	test(node == NULL);
 }
 
+static void test_transaction_end(void)
+{
+	test(strcmp(parse_ok("COMMIT"), "(commit)") == 0);
+	test(strcmp(parse_ok("commit work and chain;"), "(commit chain)") == 0);
+	test(strcmp(parse_ok("ROLLBACK /* comment */ TRANSACTION AND NO CHAIN"),
+		    "(rollback)") == 0);
+	test(strcmp(parse_ok("rollback and chain"), "(rollback chain)") == 0);
+	parse_fail("ROLLBACK TO SAVEPOINT s");
+	parse_fail("COMMIT; SELECT 1");
+	parse_fail("ROLLBACK AND CHAIN; SELECT 1");
+}
+
 /*
  * SHOW tests
  */
@@ -438,8 +450,6 @@ static void test_parse_errors(void)
 	parse_fail("DEALLOCATE foo_stmt extra");
 	parse_fail("DISCARD");
 	parse_fail("UNLISTEN");
-	parse_fail("COMMIT");
-	parse_fail("ROLLBACK");
 	parse_fail("ABORT");
 	parse_fail("END");
 	parse_fail("ALLOCATE foo");
@@ -1520,6 +1530,7 @@ void odyssey_test_sql_minimal_parser(void)
 	test_begin_transaction();
 	test_begin_case_insensitive();
 	test_begin_with_semicolon();
+	test_transaction_end();
 
 	test_deallocate_name();
 	test_deallocate_prepare_name();

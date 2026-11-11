@@ -17,6 +17,8 @@ typedef enum {
 	OD_SQL_MINIMAL_NODE_TYPE_SHOW_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_SET_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT,
+	OD_SQL_MINIMAL_NODE_TYPE_COMMIT_STMT,
+	OD_SQL_MINIMAL_NODE_TYPE_ROLLBACK_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_DEALLOCATE_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_DISCARD_STMT,
 	OD_SQL_MINIMAL_NODE_TYPE_UNLISTEN_STMT,
@@ -48,6 +50,11 @@ typedef struct {
 typedef struct {
 	od_sql_minimal_node_tag_t type;
 } od_sql_minimal_begin_stmt_t;
+
+typedef struct {
+	od_sql_minimal_node_tag_t type;
+	int chain;
+} od_sql_minimal_transaction_stmt_t;
 
 typedef struct {
 	od_sql_minimal_node_tag_t type;

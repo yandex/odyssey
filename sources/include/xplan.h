@@ -205,6 +205,8 @@ struct od_xplan {
 	 * virtualizing them would be wrong
 	 */
 	int errored;
+	bool virtual_tx_error;
+	bool track_transaction_state;
 };
 
 void od_xplan_init(od_xplan_t *xp);

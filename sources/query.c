@@ -18,6 +18,7 @@
 #include <tsa.h>
 #include <util.h>
 #include <analyze.h>
+#include <worker.h>
 #include <sql/minimal/parser.h>
 #include <sql/full/parser.h>
 #include <sql/full/pg_constants.h>
@@ -25,11 +26,20 @@
 od_config_query_parsing_mode_t od_query_parser_mode(od_client_t *client)
 {
 	if (client->parser_mode >= 0) {
+		if (client->server != NULL && client->server->virtual_error &&
+		    client->parser_mode ==
+			    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
+			return OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
+		}
 		return client->parser_mode;
 	}
 	od_instance_t *instance = client->global->instance;
 	od_config_query_parsing_mode_t mode =
 		instance->config.query_parsing.mode;
+	if (client->server != NULL && client->server->virtual_error &&
+	    mode == OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
+		mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
+	}
 	if (mode == OD_CONFIG_QUERY_PARSING_MODE_FULL &&
 	    !od_tsa_auto_route_ro_enabled(client)) {
 		/*
@@ -40,6 +50,40 @@ od_config_query_parsing_mode_t od_query_parser_mode(od_client_t *client)
 		mode = OD_CONFIG_QUERY_PARSING_MODE_MINIMAL;
 	}
 	return mode;
+}
+
+od_tx_query_kind_t od_query_transaction_kind(const char *query, size_t len,
+					     bool *chain)
+{
+	if (chain != NULL) {
+		*chain = false;
+	}
+	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
+	od_sql_minimal_node_t *node =
+		od_sql_minimal_parse(query, len, arena, NULL, NULL);
+	od_tx_query_kind_t kind = OD_TX_QUERY_OTHER;
+	if (node != NULL) {
+		switch (node->type) {
+		case OD_SQL_MINIMAL_NODE_TYPE_BEGIN_STMT:
+			kind = OD_TX_QUERY_BEGIN;
+			break;
+		case OD_SQL_MINIMAL_NODE_TYPE_COMMIT_STMT:
+		case OD_SQL_MINIMAL_NODE_TYPE_ROLLBACK_STMT:
+			kind = node->type == OD_SQL_MINIMAL_NODE_TYPE_COMMIT_STMT ?
+				       OD_TX_QUERY_COMMIT :
+				       OD_TX_QUERY_ROLLBACK;
+			if (chain != NULL) {
+				*chain = ((od_sql_minimal_transaction_stmt_t *)
+						  node)
+						 ->chain;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	od_linear_alloc_reset(arena, 0);
+	return kind;
 }
 
 machine_msg_t *od_query_do(od_server_t *server, const char *query, char *param,

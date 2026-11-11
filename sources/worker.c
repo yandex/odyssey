@@ -33,6 +33,22 @@ static OD_THREAD_LOCAL od_linear_alloc_t linear_alloc;
 
 OD_THREAD_LOCAL bool worker_shutting_down = false;
 
+int od_worker_ensure_local_linear_alloc(od_instance_t *instance)
+{
+	if (linear_alloc.buf != NULL) {
+		return 0;
+	}
+	size_t sz = instance->config.query_parsing.mem_limit_bytes;
+	linear_alloc_buf = od_malloc(sz);
+	if (linear_alloc_buf == NULL) {
+		return -1;
+	}
+	memset(linear_alloc_buf, 0, sz);
+	od_linear_alloc_init(&linear_alloc, linear_alloc_buf, sz);
+	mm_machine_atexit(od_free, linear_alloc_buf);
+	return 0;
+}
+
 static void setup_affinity(od_instance_t *instance, int wid)
 {
 	const od_affinity_config_t *config = instance->config.cpu_affinity;
@@ -112,18 +128,13 @@ static inline void od_worker(void *arg)
 	memset(&linear_alloc, 0, sizeof(linear_alloc));
 	if (instance->config.query_parsing.mode !=
 	    OD_CONFIG_QUERY_PARSING_MODE_DISABLED) {
-		size_t sz = instance->config.query_parsing.mem_limit_bytes;
-		linear_alloc_buf = od_malloc(sz);
-		if (linear_alloc_buf == NULL) {
+		if (od_worker_ensure_local_linear_alloc(instance) != 0) {
 			od_fatal(
 				&instance->logger, NULL, NULL,
 				"failed to init worker's linear allocator, errno=%d (%s)",
 				mm_errno_get(), strerror(mm_errno_get()));
 			return;
 		}
-		memset(linear_alloc_buf, 0, sz);
-		od_linear_alloc_init(&linear_alloc, linear_alloc_buf, sz);
-		mm_machine_atexit(od_free, (void *)linear_alloc_buf);
 	}
 
 	while (!worker_shutting_down) {

@@ -24,6 +24,16 @@ void od_query_parse_fill_ctx(const char *query, uint32_t query_len,
 
 od_config_query_parsing_mode_t od_query_parser_mode(od_client_t *client);
 
+typedef enum {
+	OD_TX_QUERY_OTHER,
+	OD_TX_QUERY_BEGIN,
+	OD_TX_QUERY_COMMIT,
+	OD_TX_QUERY_ROLLBACK,
+} od_tx_query_kind_t;
+
+od_tx_query_kind_t od_query_transaction_kind(const char *query, size_t len,
+					     bool *chain);
+
 __attribute__((hot)) extern int od_query_format(char *format_pos,
 						char *format_end,
 						kiwi_var_t *user, char *peer,

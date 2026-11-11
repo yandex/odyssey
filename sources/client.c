@@ -16,6 +16,71 @@
 #include <list.h>
 #include <query.h>
 
+static void virtual_portal_destroy(void *item)
+{
+	char *name = *(char **)item;
+	if (name != NULL) {
+		od_free(name);
+	}
+}
+
+bool od_client_virtual_portal_has(od_client_t *client, const char *name)
+{
+	for (size_t i = 0;
+	     i < mm_vector_size(&client->virtual_recovery_portals); ++i) {
+		char **item =
+			mm_vector_get(&client->virtual_recovery_portals, i);
+		if (*item != NULL && strcmp(*item, name) == 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void od_client_virtual_portal_remove(od_client_t *client, const char *name)
+{
+	for (size_t i = 0;
+	     i < mm_vector_size(&client->virtual_recovery_portals); ++i) {
+		char **item =
+			mm_vector_get(&client->virtual_recovery_portals, i);
+		if (*item != NULL && strcmp(*item, name) == 0) {
+			od_free(*item);
+			*item = NULL;
+			return;
+		}
+	}
+}
+
+int od_client_virtual_portal_add(od_client_t *client, const char *name)
+{
+	if (od_client_virtual_portal_has(client, name)) {
+		return 0;
+	}
+	char *copy = od_strdup(name);
+	if (copy == NULL) {
+		return -1;
+	}
+	for (size_t i = 0;
+	     i < mm_vector_size(&client->virtual_recovery_portals); ++i) {
+		char **item =
+			mm_vector_get(&client->virtual_recovery_portals, i);
+		if (*item == NULL) {
+			*item = copy;
+			return 0;
+		}
+	}
+	if (mm_vector_append(&client->virtual_recovery_portals, &copy) != 0) {
+		od_free(copy);
+		return -1;
+	}
+	return 0;
+}
+
+void od_client_virtual_portals_clear(od_client_t *client)
+{
+	mm_vector_clear(&client->virtual_recovery_portals);
+}
+
 void od_client_init(od_client_t *client)
 {
 	client->state = OD_CLIENT_UNDEF;
@@ -77,6 +142,8 @@ void od_client_init(od_client_t *client)
 	client->parser_mode = -1;
 
 	client->pending_begin = NULL;
+	mm_vector_init(&client->virtual_recovery_portals, sizeof(char *),
+		       virtual_portal_destroy);
 	client->debug_log_sampled = -1;
 
 	memset(client->scram_client_key, 0, sizeof(client->scram_client_key));
@@ -127,6 +194,7 @@ void od_client_free(od_client_t *client)
 	kiwi_vars_free(&client->vars);
 
 	od_relay_destroy(&client->relay);
+	mm_vector_destroy(&client->virtual_recovery_portals);
 
 	od_query_ctx_reset(&client->query_ctx);
 	od_client_pending_begin_clear(client);
