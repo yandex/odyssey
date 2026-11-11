@@ -12341,6 +12341,8 @@ PrepareStmt: PREPARE name prep_type_clause AS PreparableStmt
 					n->name = $2;
 					n->argtypes = $3;
 					n->query = $5;
+					n->name_location = @2;
+					n->name_end_location = $<core_yystype>2.identifier.end_location;
 					$$ = (Node *) n;
 				}
 		;

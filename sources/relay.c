@@ -378,12 +378,172 @@ rewrite_sql_execute(od_client_t *client, const char *query, uint32_t query_len,
 	return OD_OK;
 }
 
+/* Send a private Parse or Close followed by Sync, without exposing replies. */
+static od_frontend_status_t sql_prepare_shadow(od_server_t *server,
+					       od_pstmt_t *pstmt, bool close,
+					       uint32_t timeout_ms)
+{
+	machine_msg_t *msg;
+	int name_len = strlen(pstmt->name) + 1;
+	if (close) {
+		msg = kiwi_fe_write_close(NULL,
+					  KIWI_FE_CLOSE_PREPARED_STATEMENT,
+					  pstmt->name, name_len);
+	} else {
+		static const char query[] = "SELECT 1";
+		msg = kiwi_fe_write_parse(NULL, pstmt->name, name_len, query,
+					  sizeof(query), 0, NULL);
+	}
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+	machine_msg_t *sync = kiwi_fe_write_sync(msg);
+	if (sync == NULL) {
+		machine_msg_free(msg);
+		return OD_EOOM;
+	}
+	if (od_write2(&server->io, sync, timeout_ms) != 0) {
+		return OD_ESERVER_WRITE;
+	}
+	od_server_sync_request(server, 1);
+	return od_service_stream_server_until_rfq(server, 0, timeout_ms,
+						  OD_WAIT_DEPLOY_SERVER_READ);
+}
+
+static od_frontend_status_t
+rewrite_duplicate_sql_prepare(od_client_t *client, const char *query,
+			      uint32_t query_len, machine_msg_t **rewritten,
+			      od_pstmt_t **shadow, uint32_t timeout_ms)
+{
+	od_query_ctx_t *ctx = &client->query_ctx;
+	od_server_t *server = client->server;
+	if (!client->rule->pool->reserve_prepared_statement ||
+	    !od_query_ctx_has(ctx, OD_QUERY_CTX_IS_PREPARE) ||
+	    server->is_error_tx) {
+		return OD_OK;
+	}
+	od_pstmt_t *pstmt = od_client_get_pstmt(client, ctx->s1);
+	if (pstmt == NULL) {
+		return OD_OK;
+	}
+
+	size_t start = ctx->name_location.start;
+	size_t end = ctx->name_location.end;
+	if (start >= end || end >= query_len) {
+		return OD_OK;
+	}
+	size_t name_len = strlen(pstmt->name);
+	size_t size = sizeof(kiwi_header_t) + query_len - (end - start) +
+		      name_len + 1;
+	*rewritten = machine_msg_create(size);
+	if (*rewritten == NULL) {
+		return OD_EOOM;
+	}
+	char *pos = machine_msg_data(*rewritten);
+	kiwi_write8(&pos, KIWI_FE_QUERY);
+	kiwi_write32(&pos, size - 1);
+	kiwi_write(&pos, query, start);
+	kiwi_write8(&pos, ' ');
+	kiwi_write(&pos, pstmt->name, name_len);
+	kiwi_write(&pos, query + end, query_len - end);
+
+	if (!od_server_has_pstmt(server, pstmt)) {
+		od_frontend_status_t status =
+			sql_prepare_shadow(server, pstmt, false, timeout_ms);
+		if (status != OD_OK) {
+			machine_msg_free(*rewritten);
+			*rewritten = NULL;
+			return status;
+		}
+		*shadow = pstmt;
+		/* A disconnect before Close must not return this server to the pool. */
+		server->msg_broken = 1;
+	}
+	return OD_OK;
+}
+
+static od_frontend_status_t stream_duplicate_sql_prepare(od_client_t *client,
+							 od_pstmt_t *shadow,
+							 uint32_t timeout_ms)
+{
+	od_server_t *server = client->server;
+	for (;;) {
+		machine_msg_t *msg =
+			od_read(&server->io, timeout_ms, OD_READ_BE);
+		if (msg == NULL) {
+			return OD_ESERVER_READ;
+		}
+		char *data = machine_msg_data(msg);
+		int size = machine_msg_size(msg);
+		kiwi_be_type_t type = *data;
+		if (type == KIWI_BE_ERROR_RESPONSE) {
+			kiwi_fe_error_t error;
+			int rc = kiwi_fe_read_error(data, size, &error);
+			if (rc != 0 || error.code == NULL) {
+				machine_msg_free(msg);
+				return OD_ESERVER_READ;
+			}
+			od_backend_error(server, data, size);
+			if (strcmp(error.code, KIWI_DUPLICATE_PSTATEMENT) ==
+			    0) {
+				char buf[OD_QRY_MAX_SZ];
+				int len = od_snprintf(
+					buf, sizeof(buf),
+					"prepared statement \"%s\" already exists",
+					client->query_ctx.s1);
+				machine_msg_t *replacement =
+					kiwi_be_write_error(
+						NULL, KIWI_DUPLICATE_PSTATEMENT,
+						buf, len);
+				machine_msg_free(msg);
+				if (replacement == NULL) {
+					return OD_EOOM;
+				}
+				msg = replacement;
+			}
+		} else if (type == KIWI_BE_PARAMETER_STATUS) {
+			if (od_backend_update_parameter(server, data, size,
+							0) == -1) {
+				machine_msg_free(msg);
+				return OD_ESERVER_READ;
+			}
+		} else if (type == KIWI_BE_READY_FOR_QUERY) {
+			if (od_backend_ready(server, data, size) == -1) {
+				machine_msg_free(msg);
+				return OD_ESERVER_READ;
+			}
+			int64_t query_time = 0;
+			od_stat_query_end(&client->route->stats,
+					  &server->stats_state,
+					  server->is_transaction, &query_time);
+			if (shadow != NULL) {
+				od_frontend_status_t status =
+					sql_prepare_shadow(server, shadow, true,
+							   timeout_ms);
+				if (status != OD_OK) {
+					machine_msg_free(msg);
+					return status;
+				}
+				server->msg_broken = 0;
+			}
+			return od_write2(&client->io, msg, timeout_ms) == 0 ?
+				       OD_OK :
+				       OD_ECLIENT_WRITE;
+		}
+		if (od_write2(&client->io, msg, timeout_ms) != 0) {
+			return OD_ECLIENT_WRITE;
+		}
+	}
+}
+
 static od_frontend_status_t
 process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 {
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
 	od_frontend_status_t status;
+	od_pstmt_t *shadow = NULL;
+	bool duplicate_prepare = false;
 
 	char *data = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
@@ -414,8 +574,17 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		}
 
 		machine_msg_t *execute = NULL;
-		status = rewrite_sql_execute(client, query, query_len, &execute,
-					     timeout_ms);
+		status = rewrite_duplicate_sql_prepare(client, query, query_len,
+						       &execute, &shadow,
+						       timeout_ms);
+		if (status != OD_OK) {
+			return status;
+		}
+		duplicate_prepare = execute != NULL;
+		if (!duplicate_prepare) {
+			status = rewrite_sql_execute(client, query, query_len,
+						     &execute, timeout_ms);
+		}
 		if (status != OD_OK) {
 			return status;
 		}
@@ -471,6 +640,10 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 			return status;
 		}
 		od_client_pending_begin_clear(client);
+	}
+
+	if (duplicate_prepare) {
+		return stream_duplicate_sql_prepare(client, shadow, timeout_ms);
 	}
 
 	status = od_stream_server_until_rfq(server, timeout_ms,

@@ -1861,6 +1861,8 @@ NodeTag		type;
 	char	   *name;			
 	List	   *argtypes;		
 	Node	   *query;
+	ParseLoc	name_location;
+	ParseLoc	name_end_location;
 } PrepareStmt;
 
 typedef struct PublicationAllObjSpec

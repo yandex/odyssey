@@ -952,6 +952,12 @@ static void parse_full(const char *query, uint32_t query_len,
 			od_snprintf(ctx->s1, sizeof(ctx->s1), "%s",
 				    dstmt->name);
 		}
+	} else if (IsA(node, PrepareStmt)) {
+		PrepareStmt *pstmt = castNode(PrepareStmt, node);
+		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_PREPARE);
+		od_snprintf(ctx->s1, sizeof(ctx->s1), "%s", pstmt->name);
+		ctx->name_location.start = pstmt->name_location;
+		ctx->name_location.end = pstmt->name_end_location;
 	} else if (IsA(node, ExecuteStmt)) {
 		ExecuteStmt *estmt = castNode(ExecuteStmt, node);
 		od_query_ctx_set(ctx, OD_QUERY_CTX_IS_EXECUTE);
