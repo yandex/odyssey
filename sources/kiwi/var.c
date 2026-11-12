@@ -221,3 +221,59 @@ error:
 	*query = NULL;
 	return -1;
 }
+
+static int kiwi_var_has_high_byte(kiwi_var_t *var)
+{
+	for (int i = 0; i < var->value_len; i++) {
+		if ((unsigned char)var->value[i] >= 0x80) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int kiwi_vars_cas_encoding(kiwi_vars_t *client, kiwi_vars_t *server, char *buf,
+			   int buf_len)
+{
+	kiwi_var_t *enc = kiwi_vars_of(client, KIWI_VAR_CLIENT_ENCODING);
+	if (enc->type == KIWI_VAR_UNDEF || enc->value_len <= 0 ||
+	    kiwi_var_compare(enc,
+			     kiwi_vars_of(server, KIWI_VAR_CLIENT_ENCODING))) {
+		return 0;
+	}
+
+	int need = 0;
+	for (kiwi_var_type_t type = KIWI_VAR_CLIENT_ENCODING + 1;
+	     type < KIWI_VAR_MAX && !need; type++) {
+		if (type == KIWI_VAR_COMPRESSION ||
+		    type == KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS) {
+			continue;
+		}
+		kiwi_var_t *var = kiwi_vars_of(client, type);
+		if (var->type == KIWI_VAR_UNDEF ||
+		    kiwi_var_compare(var, kiwi_vars_of(server, type))) {
+			continue;
+		}
+		need = kiwi_var_has_high_byte(var);
+	}
+	if (!need) {
+		return 0;
+	}
+
+	const char *prefix = "SET client_encoding=";
+	int prefix_len = strlen(prefix);
+	if (buf_len < prefix_len + 2) {
+		return -1;
+	}
+	memcpy(buf, prefix, prefix_len);
+	int quote_len =
+		kiwi_enquote(enc->value, buf + prefix_len,
+			     buf_len - prefix_len - 1 /* ';' */);
+	if (quote_len == -1) {
+		return -1;
+	}
+	int pos = prefix_len + quote_len;
+	buf[pos++] = ';';
+	buf[pos] = 0;
+	return pos;
+}

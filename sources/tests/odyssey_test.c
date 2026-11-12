@@ -22,6 +22,7 @@ char test_substring[1024] = { 0 };
 /* KIWI */
 extern void kiwi_test_enquote(void);
 extern void kiwi_test_vars_cas(void);
+extern void kiwi_test_vars_cas_encoding(void);
 extern void kiwi_test_pgoptions(void);
 extern void kiwi_test_be_read_startup_options(void);
 extern void kiwi_test_fe_read_auth(void);
@@ -171,6 +172,7 @@ int main(int argc, char *argv[])
 
 	odyssey_test(kiwi_test_enquote);
 	odyssey_test(kiwi_test_vars_cas);
+	odyssey_test(kiwi_test_vars_cas_encoding);
 	odyssey_test(kiwi_test_pgoptions);
 	odyssey_test(kiwi_test_be_read_startup_options);
 	odyssey_test(kiwi_test_fe_read_auth);
