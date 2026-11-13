@@ -149,6 +149,9 @@ static mm_zpq_stream_t *zstd_create(mm_zpq_tx_func tx_func,
 static ssize_t zstd_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 {
 	zstd_stream_t *zs = (zstd_stream_t *)zstream;
+	/* reset the error text at the start of the operation, so it stays
+	 * reachable until the next read attempt (same lifetime as TLS) */
+	zs->rx_error = NULL;
 	ssize_t rc;
 	ZSTD_outBuffer out;
 	out.dst = buf;
@@ -366,6 +369,9 @@ static mm_zpq_stream_t *zlib_create(mm_zpq_tx_func tx_func,
 static ssize_t zlib_read(mm_zpq_stream_t *zstream, void *buf, size_t size)
 {
 	zlib_stream_t *zs = (zlib_stream_t *)zstream;
+	/* reset the error text at the start of the operation, so it stays
+	 * reachable until the next read attempt (same lifetime as TLS) */
+	zs->rx.msg = NULL;
 	int rc;
 	zs->rx.next_out = (Bytef *)buf;
 	zs->rx.avail_out = size;

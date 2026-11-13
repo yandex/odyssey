@@ -14,10 +14,6 @@
 #include <machinarium/machine.h>
 #include <machinarium/tls.h>
 #include <machinarium/socket.h>
-#include <machinarium/compression.h>
-
-static ssize_t mm_io_write_lower(mm_io_t *io, const void *buf, size_t size);
-static ssize_t mm_io_read_lower(mm_io_t *io, void *buf, size_t size);
 
 static void mm_io_on_read_cb(mm_fd_t *handle)
 {
@@ -241,20 +237,7 @@ int mm_io_is_tls(mm_io_t *io)
 
 int mm_io_set_compression(mm_io_t *io, char algorithm)
 {
-	if (io->zpq_stream) {
-		mm_errno_set(EINPROGRESS);
-		return -1;
-	}
-
-	int impl = mm_zpq_get_algorithm_impl(algorithm);
-	if (impl >= 0) {
-		io->zpq_stream =
-			zpq_create(impl, (mm_zpq_tx_func)mm_io_write_lower,
-				   (mm_zpq_rx_func)mm_io_read_lower, io, NULL,
-				   0);
-		return 0;
-	}
-	return -1;
+	return mm_bio_zpq_attach(io, algorithm);
 }
 
 mm_io_t *mm_io_create(void)
@@ -281,7 +264,6 @@ MACHINE_API void mm_io_free(mm_io_t *obj)
 	mm_errno_set(0);
 	mm_bio_free_chain(io->bio);
 	mm_tls_free(io);
-	mm_compression_free(io);
 	mm_free(io);
 }
 
@@ -472,10 +454,7 @@ int mm_io_socket(mm_io_t *io, struct sockaddr *sa)
 ssize_t mm_io_write(mm_io_t *io, const void *buf, size_t size,
 		    size_t *processed)
 {
-	if (io->zpq_stream) {
-		return mm_zpq_write(io->zpq_stream, buf, size, processed);
-	}
-	return mm_io_write_lower(io, buf, size);
+	return mm_bio_write(io->bio, buf, size, processed);
 }
 
 ssize_t mm_io_writev(mm_io_t *io, const struct iovec *iov, int iovcnt,
@@ -491,52 +470,15 @@ ssize_t mm_io_writev(mm_io_t *io, const struct iovec *iov, int iovcnt,
 		iov_to_write = IOV_MAX;
 	}
 
-	ssize_t rc;
-	if (io->zpq_stream) {
-		/* mm_compression_writev reports consumed input bytes via
-		 * *processed on partial-progress errors (rc <= 0); on
-		 * success it returns the number of consumed input bytes
-		 * as rc, leaving *processed untouched. This matches the
-		 * contract of machine_write_raw() / mm_zpq_write(). */
-		rc = mm_compression_writev(io, iov, iov_to_write, processed);
-	} else {
-		return mm_bio_writev(io->bio, iov, iov_to_write, processed);
-	}
-
-	if (rc > 0) {
-		return rc;
-	}
-	int errno_ = errno;
-	mm_errno_set(errno_);
-	if (machine_errno_retryable(errno_)) {
-		return -1;
-	}
-	io->connected = 0;
-	return -1;
+	return mm_bio_writev(io->bio, iov, iov_to_write, processed);
 }
 
 int mm_io_write_pending(mm_io_t *io)
 {
-	if (io->zpq_stream) {
-		return mm_zpq_buffered_tx(io->zpq_stream) != 0;
-	}
-	return 0;
-}
-
-static ssize_t mm_io_write_lower(mm_io_t *io, const void *buf, size_t size)
-{
-	return mm_bio_write(io->bio, buf, size, NULL);
+	return mm_bio_write_pending(io->bio);
 }
 
 ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
-{
-	if (io->zpq_stream) {
-		return mm_zpq_read(io->zpq_stream, buf, size);
-	}
-	return mm_io_read_lower(io, buf, size);
-}
-
-static ssize_t mm_io_read_lower(mm_io_t *io, void *buf, size_t size)
 {
 	return mm_bio_read(io->bio, buf, size);
 }

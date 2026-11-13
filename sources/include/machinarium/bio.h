@@ -15,6 +15,12 @@
 struct mm_bio_methods {
 	const char *name;
 	ssize_t (*read)(mm_bio_t *, void *, size_t);
+	/*
+	 * write/writev return the number of bytes written. On a
+	 * partial-progress error (rc <= 0) a layer may report the input
+	 * bytes it already consumed via *processed; those bytes must not
+	 * be resent on retry.
+	 */
 	ssize_t (*write)(mm_bio_t *, const void *, size_t, size_t *processed);
 	ssize_t (*writev)(mm_bio_t *, const struct iovec *, int,
 			  size_t *processed);
@@ -28,6 +34,10 @@ struct mm_bio_methods {
 
 extern const mm_bio_methods_t mm_bio_socket_methods;
 extern const mm_bio_methods_t mm_bio_tls_methods;
+extern const mm_bio_methods_t mm_bio_zpq_methods;
+
+/* attach the zpq compression layer on top of the stack */
+int mm_bio_zpq_attach(mm_io_t *, char algorithm);
 
 void mm_bio_init(mm_bio_t *, const mm_bio_methods_t *, mm_io_t *, void *state);
 void mm_bio_push(mm_bio_t **top, mm_bio_t *layer);
