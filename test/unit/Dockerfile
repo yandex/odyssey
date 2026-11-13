@@ -22,7 +22,7 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
     postgresql-client \
     procps \
     python3 \
-    libpthread-stubs0-dev libclang-rt-dev
+    libpthread-stubs0-dev libclang-rt-dev libzstd-dev
 
 RUN mkdir /odyssey
 WORKDIR /odyssey

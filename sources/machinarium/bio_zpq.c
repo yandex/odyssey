@@ -68,12 +68,42 @@ static int mm_bio_zpq_read_pending(mm_bio_t *bio)
 
 static int mm_bio_zpq_write_pending(mm_bio_t *bio)
 {
-	return mm_zpq_buffered_tx(bio->state) != 0;
+	/* number of bytes held by the compressor, 0 when empty */
+	return (int)mm_zpq_buffered_tx(bio->state);
+}
+
+/*
+ * Drain the bytes the compressor holds internally: every
+ * mm_zpq_write() call pushes the accumulated compressed output down
+ * (the return value of a zero-size write is always 0, the progress
+ * is measured by the buffered count). Non-blocking: returns -1 with
+ * EAGAIN on a stall.
+ */
+static int mm_bio_zpq_flush(mm_bio_t *bio)
+{
+	while (mm_zpq_buffered_tx(bio->state) != 0) {
+		size_t before = mm_zpq_buffered_tx(bio->state);
+		ssize_t rc = mm_zpq_write(bio->state, "", 0, NULL);
+		if (rc < 0) {
+			return -1;
+		}
+		if (mm_zpq_buffered_tx(bio->state) == before) {
+			/* the transport made no progress */
+			mm_errno_set(EAGAIN);
+			return -1;
+		}
+	}
+	return mm_bio_flush(bio->next);
 }
 
 static int mm_bio_zpq_shutdown(mm_bio_t *bio, uint32_t timeout)
 {
-	/* TODO: flush buffered_tx before the lower layer shutdown */
+	/*
+	 * best effort: discard whatever the compressor still holds,
+	 * data may be discarded on a stall - explicit mm_io_flush()
+	 * is required for guaranteed delivery
+	 */
+	mm_bio_flush(bio);
 	return mm_bio_shutdown(bio->next, timeout);
 }
 
@@ -101,6 +131,7 @@ const mm_bio_methods_t mm_bio_zpq_methods = {
 	.read = mm_bio_zpq_read,
 	.write = mm_bio_zpq_write,
 	.writev = mm_bio_zpq_writev,
+	.flush = mm_bio_zpq_flush,
 	.read_pending = mm_bio_zpq_read_pending,
 	.write_pending = mm_bio_zpq_write_pending,
 	.shutdown = mm_bio_zpq_shutdown,
@@ -112,6 +143,14 @@ const mm_bio_methods_t mm_bio_zpq_methods = {
 int mm_bio_zpq_attach(mm_io_t *io, char algorithm)
 {
 	if (io->bio_slots[MM_BIO_ZPQ].methods != NULL) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+	if (io->bio == &io->bio_slots[MM_BIO_BUF]) {
+		/*
+		 * the buf layer must stay on top of the stack,
+		 * attach the compression before the writebuf
+		 */
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}

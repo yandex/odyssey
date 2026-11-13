@@ -26,7 +26,7 @@ struct mm_bio {
 	void *state;
 };
 
-enum { MM_BIO_SOCKET, MM_BIO_TLS, MM_BIO_ZPQ, MM_BIO_MAX };
+enum { MM_BIO_SOCKET, MM_BIO_TLS, MM_BIO_ZPQ, MM_BIO_BUF, MM_BIO_MAX };
 
 typedef enum { MM_TLS_NONE, MM_TLS_PEER, MM_TLS_PEER_STRICT } mm_tlsverify_t;
 
@@ -125,6 +125,17 @@ int mm_io_set_keepalive(mm_io_t *, int enable, int delay, int interval,
 			int probes, int usr_timeout);
 int mm_io_set_nolinger(mm_io_t *io, int enable);
 int mm_io_advice_keepalive_usr_timeout(int delay, int interval, int probes);
+/* 
+ * The layer must be attached last, after the
+ * TLS/compression layers, so that it stays on top of the stack.
+ */
+int mm_io_buf_enable(mm_io_t *, size_t size);
+int mm_io_buf_disable(mm_io_t *);
+/*
+ * A single flush attempt: return 0 when the stack is drained, -1 with
+ * EAGAIN on a stall. Waiting is up to the caller.
+ */
+int mm_io_flush(mm_io_t *);
 int mm_io_set_tls(mm_io_t *, machine_tls_t *, uint32_t);
 int mm_io_set_compression(mm_io_t *, char algorithm);
 int mm_io_connect(mm_io_t *, struct sockaddr *, uint32_t time_ms);

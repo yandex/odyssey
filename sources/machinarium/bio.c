@@ -24,11 +24,16 @@ void mm_bio_push(mm_bio_t **top, mm_bio_t *layer)
 	*top = layer;
 }
 
+void mm_bio_free(mm_bio_t *bio)
+{
+	bio->methods->free(bio);
+}
+
 void mm_bio_free_chain(mm_bio_t *bio)
 {
 	while (bio) {
 		mm_bio_t *next = bio->next;
-		bio->methods->free(bio);
+		mm_bio_free(bio);
 		bio = next;
 	}
 }

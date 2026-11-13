@@ -42,9 +42,7 @@ MACHINE_API int machine_write_no_free(mm_io_t *destination, machine_msg_t *msg,
 	int total = 0;
 	char *src = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
-	/* If compression is on, also check that there is no data left in tx buffer
-	 */
-	while (total != size || mm_io_write_pending(io)) {
+	while (total != size) {
 		/* when using compression, some data may be processed
 		 * despite the non-positive return code */
 		size_t processed = 0;

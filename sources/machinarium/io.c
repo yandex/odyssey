@@ -208,9 +208,35 @@ MACHINE_API int machine_tls_set_key_file(machine_tls_t *obj, char *path)
 	return 0;
 }
 
+/*
+ * the buf layer must stay on top of the stack: buffering
+ * ciphertext or pre-compression bytes would corrupt the wire order
+ */
+static inline int mm_io_buf_is_top(mm_io_t *io)
+{
+	return io->bio == &io->bio_slots[MM_BIO_BUF];
+}
+
 int mm_io_set_tls(mm_io_t *io, machine_tls_t *tls, uint32_t timeout)
 {
 	if (io->tls) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+	if (mm_io_buf_is_top(io)) {
+		/*
+		 * the buf layer must stay on top of the stack,
+		 * attach the buf after the TLS setup
+		 */
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+	if (io->bio == &io->bio_slots[MM_BIO_ZPQ]) {
+		/*
+		 * after the handshake SSL_write/SSL_read bypass the
+		 * stack below the TLS layer, the compression would
+		 * be silently skipped
+		 */
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}
@@ -238,6 +264,46 @@ int mm_io_is_tls(mm_io_t *io)
 int mm_io_set_compression(mm_io_t *io, char algorithm)
 {
 	return mm_bio_zpq_attach(io, algorithm);
+}
+
+int mm_io_buf_enable(mm_io_t *io, size_t size)
+{
+	return mm_bio_buf_attach(io, size);
+}
+
+int mm_io_buf_disable(mm_io_t *io)
+{
+	if (!mm_io_buf_is_top(io)) {
+		mm_errno_set(EINVAL);
+		return -1;
+	}
+	mm_bio_t *slot = &io->bio_slots[MM_BIO_BUF];
+	if (mm_io_write_pending(io) > 0) {
+		mm_errno_set(EINPROGRESS);
+		return -1;
+	}
+	/* pop the layer, then release its state */
+	io->bio = slot->next;
+	mm_bio_free(slot);
+	slot->methods = NULL;
+	slot->next = NULL;
+	slot->state = NULL;
+	return 0;
+}
+
+/*
+ * A single flush attempt: return 0 when the stack is drained,
+ * -1 with EAGAIN on a stall. Waiting is up to the caller.
+ */
+int mm_io_flush(mm_io_t *io)
+{
+	mm_errno_set(0);
+	int rc = mm_bio_flush(io->bio);
+	if (rc == -1 && mm_errno_get() == 0) {
+		/* the layer failed without setting an errno */
+		mm_errno_set(EAGAIN);
+	}
+	return rc;
 }
 
 mm_io_t *mm_io_create(void)
