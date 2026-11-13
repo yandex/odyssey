@@ -86,9 +86,7 @@ struct mm_io {
 	int errored;
 	int error;
 	mm_call_t call;
-	/* compression */
-	mm_zpq_stream_t *zpq_stream;
-
+	/* transport layer stack, top layer first */
 	mm_bio_t bio_slots[MM_BIO_MAX];
 	mm_bio_t *bio;
 

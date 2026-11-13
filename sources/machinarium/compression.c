@@ -4,59 +4,10 @@
  * cooperative multitasking engine.
  */
 
-#include <errno.h>
 #include <string.h>
 
 #include <machinarium/machinarium.h>
-#include <machinarium/io.h>
-#include <machinarium/iov.h>
-#include <machinarium/memory.h>
 
-void mm_compression_free(mm_io_t *io)
-{
-	if (io->zpq_stream) {
-		mm_zpq_free(io->zpq_stream);
-	}
-}
-
-int mm_compression_writev(mm_io_t *io, const struct iovec *iov, int n,
-			  size_t *processed)
-{
-	int size = mm_iov_size_of(iov, n);
-	char *buffer = mm_malloc(size);
-	if (buffer == NULL) {
-		errno = ENOMEM;
-		return -1;
-	}
-	mm_iovcpy(buffer, iov, n);
-
-	int rc;
-	rc = mm_zpq_write(io->zpq_stream, buffer, size, processed);
-	mm_free(buffer);
-	return rc;
-}
-
-/* Returns value > 0 when there is read operation pending. */
-int mm_compression_read_pending(mm_io_t *io)
-{
-	return mm_zpq_buffered_rx(io->zpq_stream) ||
-	       mm_zpq_deferred_rx(io->zpq_stream);
-}
-
-/* Returns value > 0 when there is write operation pending. */
-int mm_compression_write_pending(mm_io_t *io)
-{
-	return mm_zpq_buffered_tx(io->zpq_stream);
-}
-
-/*
- * If client request compression, it sends list of supported
- * compression algorithms - client_compression_algorithms.
- * Each compression algorithm is identified
- * by one letter ('f' - Facebook zstd, 'z' - zlib).
- * Return value is the compression algorithm chosen by intersection
- * of client and server supported compression algorithms.
- * If match is not found, return value is MM_ZPQ_NO_COMPRESSION */
 MACHINE_API
 char machine_compression_choose_alg(char *client_compression_algorithms)
 {

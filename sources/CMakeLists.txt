@@ -52,6 +52,7 @@ set(od_src
     machinarium/bio.c
     machinarium/bio_socket.c
     machinarium/bio_tls.c
+    machinarium/bio_zpq.c
     machinarium/io.c
     machinarium/close.c
     machinarium/connect.c
@@ -423,6 +424,7 @@ set(od_test_src
     tests/machinarium/test_producer_consumer1.c
     tests/machinarium/test_producer_consumer2.c
     tests/machinarium/test_io_new.c
+    tests/machinarium/test_compression.c
     tests/machinarium/test_connect.c
     tests/machinarium/test_connect_timeout.c
     tests/machinarium/test_connect_cancel0.c
