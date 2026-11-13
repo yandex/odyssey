@@ -327,10 +327,14 @@ static inline int kiwi_enquote(char *src, char *dst, int dst_len)
 		return -1;
 	}
 	char *pos = dst;
-	char *end = dst + dst_len - 4;
+	char *end = dst + dst_len - 2;
 	*pos++ = 'E';
 	*pos++ = '\'';
-	while (*src && pos < end) {
+	while (*src) {
+		int escaped = *src == '\'' || *src == '\\';
+		if (end - pos < 1 + escaped) {
+			return -1;
+		}
 		if (*src == '\'') {
 			*pos++ = '\'';
 		} else if (*src == '\\') {
@@ -338,13 +342,17 @@ static inline int kiwi_enquote(char *src, char *dst, int dst_len)
 		}
 		*pos++ = *src++;
 	}
-	if (*src || pos > end) {
-		return -1;
-	}
 	*pos++ = '\'';
 	*pos = 0;
 	return (int)(pos - dst);
 }
 
-int kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server, char *query,
-		  int query_len, int smart_enquoting);
+/* Use query_buf while the SQL and its terminating NUL fit in query_buf_len.
+ * On success, *query is query_buf or an od_allocated buffer to release with
+ * od_free; it is NULL if no settings differ. On error, *query is NULL.
+ * *normalize_search_path is true only when an emitted search_path statement
+ * preserves the name list. Cache its reported value only after deployment succeeds.
+ */
+int kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server, char **query,
+		  char *query_buf, int query_buf_len,
+		  int smart_enquoting_search_path, int *normalize_search_path);

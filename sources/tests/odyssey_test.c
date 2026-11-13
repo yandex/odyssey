@@ -21,6 +21,7 @@ char test_substring[1024] = { 0 };
 
 /* KIWI */
 extern void kiwi_test_enquote(void);
+extern void kiwi_test_vars_cas(void);
 extern void kiwi_test_pgoptions(void);
 extern void kiwi_test_be_read_startup_options(void);
 extern void kiwi_test_fe_read_auth(void);
@@ -145,7 +146,6 @@ extern void odyssey_test_linear_alloc(void);
 extern void odyssey_test_scram(void);
 extern void odyssey_test_sql_minimal_parser(void);
 extern void odyssey_test_sql_full_parser(void);
-extern void odyssey_test_sql_pstmt(void);
 extern void odyssey_test_console_parser(void);
 extern void odyssey_test_config_field(void);
 extern void odyssey_test_autoconf(void);
@@ -169,6 +169,7 @@ int main(int argc, char *argv[])
 	signal(SIGPIPE, SIG_IGN);
 
 	odyssey_test(kiwi_test_enquote);
+	odyssey_test(kiwi_test_vars_cas);
 	odyssey_test(kiwi_test_pgoptions);
 	odyssey_test(kiwi_test_be_read_startup_options);
 	odyssey_test(kiwi_test_fe_read_auth);
@@ -290,7 +291,6 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_scram);
 	odyssey_test(odyssey_test_sql_minimal_parser);
 	odyssey_test(odyssey_test_sql_full_parser);
-	odyssey_test(odyssey_test_sql_pstmt);
 	odyssey_test(odyssey_test_console_parser);
 	odyssey_test(odyssey_test_config_field);
 	odyssey_test(odyssey_test_autoconf);

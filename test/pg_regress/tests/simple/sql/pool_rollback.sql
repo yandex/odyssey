@@ -1,0 +1,8 @@
+CREATE TABLE pool_rollback_test (i int);
+BEGIN;
+-- Make SELECT after reconnect wait for the first transaction to finish.
+LOCK TABLE pool_rollback_test IN ACCESS EXCLUSIVE MODE;
+INSERT INTO pool_rollback_test VALUES (42);
+\c
+SELECT * FROM pool_rollback_test;
+DROP TABLE pool_rollback_test;

@@ -1017,13 +1017,13 @@ attach_impl(od_client_t *client, kiwi_params_t *route_params, int is_deploy)
 		for (size_t i = 0; i < listen->storage_count; ++i) {
 			const char *name = listen->storage_names[i];
 
-			od_rules_lock(&router->rules);
+			od_router_lock(router);
 			od_rule_storage_t *storage =
 				od_rules_storage_match(&router->rules, name);
 			if (storage != NULL) {
 				od_rules_storage_ref(storage);
 			}
-			od_rules_unlock(&router->rules);
+			od_router_unlock(router);
 
 			if (storage == NULL) {
 				od_error(&instance->logger, client, NULL,
@@ -1079,7 +1079,7 @@ int od_frontend_host_is_known(od_client_t *client, const od_address_t *address)
 	od_router_t *router = client->global->router;
 	int found = 0;
 
-	od_rules_lock(&router->rules);
+	od_router_lock(router);
 	for (size_t i = 0; i < listen->storage_count && !found; ++i) {
 		od_rule_storage_t *storage = od_rules_storage_match(
 			&router->rules, listen->storage_names[i]);
@@ -1089,7 +1089,7 @@ int od_frontend_host_is_known(od_client_t *client, const od_address_t *address)
 		found = od_storage_find_endpoint_by_host(storage, address) !=
 			NULL;
 	}
-	od_rules_unlock(&router->rules);
+	od_router_unlock(router);
 
 	return found;
 }
@@ -2065,6 +2065,25 @@ static od_frontend_status_t client_process_message_full(od_client_t *client,
 			}
 		}
 
+		/*
+		 * Postgres skips every message until Sync after an
+		 * ErrorResponse received while in extended protocol
+		 * mode. Forwarding this Query would make the server
+		 * silently swallow it, and the coroutine would sleep
+		 * waiting for the reply forever. Drop it instead: like
+		 * direct PG, the client sees no reply to this Query; the
+		 * client's pending Sync closes the skip window and
+		 * brings ReadyForQuery.
+		 */
+		if (client->server != NULL && client->server->xproto_err) {
+			/*
+			 * do not free msg: it belongs to client->read_msg
+			 * which the caller keeps as a read buffer
+			 */
+			status = OD_OK;
+			break;
+		}
+
 		if (od_log_query_enabled(instance, route)) {
 			char *query;
 			uint32_t query_len;
@@ -2842,7 +2861,7 @@ od_frontend_replication_proxy_storage(od_client_t *client)
 	od_router_t *router = client->global->router;
 	od_instance_t *instance = client->global->instance;
 
-	od_rules_lock(&router->rules);
+	od_router_lock(router);
 
 	od_rule_storage_t *storage = NULL;
 	od_list_t *i;
@@ -2856,7 +2875,7 @@ od_frontend_replication_proxy_storage(od_client_t *client)
 		break;
 	}
 
-	od_rules_unlock(&router->rules);
+	od_router_unlock(router);
 
 	if (storage == NULL) {
 		od_error(&instance->logger, client, NULL,

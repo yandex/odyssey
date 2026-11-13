@@ -48,7 +48,6 @@ const char *od_rule_conn_type_to_str(od_rule_conn_type_t ct)
 
 void od_rules_init(od_rules_t *rules)
 {
-	mm_mutex_init(&rules->mu);
 	od_list_init(&rules->storages);
 #ifdef LDAP_FOUND
 	od_list_init(&rules->ldap_endpoints);
@@ -61,7 +60,6 @@ void od_rules_rule_free(od_rule_t *);
 
 void od_rules_free(od_rules_t *rules)
 {
-	mm_mutex_destroy(&rules->mu);
 	od_list_t *i, *n;
 
 #ifdef LDAP_FOUND
@@ -2430,7 +2428,8 @@ int od_rules_validate(od_rules_t *rules, od_config_t *config,
 	return 0;
 }
 
-int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
+int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src,
+			   od_list_t *retired_watchdogs)
 {
 	/*
 	 * Diff-based merge of storages from src into dst.
@@ -2444,8 +2443,11 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 	 *
 	 * Storages in dst that are not present in src (or whose contents
 	 * changed) are unlinked from dst.  Their watchdog (if running) is
-	 * signalled offline and joined before unref, so the coroutine
-	 * exits cleanly and drops its own ref.
+	 * signalled offline before unref, so the coroutine exits cleanly
+	 * and drops its own ref.  The join is deferred: coroutine ids are
+	 * collected into retired_watchdogs and the caller must join them
+	 * after releasing the router lock (a stopping watchdog needs the
+	 * router lock for its final polling step).
 	 *
 	 * New storages (present in src but not in dst) are moved into dst.
 	 *
@@ -2520,9 +2522,13 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 		} else {
 			/*
 			 * Storage is new or changed: move new into dst.
-			 * Stop and join the old watchdog (if running) before
-			 * unref, so the watchdog coroutine exits cleanly
-			 * and drops its own ref.  od_rules_storage_unref
+			 * Signal the old watchdog (if running) offline and
+			 * unlink before unref, so the watchdog coroutine
+			 * exits cleanly and drops its own ref.  The join is
+			 * deferred to the caller via retired_watchdogs: a
+			 * stopping watchdog needs the router lock for its
+			 * final polling step, so it must not be joined while
+			 * the router lock is held.  od_rules_storage_unref
 			 * no longer signals set_offline via refcount.
 			 */
 			if (old_storage) {
@@ -2530,8 +2536,18 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 				    old_storage->watchdog_coro_id != -1) {
 					od_storage_watchdog_set_offline(
 						old_storage->watchdog);
-					machine_join(
-						old_storage->watchdog_coro_id);
+
+					od_rules_watchdog_join_t *join =
+						od_malloc(sizeof(*join));
+					if (join != NULL) {
+						join->coro_id =
+							old_storage
+								->watchdog_coro_id;
+						od_list_init(&join->link);
+						od_list_append(
+							retired_watchdogs,
+							&join->link);
+					}
 				}
 				od_list_unlink(&old_storage->link);
 				od_rules_storage_unref(old_storage);
@@ -2539,12 +2555,14 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 
 			od_list_unlink(&new_storage->link);
 			od_rules_storage_add(dst, new_storage);
+			new_storage->mark = 1;
 		}
 	}
 
 	/*
 	 * Unlink storages in dst that were not matched (not present in
-	 * new config), stop their watchdogs and unref them.
+	 * new config), signal their watchdogs offline and unref them.
+	 * Joins are deferred to the caller via retired_watchdogs.
 	 */
 	od_list_foreach_safe (&dst->storages, i, n) {
 		od_rule_storage_t *s;
@@ -2552,7 +2570,15 @@ int od_rules_storage_merge(od_rules_t *dst, od_rules_t *src)
 		if (!s->mark) {
 			if (s->watchdog != NULL && s->watchdog_coro_id != -1) {
 				od_storage_watchdog_set_offline(s->watchdog);
-				machine_join(s->watchdog_coro_id);
+
+				od_rules_watchdog_join_t *join =
+					od_malloc(sizeof(*join));
+				if (join != NULL) {
+					join->coro_id = s->watchdog_coro_id;
+					od_list_init(&join->link);
+					od_list_append(retired_watchdogs,
+						       &join->link);
+				}
 			}
 			od_list_unlink(&s->link);
 			od_rules_storage_unref(s);

@@ -108,7 +108,6 @@ set(od_src
     deploy.c
     reset.c
     pstmt.c
-    sql_pstmt.c
     analyze.c
     clients_map.c
     frontend.c
@@ -384,6 +383,7 @@ set(od_test_binary odyssey_test)
 set(od_test_src
     tests/odyssey_test.c
     tests/kiwi/test_kiwi_enquote.c
+    tests/kiwi/test_kiwi_vars.c
     tests/kiwi/test_kiwi_pgoptions.c
     tests/kiwi/test_kiwi_fe_read_auth.c
     tests/kiwi/test_kiwi_be_read_query.c
@@ -498,7 +498,6 @@ set(od_test_src
     tests/odyssey/test_scram.c
     tests/odyssey/test_sql_parser.c
     tests/odyssey/test_sql_full_parser.c
-    tests/odyssey/test_sql_pstmt.c
     tests/odyssey/test_console_parser.c
     tests/odyssey/test_config_field.c
     tests/odyssey/test_autoconf.c
