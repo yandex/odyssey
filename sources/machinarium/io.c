@@ -10,6 +10,7 @@
 
 #include <machinarium/machinarium.h>
 #include <machinarium/io.h>
+#include <machinarium/bio.h>
 #include <machinarium/machine.h>
 #include <machinarium/tls.h>
 #include <machinarium/socket.h>
@@ -218,7 +219,19 @@ int mm_io_set_tls(mm_io_t *io, machine_tls_t *tls, uint32_t timeout)
 		return -1;
 	}
 	io->tls = mm_cast(mm_tls_t *, tls);
-	return mm_tls_handshake(io, timeout);
+	mm_bio_t *tls_bio = &io->bio_slots[MM_BIO_TLS];
+	mm_bio_init(tls_bio, &mm_bio_tls_methods, io, NULL);
+	mm_bio_push(&io->bio, tls_bio);
+	int rc;
+	rc = mm_tls_handshake(io, timeout);
+	if (rc == -1) {
+		/* the layer stays in the stack: while the handshake is
+		 * incomplete the layer is transparent (delegates to the
+		 * lower layer), this also keeps the TLS error text
+		 * reachable through mm_io_error() */
+		return -1;
+	}
+	return 0;
 }
 
 int mm_io_is_tls(mm_io_t *io)
@@ -256,6 +269,9 @@ mm_io_t *mm_io_create(void)
 	io->fd = -1;
 	mm_cond_init(&io->cond);
 	mm_tls_init(io);
+	mm_bio_init(&io->bio_slots[MM_BIO_SOCKET], &mm_bio_socket_methods, io,
+		    NULL);
+	io->bio = &io->bio_slots[MM_BIO_SOCKET];
 	return io;
 }
 
@@ -263,6 +279,7 @@ MACHINE_API void mm_io_free(mm_io_t *obj)
 {
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
 	mm_errno_set(0);
+	mm_bio_free_chain(io->bio);
 	mm_tls_free(io);
 	mm_compression_free(io);
 	mm_free(io);
@@ -270,11 +287,9 @@ MACHINE_API void mm_io_free(mm_io_t *obj)
 
 char *mm_io_error(mm_io_t *io)
 {
-	if (io->tls_error) {
-		return io->tls_error_msg;
-	}
-	if (io->error) {
-		return strerror(io->error);
+	const char *error = mm_bio_error(io->bio);
+	if (error != NULL) {
+		return (char *)error;
 	}
 	int errno_ = mm_errno_get();
 	if (errno_) {
@@ -484,10 +499,8 @@ ssize_t mm_io_writev(mm_io_t *io, const struct iovec *iov, int iovcnt,
 		 * as rc, leaving *processed untouched. This matches the
 		 * contract of machine_write_raw() / mm_zpq_write(). */
 		rc = mm_compression_writev(io, iov, iov_to_write, processed);
-	} else if (mm_tls_is_active(io)) {
-		rc = mm_tls_writev(io, iov, iov_to_write);
 	} else {
-		rc = mm_socket_writev(io->fd, iov, iov_to_write);
+		return mm_bio_writev(io->bio, iov, iov_to_write, processed);
 	}
 
 	if (rc > 0) {
@@ -512,23 +525,7 @@ int mm_io_write_pending(mm_io_t *io)
 
 static ssize_t mm_io_write_lower(mm_io_t *io, const void *buf, size_t size)
 {
-	mm_errno_set(0);
-	ssize_t rc;
-	if (mm_tls_is_active(io)) {
-		rc = mm_tls_write(io, buf, size);
-	} else {
-		rc = mm_socket_write(io->fd, buf, size);
-	}
-	if (rc > 0) {
-		return rc;
-	}
-	int errno_ = errno;
-	mm_errno_set(errno_);
-	if (machine_errno_retryable(errno_)) {
-		return -1;
-	}
-	io->connected = 0;
-	return -1;
+	return mm_bio_write(io->bio, buf, size, NULL);
 }
 
 ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
@@ -541,46 +538,12 @@ ssize_t mm_io_read(mm_io_t *io, void *buf, size_t size)
 
 static ssize_t mm_io_read_lower(mm_io_t *io, void *buf, size_t size)
 {
-	mm_errno_set(0);
-	/* The event loop consumes SO_ERROR on reset. Preserve the latched error
-	 * so a subsequent recv cannot turn an uncertain reset into clean EOF. */
-	if (io->error) {
-		mm_errno_set(io->error);
-		return -1;
-	}
-	ssize_t rc;
-	if (mm_tls_is_active(io)) {
-		rc = mm_tls_read(io, buf, size);
-	} else {
-		rc = mm_socket_read(io->fd, buf, size);
-	}
-
-	if (rc > 0) {
-		/* do not set read_ready to 0 - there can be more bytes in socket */
-		return rc;
-	}
-	io->read_ready = 0;
-	if (rc < 0) {
-		int errno_ = errno;
-		mm_errno_set(errno_);
-		if (machine_errno_retryable(errno_)) {
-			return -1;
-		}
-	}
-	/* error or eof */
-	io->connected = 0;
-	return rc;
+	return mm_bio_read(io->bio, buf, size);
 }
 
 int mm_io_read_pending(mm_io_t *io)
 {
-	if (mm_tls_is_active(io)) {
-		if (mm_tls_read_pending(io)) {
-			return 1;
-		}
-	}
-
-	return mm_socket_read_pending(io->fd);
+	return mm_bio_read_pending(io->bio);
 }
 
 static inline int format_inet_socket_addr(struct sockaddr *sa, socklen_t sa_len,
@@ -792,27 +755,20 @@ int mm_io_poll(mm_io_t *io)
 	return mask;
 }
 
-int mm_io_shutdown(mm_io_t *io)
+int mm_io_shutdown(mm_io_t *io, uint32_t timeout)
 {
 	mm_errno_set(0);
-
-	int rc = shutdown(io->fd, SHUT_RDWR);
-
-	if (rc == -1) {
-		return MM_NOTOK_RETCODE;
-	}
-
-	return MM_OK_RETCODE;
+	return mm_bio_shutdown(io->bio, timeout);
 }
 
 int mm_io_want_read(mm_io_t *io)
 {
-	return io->want & MM_IO_WANT_READ;
+	return mm_bio_want(io->bio) & MM_IO_WANT_READ;
 }
 
 int mm_io_want_write(mm_io_t *io)
 {
-	return io->want & MM_IO_WANT_WRITE;
+	return mm_bio_want(io->bio) & MM_IO_WANT_WRITE;
 }
 
 int mm_io_read_ready(mm_io_t *io)

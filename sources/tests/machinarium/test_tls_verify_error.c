@@ -1,6 +1,7 @@
 
 #include <machinarium/machinarium.h>
 #include <machinarium/io.h>
+#include <machinarium/bio.h>
 #include <machinarium/socket.h>
 #include <machinarium/tls.h>
 #include <tests/odyssey_test.h>
@@ -48,6 +49,14 @@ static void test_verify_error(void *arg)
 		test(mm_socket_set_nonblock(fds[1], 1) == 0);
 		test(mm_io_attach(server) == 0);
 		test(mm_io_attach(client) == 0);
+		/* the test drives mm_tls_handshake directly, bypassing
+		 * mm_io_set_tls, so install the TLS layer manually */
+		mm_bio_init(&server->bio_slots[MM_BIO_TLS], &mm_bio_tls_methods,
+			    server, NULL);
+		mm_bio_push(&server->bio, &server->bio_slots[MM_BIO_TLS]);
+		mm_bio_init(&client->bio_slots[MM_BIO_TLS], &mm_bio_tls_methods,
+			    client, NULL);
+		mm_bio_push(&client->bio, &client->bio_slots[MM_BIO_TLS]);
 		server->accepted = 1;
 		server->connected = 1;
 		client->connected = 1;
