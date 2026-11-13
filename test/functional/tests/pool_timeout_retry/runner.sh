@@ -41,7 +41,7 @@ fi
 elapsed_ms=$(( $(date +%s%3N) - start_ms ))
 
 grep -q 'too many connections for role' /var/log/odyssey.log || {
-	echo "the backend must have rejected the waiter's connection"
+	echo "the backend must reject the waiter's connection"
 	cat /var/log/odyssey.log
 	exit 1
 }
