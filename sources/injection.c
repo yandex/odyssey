@@ -9,6 +9,7 @@
 #include <odyssey.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/mutex.h>
 
 #include <injection.h>
 #include <logger.h>
@@ -18,6 +19,17 @@
 #define OD_INJECTION_RELEASE_TOKENS 1000
 
 static od_injection_point_t od_injection_points[OD_INJECTION_POINTS_MAX];
+static mm_mutex_t od_injection_mutex;
+
+void od_injection_init(void)
+{
+	mm_mutex_init(&od_injection_mutex);
+}
+
+void od_injection_free(void)
+{
+	mm_mutex_destroy(&od_injection_mutex);
+}
 
 static od_injection_point_t *od_injection_find(const char *name)
 {
@@ -32,15 +44,25 @@ static od_injection_point_t *od_injection_find(const char *name)
 
 static od_injection_point_t *od_injection_find_active(const char *name)
 {
+	if (mm_mutex_lock2(&od_injection_mutex) == 0) {
+		return NULL;
+	}
+
 	od_injection_point_t *ip = od_injection_find(name);
 	if (ip != NULL && !ip->loaded) {
 		ip = NULL;
 	}
+
+	mm_mutex_unlock(&od_injection_mutex);
 	return ip;
 }
 
 void od_injection_load(const char *name)
 {
+	if (mm_mutex_lock2(&od_injection_mutex) == 0) {
+		return;
+	}
+
 	od_injection_point_t *ip = od_injection_find(name);
 	if (ip != NULL) {
 		/* already loaded - release parked waiters */
@@ -49,6 +71,7 @@ void od_injection_load(const char *name)
 		atomic_store_explicit(&ip->tokens, OD_INJECTION_RELEASE_TOKENS,
 				      memory_order_release);
 
+		mm_mutex_unlock(&od_injection_mutex);
 		return;
 	}
 
@@ -61,8 +84,11 @@ void od_injection_load(const char *name)
 		atomic_init(&ip->tokens, 0);
 		ip->loaded = true;
 
+		mm_mutex_unlock(&od_injection_mutex);
 		return;
 	}
+
+	mm_mutex_unlock(&od_injection_mutex);
 }
 
 void od_injection_wait(const char *name)
