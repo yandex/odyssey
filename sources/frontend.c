@@ -537,12 +537,21 @@ od_frontend_attach_to_endpoint(od_client_t *client, kiwi_params_t *route_params,
 	char addr[256];
 
 	bool wait_for_idle = false;
-	uint64_t end_time_ms = od_router_wait_end_time_ms(route);
+	uint64_t pool_timeout_ms = route->rule->pool->timeout_ms;
+	uint64_t start_ms = machine_time_ms();
 	for (;;) {
+		uint64_t timeout_ms = 0;
+		if (pool_timeout_ms != 0) {
+			uint64_t waited_ms = machine_time_ms() - start_ms;
+			/* 0 would mean no limit; past the deadline, try once more */
+			timeout_ms = waited_ms < pool_timeout_ms ?
+					     pool_timeout_ms - waited_ms :
+					     1;
+		}
+
 		od_router_status_t status;
-		status = od_router_attach_until(router, client, wait_for_idle,
-						endpoint, immediate,
-						end_time_ms);
+		status = od_router_attach(router, client, wait_for_idle,
+					  endpoint, immediate, timeout_ms);
 		if (status != OD_ROUTER_OK) {
 			if (immediate && status == OD_ROUTER_ERROR_TIMEDOUT) {
 				return OD_EATTACH_TOO_MANY_CONNECTIONS;
