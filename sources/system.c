@@ -107,7 +107,7 @@ static void start_timeout_thread(uint64_t timeout_ms)
 void od_system_server_shutdown(od_system_server_t *server)
 {
 	atomic_store(&server->closed, 1);
-	mm_io_shutdown(server->io);
+	mm_io_shutdown(server->io, UINT32_MAX);
 	mm_eventfd_write(&server->shutdown_efd, UINT32_MAX);
 }
 

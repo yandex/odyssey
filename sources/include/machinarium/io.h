@@ -16,6 +16,17 @@
 
 typedef struct mm_tls mm_tls_t;
 typedef struct mm_tls_ctx mm_tls_ctx_t;
+typedef struct mm_bio mm_bio_t;
+typedef struct mm_bio_methods mm_bio_methods_t;
+
+struct mm_bio {
+	const mm_bio_methods_t *methods;
+	mm_bio_t *next;
+	mm_io_t *io;
+	void *state;
+};
+
+enum { MM_BIO_SOCKET, MM_BIO_TLS, MM_BIO_ZPQ, MM_BIO_MAX };
 
 typedef enum { MM_TLS_NONE, MM_TLS_PEER, MM_TLS_PEER_STRICT } mm_tlsverify_t;
 
@@ -78,6 +89,9 @@ struct mm_io {
 	/* compression */
 	mm_zpq_stream_t *zpq_stream;
 
+	mm_bio_t bio_slots[MM_BIO_MAX];
+	mm_bio_t *bio;
+
 	uint64_t deadline_ms;
 
 	int want;
@@ -121,7 +135,7 @@ int mm_io_bind(mm_io_t *, struct sockaddr *, int);
 int mm_io_accept(mm_io_t *, mm_io_t **, int backlog, int attach,
 		 uint32_t time_ms);
 int mm_io_close(mm_io_t *);
-int mm_io_shutdown(mm_io_t *);
+int mm_io_shutdown(mm_io_t *, uint32_t timeout);
 int mm_io_set_tls(mm_io_t *obj, machine_tls_t *tls, uint32_t timeout);
 
 int mm_io_last_event(mm_io_t *io);

@@ -3505,9 +3505,9 @@ static void od_frontend_cancel_close(od_client_t *client)
 		instance->config.cancel_timeout_ms > 0 ?
 			(uint32_t)instance->config.cancel_timeout_ms :
 			UINT32_MAX;
-	if (mm_tls_shutdown(client->io.io, timeout) == -1) {
+	if (mm_io_shutdown(client->io.io, timeout) == -1) {
 		od_debug(&instance->logger, client, NULL,
-			 "TLS shutdown failed: %s", od_io_error(&client->io));
+			 "io shutdown failed: %s", od_io_error(&client->io));
 	}
 	od_frontend_close(client);
 }

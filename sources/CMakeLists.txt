@@ -49,6 +49,9 @@ set(od_src
     machinarium/channel_api.c
     machinarium/task_mgr.c
     machinarium/tls.c
+    machinarium/bio.c
+    machinarium/bio_socket.c
+    machinarium/bio_tls.c
     machinarium/io.c
     machinarium/close.c
     machinarium/connect.c
