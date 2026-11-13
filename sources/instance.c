@@ -32,6 +32,7 @@
 #include <cfg/reader.h>
 #include <cfg/convert.h>
 #include <cfg_import.h>
+#include <injection.h>
 
 int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
 		  od_global_t *global, od_hba_rules_t *hba_rules,
@@ -215,6 +216,9 @@ void od_instance_free(od_instance_t *instance)
 		od_global_pstmts_map_free(instance->pstmts);
 	}
 	od_global_clients_map_free(instance->clients_by_key);
+
+	/* free test injection points */
+	od_injection_free();
 
 	/* as mallocd on start */
 	od_free(instance->config_file);
@@ -576,6 +580,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 			 "failed to init machinarium");
 		goto error;
 	}
+
+	/* initialize test injection points */
+	od_injection_init();
 
 	/* create pid file */
 	if (instance->config.pid_file) {
