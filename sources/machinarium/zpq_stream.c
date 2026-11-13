@@ -229,7 +229,9 @@ static ssize_t zstd_write(mm_zpq_stream_t *zstream, void const *buf,
 			zs->tx.dst = (char *)zs->tx.dst + rc;
 			zs->tx_total += rc;
 		} else {
-			*processed = in_buf.pos;
+			if (processed) {
+				*processed = in_buf.pos;
+			}
 			zs->tx_buffered = zs->tx.pos;
 			zs->tx_total_raw += in_buf.pos;
 			return rc;
@@ -434,7 +436,9 @@ static ssize_t zlib_write(mm_zpq_stream_t *zstream, void const *buf,
 			zs->tx.next_out += rc;
 			zs->tx.avail_out += rc;
 		} else {
-			*processed = size - zs->tx.avail_in;
+			if (processed) {
+				*processed = size - zs->tx.avail_in;
+			}
 			zs->tx_buffered =
 				MM_ZLIB_BUFFER_SIZE - zs->tx.avail_out;
 			return rc;

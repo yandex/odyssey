@@ -89,10 +89,12 @@ void mm_io_free(mm_io_t *);
 
 int mm_io_socket_set(mm_io_t *, int);
 int mm_io_socket(mm_io_t *, struct sockaddr *);
-ssize_t mm_io_write(mm_io_t *, const void *, size_t);
+ssize_t mm_io_write(mm_io_t *, const void *, size_t, size_t *processed);
+ssize_t mm_io_writev(mm_io_t *, const struct iovec *, int, size_t *processed);
 ssize_t mm_io_read(mm_io_t *, void *, size_t);
 int mm_io_format_socket_addr(mm_io_t *, char *, size_t);
 int mm_io_read_pending(mm_io_t *);
+int mm_io_write_pending(mm_io_t *);
 
 void mm_io_set_peer(mm_io_t *io, mm_io_t *peer);
 void mm_io_remove_peer(mm_io_t *io, mm_io_t *peer);

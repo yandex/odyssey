@@ -5,6 +5,7 @@
  */
 
 #include <errno.h>
+#include <string.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/io.h>
@@ -59,10 +60,9 @@ int mm_compression_write_pending(mm_io_t *io)
 MACHINE_API
 char machine_compression_choose_alg(char *client_compression_algorithms)
 {
-	(void)client_compression_algorithms;
 	/* chosen compression algorithm */
 	char compression_algorithm = MM_ZPQ_NO_COMPRESSION;
-#ifdef MM_BUILD_COMPRESSION
+
 	/* machinarium supported libpq compression algorithms */
 	char server_compression_algorithms[MM_ZPQ_MAX_ALGORITHMS];
 
@@ -78,6 +78,6 @@ char machine_compression_choose_alg(char *client_compression_algorithms)
 		}
 		client_compression_algorithms += 1;
 	}
-#endif
+
 	return compression_algorithm;
 }

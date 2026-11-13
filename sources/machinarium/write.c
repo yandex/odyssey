@@ -14,64 +14,18 @@
 #include <machinarium/macro.h>
 #include <machinarium/socket.h>
 #include <machinarium/tls.h>
-#include <machinarium/compression.h>
 
 MACHINE_API ssize_t machine_write_raw(mm_io_t *obj, const void *buf,
 				      size_t size, size_t *processed)
 {
-	(void)processed;
 	mm_io_t *io = mm_cast(mm_io_t *, obj);
-#ifdef MM_BUILD_COMPRESSION
-	/* If streaming compression is enabled then use correspondent compression
-	 * write function. */
-	if (mm_compression_is_active(io)) {
-		return mm_zpq_write(io->zpq_stream, buf, size, processed);
-	}
-#endif
-	return mm_io_write(io, buf, size);
+	return mm_io_write(io, buf, size, processed);
 }
 
 MACHINE_API ssize_t machine_writev_raw(mm_io_t *io, const struct iovec *iov,
 				       int iovcnt, size_t *processed)
 {
-	mm_errno_set(0);
-	if (processed) {
-		*processed = 0;
-	}
-
-	int iov_to_write = iovcnt;
-	if (iov_to_write > IOV_MAX) {
-		iov_to_write = IOV_MAX;
-	}
-
-	ssize_t rc;
-#ifdef MM_BUILD_COMPRESSION
-	if (mm_compression_is_active(io)) {
-		/* mm_compression_writev reports consumed input bytes via
-		 * *processed on partial-progress errors (rc <= 0); on
-		 * success it returns the number of consumed input bytes
-		 * as rc, leaving *processed untouched. This matches the
-		 * contract of machine_write_raw() / mm_zpq_write(). */
-		rc = mm_compression_writev(io, iov, iov_to_write, processed);
-	} else if (mm_tls_is_active(io))
-#else
-	if (mm_tls_is_active(io))
-#endif
-		rc = mm_tls_writev(io, iov, iov_to_write);
-	else {
-		rc = mm_socket_writev(io->fd, iov, iov_to_write);
-	}
-
-	if (rc > 0) {
-		return rc;
-	}
-	int errno_ = errno;
-	mm_errno_set(errno_);
-	if (machine_errno_retryable(errno_)) {
-		return -1;
-	}
-	io->connected = 0;
-	return -1;
+	return mm_io_writev(io, iov, iovcnt, processed);
 }
 
 MACHINE_API int machine_write_no_free(mm_io_t *destination, machine_msg_t *msg,
@@ -90,7 +44,7 @@ MACHINE_API int machine_write_no_free(mm_io_t *destination, machine_msg_t *msg,
 	int size = machine_msg_size(msg);
 	/* If compression is on, also check that there is no data left in tx buffer
 	 */
-	while (total != size || mm_compression_write_pending(io)) {
+	while (total != size || mm_io_write_pending(io)) {
 		/* when using compression, some data may be processed
 		 * despite the non-positive return code */
 		size_t processed = 0;
