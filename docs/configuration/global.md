@@ -263,7 +263,7 @@ log_format "json"
 
 This outputs structured JSON logs with all available fields:
 ```json
-{"timestamp":"2024-12-15 10:30:45.123","pid":"12345","level":"info","context":"instance.c:123","message":"accepting connections","client":{"id":"c1a2b3","ip":"192.168.1.100","port":"54321","user":"app_user","database":"mydb"},"server":{"id":"s4d5e6"}}
+{"timestamp":"2024-12-15T10:30:45.123Z","pid":"12345","level":"info","context":"instance.c:123","message":"accepting connections","client":{"id":"c1a2b3","ip":"192.168.1.100","port":"54321","user":"app_user","database":"mydb"},"server":{"id":"s4d5e6"}}
 ```
 
 ## **log\_to\_stdout**
