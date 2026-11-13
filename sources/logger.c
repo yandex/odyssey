@@ -61,7 +61,7 @@ static char *od_log_level[] = { "info", "error", "debug", "fatal" };
 
 /* ISO 8601 / RFC 3339 UTC timestamp with millisecond precision,
  * e.g. "2024-12-15T10:30:45.123Z" */
-#define OD_LOGGER_JSON_TIMESTAMP_FMT "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ"
+#define OD_LOGGER_JSON_TIMESTAMP_FMT "%04d-%02d-%02dT%02d:%02d:%02d.%03ldZ"
 
 static int have_writev(int fd)
 {
@@ -1070,7 +1070,7 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 	gmtime_r(&tv.tv_sec, &tm);
 	od_snprintf(tmp_buf, sizeof(tmp_buf), OD_LOGGER_JSON_TIMESTAMP_FMT,
 		    tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
-		    tm.tm_min, tm.tm_sec, tv.tv_usec / 1000);
+		    tm.tm_min, tm.tm_sec, (long)(tv.tv_usec / 1000));
 	dst = od_logger_json_add_string(dst, dst_end, "timestamp", tmp_buf,
 					add_comma);
 	add_comma = 1;
