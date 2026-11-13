@@ -537,10 +537,12 @@ od_frontend_attach_to_endpoint(od_client_t *client, kiwi_params_t *route_params,
 	char addr[256];
 
 	bool wait_for_idle = false;
+	uint64_t end_time_ms = od_router_wait_end_time_ms(route);
 	for (;;) {
 		od_router_status_t status;
-		status = od_router_attach(router, client, wait_for_idle,
-					  endpoint, immediate);
+		status = od_router_attach_until(router, client, wait_for_idle,
+						endpoint, immediate,
+						end_time_ms);
 		if (status != OD_ROUTER_OK) {
 			if (immediate && status == OD_ROUTER_ERROR_TIMEDOUT) {
 				return OD_EATTACH_TOO_MANY_CONNECTIONS;

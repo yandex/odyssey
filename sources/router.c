@@ -1058,24 +1058,38 @@ static inline int send_waiting_finished_notice(od_client_t *client,
 	return od_io_write_raw(&client->io, buf, n, &unused, 1000, 0);
 }
 
+uint64_t od_router_wait_end_time_ms(od_route_t *route)
+{
+	if (route->rule->pool->timeout_ms == 0) {
+		return UINT64_MAX;
+	}
+	return machine_time_ms() + route->rule->pool->timeout_ms;
+}
+
 od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    bool wait_for_idle,
 				    od_storage_endpoint_t *endpoint,
 				    int immediate)
 {
+	od_assert(client->route != NULL);
+	return od_router_attach_until(
+		router, client, wait_for_idle, endpoint, immediate,
+		od_router_wait_end_time_ms(client->route));
+}
+
+od_router_status_t od_router_attach_until(od_router_t *router,
+					  od_client_t *client,
+					  bool wait_for_idle,
+					  od_storage_endpoint_t *endpoint,
+					  int immediate, uint64_t end_time_ms)
+{
 	od_route_t *route;
 	od_router_status_t rc;
-	uint64_t end_time_ms;
 
 	route = client->route;
 	od_assert(route != NULL);
 
 	uint64_t now_ms = machine_time_ms();
-	if (route->rule->pool->timeout_ms == 0) {
-		end_time_ms = UINT64_MAX;
-	} else {
-		end_time_ms = now_ms + route->rule->pool->timeout_ms;
-	}
 
 	int internal = route->rule->pool->routing == OD_RULE_POOL_INTERNAL;
 
