@@ -537,10 +537,20 @@ od_frontend_attach_to_endpoint(od_client_t *client, kiwi_params_t *route_params,
 	char addr[256];
 
 	bool wait_for_idle = false;
+	uint64_t pool_timeout_ms = route->rule->pool->timeout_ms;
+	uint64_t start_ms = machine_time_ms();
 	for (;;) {
-		od_router_status_t status;
-		status = od_router_attach(router, client, wait_for_idle,
-					  endpoint, immediate);
+		od_router_status_t status = OD_ROUTER_ERROR_TIMEDOUT;
+		uint64_t waited_ms = machine_time_ms() - start_ms;
+		if (pool_timeout_ms == 0 || waited_ms < pool_timeout_ms) {
+			uint64_t timeout_ms =
+				pool_timeout_ms == 0 ?
+					0 :
+					pool_timeout_ms - waited_ms;
+			status = od_router_attach(router, client, wait_for_idle,
+						  endpoint, immediate,
+						  timeout_ms);
+		}
 		if (status != OD_ROUTER_OK) {
 			if (immediate && status == OD_ROUTER_ERROR_TIMEDOUT) {
 				return OD_EATTACH_TOO_MANY_CONNECTIONS;
