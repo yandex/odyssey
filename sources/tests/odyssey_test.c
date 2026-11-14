@@ -91,6 +91,7 @@ extern void machinarium_test_read_close(void);
 extern void machinarium_test_writebuf(void);
 extern void machinarium_test_tls_writebuf(void);
 extern void machinarium_test_writebuf_zpq(void);
+extern void machinarium_test_writebuf_close(void);
 extern void machinarium_test_hm_hash(void);
 extern void machinarium_test_hm_dist(void);
 extern void machinarium_test_tls0(void);
@@ -240,6 +241,7 @@ int main(int argc, char *argv[])
 	odyssey_test(machinarium_test_writebuf);
 	odyssey_test(machinarium_test_tls_writebuf);
 	odyssey_test(machinarium_test_writebuf_zpq);
+	odyssey_test(machinarium_test_writebuf_close);
 	odyssey_test(machinarium_test_read_close);
 	odyssey_test(machinarium_test_hm_hash);
 	odyssey_test(machinarium_test_hm_dist);

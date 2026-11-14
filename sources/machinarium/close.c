@@ -8,6 +8,7 @@
 #include <errno.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/bio.h>
 #include <machinarium/io.h>
 #include <machinarium/machine.h>
 
@@ -21,6 +22,13 @@ int mm_io_close(mm_io_t *obj)
 	if (io->attached) {
 		mm_io_detach(obj);
 	}
+	/*
+	 * Best effort: push whatever the buffered layers hold
+	 * downstream without waiting; on a stall the rest is
+	 * discarded, explicit mm_io_flush() is required for
+	 * guaranteed delivery.
+	 */
+	(void)mm_bio_flush(io->bio);
 	int rc;
 	rc = close(io->fd);
 	if (rc == -1) {
