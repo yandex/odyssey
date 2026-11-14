@@ -30,6 +30,15 @@ static od_injection_point_t *od_injection_find(const char *name)
 	return NULL;
 }
 
+static od_injection_point_t *od_injection_find_active(const char *name)
+{
+	od_injection_point_t *ip = od_injection_find(name);
+	if (ip != NULL && !ip->loaded) {
+		ip = NULL;
+	}
+	return ip;
+}
+
 void od_injection_load(const char *name)
 {
 	od_injection_point_t *ip = od_injection_find(name);
@@ -39,6 +48,7 @@ void od_injection_load(const char *name)
 		ip->loaded = false;
 		atomic_store_explicit(&ip->tokens, OD_INJECTION_RELEASE_TOKENS,
 				      memory_order_release);
+
 		return;
 	}
 
@@ -50,14 +60,15 @@ void od_injection_load(const char *name)
 		od_snprintf(ip->name, sizeof(ip->name), "%s", name);
 		atomic_init(&ip->tokens, 0);
 		ip->loaded = true;
+
 		return;
 	}
 }
 
 void od_injection_wait(const char *name)
 {
-	od_injection_point_t *ip = od_injection_find(name);
-	if (ip == NULL || !ip->loaded) {
+	od_injection_point_t *ip = od_injection_find_active(name);
+	if (ip == NULL) {
 		return;
 	}
 
@@ -78,4 +89,9 @@ void od_injection_wait(const char *name)
 			return;
 		}
 	}
+}
+
+bool od_injection_is_active(const char *name)
+{
+	return od_injection_find_active(name) != NULL;
 }
