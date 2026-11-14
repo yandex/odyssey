@@ -143,6 +143,10 @@ typedef enum {
 	 * deferred simple query begin
 	 */
 	OD_XPLAN_DEFERRED_BEGIN,
+
+	/* Internal simple queries; their replies are hidden from the client. */
+	OD_XPLAN_RWR_WAIT,
+	OD_XPLAN_RWR_CAPTURE,
 } od_xplan_entry_type_t;
 
 typedef struct {
@@ -161,7 +165,7 @@ typedef struct {
 	 * original msg from client
 	 * can be sent to server, if it wan't rewritten to server_msg
 	 *
-	 * cannot be NULL, but is owned by xbuf
+	 * borrowed from xbuf or the caller; NULL for internal RWR queries
 	 */
 	machine_msg_t *clmsg;
 
@@ -215,3 +219,11 @@ od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay);
 
 od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 				  uint32_t timeout_ms);
+
+/* Send a message/batch with a pending RWR wait in one writev. The caller
+ * handles the client message's replies; only internal replies are read here. */
+od_frontend_status_t od_xplan_send_query(od_relay_t *relay, machine_msg_t *msg,
+					 uint32_t timeout_ms);
+
+od_frontend_status_t od_xplan_capture_lsn(od_relay_t *relay,
+					  uint32_t timeout_ms);

@@ -171,6 +171,7 @@ static void test_format_duration(void)
 		"auth_query_cache_error_retry",
 		"auth_query_timeout",
 		"backend_connect_timeout_ms",
+		"rwr_wait_timeout",
 		"cancel_timeout_ms",
 		"cancel_queue_timeout_ms",
 	};

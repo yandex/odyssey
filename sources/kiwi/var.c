@@ -181,7 +181,8 @@ int kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server, char **query,
 	     type < KIWI_VAR_MAX; type++) {
 		if (type == KIWI_VAR_SEARCH_PATH ||
 		    type == KIWI_VAR_COMPRESSION ||
-		    type == KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS) {
+		    type == KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS ||
+		    type == KIWI_VAR_ODYSSEY_RWR_CONSISTENT) {
 			continue;
 		}
 		kiwi_var_t *var = kiwi_vars_of(client, type);

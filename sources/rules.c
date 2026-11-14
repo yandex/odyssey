@@ -557,6 +557,7 @@ static od_rule_t *od_rules_add(od_rules_t *rules)
 	rule->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 
 	rule->auto_route_ro_on_standby = 0;
+	rule->rwr_wait_timeout_ms = -1;
 
 	rule->auth_common_name_default = 0;
 	rule->auth_common_names_count = 0;
@@ -1546,6 +1547,9 @@ int od_rules_rule_compare(od_rule_t *a, od_rule_t *b)
 	if (a->catchup_checks != b->catchup_checks) {
 		return 0;
 	}
+	if (a->rwr_wait_timeout_ms != b->rwr_wait_timeout_ms) {
+		return 0;
+	}
 
 	/* client_max */
 	if (a->client_max != b->client_max) {
@@ -2056,6 +2060,7 @@ static inline int od_rules_validate_endpoints(od_logger_t *logger,
 		od_storage_endpoint_t *endpoint = &storage->endpoints[0];
 
 		endpoint->storage = storage;
+		atomic_init(&endpoint->rwr_wait_unsupported_logged, false);
 		od_storage_endpoint_status_init(&endpoint->status);
 		od_address_init(&endpoint->address);
 
@@ -2945,6 +2950,10 @@ void od_rules_print(od_rules_t *rules, od_logger_t *logger)
 		if (rule->catchup_checks) {
 			od_log(logger, NULL, NULL, "  catchup checks    %d",
 			       rule->catchup_checks);
+		}
+		if (rule->rwr_wait_timeout_ms >= 0) {
+			od_log(logger, NULL, NULL, "  rwr_wait_timeout_ms %d",
+			       rule->rwr_wait_timeout_ms);
 		}
 
 		od_log(logger, NULL, NULL,

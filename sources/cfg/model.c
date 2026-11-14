@@ -302,6 +302,7 @@ static void od_cfg_user_route_free(od_cfg_route_t *user)
 	od_cfg_bool_field_free(&user->pool_cancel);
 	od_cfg_bool_field_free(&user->pool_rollback);
 	od_cfg_u64_field_free(&user->pool_reset_timeout_ms);
+	od_cfg_u64_field_free(&user->rwr_wait_timeout_ms);
 	od_cfg_bool_field_free(&user->pool_reserve_prepared_statement);
 	od_cfg_int_field_free(&user->server_pstmt_cache_size);
 	od_cfg_bool_field_free(&user->pool_pin_on_listen);
@@ -432,6 +433,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_i64_field_free(&g->keepalive_usr_timeout_ms);
 	od_cfg_int_field_free(&g->max_sigterms_to_die);
 	od_cfg_u64_field_free(&g->backend_connect_timeout_ms);
+	od_cfg_u64_field_free(&g->rwr_wait_timeout_ms);
 	od_cfg_u64_field_free(&g->cancel_timeout_ms);
 	od_cfg_i64_field_free(&g->cancel_queue_timeout_ms);
 	od_cfg_int_field_free(&g->cancel_max_inflight);

@@ -49,6 +49,7 @@ typedef enum {
 	/* odyssey own params */
 	KIWI_VAR_ODYSSEY_CATCHUP_TIMEOUT,
 	KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS,
+	KIWI_VAR_ODYSSEY_RWR_CONSISTENT,
 
 	/* always keep this at end */
 	KIWI_VAR_MAX,
@@ -238,6 +239,9 @@ static inline void kiwi_vars_init(kiwi_vars_t *vars)
 	kiwi_var_init(&vars->vars[KIWI_VAR_ODYSSEY_TARGET_SESSION_ATTRS],
 		      "odyssey.target_session_attrs",
 		      sizeof("odyssey.target_session_attrs"));
+	kiwi_var_init(&vars->vars[KIWI_VAR_ODYSSEY_RWR_CONSISTENT],
+		      "odyssey.rwr_consistent",
+		      sizeof("odyssey.rwr_consistent"));
 	kiwi_var_init(&vars->vars[KIWI_VAR_ROLE], "role", sizeof("role"));
 	kiwi_var_init(
 		&vars->vars[KIWI_VAR_SPQRGUARD_PREVENT_DISTRIBUTED_TABLE_MODIFY],

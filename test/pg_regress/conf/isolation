@@ -2,7 +2,7 @@ include "/home/postgres/regress/conf/_base"
 
 storage "postgres_server" {
 	type "remote"
-	host "localhost:5432"
+	host "localhost:5432,localhost:5434"
 }
 
 database "postgres" {
@@ -11,6 +11,7 @@ database "postgres" {
 		storage "postgres_server"
 		storage_user "postgres"
 		pool "transaction"
+		target_session_attrs "read-write"
 		pool_size 4
 		pool_reserve_prepared_statement yes
 		client_fwd_error yes

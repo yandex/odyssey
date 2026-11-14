@@ -211,8 +211,9 @@ static void test_config_duration_strings(void)
 		test(file != NULL);
 		fprintf(file,
 			"stats_interval %s\nbackend_connect_timeout_ms %s\n"
+			"rwr_wait_timeout %s\n"
 			"cancel_queue_timeout_ms \"-1\"\n",
-			cases[i].value, cases[i].value);
+			cases[i].value, cases[i].value, cases[i].value);
 		test(fclose(file) == 0);
 		od_cfg_model_t model;
 		od_cfg_diag_list_t diags;
@@ -226,6 +227,8 @@ static void test_config_duration_strings(void)
 			test(model.global.stats_interval_ms.value ==
 			     (uint64_t)cases[i].seconds_ms);
 			test(model.global.backend_connect_timeout_ms.value ==
+			     (uint64_t)cases[i].milliseconds);
+			test(model.global.rwr_wait_timeout_ms.value ==
 			     (uint64_t)cases[i].milliseconds);
 			test(model.global.cancel_queue_timeout_ms.value == -1);
 		} else {

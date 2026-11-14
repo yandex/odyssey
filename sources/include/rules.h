@@ -173,6 +173,8 @@ struct od_rule {
 	od_rule_pool_t *pool;
 	int catchup_timeout;
 	int catchup_checks;
+	/* -1 inherits the global timeout; 0 means no limit. */
+	int rwr_wait_timeout_ms;
 
 	od_shared_pool_t *shared_pool;
 
