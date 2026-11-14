@@ -33,6 +33,47 @@ static inline int complete_deploy(od_instance_t *instance, od_server_t *server)
 	return OK_RESPONSE;
 }
 
+/*
+ * Switch the backend to the client's client_encoding in a separate Query when
+ * the parameters to deploy contain non-ASCII bytes: the backend converts the
+ * whole next Query from its current client_encoding before running it.
+ */
+static int deploy_switch_encoding(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	od_server_t *server = client->server;
+
+	char query[256];
+	int query_size = kiwi_vars_cas_encoding(&client->vars, &server->vars,
+						query, sizeof(query));
+	if (query_size == -1) {
+		return -1;
+	}
+	if (query_size == 0) {
+		return 0;
+	}
+	query_size++; /* terminating NUL */
+
+	machine_msg_t *msg = kiwi_fe_write_query(NULL, query, query_size);
+	if (msg == NULL) {
+		return -1;
+	}
+	od_wait_event_start(OD_WAIT_DEPLOY_SERVER_WRITE);
+	int rc = od_write(&server->io, msg);
+	od_wait_event_end(OD_WAIT_DEPLOY_SERVER_WRITE);
+	if (rc == -1) {
+		return -1;
+	}
+	client->server->synced_settings = false;
+	od_debug(&instance->logger, client, server, "deploy: %s", query);
+
+	od_server_sync_request(server, 1);
+	if (complete_deploy(instance, server) != OK_RESPONSE) {
+		return -1;
+	}
+	return 0;
+}
+
 int od_deploy(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
@@ -40,6 +81,10 @@ int od_deploy(od_client_t *client)
 
 	if (client->physical_rep || client->logical_rep) {
 		return 0;
+	}
+
+	if (deploy_switch_encoding(client) == -1) {
+		return -1;
 	}
 
 	/* compare and set options which are differs from server */

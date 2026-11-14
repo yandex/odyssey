@@ -356,3 +356,13 @@ static inline int kiwi_enquote(char *src, char *dst, int dst_len)
 int kiwi_vars_cas(kiwi_vars_t *client, kiwi_vars_t *server, char **query,
 		  char *query_buf, int query_buf_len,
 		  int smart_enquoting_search_path, int *normalize_search_path);
+
+/* The backend decodes a whole Query message using its current client_encoding
+ * before running any statement in it. Stored values are in the client's
+ * encoding, so when a value to be deployed has a byte >= 0x80 and the backend
+ * is in another encoding, client_encoding must be set in a Query of its own
+ * first. Writes "SET client_encoding=...;" to buf and returns its length, or 0
+ * if no separate switch is needed, or -1 on error (buf too small).
+ */
+int kiwi_vars_cas_encoding(kiwi_vars_t *client, kiwi_vars_t *server, char *buf,
+			   int buf_len);
