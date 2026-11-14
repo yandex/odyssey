@@ -1196,6 +1196,131 @@ static od_frontend_status_t plan_simple(od_xplan_t *xp, od_relay_t *relay)
 	return OD_OK;
 }
 
+static od_frontend_status_t
+plan_error_tx_bind(od_xplan_t *xp, od_client_t *client, machine_msg_t *msg)
+{
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	char *portal_name, *pstmt_name;
+	uint32_t portal_name_len, pstmt_name_len;
+	if (kiwi_be_read_bind_names(data, size, &portal_name, &portal_name_len,
+				    &pstmt_name, &pstmt_name_len) != 0) {
+		return OD_ECLIENT_PROTOCOL_ERROR;
+	}
+	(void)portal_name;
+	(void)portal_name_len;
+
+	/*
+	 * only the committed client map is consulted and no deltas are
+	 * planned: the backend will not create anything until ROLLBACK
+	 * (Parse is rejected with 25P02), so the maps must stay intact
+	 */
+	od_pstmt_t *pstmt = od_client_get_pstmt_hash(
+		client, pstmt_name,
+		od_hm_name_hash(pstmt_name, pstmt_name_len));
+	if (pstmt == NULL) {
+		/*
+		 * unknown to this client session - forward the original
+		 * Bind unmodified and let the backend produce the
+		 * appropriate ErrorResponse
+		 */
+		return xplan_append_fwd_no_delta(xp, msg,
+						 NULL /* no rewrite */);
+	}
+
+	int pstmt_start_offset = kiwi_be_bind_opname_offset(data, size);
+	if (pstmt_start_offset < 0) {
+		return OD_ECLIENT_PROTOCOL_ERROR;
+	}
+
+	machine_msg_t *bmsg =
+		rewrite_bind_msg(data, size, pstmt_start_offset, pstmt_name_len,
+				 pstmt->name, strlen(pstmt->name) + 1);
+	if (bmsg == NULL) {
+		return OD_EOOM;
+	}
+
+	return xplan_append_fwd_no_delta(xp, msg, bmsg);
+}
+
+static od_frontend_status_t
+plan_error_tx_describe(od_xplan_t *xp, od_client_t *client, machine_msg_t *msg)
+{
+	char *data = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+
+	char *pstmt_name;
+	uint32_t pstmt_name_len;
+	kiwi_fe_describe_type_t type;
+	if (kiwi_be_read_describe(data, size, &pstmt_name, &pstmt_name_len,
+				  &type) != 0) {
+		return OD_ECLIENT_PROTOCOL_ERROR;
+	}
+
+	if (type == KIWI_FE_DESCRIBE_PORTAL) {
+		/* skip this, we only need to rewrite statement */
+		return xplan_append_fwd_no_delta(xp, msg,
+						 NULL /* no rewrite */);
+	}
+
+	od_pstmt_t *pstmt = od_client_get_pstmt_hash(
+		client, pstmt_name,
+		od_hm_name_hash(pstmt_name, pstmt_name_len));
+	if (pstmt == NULL) {
+		return xplan_append_fwd_no_delta(xp, msg,
+						 NULL /* no rewrite */);
+	}
+
+	/* will create copy of name for pstmt, so no ref needed */
+	machine_msg_t *dmsg = od_pstmt_describe_of(pstmt);
+	if (dmsg == NULL) {
+		return OD_EOOM;
+	}
+
+	return xplan_append_fwd_no_delta(xp, msg, dmsg);
+}
+
+static od_frontend_status_t plan_error_tx(od_xplan_t *xp, od_relay_t *relay)
+{
+	od_client_t *client = relay->client;
+	od_relay_xbuf_t *xbuf = &relay->xbuf;
+
+	size_t count = mm_vector_size(&xbuf->msgs);
+
+	for (size_t i = 0; i < count; ++i) {
+		od_xbuf_msg_t *m = mm_vector_get(&xbuf->msgs, i);
+		machine_msg_t *msg = m->msg;
+
+		od_frontend_status_t status;
+
+		if (i == 0 && m->is_deferred_begin) {
+			/* deferred begin plan entry is always at the beggining */
+			status = xplan_append_deferred_begin(xp, msg);
+		} else {
+			switch (msg_fe_type(msg)) {
+			case KIWI_FE_BIND:
+				status = plan_error_tx_bind(xp, client, msg);
+				break;
+			case KIWI_FE_DESCRIBE:
+				status =
+					plan_error_tx_describe(xp, client, msg);
+				break;
+			default:
+				status = xplan_append_fwd_no_delta(xp, msg,
+								   NULL);
+				break;
+			}
+		}
+
+		if (status != OD_OK) {
+			return status;
+		}
+	}
+
+	return OD_OK;
+}
+
 static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 						    od_relay_t *relay)
 {
@@ -1311,14 +1436,25 @@ od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay)
 	int reserve_prepared = rule->pool->reserve_prepared_statement;
 
 	if (server->is_error_tx) {
+		if (!reserve_prepared) {
+			return plan_simple(xp, relay);
+		}
+
 		/*
 		 * the backend is in a failed transaction: it will reject
 		 * all commands until ROLLBACK anyway, so there is no point
-		 * in planning - forward everything as-is and let the backend
-		 * produce the real errors (25P02) and the real ReadyForQuery
-		 * tx status
+		 * in full planning - forward everything as-is and let the
+		 * backend produce the real errors (25P02) and the real
+		 * ReadyForQuery tx status.
+		 *
+		 * but pstmt names still must be rewritten: the backend
+		 * knows only odyssey_pstmt_N names, and unlike the rest of
+		 * the commands Bind and Describe Statement perform the
+		 * statement lookup even in a failed transaction - client
+		 * names would fail with 26000 (invalid_sql_statement_name)
+		 * instead of 25P02
 		 */
-		return plan_simple(xp, relay);
+		return plan_error_tx(xp, relay);
 	}
 
 	if (!reserve_prepared) {
