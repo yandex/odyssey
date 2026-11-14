@@ -33,6 +33,23 @@ static struct iovec iov_advance(struct iovec *iov, int cnt, size_t size)
 	return ret;
 }
 
+/*
+ * machinarium-level user of the new write contract: loop the
+ * single-attempt flush, delivery is not guaranteed by
+ * machine_write() anymore
+ */
+static void test_flush(mm_io_t *io)
+{
+	mm_io_set_deadline(io, UINT32_MAX);
+	int rc;
+	while ((rc = mm_io_flush(io)) == -1) {
+		test(machine_errno_retryable(machine_errno()));
+		rc = mm_io_wait_deadline(io);
+		test(rc != MM_COND_WAIT_FAIL);
+	}
+	test(rc == 0);
+}
+
 static void server(void *arg)
 {
 	(void)arg;
@@ -108,6 +125,7 @@ static void server(void *arg)
 		break;
 	}
 	test(total == COMPRESSION_PAYLOAD_SIZE);
+	test_flush(client);
 
 	rc = mm_io_close(client);
 	test(rc == 0);
@@ -143,7 +161,7 @@ static void client(void *arg)
 	rc = machine_msg_write(msg, "ping", sizeof("ping"));
 	test(rc == 0);
 	rc = machine_write(client, msg, UINT32_MAX);
-	test(rc == 0);
+	test_flush(client);
 
 	msg = machine_msg_create(0);
 	test(msg != NULL);
@@ -151,7 +169,7 @@ static void client(void *arg)
 			       COMPRESSION_PAYLOAD_SIZE);
 	test(rc == 0);
 	rc = machine_write(client, msg, UINT32_MAX);
-	test(rc == 0);
+	test_flush(client);
 
 	msg = machine_read(client, COMPRESSION_PAYLOAD_SIZE, UINT32_MAX);
 	test(msg != NULL);

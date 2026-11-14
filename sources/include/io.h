@@ -250,6 +250,34 @@ static inline int od_io_write(od_io_t *io, machine_msg_t *msg,
 	return machine_write_no_free(io->io, msg, timeout_ms);
 }
 
+/*
+ * A protocol message send is a flush point: push the buffered data
+ * downstream before returning. Mirrors od_io_write_raw: the
+ * machinarium flush is a single attempt, the wait lives here.
+ */
+static inline int od_io_flush_pending(od_io_t *io, uint32_t time_ms)
+{
+	mm_io_set_deadline(io->io, time_ms);
+	int rc;
+	while ((rc = mm_io_flush(io->io)) == -1) {
+		int errno_ = machine_errno();
+		if (!machine_errno_retryable(errno_)) {
+			return -1;
+		}
+
+		rc = mm_io_wait_deadline(io->io);
+		if (rc == MM_COND_WAIT_FAIL) {
+			/* io wait will set errno to ETIMEDOUT or ECANCELLED */
+			return -1;
+		}
+		if (rc == MM_COND_WAIT_OK_PROPAGATED) {
+			mm_errno_set(EAGAIN);
+			return -1;
+		}
+	}
+	return rc;
+}
+
 static inline int od_io_connected(od_io_t *io)
 {
 	return mm_io_connected(io->io);

@@ -53,6 +53,7 @@ set(od_src
     machinarium/bio_socket.c
     machinarium/bio_tls.c
     machinarium/bio_zpq.c
+    machinarium/bio_buf.c
     machinarium/io.c
     machinarium/close.c
     machinarium/connect.c
@@ -468,6 +469,9 @@ set(od_test_src
     tests/machinarium/test_read_cancel.c
     tests/machinarium/test_read_var.c
     tests/machinarium/test_read_close.c
+    tests/machinarium/test_writebuf.c
+    tests/machinarium/test_tls_writebuf.c
+    tests/machinarium/test_writebuf_zpq.c
     tests/machinarium/test_ring_buffer.c
     tests/machinarium/test_tls0.c
     tests/machinarium/test_tls_verify_error.c
