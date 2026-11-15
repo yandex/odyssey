@@ -9,6 +9,14 @@ schedule live in this directory. The suite runs through Odyssey as part of
 locks. Both permutations require a waiting step to complete after the other
 session commits.
 
+`rwr_replay` pauses WAL replay on the replica at port 5434, writes through the
+primary, and sets `odyssey.target_session_attrs` to `'read-only'` for that
+client. Its read must wait until the other session resumes replay, then
+return the inserted row from the replica. The resume step first requires an
+active `WAIT FOR LSN` in `WaitForWalReplay`; the `read(*)` annotation only gives
+the controller a turn and does not replace that assertion. The isolation
+config uses one primary and one replica, with `read-write` routing by default.
+
 ## Lock detection through Odyssey
 
 Odyssey's `BackendKeyData` contains a virtual PID, so PostgreSQL's usual

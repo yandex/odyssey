@@ -36,6 +36,7 @@ struct od_config_listen {
 
 	od_target_session_attrs_t target_session_attrs;
 	int auto_route_ro_on_standby;
+	int enable_rwr_consistent;
 	od_storage_balancing_t balancing_override;
 	int balancing_override_set;
 	int catchup_timeout;
@@ -183,6 +184,8 @@ struct od_config {
 	od_list_t listen;
 
 	uint64_t backend_connect_timeout_ms;
+	/* RWR side-query timeout; 0 means no limit. */
+	uint64_t rwr_wait_timeout_ms;
 	uint64_t cancel_timeout_ms;
 	int64_t cancel_queue_timeout_ms;
 	int cancel_max_inflight;

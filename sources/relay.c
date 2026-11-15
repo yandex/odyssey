@@ -357,16 +357,19 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 				return OD_EOOM;
 			}
 
-			rc = od_io_write(&server->io, rewritten, timeout_ms,
-					 OD_WAIT_QUERY_SERVER_WRITE);
+			status =
+				od_xplan_send_query(relay, rewritten,
+						    timeout_ms,
+						    OD_WAIT_QUERY_SERVER_WRITE);
 			machine_msg_free(rewritten);
 		} else {
-			rc = od_io_write(&server->io, msg, timeout_ms,
-					 OD_WAIT_QUERY_SERVER_WRITE);
+			status =
+				od_xplan_send_query(relay, msg, timeout_ms,
+						    OD_WAIT_QUERY_SERVER_WRITE);
 		}
 
-		if (rc != 0) {
-			return OD_ESERVER_WRITE;
+		if (status != OD_OK) {
+			return status;
 		}
 
 		od_server_sync_request(server, 1);
@@ -711,10 +714,10 @@ process_fcall_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	/* no need special handling - just write call and wait for rfq */
 
-	int rc = od_io_write(&server->io, msg, timeout_ms,
-			     OD_WAIT_QUERY_SERVER_WRITE);
-	if (rc != 0) {
-		return OD_ESERVER_WRITE;
+	od_frontend_status_t status = od_xplan_send_query(
+		relay, msg, timeout_ms, OD_WAIT_QUERY_SERVER_WRITE);
+	if (status != OD_OK) {
+		return status;
 	}
 
 	od_server_sync_request(server, 1);
