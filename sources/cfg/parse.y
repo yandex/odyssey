@@ -794,11 +794,13 @@ top_item:
 						@1,
 						"server_login_retry");
 		}
-	| READAHEAD int_value
+	| READAHEAD size_value
 		{
-			od_cfg_set_int_from_i64(ctx->diags,
+			od_cfg_set_int_range_from_i64(ctx->diags,
 							&ctx->model->global.readahead,
 							$2,
+							0,
+							INT_MAX,
 							@1,
 							"readahead");
 		}
