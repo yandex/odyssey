@@ -12,3 +12,5 @@ od_bpf_pipe_object_end:
     .align 16
 od_bpf_pipe_object_size:
     .quad od_bpf_pipe_object_end - od_bpf_pipe_object
+
+.section .note.GNU-stack,"",@progbits

@@ -70,7 +70,7 @@ int od_bpf_init(od_global_t *global)
 	do {                                                                 \
 		struct bpf_map *ttt =                                        \
 			bpf_object__find_map_by_name(object, name);          \
-		if (name == NULL) {                                          \
+		if (ttt == NULL) {                                           \
 			int err_ = errno;                                    \
 			od_error(&instance->logger, NULL, NULL,              \
 				 "eBPF: can't find map '%s', errno=%d (%s)", \
