@@ -62,7 +62,7 @@ void od_config_init(od_config_t *config)
 	config->log_syslog_facility = NULL;
 
 	config->readahead = sysconf(_SC_PAGESIZE);
-	config->writebuf = 0;
+	config->writebuf = 8192;
 	config->nodelay = 1;
 	config->disable_nolinger = 0;
 

@@ -56,7 +56,7 @@ static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 	case OD_XPLAN_DEFERRED_BEGIN:
 		return "OD_XPLAN_DEFERRED_BEGIN";
 	default:
-		abort();
+		od_abort();
 	}
 }
 
@@ -69,7 +69,7 @@ static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 		} else if (entry->clmsg != NULL) {
 			return entry->clmsg;
 		} else {
-			abort();
+			od_abort();
 		}
 		break;
 	case OD_XPLAN_PARSE:
@@ -77,7 +77,7 @@ static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 		if (entry->srvmsg != NULL) {
 			return entry->srvmsg;
 		}
-		abort();
+		od_abort();
 		break;
 	case OD_XPLAN_DEFERRED_BEGIN:
 		return entry->clmsg;
@@ -87,7 +87,7 @@ static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 	case OD_XPLAN_VIRTUAL_COMMAND_COMPLETE:
 		return NULL;
 	default:
-		abort();
+		od_abort();
 	}
 }
 
@@ -115,7 +115,7 @@ static const char *plan_delta_type_str(od_xplan_delta_type_t type)
 	case OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME:
 		return "OD_XPLAN_DELTA_REMOVE_CLIENT_ONLY_BY_NAME";
 	default:
-		abort();
+		od_abort();
 	}
 }
 
@@ -601,7 +601,7 @@ static od_pstmt_t *plan_client_get_pstmt(od_xplan_t *xp, od_client_t *client,
 			return NULL;
 
 		default:
-			abort();
+			od_abort();
 		}
 	}
 
@@ -657,7 +657,7 @@ static od_pstmt_t *plan_client_get_portal(od_xplan_t *xp, od_client_t *client,
 			return NULL;
 
 		default:
-			abort();
+			od_abort();
 		}
 	}
 
@@ -711,7 +711,7 @@ static int plan_server_has_pstmt(od_xplan_t *xp, od_server_t *server,
 			return 0;
 
 		default:
-			abort();
+			od_abort();
 		}
 	}
 
@@ -1329,7 +1329,7 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 	size_t count = mm_vector_size(&xbuf->msgs);
 
 	if (od_unlikely(count == 0)) {
-		abort();
+		od_abort();
 	}
 
 	/* handle Flush/Sync out of cycle */
@@ -1343,7 +1343,7 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 		case KIWI_FE_QUERY:
 			if (od_unlikely(i != 0 || !m->is_deferred_begin)) {
 				/* deferred begin must always be at the begginig of the plan */
-				abort();
+				od_abort();
 			}
 			status = plan_deferred_begin(relay, xp, m);
 			break;
@@ -1369,7 +1369,7 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 			break;
 
 		default:
-			abort();
+			od_abort();
 		}
 
 		if (status != OD_OK) {
@@ -1402,7 +1402,7 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 		status = plan_sync(relay, xp, last);
 		break;
 	default:
-		abort();
+		od_abort();
 	}
 
 	return status;
@@ -1537,7 +1537,7 @@ delta_apply(od_xplan_delta_t *delta, od_client_t *client, od_server_t *server)
 		break;
 
 	default:
-		abort();
+		od_abort();
 	}
 
 	return OD_OK;
@@ -1770,130 +1770,33 @@ static od_frontend_status_t run_parse(od_xplan_entry_t *ps, od_client_t *client,
 						OD_WAIT_STREAM_SERVER_READ);
 }
 
-typedef struct {
-	od_client_t *client;
-	od_server_t *server;
-	od_xplan_t *xp;
-	size_t idx;
-} forward_batch_response_arg_t;
-
-static od_frontend_status_t forward_apply_delta_cb(kiwi_be_type_t type, void *a)
+static od_frontend_status_t run_forward(od_xplan_entry_t *e,
+					od_client_t *client,
+					od_server_t *server,
+					uint32_t timeout_ms, int *copy_in_met)
 {
-	forward_batch_response_arg_t *arg = a;
-	od_client_t *client = arg->client;
-	od_server_t *server = arg->server;
-	od_instance_t *instance = client->global->instance;
-	od_rule_t *rule = client->route->rule;
-	od_xplan_t *xp = arg->xp;
-	od_xplan_entry_t *entry = mm_vector_get(&xp->entries, arg->idx);
-	arg->idx++;
+	od_assert(e->type == OD_XPLAN_FORWARD);
+	(void)e;
 
-	od_frontend_status_t status = OD_OK;
-	int apply_delta = 0;
+	od_frontend_status_t status = od_stream_server_exact_completes(
+		server, 1, NULL, NULL, timeout_ms, OD_WAIT_STREAM_SERVER_READ);
 
-	if (!server->xproto_err) {
-		status = delta_apply(&entry->delta, client, server);
-		apply_delta = 1;
-	}
+	if (status == OD_COPY_IN_RECEIVED) {
+		machine_msg_t *add =
+			od_relay_get_copy_additional(&client->relay);
 
-	if (instance->config.log_debug || rule->log_debug) {
-		char buf[256];
-		plan_entry_description(entry, buf, sizeof(buf));
-		od_debug(
-			&instance->logger, client, server,
-			"%s entry finished, response type = %c, apply_delta = %d",
-			buf, type, apply_delta);
-	}
+		status = od_stream_copy_to_server(client, server, add,
+						  timeout_ms);
+		od_relay_set_copy_additional(&client->relay, NULL);
 
-	return status;
-}
-
-static od_frontend_status_t
-run_forward_batch(od_xplan_t *xp, size_t begin, size_t end, /* [begin; end) */
-		  od_client_t *client, od_server_t *server, uint32_t timeout_ms)
-{
-	od_assert(end > begin);
-
-	int has_sync = 0;
-
-#ifndef NDEBUG
-	for (size_t i = begin; i < end; ++i) {
-		od_xplan_entry_t *e = mm_vector_get(&xp->entries, i);
-		od_assert(e->type == OD_XPLAN_FORWARD);
-	}
-#endif
-
-	if (end == mm_vector_size(&xp->entries)) {
-		od_xplan_entry_t *last = mm_vector_get(&xp->entries, end - 1);
-		kiwi_fe_type_t last_type = msg_fe_type(last->clmsg);
-
-		if (last_type == KIWI_FE_FLUSH) {
-			/*
-			 * Flush will not produce any responce from backend
-			 * but we count RFQ as response for Sync
-			 */
-			--end;
-		} else if (last_type == KIWI_FE_SYNC) {
-			has_sync = 1;
-		}
-	}
-
-	od_frontend_status_t status = OD_OK;
-	forward_batch_response_arg_t arg;
-	arg.client = client;
-	arg.server = server;
-	arg.idx = begin;
-	arg.xp = xp;
-
-	while (arg.idx < end && !server->xproto_err) {
-		size_t left = end - arg.idx;
-
-		status = od_stream_server_exact_completes(
-			server, left, forward_apply_delta_cb, &arg, timeout_ms,
-			OD_WAIT_STREAM_SERVER_READ);
-
-		if (status == OD_COPY_IN_RECEIVED) {
-			machine_msg_t *add =
-				od_relay_get_copy_additional(&client->relay);
-
-			status = od_stream_copy_to_server(client, server, add,
-							  timeout_ms);
-
-			od_relay_set_copy_additional(&client->relay, NULL);
-
+		if (status == OD_OK) {
 			int rc = od_io_write_flush(&server->io, timeout_ms);
 			if (rc != 0) {
-				return OD_ESERVER_WRITE;
-			}
-
-			if (has_sync) {
-				/*
-				 * in case some msgs like:
-				 * Bind Execute(COPY FROM) Sync(ignored) CopyData CopyData
-				 *
-				 * we must not expect the response for this sync
-				 */
-				--end;
-				has_sync = 0;
+				status = OD_ESERVER_WRITE;
 			}
 		}
 
-		if (status != OD_OK) {
-			return status;
-		}
-	}
-
-	if (status != OD_OK) {
-		return status;
-	}
-
-	/*
-	 * if Sync was included into batch and exact_completes stopped early
-	 * on ErrorResponse, RFQ is still pending and must be drained
-	 */
-	if (has_sync && server->xproto_err) {
-		status = od_stream_server_sync(server, timeout_ms,
-					       OD_WAIT_STREAM_SERVER_READ);
+		*copy_in_met = 1;
 	}
 
 	return status;
@@ -1943,32 +1846,21 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	size_t count = mm_vector_size(&xp->entries);
 	od_assert(count > 0);
 
-	int forward_begin = -1;
+	/*
+	 * the backend ignores Flush and Sync received during copy-in
+	 * mode, so if a copy-in was handled in this batch, the
+	 * terminating Sync (if any) will never be followed by RFQ
+	 * and must not be awaited
+	 */
+	int copy_in_met = 0;
 
-	for (size_t i = 0; i < count; ++i) {
-		if (server->xproto_err && i != count - 1) {
+	for (size_t i = 0; i < count - 1; ++i) {
+		if (server->xproto_err) {
 			/* if error is met, skip all until Flush/Sync */
 			continue;
 		}
 
 		od_xplan_entry_t *entry = mm_vector_get(&xp->entries, i);
-
-		if (entry->type == OD_XPLAN_FORWARD) {
-			if (forward_begin == -1) {
-				forward_begin = (int)i;
-			}
-			continue;
-		}
-
-		if (forward_begin != -1) {
-			/* need to handle forwards range */
-			status = run_forward_batch(xp, (size_t)forward_begin, i,
-						   client, server, timeout_ms);
-			if (status != OD_OK) {
-				return status;
-			}
-			forward_begin = -1;
-		}
 
 		switch (entry->type) {
 		case OD_XPLAN_DEFERRED_BEGIN:
@@ -1999,9 +1891,11 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 							      timeout_ms);
 			break;
 		case OD_XPLAN_FORWARD:
-			/* fallthrough */
+			status = run_forward(entry, client, server, timeout_ms,
+					     &copy_in_met);
+			break;
 		default:
-			abort();
+			od_abort();
 		}
 
 		if (status == OD_OK && !server->xproto_err) {
@@ -2021,10 +1915,27 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		}
 	}
 
-	if (forward_begin != -1) {
-		/* need to handle tail forwards range */
-		status = run_forward_batch(xp, (size_t)forward_begin, count,
-					   client, server, timeout_ms);
+	od_xbuf_msg_t *last = mm_vector_back(&relay->xbuf.msgs);
+	switch (msg_fe_type(last->msg)) {
+	case KIWI_FE_FLUSH:
+		/* nothing to do */
+		break;
+	case KIWI_FE_SYNC:
+		if (copy_in_met) {
+			/*
+			 * in case some msgs like:
+			 * Bind Execute(COPY FROM) Sync(ignored) CopyData CopyData
+			 *
+			 * we must not expect the response for this sync
+			 */
+			break;
+		}
+
+		status = od_stream_server_sync(server, timeout_ms,
+					       OD_WAIT_STREAM_SERVER_READ);
+		break;
+	default:
+		od_abort();
 	}
 
 	return status;
