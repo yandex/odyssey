@@ -266,9 +266,8 @@ int kiwi_vars_cas_encoding(kiwi_vars_t *client, kiwi_vars_t *server, char *buf,
 		return -1;
 	}
 	memcpy(buf, prefix, prefix_len);
-	int quote_len =
-		kiwi_enquote(enc->value, buf + prefix_len,
-			     buf_len - prefix_len - 1 /* ';' */);
+	int quote_len = kiwi_enquote(enc->value, buf + prefix_len,
+				     buf_len - prefix_len - 1 /* ';' */);
 	if (quote_len == -1) {
 		return -1;
 	}
