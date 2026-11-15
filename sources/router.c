@@ -1061,7 +1061,7 @@ static inline int send_waiting_finished_notice(od_client_t *client,
 od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 				    bool wait_for_idle,
 				    od_storage_endpoint_t *endpoint,
-				    int immediate)
+				    int immediate, uint64_t timeout_ms)
 {
 	od_route_t *route;
 	od_router_status_t rc;
@@ -1071,10 +1071,10 @@ od_router_status_t od_router_attach(od_router_t *router, od_client_t *client,
 	od_assert(route != NULL);
 
 	uint64_t now_ms = machine_time_ms();
-	if (route->rule->pool->timeout_ms == 0) {
+	if (timeout_ms == 0) {
 		end_time_ms = UINT64_MAX;
 	} else {
-		end_time_ms = now_ms + route->rule->pool->timeout_ms;
+		end_time_ms = now_ms + timeout_ms;
 	}
 
 	int internal = route->rule->pool->routing == OD_RULE_POOL_INTERNAL;

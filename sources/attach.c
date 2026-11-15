@@ -21,7 +21,8 @@ od_attach_extended_endpoint(od_instance_t *instance, od_router_t *router,
 	od_router_status_t status;
 
 	status = od_router_attach(router, client, 0 /* wait for idle */,
-				  endpoint, 0 /* wait if needed */);
+				  endpoint, 0 /* wait if needed */,
+				  client->route->rule->pool->timeout_ms);
 	od_debug(&instance->logger, client, NULL,
 		 "attaching service client to backend connection status: %s",
 		 od_router_status_to_str(status));
