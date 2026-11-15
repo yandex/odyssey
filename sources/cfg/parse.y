@@ -247,6 +247,7 @@
 %token PORT "port"
 %token TARGET_SESSION_ATTRS "target_session_attrs"
 %token AUTO_ROUTE_RO_ON_STANDBY "auto_route_ro_on_standby"
+%token ENABLE_RWR_CONSISTENT "enable_rwr_consistent"
 %token CLIENT_LOGIN_TIMEOUT "client_login_timeout"
 %token BACKLOG "backlog"
 %token TLS "tls"
@@ -260,6 +261,7 @@
 %token TYPE "type"
 %token SERVER_MAX_ROUTING "server_max_routing"
 %token ENDPOINTS_STATUS_POLL_INTERVAL "endpoints_status_poll_interval"
+%token RWR_WAIT_TIMEOUT "rwr_wait_timeout"
 %token BALANCING "balancing"
 %token METHOD "method"
 %token SHOW_NOTICE_MESSAGES "show_notice_messages"
@@ -870,6 +872,15 @@ top_item:
 						&$2, 1, 0, INT_MAX,
 						@1,
 						"backend_connect_timeout_ms");
+		}
+	| RWR_WAIT_TIMEOUT time_value
+		{
+			od_cfg_set_time_u64_ms(
+				ctx->diags,
+				&ctx->model->global.rwr_wait_timeout_ms,
+				&$2, 1, 0, INT_MAX,
+				@1,
+				"rwr_wait_timeout");
 		}
 	| CANCEL_TIMEOUT_MS time_value
 		{
@@ -1802,6 +1813,15 @@ route_item:
 							@1,
 							"pool_rollback");
 		}
+	| RWR_WAIT_TIMEOUT time_value
+		{
+			od_cfg_set_time_u64_ms(
+				ctx->diags,
+				&ctx->current_user->rwr_wait_timeout_ms,
+				&$2, 1, 0, INT_MAX,
+				@1,
+				"rwr_wait_timeout");
+		}
 	| POOL_RESET_TIMEOUT_MS time_value
 		{
 			od_cfg_set_time_u64_ms(ctx->diags,
@@ -2649,6 +2669,14 @@ listen_item:
 							"auto_route_ro_on_standby");
 		}
 	| listen_balancing_section
+	| ENABLE_RWR_CONSISTENT bool_value
+		{
+			od_cfg_set_bool(ctx->diags,
+							&ctx->current_listen->enable_rwr_consistent,
+							$2,
+							@1,
+							"enable_rwr_consistent");
+		}
 	| CLIENT_LOGIN_TIMEOUT time_value
 		{
 			od_cfg_set_time_u64_ms(ctx->diags,

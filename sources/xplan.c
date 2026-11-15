@@ -18,6 +18,7 @@
 #include <util.h>
 #include <worker.h>
 #include <wait_event.h>
+#include <rwr.h>
 
 /* max plan entries sent without a heap-allocated iovec array */
 #define OD_XPLAN_IOVEC_INLINE_MAX 32
@@ -55,6 +56,10 @@ static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 		return "OD_XPLAN_VIRTUAL_COMMAND_COMPLETE";
 	case OD_XPLAN_DEFERRED_BEGIN:
 		return "OD_XPLAN_DEFERRED_BEGIN";
+	case OD_XPLAN_RWR_WAIT:
+		return "OD_XPLAN_RWR_WAIT";
+	case OD_XPLAN_RWR_CAPTURE:
+		return "OD_XPLAN_RWR_CAPTURE";
 	default:
 		od_abort();
 	}
@@ -74,6 +79,8 @@ static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 		break;
 	case OD_XPLAN_PARSE:
 	case OD_XPLAN_PARSE_SHADOW:
+	case OD_XPLAN_RWR_WAIT:
+	case OD_XPLAN_RWR_CAPTURE:
 		if (entry->srvmsg != NULL) {
 			return entry->srvmsg;
 		}
@@ -342,6 +349,19 @@ static void entry_init_virtual_command_complete(
 static int xplan_append(od_xplan_t *xp, const od_xplan_entry_t *e)
 {
 	return mm_vector_append(&xp->entries, e);
+}
+
+static od_frontend_status_t
+xplan_append_rwr(od_xplan_t *xp, od_xplan_entry_type_t type, machine_msg_t *msg)
+{
+	od_xplan_entry_t entry;
+	entry_init_internal(&entry, type, NULL, msg, NULL, OD_XPLAN_DELTA_NONE,
+			    NULL, NULL, NULL);
+	if (xplan_append(xp, &entry) != 0) {
+		machine_msg_free(msg);
+		return OD_EOOM;
+	}
+	return OD_OK;
 }
 
 static inline od_frontend_status_t
@@ -1638,6 +1658,84 @@ static od_frontend_status_t run_virtual_command_complete(od_xplan_entry_t *cc,
 	return OD_OK;
 }
 
+static od_frontend_status_t
+run_rwr_query(od_xplan_entry_t *entry, od_client_t *client, od_server_t *server)
+{
+	uint32_t timeout_ms = od_rwr_timeout_ms(client);
+	uint64_t deadline = machine_time_ms() + timeout_ms;
+	int failed = 0;
+	int rows = 0;
+
+	for (;;) {
+		uint32_t remaining_ms = UINT32_MAX;
+		if (timeout_ms != UINT32_MAX) {
+			uint64_t now = machine_time_ms();
+			remaining_ms = now < deadline ? deadline - now : 0;
+		}
+		od_wait_event_t event = entry->type == OD_XPLAN_RWR_WAIT ?
+						OD_WAIT_QUERY_SERVER_READ :
+						OD_WAIT_RESET_SERVER_READ;
+		od_wait_event_start(event);
+		machine_msg_t *msg =
+			od_read(&server->io, remaining_ms, OD_READ_BE);
+		od_wait_event_end(event);
+		if (msg == NULL) {
+			od_gerror(client, server,
+				  "read-your-writes: internal query failed: %s",
+				  machine_timedout() ?
+					  "timed out" :
+					  od_io_error(&server->io));
+			return OD_ESERVER_READ;
+		}
+
+		char *data = machine_msg_data(msg);
+		int size = machine_msg_size(msg);
+		kiwi_be_type_t type = msg_be_type(msg);
+		od_frontend_status_t status = OD_OK;
+		switch (type) {
+		case KIWI_BE_DATA_ROW:
+			if (++rows > 1) {
+				status = OD_ESERVER_READ;
+			} else if (entry->type == OD_XPLAN_RWR_CAPTURE) {
+				od_rwr_capture_lsn_result(client, msg);
+			}
+			break;
+		case KIWI_BE_ERROR_RESPONSE:
+			od_backend_error(server, data, size);
+			failed = 1;
+			break;
+		case KIWI_BE_PARAMETER_STATUS:
+			if (od_backend_update_parameter(server, data, size,
+							1) != 0) {
+				status = OD_ESERVER_READ;
+			}
+			break;
+		case KIWI_BE_READY_FOR_QUERY:
+			if (od_backend_ready(server, data, size) != 0) {
+				status = OD_ESERVER_READ;
+			}
+			if (failed && entry->type == OD_XPLAN_RWR_CAPTURE) {
+				client->rwr_last_lsn_valid = false;
+			}
+			break;
+		case KIWI_BE_ROW_DESCRIPTION:
+		case KIWI_BE_COMMAND_COMPLETE:
+		case KIWI_BE_NOTICE_RESPONSE:
+		case KIWI_BE_NOTIFICATION_RESPONSE:
+			break;
+		default:
+			status = OD_ESERVER_READ;
+			break;
+		}
+		machine_msg_free(msg);
+		if (status != OD_OK || type == KIWI_BE_READY_FOR_QUERY) {
+			/* A regular WAIT error, e.g. promotion, does not poison the
+			 * following messages: it was an independent simple query. */
+			return status;
+		}
+	}
+}
+
 static od_frontend_status_t run_parse_shadow(od_xplan_entry_t *ps,
 					     od_client_t *client,
 					     od_server_t *server,
@@ -1885,7 +1983,6 @@ od_frontend_status_t run_query_no_plan(machine_msg_t *msg,
 
 	/* virtual_portal_write already sent and counted a replacement Query. */
 	if (portal->query == NULL) {
-		int rc;
 		if (client->pending_begin != NULL) {
 			const char *query = (char *)machine_msg_data(msg) +
 					    sizeof(kiwi_header_t);
@@ -1897,15 +1994,19 @@ od_frontend_status_t run_query_no_plan(machine_msg_t *msg,
 			if (rewritten == NULL) {
 				return OD_EOOM;
 			}
-			rc = od_io_write(&server->io, rewritten, timeout_ms,
-					 OD_WAIT_QUERY_SERVER_WRITE);
+			status =
+				od_xplan_send_query(&client->relay, rewritten,
+						    timeout_ms,
+						    OD_WAIT_QUERY_SERVER_WRITE);
 			machine_msg_free(rewritten);
 		} else {
-			rc = od_io_write(&server->io, msg, timeout_ms,
-					 OD_WAIT_QUERY_SERVER_WRITE);
+			status =
+				od_xplan_send_query(&client->relay, msg,
+						    timeout_ms,
+						    OD_WAIT_QUERY_SERVER_WRITE);
 		}
-		if (rc != 0) {
-			return OD_ESERVER_WRITE;
+		if (status != OD_OK) {
+			return status;
 		}
 		od_server_sync_request(server, 1);
 	}
@@ -2048,6 +2149,10 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 		case OD_XPLAN_DEFERRED_BEGIN:
 			/* Already replayed before sending the extended batch. */
 			break;
+		case OD_XPLAN_RWR_WAIT:
+		case OD_XPLAN_RWR_CAPTURE:
+			/* Internal replies were consumed before the extended replies. */
+			break;
 		case OD_XPLAN_PARSE:
 			status = run_parse(entry, client, server, timeout_ms);
 			break;
@@ -2123,50 +2228,91 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	return status;
 }
 
+static od_frontend_status_t run_rwr_prefix(od_xplan_t *xp, size_t count,
+					   od_client_t *client,
+					   od_server_t *server)
+{
+	for (size_t i = 0; i < count; ++i) {
+		od_xplan_entry_t *entry = mm_vector_get(&xp->entries, i);
+		od_frontend_status_t status =
+			run_rwr_query(entry, client, server);
+		if (status != OD_OK) {
+			return status;
+		}
+	}
+	return OD_OK;
+}
+
 static od_frontend_status_t
 send_buf_and_run_plan(od_xplan_t *xp, od_relay_t *relay, struct iovec *iovecs,
-		      size_t niovecs, uint32_t timeout_ms)
+		      size_t niovecs, uint32_t timeout_ms, bool extended,
+		      od_wait_event_t write_event)
 {
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
+	size_t count = mm_vector_size(&xp->entries);
+	size_t prefix = 0;
+	while (prefix < count) {
+		od_xplan_entry_t *entry = mm_vector_get(&xp->entries, prefix);
+		if (entry->type != OD_XPLAN_RWR_WAIT &&
+		    entry->type != OD_XPLAN_RWR_CAPTURE) {
+			break;
+		}
+		++prefix;
+	}
 
-	od_xplan_entry_t *first = mm_vector_get(&xp->entries, 0);
-	if (first->type == OD_XPLAN_DEFERRED_BEGIN) {
-		/* A rejected BEGIN must not let the batch run outside a transaction. */
-		od_assert(niovecs > 1);
-		od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-		int rc = od_io_writev(&server->io, iovecs, 1, timeout_ms, 0);
-		od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
+	od_server_sync_request(server, prefix);
+	uint32_t write_timeout_ms =
+		prefix > 0 ? od_min(timeout_ms, od_rwr_timeout_ms(client)) :
+			     timeout_ms;
+	od_xplan_entry_t *first =
+		prefix < count ? mm_vector_get(&xp->entries, prefix) : NULL;
+	if (first != NULL && first->type == OD_XPLAN_DEFERRED_BEGIN) {
+		/* WAIT can share the BEGIN write. A rejected BEGIN must still
+		 * prevent the extended commands from running outside a transaction. */
+		od_assert(niovecs > prefix + 1);
+		od_wait_event_start(write_event);
+		int rc = od_io_writev(&server->io, iovecs, prefix + 1,
+				      write_timeout_ms, 0);
+		od_wait_event_end(write_event);
 		if (rc == -1) {
 			return OD_ESERVER_WRITE;
 		}
 
 		od_frontend_status_t status =
-			run_deferred_begin(first, client, server, timeout_ms);
+			run_rwr_prefix(xp, prefix, client, server);
+		if (status != OD_OK) {
+			return status;
+		}
+		status = run_deferred_begin(first, client, server, timeout_ms);
 		if (status == OD_SKIP) {
 			/* Only Flush/Sync may be sent after the error. */
 			server->xproto_err = 1;
 			iovecs += niovecs - 1;
 			niovecs = 1;
 		} else if (status == OD_OK) {
-			iovecs++;
-			niovecs--;
+			iovecs += prefix + 1;
+			niovecs -= prefix + 1;
 		} else {
 			return status;
 		}
+		prefix = 0;
+		write_timeout_ms = timeout_ms;
 	}
 
-	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-	int rc = od_io_writev(&server->io, iovecs, niovecs, timeout_ms, 0);
-	od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
+	od_wait_event_start(write_event);
+	int rc =
+		od_io_writev(&server->io, iovecs, niovecs, write_timeout_ms, 0);
+	od_wait_event_end(write_event);
 	if (rc == -1) {
 		return OD_ESERVER_WRITE;
 	}
 
-	/*
-	 * use niovecs because it shows real number of how much responses we are awaiting
-	 * (some might have been skipped after virtual error response)
-	 */
+	od_frontend_status_t status =
+		run_rwr_prefix(xp, prefix, client, server);
+	if (status != OD_OK || !extended) {
+		return status;
+	}
 	return run_plan_impl(xp, relay, niovecs, timeout_ms);
 }
 
@@ -2244,15 +2390,41 @@ static inline void log_xbuf(od_instance_t *instance, od_client_t *client,
 	od_free(msg);
 }
 
-od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
-				  uint32_t timeout_ms)
+static od_frontend_status_t xplan_send(od_xplan_t *xp, od_relay_t *relay,
+				       uint32_t timeout_ms, bool extended,
+				       od_wait_event_t write_event)
 {
 	od_client_t *client = relay->client;
+	od_server_t *server = client->server;
 	od_rule_t *rule = client->route->rule;
 	od_instance_t *instance = client->global->instance;
 
 	size_t count = mm_vector_size(&xp->entries);
 	od_assert(count > 0);
+
+	od_xplan_entry_t *first = mm_vector_get(&xp->entries, 0);
+	if (server->rwr_wait_pending && !server->xproto_err &&
+	    first->type != OD_XPLAN_RWR_CAPTURE) {
+		machine_msg_t *wait;
+		od_frontend_status_t status =
+			od_rwr_prepare_wait(client, &wait);
+		if (status != OD_OK) {
+			return status;
+		}
+		if (wait != NULL) {
+			status = xplan_append_rwr(xp, OD_XPLAN_RWR_WAIT, wait);
+			if (status != OD_OK) {
+				return status;
+			}
+			/* WAIT must precede every client command, including BEGIN. */
+			od_xplan_entry_t *entries =
+				mm_vector_get(&xp->entries, 0);
+			od_xplan_entry_t entry = entries[count];
+			memmove(entries + 1, entries, count * sizeof(entry));
+			entries[0] = entry;
+			++count;
+		}
+	}
 
 	/* most plans are small: avoid a heap round-trip per flush */
 	struct iovec stack_iovecs[OD_XPLAN_IOVEC_INLINE_MAX];
@@ -2269,17 +2441,73 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 	size_t written = prepare_send_iovecs(xp, iovecs);
 
 	if (instance->config.log_debug || rule->log_debug) {
-		log_xbuf(instance, client, &relay->xbuf);
+		if (!mm_vector_empty(&relay->xbuf.msgs)) {
+			log_xbuf(instance, client, &relay->xbuf);
+		}
 		log_plan_debug(instance, xp, client);
 		log_srv_send_buf(instance, client, iovecs, written);
 	}
 
-	od_frontend_status_t status =
-		send_buf_and_run_plan(xp, relay, iovecs, written, timeout_ms);
+	od_frontend_status_t status = send_buf_and_run_plan(
+		xp, relay, iovecs, written, timeout_ms, extended, write_event);
 
 	if (iovecs != stack_iovecs) {
 		od_free(iovecs);
 	}
 
+	return status;
+}
+
+od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
+				  uint32_t timeout_ms)
+{
+	return xplan_send(xp, relay, timeout_ms, true,
+			  OD_WAIT_QUERY_SERVER_WRITE);
+}
+
+od_frontend_status_t od_xplan_send_query(od_relay_t *relay, machine_msg_t *msg,
+					 uint32_t timeout_ms,
+					 od_wait_event_t write_event)
+{
+	if (!relay->client->server->rwr_wait_pending) {
+		int rc = od_io_write(&relay->client->server->io, msg,
+				     timeout_ms, write_event);
+		return rc == 0 ? OD_OK : OD_ESERVER_WRITE;
+	}
+
+	od_xplan_t xp;
+	od_xplan_init(&xp);
+	od_frontend_status_t status = xplan_append_fwd_no_delta(&xp, msg, NULL);
+	if (status == OD_OK) {
+		status = xplan_send(&xp, relay, timeout_ms, false, write_event);
+	}
+	od_xplan_destroy(&xp);
+	return status;
+}
+
+od_frontend_status_t od_xplan_capture_lsn(od_relay_t *relay,
+					  uint32_t timeout_ms)
+{
+	/* Older servers do not report in_hot_standby. Let the query guard
+	 * distinguish a primary from a standby without a separate round trip. */
+	const char *query =
+		relay->client->server->in_hot_standby < 0 ?
+			"SELECT pg_current_wal_insert_lsn() WHERE NOT pg_is_in_recovery()" :
+			"SELECT pg_current_wal_insert_lsn()";
+	machine_msg_t *msg =
+		kiwi_fe_write_query(NULL, query, strlen(query) + 1);
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+
+	od_xplan_t xp;
+	od_xplan_init(&xp);
+	od_frontend_status_t status =
+		xplan_append_rwr(&xp, OD_XPLAN_RWR_CAPTURE, msg);
+	if (status == OD_OK) {
+		status = xplan_send(&xp, relay, timeout_ms, false,
+				    OD_WAIT_QUERY_SERVER_WRITE);
+	}
+	od_xplan_destroy(&xp);
 	return status;
 }

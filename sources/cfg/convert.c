@@ -558,6 +558,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_INT(cfg->max_sigterms_to_die, config->max_sigterms_to_die);
 	COPY_U64(cfg->backend_connect_timeout_ms,
 		 config->backend_connect_timeout_ms);
+	COPY_U64(cfg->rwr_wait_timeout_ms, config->rwr_wait_timeout_ms);
 	COPY_U64(cfg->cancel_timeout_ms, config->cancel_timeout_ms);
 	COPY_I64(cfg->cancel_queue_timeout_ms, config->cancel_queue_timeout_ms);
 	COPY_INT(cfg->cancel_max_inflight, config->cancel_max_inflight);
@@ -875,6 +876,7 @@ static int convert_rule_settings(const od_cfg_route_t *cfg, od_list_t *spools,
 	COPY_BOOL(cfg->pool_cancel, rule->pool->cancel);
 	COPY_BOOL(cfg->pool_rollback, rule->pool->rollback);
 	COPY_U64(cfg->pool_reset_timeout_ms, rule->pool->reset_timeout_ms);
+	COPY_U64(cfg->rwr_wait_timeout_ms, rule->rwr_wait_timeout_ms);
 	COPY_BOOL(cfg->pool_reserve_prepared_statement,
 		  rule->pool->reserve_prepared_statement);
 	COPY_INT(cfg->server_pstmt_cache_size,
@@ -1192,6 +1194,7 @@ static int convert_listen(convert_ctx_t *ctx, const od_cfg_listen_t *cfg)
 		 diags);
 	COPY_BOOL(cfg->auto_route_ro_on_standby,
 		  listen->auto_route_ro_on_standby);
+	COPY_BOOL(cfg->enable_rwr_consistent, listen->enable_rwr_consistent);
 	if (cfg->target_session_attrs.seen.is_set &&
 	    cfg->auto_route_ro_on_standby.seen.is_set) {
 		od_cfg_diag_error(
