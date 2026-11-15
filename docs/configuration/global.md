@@ -77,7 +77,7 @@ megabytes) and is rejected by time-valued options.
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
 | `readahead`                                | int (bytes)      | one page    | SIGHUP  | Per-connection read buffer                            |
-| `writebuf`                                 | int (bytes)      | `0`         | restart | Per-connection write buffer for client connections; 0 = off; size suffixes (`8K`, `1M`) are supported |
+| `writebuf`                                 | int (bytes)      | 8192         | restart | Per-connection write buffer for client connections; 0 = off; size suffixes (`8K`, `1M`) are supported |
 | `cache_coroutine`                          | int              | `1024`      | restart | Coroutines cache size                                  |
 | `nodelay`                                  | int (bool)       | `yes`       | SIGHUP  | Enable TCP\_NODELAY                                   |
 | `disable_nolinger`                         | int (bool)       | `yes`       | SIGHUP  | Do no set tcp linger to 0 for client connections                  |
@@ -427,9 +427,10 @@ pushed to the socket at protocol flush points (when a response batch
 is complete), instead of one syscall per message. Bare values are
 bytes; size suffixes (`8K`, `1M`, `1G`) are supported.
 
-`0` (default) disables buffering: every write goes to the socket
+`0` disables buffering: every write goes to the socket
 directly. Replication connections and the local (console) loop are
 never buffered regardless of this option.
+Default: 8192
 
 `writebuf 8192`
 
