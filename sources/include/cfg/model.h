@@ -106,6 +106,7 @@ typedef struct od_cfg_global {
 	od_cfg_int_field_t accept_rate_limit;
 	od_cfg_u64_field_t server_login_retry_ms;
 	od_cfg_int_field_t readahead;
+	od_cfg_int_field_t writebuf;
 	od_cfg_u64_field_t keepalive_ms;
 	od_cfg_u64_field_t keepalive_keep_interval_ms;
 	od_cfg_int_field_t keepalive_probes;

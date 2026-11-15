@@ -529,6 +529,7 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_INT(cfg->accept_rate_limit, config->accept_rate_limit);
 	COPY_U64(cfg->server_login_retry_ms, config->server_login_retry_ms);
 	COPY_INT(cfg->readahead, config->readahead);
+	COPY_INT(cfg->writebuf, config->writebuf);
 	if (cfg->keepalive_ms.seen.is_set) {
 		config->keepalive =
 			od_cfg_ms_to_sec(diags, cfg->keepalive_ms.seen.location,

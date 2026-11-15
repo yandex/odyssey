@@ -43,6 +43,24 @@
 #include <log_sampling.h>
 #include <server.h>
 
+static inline od_frontend_status_t writebuf_enable(od_client_t *client)
+{
+	od_instance_t *instance = client->global->instance;
+	if (instance->config.writebuf <= 0) {
+		return OD_OK;
+	}
+
+	int rc = mm_io_buf_enable(client->io.io,
+				  (size_t)instance->config.writebuf);
+	if (rc != 0) {
+		od_error(&instance->logger, client, NULL,
+			 "failed to enable write buffer: %s",
+			 strerror(machine_errno()));
+		return machine_errno() == ENOMEM ? OD_EOOM : OD_ECLIENT_WRITE;
+	}
+	return OD_OK;
+}
+
 static inline void od_frontend_close(od_client_t *client)
 {
 	od_assert(client->route == NULL);
@@ -3052,6 +3070,11 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		return od_frontend_remote_replication(client);
 	}
 
+	od_frontend_status_t wb_status = writebuf_enable(client);
+	if (wb_status != OD_OK) {
+		return wb_status;
+	}
+
 	od_instance_t *instance = client->global->instance;
 
 	while (1) {
@@ -3083,13 +3106,25 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 			if (status != OD_OK) {
 				return status;
 			}
+		}
 
+		/*
+		 * Main flush point: make sure all of packet handling bytes
+		 * was properly sent to client alongside with async server messages above,
+		 * so we place it here, not after client_process_message() call
+		 */
+		if (od_io_flush(&client->io, UINT32_MAX) == -1) {
+			return OD_ECLIENT_WRITE;
+		}
+
+		if (server != NULL) {
 			/*
 			 * interrupt client header reading when smth occurs on server
 			 * smth == async messages
 			 */
 			od_io_set_peer(&client->io, &server->io);
 		}
+
 		kiwi_header_t header;
 		status = client_read_header(client, &header);
 		if (server != NULL) {

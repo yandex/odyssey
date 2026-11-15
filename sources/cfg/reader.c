@@ -122,6 +122,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_INT(dst, src, accept_rate_limit);
 	MERGE_U64(dst, src, server_login_retry_ms);
 	MERGE_INT(dst, src, readahead);
+	MERGE_INT(dst, src, writebuf);
 	MERGE_U64(dst, src, keepalive_ms);
 	MERGE_U64(dst, src, keepalive_keep_interval_ms);
 	MERGE_INT(dst, src, keepalive_probes);

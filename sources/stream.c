@@ -935,6 +935,16 @@ od_frontend_status_t od_stream_copy_to_server(od_client_t *client,
 					      uint32_t timeout_ms)
 {
 	/*
+	 * Flush point: the CopyInResponse forwarded to the
+	 * buffered client io must reach the wire before the copy-in
+	 * stream starts, the client waits for it before sending any
+	 * CopyData (see pq_flush in ReceiveCopyBegin)
+	 */
+	if (od_io_flush(&client->io, timeout_ms) == -1) {
+		return OD_ECLIENT_WRITE;
+	}
+
+	/*
 	 * stream from client to server all CopyData/CopyFail/CopyDone messages
 	 * then stream from server to client until RFQ
 	 */
