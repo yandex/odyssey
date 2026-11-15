@@ -1,0 +1,14 @@
+    .section .rodata
+    .globl od_bpf_pipe_object
+    .hidden od_bpf_pipe_object
+    .align 16
+od_bpf_pipe_object:
+    .incbin "@OD_BPF_OBJ@"
+    .globl od_bpf_pipe_object_end
+    .hidden od_bpf_pipe_object_end
+od_bpf_pipe_object_end:
+    .globl od_bpf_pipe_object_size
+    .hidden od_bpf_pipe_object_size
+    .align 16
+od_bpf_pipe_object_size:
+    .quad od_bpf_pipe_object_end - od_bpf_pipe_object

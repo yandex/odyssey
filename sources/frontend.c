@@ -11,6 +11,7 @@
 
 #include <machinarium/machinarium.h>
 
+#include <bpf.h>
 #include <status.h>
 #include <types.h>
 #include <frontend.h>
@@ -2532,6 +2533,10 @@ static od_frontend_status_t replication_impl(od_client_t *client)
 	od_io_set_peer(&client->io, &server->io);
 	od_io_set_peer(&server->io, &client->io);
 
+#ifdef HAVE_EBPF
+	od_bpf_pipe_enter(client, server);
+#endif
+
 	char coro_name[OD_ID_LEN + 16 /* '>s' or '<s' */];
 	memset(coro_name, 0, sizeof(coro_name));
 	od_id_write_to_string(&client->id, coro_name, sizeof(coro_name));
@@ -2565,6 +2570,10 @@ static od_frontend_status_t replication_impl(od_client_t *client)
 
 	od_io_remove_peer(&client->io, &server->io);
 	od_io_remove_peer(&server->io, &client->io);
+
+#ifdef HAVE_EBPF
+	od_bpf_pipe_exit(client, server);
+#endif
 
 	/* force returning the OK status to not trigger the cleanup */
 
@@ -2809,6 +2818,10 @@ static void od_frontend_replication_proxy_pump(od_client_t *client)
 
 	od_assert(server != NULL);
 
+#ifdef HAVE_EBPF
+	od_bpf_pipe_enter(client, server);
+#endif
+
 	atomic_uint_fast64_t stop;
 	atomic_init(&stop, 0);
 
@@ -2867,6 +2880,10 @@ static void od_frontend_replication_proxy_pump(od_client_t *client)
 out:
 	od_io_remove_peer(&client->io, &server->io);
 	od_io_remove_peer(&server->io, &client->io);
+
+#ifdef HAVE_EBPF
+	od_bpf_pipe_exit(client, server);
+#endif
 }
 
 static od_rule_storage_t *

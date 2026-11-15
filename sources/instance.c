@@ -14,7 +14,7 @@
 
 #include <machinarium/machinarium.h>
 
-#include <status.h>
+#include <bpf.h>
 #include <daemon.h>
 #include <types.h>
 #include <instance.h>
@@ -606,6 +606,11 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 		}
 	}
 
+#ifdef HAVE_EBPF
+	/* best-effort mode: no return code check */
+	od_bpf_init(global);
+#endif
+
 	/* start system machine thread */
 	rc = od_system_start(system, global);
 	if (rc == -1) {
@@ -613,6 +618,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	}
 
 	rc = machine_wait(system->machine);
+
+#ifdef HAVE_EBPF
+	od_bpf_shutdown();
+#endif
 
 	return rc;
 

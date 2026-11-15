@@ -73,6 +73,7 @@ set(od_src
     machinarium/compression.c
     machinarium/cert_hash.c
     machinarium/sem.c
+    bpf.c
     alloc/linear.c
     cfg/diag.c
     cfg/model.c
@@ -173,6 +174,62 @@ else()
 endif()
 
 message(STATUS "Poll backend: ${CMAKE_SYSTEM_NAME}")
+
+set(HAVE_EBPF OFF)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    option(BUILD_EBPF "Build eBPF replication pipe bypass support" OFF)
+    find_program(OD_BPF_CLANG clang)
+    find_path(LIBBPF_INCLUDE_DIR NAMES bpf/libbpf.h)
+    find_library(LIBBPF_LIBRARY NAMES bpf)
+
+    if (BUILD_EBPF AND OD_BPF_CLANG AND LIBBPF_INCLUDE_DIR AND LIBBPF_LIBRARY)
+        set(OD_BPF_ARCH_INC "")
+        foreach (cand "/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu" "/usr/include")
+            if (EXISTS "${cand}/asm/types.h")
+                set(OD_BPF_ARCH_INC "${cand}")
+                break()
+            endif()
+        endforeach()
+
+        set(HAVE_EBPF ON)
+        add_definitions(-DHAVE_EBPF)
+        include_directories(${LIBBPF_INCLUDE_DIR})
+        set(od_libraries ${od_libraries} ${LIBBPF_LIBRARY})
+
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bpf)
+        set(OD_BPF_OBJ ${CMAKE_CURRENT_BINARY_DIR}/bpf/pipe.bpf.o)
+
+        add_custom_command(
+            OUTPUT ${OD_BPF_OBJ}
+            COMMAND ${OD_BPF_CLANG} -O2 -g -Wall -Werror -target bpf
+                    $<$<BOOL:${OD_BPF_ARCH_INC}>:-I${OD_BPF_ARCH_INC}>
+                    -c ${CMAKE_CURRENT_SOURCE_DIR}/bpf/pipe.bpf.c
+                    -o ${OD_BPF_OBJ}
+            DEPENDS bpf/pipe.bpf.c
+            COMMENT "Compiling eBPF program bpf/pipe.bpf.c"
+            VERBATIM
+        )
+
+        configure_file(
+            ${CMAKE_CURRENT_SOURCE_DIR}/bpf/pipe_bpf_embed.S.in
+            ${CMAKE_CURRENT_BINARY_DIR}/bpf/pipe_bpf_embed.S
+            @ONLY
+        )
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/bpf/pipe_bpf_embed.S
+            PROPERTIES GENERATED TRUE
+                       LANGUAGE C
+                       OBJECT_DEPENDS ${OD_BPF_OBJ}
+        )
+        list(APPEND od_src ${CMAKE_CURRENT_BINARY_DIR}/bpf/pipe_bpf_embed.S)
+
+        message(STATUS "eBPF suppot: ON")
+        message(STATUS "  clang: ${OD_BPF_CLANG}")
+        message(STATUS "  libbpf: ${LIBBPF_LIBRARY}")
+    endif()
+else()
+    message(STATUS "eBPF support: OFF (clang or libbpf-dev not found)")
+endif()
 
 set(CONFIG_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/cfg)
 file(MAKE_DIRECTORY ${CONFIG_GEN_DIR})
