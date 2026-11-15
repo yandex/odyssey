@@ -2101,3 +2101,14 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 
 	return status;
 }
+
+od_frontend_status_t od_xplan_send_query(od_relay_t *relay, machine_msg_t *msg,
+					 uint32_t timeout_ms,
+					 od_wait_event_t write_event)
+{
+	od_server_t *server = relay->client->server;
+	od_wait_event_start(write_event);
+	int rc = od_io_write(&server->io, msg, timeout_ms);
+	od_wait_event_end(write_event);
+	return rc == 0 ? OD_OK : OD_ESERVER_WRITE;
+}
