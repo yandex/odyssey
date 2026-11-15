@@ -426,6 +426,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_int_field_free(&g->accept_rate_limit);
 	od_cfg_u64_field_free(&g->server_login_retry_ms);
 	od_cfg_int_field_free(&g->readahead);
+	od_cfg_int_field_free(&g->writebuf);
 	od_cfg_u64_field_free(&g->keepalive_ms);
 	od_cfg_u64_field_free(&g->keepalive_keep_interval_ms);
 	od_cfg_int_field_free(&g->keepalive_probes);

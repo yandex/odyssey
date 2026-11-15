@@ -126,6 +126,7 @@ struct od_config {
 	int bindwith_reuseport;
 	/*                         */
 	int readahead;
+	int writebuf;
 	int nodelay;
 	int disable_nolinger;
 

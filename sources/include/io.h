@@ -255,7 +255,7 @@ static inline int od_io_write(od_io_t *io, machine_msg_t *msg,
  * downstream before returning. Mirrors od_io_write_raw: the
  * machinarium flush is a single attempt, the wait lives here.
  */
-static inline int od_io_flush_pending(od_io_t *io, uint32_t time_ms)
+static inline int od_io_flush(od_io_t *io, uint32_t time_ms)
 {
 	mm_io_set_deadline(io->io, time_ms);
 	int rc;

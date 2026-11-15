@@ -62,6 +62,7 @@ void od_config_init(od_config_t *config)
 	config->log_syslog_facility = NULL;
 
 	config->readahead = sysconf(_SC_PAGESIZE);
+	config->writebuf = 8192;
 	config->nodelay = 1;
 	config->disable_nolinger = 0;
 
@@ -523,6 +524,7 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, bindwith_reuseport), 0 },
 	{ "readahead", OD_CONFIG_FIELD_INT, offsetof(od_config_t, readahead),
 	  0 },
+	{ "writebuf", OD_CONFIG_FIELD_INT, offsetof(od_config_t, writebuf), 0 },
 	{ "nodelay", OD_CONFIG_FIELD_BOOL, offsetof(od_config_t, nodelay), 0 },
 	{ "disable_nolinger", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, disable_nolinger), 1 },
@@ -874,6 +876,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->stats_interval);
 	od_log(logger, NULL, NULL, "readahead               %d",
 	       config->readahead);
+	od_log(logger, NULL, NULL, "writebuf                %d",
+	       config->writebuf);
 	od_log(logger, NULL, NULL, "nodelay                 %s",
 	       od_config_yes_no(config->nodelay));
 	od_log(logger, NULL, NULL, "disable_nolinger        %s",

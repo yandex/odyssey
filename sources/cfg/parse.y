@@ -208,6 +208,7 @@
 %token ACCEPT_RATE_LIMIT "accept_rate_limit"
 %token SERVER_LOGIN_RETRY "server_login_retry"
 %token READAHEAD "readahead"
+%token WRITEBUF "writebuf"
 %token KEEPALIVE "keepalive"
 %token KEEPALIVE_KEEP_INTERVAL "keepalive_keep_interval"
 %token KEEPALIVE_PROBES "keepalive_probes"
@@ -800,6 +801,16 @@ top_item:
 							$2,
 							@1,
 							"readahead");
+		}
+	| WRITEBUF size_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+							&ctx->model->global.writebuf,
+							$2,
+							0,
+							INT_MAX,
+							@1,
+							"writebuf");
 		}
 	| KEEPALIVE time_value
 		{

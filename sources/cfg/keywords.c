@@ -62,6 +62,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "accept_rate_limit", ACCEPT_RATE_LIMIT },
 	{ "server_login_retry", SERVER_LOGIN_RETRY },
 	{ "readahead", READAHEAD },
+	{ "writebuf", WRITEBUF },
 	{ "keepalive", KEEPALIVE },
 	{ "keepalive_keep_interval", KEEPALIVE_KEEP_INTERVAL },
 	{ "keepalive_probes", KEEPALIVE_PROBES },
