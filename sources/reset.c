@@ -20,6 +20,8 @@
 #include <stream.h>
 #include <wait_event.h>
 
+#define RESET_COMMENT "/* odyssey reset */"
+
 int od_reset(od_server_t *server)
 {
 	od_instance_t *instance = server->global->instance;
@@ -151,7 +153,7 @@ int od_reset(od_server_t *server)
 	 * transaction running */
 	if (route->rule->pool->rollback) {
 		if (server->is_transaction) {
-			char query_rlb[] = "ROLLBACK";
+			char query_rlb[] = RESET_COMMENT "ROLLBACK";
 			rc = od_backend_query(server, query_rlb, NULL,
 					      sizeof(query_rlb),
 					      reset_timeout_ms);
@@ -164,7 +166,7 @@ int od_reset(od_server_t *server)
 
 	/* send DISCARD ALL */
 	if (route->rule->pool->discard) {
-		char query_discard[] = "DISCARD ALL";
+		char query_discard[] = RESET_COMMENT "DISCARD ALL";
 		rc = od_backend_query(server, query_discard, NULL,
 				      sizeof(query_discard), reset_timeout_ms);
 		if (rc == NOT_OK_RESPONSE) {
@@ -175,7 +177,7 @@ int od_reset(od_server_t *server)
 	/* send smart discard */
 	if (route->rule->pool->smart_discard &&
 	    route->rule->pool->discard_query == NULL) {
-		char query_discard[] =
+		char query_discard[] = RESET_COMMENT
 			"SET SESSION AUTHORIZATION DEFAULT;RESET ALL;CLOSE ALL;UNLISTEN *;SELECT pg_advisory_unlock_all();DISCARD PLANS;DISCARD SEQUENCES;DISCARD TEMP;";
 		rc = od_backend_query(server, query_discard, NULL,
 				      sizeof(query_discard), reset_timeout_ms);
