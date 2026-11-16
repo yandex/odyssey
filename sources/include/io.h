@@ -12,6 +12,7 @@
 #include <machinarium/io.h>
 
 #include <readahead.h>
+#include <wait_event.h>
 
 typedef struct od_io od_io_t;
 
@@ -245,9 +246,12 @@ int od_io_try_read_some(od_io_t *io);
  * Note: this function do not frees msg
  */
 static inline int od_io_write(od_io_t *io, machine_msg_t *msg,
-			      uint32_t timeout_ms)
+			      uint32_t timeout_ms, od_wait_event_t write_event)
 {
-	return machine_write_no_free(io->io, msg, timeout_ms);
+	od_wait_event_start(write_event);
+	int rc = machine_write_no_free(io->io, msg, timeout_ms);
+	od_wait_event_end(write_event);
+	return rc;
 }
 
 /*

@@ -829,9 +829,8 @@ static od_frontend_status_t stream_copy_from_client(od_client_t *client,
 			return st;
 		}
 
-		od_wait_event_start(OD_WAIT_STREAM_SERVER_WRITE);
-		rc = od_io_write(&server->io, additional, timeout_ms);
-		od_wait_event_end(OD_WAIT_STREAM_SERVER_WRITE);
+		rc = od_io_write(&server->io, additional, timeout_ms,
+				 OD_WAIT_STREAM_SERVER_WRITE);
 		if (rc != 0) {
 			return OD_ESERVER_WRITE;
 		}

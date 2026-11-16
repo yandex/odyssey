@@ -219,9 +219,8 @@ int od_reset(od_server_t *server)
 				goto error;
 			}
 
-			od_wait_event_start(OD_WAIT_RESET_SERVER_WRITE);
-			rc = od_io_write(&server->io, sync, reset_timeout_ms);
-			od_wait_event_end(OD_WAIT_RESET_SERVER_WRITE);
+			rc = od_io_write(&server->io, sync, reset_timeout_ms,
+					 OD_WAIT_RESET_SERVER_WRITE);
 			machine_msg_free(sync);
 			if (rc != 0) {
 				goto error;
