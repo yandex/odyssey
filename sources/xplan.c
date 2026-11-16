@@ -1766,7 +1766,7 @@ static od_frontend_status_t run_parse(od_xplan_entry_t *ps, od_client_t *client,
 
 	return od_stream_server_exact_completes(server,
 						1 /* one complete for parse */,
-						NULL, NULL, timeout_ms,
+						timeout_ms,
 						OD_WAIT_STREAM_SERVER_READ);
 }
 
@@ -1779,7 +1779,7 @@ static od_frontend_status_t run_forward(od_xplan_entry_t *e,
 	(void)e;
 
 	od_frontend_status_t status = od_stream_server_exact_completes(
-		server, 1, NULL, NULL, timeout_ms, OD_WAIT_STREAM_SERVER_READ);
+		server, 1, timeout_ms, OD_WAIT_STREAM_SERVER_READ);
 
 	if (status == OD_COPY_IN_RECEIVED) {
 		machine_msg_t *add =
