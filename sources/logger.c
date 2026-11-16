@@ -165,6 +165,8 @@ static inline od_fmt_token_type_t od_logger_format_parse_specifier(char c)
 		return OD_FMT_CLIENT_PORT;
 	case 'H':
 		return OD_FMT_SERVER_HOST;
+	case 'b':
+		return OD_FMT_SERVER_PID;
 	default:
 		return OD_FMT_LITERAL;
 	}
@@ -669,6 +671,16 @@ od_logger_format(od_logger_t *logger, od_logger_level_t level,
 					dst_pos, dst_end, server->id.id_prefix,
 					server->id.id,
 					(int)sizeof(server->id.id));
+			} else {
+				dst_pos += od_logger_append_str(
+					dst_pos, dst_end, "none");
+			}
+			break;
+		case OD_FMT_SERVER_PID:
+			if (server && server->key.key_pid != 0) {
+				dst_pos += od_logger_append_u64(
+					dst_pos, dst_end,
+					(uint64_t)server->key.key_pid);
 			} else {
 				dst_pos += od_logger_append_str(
 					dst_pos, dst_end, "none");
@@ -1235,6 +1247,17 @@ od_logger_format_json(od_logger_t *logger, od_logger_level_t level,
 				 (int)sizeof(server->id.id), server->id.id);
 			dst = od_logger_json_add_string(
 				dst, dst_end, "id", server_id, server_comma);
+			server_comma = 1;
+		}
+
+		if (server->key.key_pid != 0) {
+			char server_pid[16];
+			int len = od_logger_append_u64(
+				server_pid, server_pid + sizeof(server_pid) - 1,
+				(uint64_t)server->key.key_pid);
+			server_pid[len] = '\0';
+			dst = od_logger_json_add_string(
+				dst, dst_end, "pid", server_pid, server_comma);
 		}
 
 		if (dst < dst_end) {

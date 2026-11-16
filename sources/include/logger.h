@@ -54,7 +54,8 @@ typedef enum {
 	OD_FMT_EXTERNAL_ID, /* %x  */
 	OD_FMT_CLIENT_HOST, /* %h  */
 	OD_FMT_CLIENT_PORT, /* %r  */
-	OD_FMT_SERVER_HOST /* %H  */
+	OD_FMT_SERVER_HOST, /* %H  */
+	OD_FMT_SERVER_PID /* %b  */
 } od_fmt_token_type_t;
 
 typedef struct {
