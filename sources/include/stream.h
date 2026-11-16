@@ -33,9 +33,7 @@ od_frontend_status_t od_stream_server_sync(od_server_t *server,
 					   uint32_t timeout_ms,
 					   od_wait_event_t wait_event);
 
-typedef od_frontend_status_t (*od_stream_on_responce_cb)(kiwi_be_type_t type,
-							 void *arg);
-
-od_frontend_status_t od_stream_server_exact_completes(
-	od_server_t *server, int n, od_stream_on_responce_cb on_response,
-	void *arg, uint32_t timeout_ms, od_wait_event_t wait_event);
+od_frontend_status_t
+od_stream_server_exact_completes(od_server_t *server, int n,
+				 uint32_t timeout_ms,
+				 od_wait_event_t wait_event);

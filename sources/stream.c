@@ -69,9 +69,6 @@ typedef struct {
 
 	/* stop criteria */
 	stream_stop_t stop;
-
-	od_stream_on_responce_cb on_response;
-	void *on_reponse_arg;
 } stream_t;
 
 static int server_is_fully_handled(stream_t *stream, kiwi_be_type_t type)
@@ -115,15 +112,12 @@ static inline int stream_must_stop(stream_t *stream)
 	}
 }
 
-static void stream_init(stream_t *stream, int nresponses,
-			od_stream_on_responce_cb on_response, void *arg)
+static void stream_init(stream_t *stream, int nresponses)
 {
 	stream->msg = NULL;
 	stream->msg_wpos = 0;
 	stream->msg_left = 0;
 	stream->skip_left = 0;
-	stream->on_response = on_response;
-	stream->on_reponse_arg = arg;
 
 	memset(&stream->stop, 0, sizeof(stream_stop_t));
 	if (nresponses > 0) {
@@ -324,15 +318,6 @@ stream_handle_message(stream_t *stream, od_server_t *server, char *data,
 			od_assert(stream->stop.nresponse > 0);
 			--stream->stop.nresponse;
 		}
-
-		if (stream->on_response != NULL) {
-			od_frontend_status_t st = stream->on_response(
-				type, stream->on_reponse_arg);
-
-			if (st != OD_OK) {
-				return st;
-			}
-		}
 	}
 
 	return OD_OK;
@@ -517,8 +502,7 @@ static int readahead_empty(od_readahead_t *ra)
 
 static od_frontend_status_t
 od_stream_server_impl(od_server_t *server, int is_service, int ignore_errors,
-		      int nresponses, od_stream_on_responce_cb on_response,
-		      void *arg, uint32_t timeout_ms,
+		      int nresponses, uint32_t timeout_ms,
 		      od_wait_event_t wait_event)
 {
 	od_frontend_status_t status = OD_OK;
@@ -527,7 +511,7 @@ od_stream_server_impl(od_server_t *server, int is_service, int ignore_errors,
 	od_client_t *client = server->client;
 
 	stream_t stream;
-	stream_init(&stream, nresponses, on_response, arg);
+	stream_init(&stream, nresponses);
 
 	/*
 	 * set up the server io operations to be interrupted if
@@ -610,7 +594,7 @@ od_frontend_status_t od_stream_server_until_rfq(od_server_t *server,
 {
 	return od_stream_server_impl(server, 0 /* is_service */,
 				     0 /* ignore_errors */, 0 /* nresponses */,
-				     NULL, NULL, timeout_ms, wait_event);
+				     timeout_ms, wait_event);
 }
 
 od_frontend_status_t
@@ -619,17 +603,18 @@ od_service_stream_server_until_rfq(od_server_t *server, int ignore_errors,
 				   od_wait_event_t wait_event)
 {
 	return od_stream_server_impl(server, 1 /* is_service */, ignore_errors,
-				     0 /* nresponses */, NULL, NULL, timeout_ms,
+				     0 /* nresponses */, timeout_ms,
 				     wait_event);
 }
 
-od_frontend_status_t od_stream_server_exact_completes(
-	od_server_t *server, int n, od_stream_on_responce_cb on_response,
-	void *arg, uint32_t timeout_ms, od_wait_event_t wait_event)
+od_frontend_status_t
+od_stream_server_exact_completes(od_server_t *server, int n,
+				 uint32_t timeout_ms,
+				 od_wait_event_t wait_event)
 {
 	return od_stream_server_impl(server, 0 /* is_service */,
 				     0 /* ignore_errors */, n /* nresponses */,
-				     on_response, arg, timeout_ms, wait_event);
+				     timeout_ms, wait_event);
 }
 
 od_frontend_status_t od_stream_server_sync(od_server_t *server,
@@ -638,7 +623,7 @@ od_frontend_status_t od_stream_server_sync(od_server_t *server,
 {
 	return od_stream_server_impl(server, 0 /* is_service */,
 				     0 /* ignore_errors */, 0 /* nresponses */,
-				     NULL, NULL, timeout_ms, wait_event);
+				     timeout_ms, wait_event);
 }
 
 /*
