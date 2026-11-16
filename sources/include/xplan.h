@@ -9,7 +9,6 @@
 #include <status.h>
 #include <types.h>
 #include <pstmt.h>
-#include <wait_event.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/ds/vector.h>
@@ -216,9 +215,3 @@ od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay);
 
 od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 				  uint32_t timeout_ms);
-
-/* Send a message or batch without taking ownership. The caller handles
- * replies and sync accounting. */
-od_frontend_status_t od_xplan_send_query(od_relay_t *relay, machine_msg_t *msg,
-					 uint32_t timeout_ms,
-					 od_wait_event_t write_event);
