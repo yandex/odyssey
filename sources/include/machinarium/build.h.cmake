@@ -15,6 +15,8 @@
 #cmakedefine HAVE_ASAN @HAVE_ASAN@
 #cmakedefine HAVE_TSAN @HAVE_TSAN@
 
+#cmakedefine HAVE_IO_URING 1
+
 #cmakedefine USE_UCONTEXT
 
 #cmakedefine MM_MEM_PROF
