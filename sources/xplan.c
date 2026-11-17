@@ -39,6 +39,8 @@ static inline kiwi_fe_type_t msg_fe_type(machine_msg_t *msg)
 static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 {
 	switch (type) {
+	case OD_XPLAN_QUERY:
+		return "OD_XPLAN_QUERY";
 	case OD_XPLAN_FORWARD:
 		return "OD_XPLAN_FORWARD";
 	case OD_XPLAN_PARSE:
@@ -63,6 +65,7 @@ static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 {
 	switch (entry->type) {
+	case OD_XPLAN_QUERY:
 	case OD_XPLAN_FORWARD:
 		if (entry->srvmsg != NULL) {
 			return entry->srvmsg;
@@ -175,7 +178,7 @@ static void plan_entry_destroy(void *a)
 {
 	od_xplan_entry_t *entry = a;
 
-	/* entry->clmsg is owned by xbuf, no free */
+	/* entry->clmsg is borrowed from the caller, no free */
 
 	machine_msg_free_safe(entry->srvmsg);
 	machine_msg_free_safe(entry->vresp);
@@ -1408,6 +1411,17 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 	return status;
 }
 
+od_frontend_status_t od_xplan_make_query(od_xplan_t *xp, machine_msg_t *msg)
+{
+	od_assert(mm_vector_empty(&xp->entries));
+	od_assert(msg_fe_type(msg) == KIWI_FE_QUERY);
+
+	od_xplan_entry_t entry;
+	entry_init_internal(&entry, OD_XPLAN_QUERY, msg, NULL, NULL,
+			    OD_XPLAN_DELTA_NONE, NULL, NULL, NULL);
+	return xplan_append(xp, &entry) == 0 ? OD_OK : OD_EOOM;
+}
+
 od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay)
 {
 	od_client_t *client = relay->client;
@@ -1833,6 +1847,15 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 
 	od_stat_query_start(&server->stats_state);
 
+	od_xplan_entry_t *first = mm_vector_get(&xp->entries, 0);
+	if (first->type == OD_XPLAN_QUERY) {
+		/* A Query ends at RFQ and does not enter extended protocol mode. */
+		od_assert(mm_vector_size(&xp->entries) == 1);
+		od_server_sync_request(server, 1);
+		return od_stream_server_until_rfq(server, timeout_ms,
+						  OD_WAIT_STREAM_SERVER_READ);
+	}
+
 	if (!server->xproto_mode) {
 		/* this is first run of xproto buf after last sync */
 		od_server_sync_request(server, 1);
@@ -2088,7 +2111,9 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 	size_t written = prepare_send_iovecs(xp, iovecs);
 
 	if (instance->config.log_debug || rule->log_debug) {
-		log_xbuf(instance, client, &relay->xbuf);
+		if (!mm_vector_empty(&relay->xbuf.msgs)) {
+			log_xbuf(instance, client, &relay->xbuf);
+		}
 		log_plan_debug(instance, xp, client);
 		log_srv_send_buf(instance, client, iovecs, written);
 	}
