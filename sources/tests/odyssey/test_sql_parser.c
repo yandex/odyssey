@@ -1272,12 +1272,12 @@ static void test_parse_fill_ctx_modes(void)
 	}
 }
 
-static void test_pending_begin_storage(void)
+static void test_pending_query_storage(void)
 {
 	od_client_t *client = od_client_allocate();
 	test(client != NULL);
-	test(client->pending_begin == NULL);
-	od_client_pending_begin_clear(client);
+	test(client->pending_query == NULL);
+	od_client_pending_query_clear(client);
 
 	/* Include the terminator: 127 bytes fit, 128 bytes need the heap. */
 	const size_t lengths[] = { 6, 127, 128, 511, 6 };
@@ -1287,23 +1287,52 @@ static void test_pending_begin_storage(void)
 		memset(query, ' ', len);
 		memcpy(query, "BEGIN;", 6);
 		query[len] = '\0';
-		test(od_client_pending_begin_set(client, query) == 0);
-		test(strcmp(client->pending_begin, query) == 0);
-		test((client->pending_begin == client->pending_begin_buf) ==
+		test(od_client_pending_query_set(client, query) == 0);
+		test(strcmp(client->pending_query, query) == 0);
+		test((client->pending_query == client->pending_query_buf) ==
 		     (len < 128));
 		/* The saved SQL must outlive the input message. */
 		query[0] = 'X';
-		test(client->pending_begin[0] == 'B');
-		od_client_pending_begin_clear(client);
-		test(client->pending_begin == NULL);
+		test(client->pending_query[0] == 'B');
+		od_client_pending_query_clear(client);
+		test(client->pending_query == NULL);
+	}
+
+	/* A rewrite without a deferred BEGIN becomes the pending query. */
+	test(od_client_pending_query_append(client,
+					    "SET application_name = 'x'") == 0);
+	test(strcmp(client->pending_query, "SET application_name = 'x'") == 0);
+	od_client_pending_query_clear(client);
+
+	/* Preserve a trailing BEGIN comment and handle the inline/heap boundary. */
+	test(od_client_pending_query_set(client, "BEGIN -- comment") == 0);
+	test(od_client_pending_query_append(client,
+					    "SET application_name = 'x'") == 0);
+	test(strcmp(client->pending_query,
+		    "BEGIN -- comment\n;SET application_name = 'x'") == 0);
+	od_client_pending_query_clear(client);
+	const size_t suffix_lengths[] = { 0, 119, 120, 121, 127 };
+	char suffix[128];
+	for (size_t i = 0;
+	     i < sizeof(suffix_lengths) / sizeof(suffix_lengths[0]); i++) {
+		size_t len = suffix_lengths[i];
+		memset(suffix, 'x', len);
+		suffix[len] = '\0';
+		test(od_client_pending_query_set(client, "BEGIN") == 0);
+		test(od_client_pending_query_append(client, suffix) == 0);
+		test(strncmp(client->pending_query, "BEGIN\n;", 7) == 0);
+		test(strcmp(client->pending_query + 7, suffix) == 0);
+		test((client->pending_query == client->pending_query_buf) ==
+		     (7 + len + 1 <= sizeof(client->pending_query_buf)));
+		od_client_pending_query_clear(client);
 	}
 
 	/* Disconnect must safely release both inline and heap-backed SQL. */
-	test(od_client_pending_begin_set(
+	test(od_client_pending_query_set(
 		     client,
 		     "BEGIN ISOLATION LEVEL SERIALIZABLE, READ ONLY, DEFERRABLE;") ==
 	     0);
-	test(client->pending_begin == client->pending_begin_buf);
+	test(client->pending_query == client->pending_query_buf);
 	od_client_free(client);
 
 	client = od_client_allocate();
@@ -1311,8 +1340,13 @@ static void test_pending_begin_storage(void)
 	memset(query, ' ', sizeof(query) - 1);
 	memcpy(query, "BEGIN;", 6);
 	query[sizeof(query) - 1] = '\0';
-	test(od_client_pending_begin_set(client, query) == 0);
-	test(client->pending_begin != client->pending_begin_buf);
+	test(od_client_pending_query_set(client, query) == 0);
+	test(client->pending_query != client->pending_query_buf);
+	test(od_client_pending_query_append(client,
+					    "SET application_name = 'x'") == 0);
+	test(strncmp(client->pending_query, query, strlen(query)) == 0);
+	test(strcmp(client->pending_query + strlen(query),
+		    "\n;SET application_name = 'x'") == 0);
 	od_client_free(client);
 }
 
@@ -1490,7 +1524,7 @@ static void test_reserved_query_ctx(void)
 void odyssey_test_sql_minimal_parser(void)
 {
 	od_linear_alloc_init(&s_arena, s_arena_buf, sizeof(s_arena_buf));
-	test_pending_begin_storage();
+	test_pending_query_storage();
 	test_prepare_locations();
 	test_locations_after_comments();
 
