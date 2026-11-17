@@ -16,6 +16,7 @@ set(od_src
     kiwi/options.c
     kiwi/var.c
     machinarium/ds/vrb.c
+    machinarium/uring.c
     machinarium/ds/hash.c
     machinarium/ds/hm.c
     machinarium/ds/vector.c
@@ -174,6 +175,19 @@ else()
 endif()
 
 message(STATUS "Poll backend: ${CMAKE_SYSTEM_NAME}")
+
+set(HAVE_IO_URING OFF)
+option(BUILD_IO_URING "Build io_uring support (Linux, liburing >= 2.2)" OFF)
+if (BUILD_IO_URING)
+    if (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(FATAL_ERROR "BUILD_IO_URING requires Linux")
+    endif()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LIBURING REQUIRED IMPORTED_TARGET liburing>=2.2)
+    set(HAVE_IO_URING ON)
+    set(od_libraries ${od_libraries} PkgConfig::LIBURING)
+endif()
+message(STATUS "io_uring support: ${HAVE_IO_URING}")
 
 set(HAVE_EBPF OFF)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
