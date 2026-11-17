@@ -17,6 +17,8 @@
 #include <instance.h>
 #include <stream.h>
 #include <wait_event.h>
+#include <backend.h>
+#include <deploy.h>
 
 static inline int complete_deploy(od_instance_t *instance, od_server_t *server)
 {
@@ -31,6 +33,63 @@ static inline int complete_deploy(od_instance_t *instance, od_server_t *server)
 	}
 
 	return OK_RESPONSE;
+}
+
+/* BEGIN was acknowledged virtually; suppress its success response. */
+static int deploy_begin(od_client_t *client, uint32_t timeout)
+{
+	od_server_t *server = client->server;
+	machine_msg_t *msg = kiwi_fe_write_query(
+		NULL, client->pending_begin, strlen(client->pending_begin) + 1);
+	if (msg == NULL) {
+		return -1;
+	}
+	if (od_write(&server->io, msg) != 0) {
+		return -1;
+	}
+	od_server_sync_request(server, 1);
+
+	int failed = 0;
+	for (;;) {
+		msg = od_read(&server->io, timeout, OD_READ_BE);
+		if (msg == NULL) {
+			return -1;
+		}
+		char *data = machine_msg_data(msg);
+		int size = machine_msg_size(msg);
+		kiwi_be_type_t type = *data;
+
+		if (type == KIWI_BE_READY_FOR_QUERY) {
+			int rc = od_backend_ready(server, data, size);
+			od_client_pending_begin_clear(client);
+			if (rc != 0) {
+				machine_msg_free(msg);
+				return -1;
+			}
+			if (!failed) {
+				machine_msg_free(msg);
+				return OK_RESPONSE;
+			}
+			/* The error and RFQ are the response to the current query. */
+			return od_write2(&client->io, msg, timeout) == 0 ?
+				       OD_DEPLOY_BEGIN_ERROR : -1;
+		}
+		if (type == KIWI_BE_COMMAND_COMPLETE) {
+			machine_msg_free(msg);
+			continue;
+		}
+		if (type == KIWI_BE_ERROR_RESPONSE) {
+			od_backend_error(server, data, size);
+			failed = 1;
+		} else if (type == KIWI_BE_PARAMETER_STATUS &&
+			   od_backend_update_parameter(server, data, size, 0) != 0) {
+			machine_msg_free(msg);
+			return -1;
+		}
+		if (od_write2(&client->io, msg, timeout) != 0) {
+			return -1;
+		}
+	}
 }
 
 int od_deploy(od_client_t *client)
@@ -100,22 +159,26 @@ int od_deploy(od_client_t *client)
 		if (complete_deploy(instance, server) != OK_RESPONSE) {
 			return -1;
 		}
-		if (!normalize_search_path) {
-			return OK_RESPONSE;
-		}
-
 		/* Cache normalization only when restoration preserves the name list.
 		 * Leave unreported parameters (e.g. upstream PG16) untouched. */
 		kiwi_var_t *client_path =
 			kiwi_vars_get(&client->vars, KIWI_VAR_SEARCH_PATH);
 		kiwi_var_t *server_path =
 			kiwi_vars_get(&server->vars, KIWI_VAR_SEARCH_PATH);
-		if (client_path && server_path &&
+		if (normalize_search_path && client_path && server_path &&
 		    !kiwi_var_compare(client_path, server_path)) {
-			return kiwi_var_set(client_path, KIWI_VAR_SEARCH_PATH,
-					    server_path->value,
-					    server_path->value_len);
+			if (kiwi_var_set(client_path, KIWI_VAR_SEARCH_PATH,
+					 server_path->value,
+					 server_path->value_len) != 0) {
+				return -1;
+			}
 		}
+	}
+
+	/* Restore session parameters before entering the transaction. */
+	if (client->pending_begin) {
+		return deploy_begin(client,
+				    instance->config.backend_connect_timeout_ms);
 	}
 
 	return OK_RESPONSE;

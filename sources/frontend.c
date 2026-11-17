@@ -678,6 +678,9 @@ od_frontend_attach_to_endpoint(od_client_t *client, kiwi_params_t *route_params,
 
 		if (is_deploy && client->rule->maintain_params) {
 			int rc = od_deploy(client);
+			if (rc == OD_DEPLOY_BEGIN_ERROR) {
+				return OD_SKIP;
+			}
 			if (rc == -1) {
 				od_gerror(client, client->server,
 					  "deploy failed, errno=%d (%s)",
@@ -861,7 +864,7 @@ attach_to_first(od_client_t *client, kiwi_params_t *route_params,
 						       endpoint, tsa, fail_fast,
 						       is_deploy, storage);
 
-		if (status == OD_OK) {
+		if (status == OD_OK || status == OD_SKIP) {
 			return status;
 		}
 
@@ -901,7 +904,8 @@ attach_to_first_with_fail_fast(od_client_t *client, kiwi_params_t *route_params,
 	od_frontend_status_t status =
 		attach_to_first(client, route_params, endpoints, count, tsa,
 				acquire_fail_fast, is_deploy, storage);
-	if (status != OD_OK && acquire_fail_fast && !client_opportunistic) {
+	if (status != OD_OK && status != OD_SKIP && acquire_fail_fast &&
+	    !client_opportunistic) {
 		/*
 		 * attach failed
 		 *
@@ -1010,7 +1014,7 @@ static od_frontend_status_t attach_with_storage(od_client_t *client,
 			status = attach_to_first_with_fail_fast(
 				client, route_params, endpoints, count, tsa,
 				is_deploy, storage);
-			if (status == OD_OK) {
+			if (status == OD_OK || status == OD_SKIP) {
 				return status;
 			}
 		}
@@ -1080,8 +1084,8 @@ attach_impl(od_client_t *client, kiwi_params_t *route_params, int is_deploy)
 
 			od_rules_storage_unref(storage);
 
-			if (status == OD_OK) {
-				return OD_OK;
+			if (status == OD_OK || status == OD_SKIP) {
+				return status;
 			}
 
 			od_debug(&instance->logger, client, NULL,

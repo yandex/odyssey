@@ -194,6 +194,10 @@ static od_frontend_status_t process_possible_attach(handler_t handler,
 	if (status == OD_ATTACH) {
 		od_client_t *client = relay->client;
 		status = od_frontend_attach_and_deploy(client);
+		if (status == OD_SKIP) {
+			/* The deferred BEGIN failed; deploy replied to this query. */
+			return OD_OK;
+		}
 		if (status != OD_OK) {
 			return status;
 		}
@@ -246,70 +250,6 @@ static inline void process_unlisten(od_client_t *client, od_server_t *server)
 		client->backend_pin = 0;
 		client->backend_pin_listen = 0;
 	}
-}
-
-static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
-							 od_server_t *server,
-							 uint32_t timeout_ms)
-{
-	int rc;
-	int done = 0;
-	machine_msg_t *msg = NULL;
-
-	while (!done) {
-		msg = od_read(&server->io, timeout_ms, OD_READ_BE);
-		if (msg == NULL) {
-			return OD_ESERVER_READ;
-		}
-
-		char *data = machine_msg_data(msg);
-		int size = machine_msg_size(msg);
-		kiwi_be_type_t type = *data;
-		od_instance_t *instance = client->global->instance;
-
-		if (instance->config.log_debug) {
-			if (type == KIWI_BE_COMMAND_COMPLETE) {
-				const char *command_tag =
-					data + sizeof(kiwi_header_t);
-				od_debug(&instance->logger, client, server,
-					 "%s - %s",
-					 kiwi_be_type_to_string(type),
-					 command_tag);
-			} else {
-				od_debug(&instance->logger, client, server,
-					 "%s", kiwi_be_type_to_string(type));
-			}
-		}
-
-		switch (type) {
-		case KIWI_BE_COMMAND_COMPLETE:
-			done = 1;
-			machine_msg_free(msg);
-			break;
-		case KIWI_BE_ERROR_RESPONSE:
-			/* Failed BEGIN has no CommandComplete; leave RFQ to the stream. */
-			od_backend_error(server, data, size);
-			rc = od_write(&client->io, msg);
-			return rc == 0 ? OD_OK : OD_ECLIENT_WRITE;
-		case KIWI_BE_PARAMETER_STATUS:
-			rc = od_backend_update_parameter(server, data, size, 0);
-			if (rc == -1) {
-				machine_msg_free(msg);
-				od_gerror(client, server,
-					  "can't update parameter");
-				return OD_ESERVER_READ;
-			}
-			/* fallthrough */
-		default:
-			rc = od_write(&client->io, msg);
-			if (rc != 0) {
-				return OD_ECLIENT_READ;
-			}
-			break;
-		}
-	}
-
-	return OD_OK;
 }
 
 static od_frontend_status_t
@@ -421,30 +361,11 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		}
 		if (execute != NULL) {
 			msg = execute;
-			query = (char *)machine_msg_data(execute) +
-				sizeof(kiwi_header_t);
 		}
 
-		if (client->pending_begin) {
-			/* End trailing line comments before separating statements. */
-			machine_msg_t *rewritten =
-				kiwi_fe_write_query_join(NULL,
-							 client->pending_begin,
-							 "\n;", query, NULL);
-			if (rewritten == NULL) {
-				machine_msg_free_safe(execute);
-				return OD_EOOM;
-			}
-
-			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-			rc = od_io_write(&server->io, rewritten, timeout_ms);
-			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
-			machine_msg_free(rewritten);
-		} else {
-			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-			rc = od_io_write(&server->io, msg, timeout_ms);
-			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
-		}
+		od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
+		rc = od_io_write(&server->io, msg, timeout_ms);
+		od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
 		machine_msg_free_safe(execute);
 
 		if (rc != 0) {
@@ -459,19 +380,6 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_stat_query_start(&server->stats_state);
 	uint64_t errors_before = server->error_responses;
-
-	if (client->pending_begin) {
-		/*
-		 * need to consume CommandComplete(BEGIN)
-		 * and maybe bypass some asynchronious messages
-		 */
-		status = proxy_until_command_complete(client, server,
-						      timeout_ms);
-		if (status != OD_OK) {
-			return status;
-		}
-		od_client_pending_begin_clear(client);
-	}
 
 	status = od_stream_server_until_rfq(server, timeout_ms,
 					    OD_WAIT_STREAM_SERVER_READ);

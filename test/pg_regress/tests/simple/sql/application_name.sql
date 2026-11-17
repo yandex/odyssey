@@ -14,3 +14,12 @@ SET application_name = 'xx';
 SHOW application_name;
 ROLLBACK;
 SHOW application_name;
+
+-- Preserve transaction characteristics when deploying the deferred BEGIN.
+SET odyssey.parser_mode = 'full';
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE READ ONLY;
+SET application_name = 'xx';
+SELECT current_setting('transaction_isolation'),
+       current_setting('transaction_read_only'),
+       current_setting('application_name');
+ROLLBACK;

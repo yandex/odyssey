@@ -711,10 +711,9 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
 					   od_virtual_portal_t *portal)
 {
 	od_server_t *server = client->server;
-	int in_tx = (server != NULL && server->is_transaction);
-
-	if (client->pending_begin || in_tx) {
-		/* pass to pg and let it generate warning/error itself */
+	if (client->pending_begin || server != NULL ||
+	    !client->rule->maintain_params) {
+		/* With an attached server, or without deploy, begin immediately. */
 		return OD_OK;
 	}
 
