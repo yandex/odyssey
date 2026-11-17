@@ -1,3 +1,10 @@
+odyssey (1.5.3-1) unstable; urgency=medium
+
+  * Disable deferred begin feature
+  * Fix od_pstmt_t unref assert (#1599)
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Tue, 17 Nov 2026 12:23:03 +0500
+
 odyssey (1.5.2-1) unstable; urgency=medium
 
   * SCRAM fixes
