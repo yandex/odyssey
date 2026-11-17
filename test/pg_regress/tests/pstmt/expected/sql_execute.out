@@ -5,6 +5,13 @@ EXECUTE exec_expr(1, 'text');
 v|s
 1|text
 (1 row)
+-- SQL EXECUTE also works as the first query after a virtual BEGIN.
+BEGIN;
+EXECUTE exec_expr(3, 'transaction');
+v|s
+3|transaction
+(1 row)
+ROLLBACK;
 select 42 as v \parse MixedCase
 EXECUTE "MixedCase";
 v

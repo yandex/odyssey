@@ -52,4 +52,5 @@ void virtual_portal_free(od_virtual_portal_t *portal);
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
 					       const char *query,
-					       uint32_t query_len);
+					       uint32_t query_len,
+					       uint32_t timeout_ms);

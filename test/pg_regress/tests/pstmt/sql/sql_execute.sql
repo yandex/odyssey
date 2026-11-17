@@ -2,6 +2,11 @@
 \pset format unaligned
 select $1::int as v, $2::text as s \parse exec_expr
 EXECUTE exec_expr(1, 'text');
+
+-- SQL EXECUTE also works as the first query after a virtual BEGIN.
+BEGIN;
+EXECUTE exec_expr(3, 'transaction');
+ROLLBACK;
 select 42 as v \parse MixedCase
 EXECUTE "MixedCase";
 

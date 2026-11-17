@@ -58,7 +58,7 @@
  *   OD_OK       - not virtual, forward the query to the backend
  *   OD_SKIP     - the portal is composed in portal, has to be written
  *   OD_ATTACH   - attach first, then retry
- *   OD_REPLACED - the query was replaced with another one (appname),
+ *   OD_REPLACED - the replacement query was sent to the backend,
  *                 the portal must not be written
  */
 void virtual_portal_init(od_virtual_portal_t *portal)
@@ -658,6 +658,83 @@ static od_frontend_status_t process_vshow(od_client_t *client,
 	return OD_OK;
 }
 
+static od_frontend_status_t process_vexec(od_client_t *client,
+					  const od_query_ctx_t *ctx,
+					  const char *query, uint32_t query_len,
+					  uint32_t timeout_ms)
+{
+	od_pstmt_t *pstmt = od_client_get_pstmt(client, ctx->s1);
+	if (pstmt == NULL) {
+		/* Keep native SQL PREPARE/EXECUTE behavior for other names. */
+		return OD_OK;
+	}
+
+	od_server_t *server = client->server;
+	if (server == NULL) {
+		return OD_ATTACH;
+	}
+	if (!od_server_has_pstmt(server, pstmt)) {
+		machine_msg_t *parse = od_pstmt_parse_of(pstmt);
+		if (parse == NULL) {
+			return OD_EOOM;
+		}
+		machine_msg_t *sync = kiwi_fe_write_sync(parse);
+		if (sync == NULL) {
+			machine_msg_free(parse);
+			return OD_EOOM;
+		}
+		int rc = od_io_write(&server->io, sync, timeout_ms,
+				     OD_WAIT_DEPLOY_SERVER_WRITE);
+		machine_msg_free(sync);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		od_server_sync_request(server, 1);
+		od_frontend_status_t status =
+			od_service_stream_server_until_rfq(
+				server, 0 /* ignore errors */, timeout_ms,
+				OD_WAIT_DEPLOY_SERVER_READ);
+		if (status != OD_OK) {
+			return status;
+		}
+		if (od_server_add_pstmt(server, pstmt) == -1) {
+			return OD_EOOM;
+		}
+	}
+
+	/* Only the name changes: PostgreSQL evaluates the argument SQL. */
+	size_t start = ctx->name_location.start;
+	size_t end = ctx->name_location.end;
+	char *rewritten;
+	if (od_asprintf(&rewritten, "%.*s %s%.*s", (int)start, query,
+			pstmt->name, (int)(query_len - end),
+			query + end) != OK_RESPONSE) {
+		return OD_EOOM;
+	}
+
+	machine_msg_t *msg;
+	if (client->pending_begin) {
+		msg = kiwi_fe_write_query_join(NULL, client->pending_begin,
+					       "\n;", rewritten, NULL);
+	} else {
+		msg = kiwi_fe_write_query(NULL, rewritten,
+					  strlen(rewritten) + 1);
+	}
+	od_free(rewritten);
+	if (msg == NULL) {
+		return OD_EOOM;
+	}
+
+	int rc = od_io_write(&server->io, msg, timeout_ms,
+			     OD_WAIT_QUERY_SERVER_WRITE);
+	machine_msg_free(msg);
+	if (rc != 0) {
+		return OD_ESERVER_WRITE;
+	}
+	od_server_sync_request(server, 1);
+	return OD_REPLACED;
+}
+
 static od_frontend_status_t process_vdeallocate(od_client_t *client,
 						const od_query_ctx_t *ctx,
 						od_virtual_portal_t *portal)
@@ -789,8 +866,8 @@ static od_frontend_status_t write_virtual_portal(od_client_t *client,
  * does the query have a virtual handler at all, and is its config gate
  * open: SHOW/SET need virtual_processing (a SET may also go the
  * application_name_add_host rewrite way), an empty query (";") needs
- * virtual_processing too, BEGIN needs virtual_transaction, DEALLOCATE
- * needs reserve_prepared_statement
+ * virtual_processing too, BEGIN needs virtual_transaction, EXECUTE/DEALLOCATE
+ * need reserve_prepared_statement
  */
 static bool virtual_query_supported(od_client_t *client,
 				    const od_query_ctx_t *ctx)
@@ -814,7 +891,8 @@ static bool virtual_query_supported(od_client_t *client,
 		return instance->config.virtual_transaction;
 	}
 
-	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL) ||
+	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EXECUTE) ||
+	    od_query_ctx_has(ctx, OD_QUERY_CTX_IS_DEALLOCATE_ALL) ||
 	    od_query_ctx_has(ctx, OD_QUERY_CTX_HAS_DEALLOCATE_NAME)) {
 		return client->rule->pool->reserve_prepared_statement;
 	}
@@ -824,7 +902,8 @@ static bool virtual_query_supported(od_client_t *client,
 
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
 					       const char *query,
-					       uint32_t query_len)
+					       uint32_t query_len,
+					       uint32_t timeout_ms)
 {
 	const od_query_ctx_t *ctx = od_sql_parse_for_analysis(
 		client, query, query_len, NULL, &client->query_ctx);
@@ -856,6 +935,9 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 		status = process_vempty(client, &portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_BEGIN)) {
 		status = process_vbegin(client, query, &portal);
+	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EXECUTE)) {
+		status = process_vexec(client, ctx, query, query_len,
+				       timeout_ms);
 	} else {
 		status = process_vdeallocate(client, ctx, &portal);
 	}
@@ -863,12 +945,13 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 reply:
 	if (status == OD_SKIP) {
 		/* Preserve the write limit for virtual SET and error replies. */
-		uint32_t timeout_ms = UINT32_MAX;
+		uint32_t reply_timeout_ms = UINT32_MAX;
 		if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET) ||
 		    virtual_portal_is_error(&portal)) {
-			timeout_ms = 1000;
+			reply_timeout_ms = 1000;
 		}
-		status = write_virtual_portal(client, &portal, timeout_ms);
+		status =
+			write_virtual_portal(client, &portal, reply_timeout_ms);
 	}
 
 done:
