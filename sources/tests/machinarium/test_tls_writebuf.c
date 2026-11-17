@@ -144,7 +144,7 @@ static void client(void *arg)
 	}
 
 	/* the buf layer attaches on top of the TLS layer */
-	rc = mm_io_buf_enable(client, BUF_SIZE);
+	rc = mm_io_buf_enable(client, BUF_SIZE, 0);
 	test(rc == 0);
 	test(mm_io_write_pending(client) == 0);
 

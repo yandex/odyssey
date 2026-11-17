@@ -47,7 +47,7 @@ extern const mm_bio_methods_t mm_bio_zpq_methods;
 extern const mm_bio_methods_t mm_bio_buf_methods;
 
 /* attach the buf layer on top of the stack */
-int mm_bio_buf_attach(mm_io_t *, size_t size);
+int mm_bio_buf_attach(mm_io_t *, size_t write_size, size_t read_size);
 
 /* attach the zpq compression layer on top of the stack */
 int mm_bio_zpq_attach(mm_io_t *, char algorithm);

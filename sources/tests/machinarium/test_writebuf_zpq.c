@@ -128,7 +128,7 @@ static void client(void *arg)
 	/* compression attaches before the buf layer */
 	rc = mm_io_set_compression(client, 'f');
 	test(rc == 0);
-	rc = mm_io_buf_enable(client, BUF_SIZE);
+	rc = mm_io_buf_enable(client, BUF_SIZE, 0);
 	test(rc == 0);
 	test(mm_io_write_pending(client) == 0);
 

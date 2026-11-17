@@ -145,7 +145,7 @@ static void client(void *arg)
 	rc = mm_io_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	rc = mm_io_buf_enable(client, BUF_SIZE);
+	rc = mm_io_buf_enable(client, BUF_SIZE, 0);
 	test(rc == 0);
 	test(mm_io_write_pending(client) == 0);
 
@@ -244,11 +244,11 @@ static void client(void *arg)
 
 	/* re-enable/disable cycle: the slot must be reusable and the
 	 * buffer state released */
-	rc = mm_io_buf_enable(client, BUF_SIZE);
+	rc = mm_io_buf_enable(client, BUF_SIZE, 0);
 	test(rc == 0);
 	rc = mm_io_buf_disable(client);
 	test(rc == 0);
-	rc = mm_io_buf_enable(client, BUF_SIZE);
+	rc = mm_io_buf_enable(client, BUF_SIZE, 0);
 	test(rc == 0);
 	rc = mm_io_buf_disable(client);
 	test(rc == 0);

@@ -125,11 +125,11 @@ int mm_io_set_keepalive(mm_io_t *, int enable, int delay, int interval,
 			int probes, int usr_timeout);
 int mm_io_set_nolinger(mm_io_t *io, int enable);
 int mm_io_advice_keepalive_usr_timeout(int delay, int interval, int probes);
-/* 
+/*
  * The layer must be attached last, after the
  * TLS/compression layers, so that it stays on top of the stack.
  */
-int mm_io_buf_enable(mm_io_t *, size_t size);
+int mm_io_buf_enable(mm_io_t *, size_t write_size, size_t read_size);
 int mm_io_buf_disable(mm_io_t *);
 /*
  * A single flush attempt: return 0 when the stack is drained, -1 with

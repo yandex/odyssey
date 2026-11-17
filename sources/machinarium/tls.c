@@ -891,7 +891,7 @@ int mm_tls_get_cert_hash(mm_io_t *io,
 
 int mm_tls_read_pending(mm_io_t *io)
 {
-	return SSL_pending(io->tls_ssl) > 0;
+	return SSL_pending(io->tls_ssl);
 }
 
 int mm_tls_read(mm_io_t *io, char *buf, int size)

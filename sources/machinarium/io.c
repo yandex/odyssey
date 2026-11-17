@@ -266,9 +266,9 @@ int mm_io_set_compression(mm_io_t *io, char algorithm)
 	return mm_bio_zpq_attach(io, algorithm);
 }
 
-int mm_io_buf_enable(mm_io_t *io, size_t size)
+int mm_io_buf_enable(mm_io_t *io, size_t write_size, size_t read_size)
 {
-	return mm_bio_buf_attach(io, size);
+	return mm_bio_buf_attach(io, write_size, read_size);
 }
 
 int mm_io_buf_disable(mm_io_t *io)
@@ -278,7 +278,7 @@ int mm_io_buf_disable(mm_io_t *io)
 		return -1;
 	}
 	mm_bio_t *slot = &io->bio_slots[MM_BIO_BUF];
-	if (mm_io_write_pending(io) > 0) {
+	if (mm_io_write_pending(io) > 0 || mm_io_read_pending(io) > 0) {
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}

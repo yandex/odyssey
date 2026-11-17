@@ -52,7 +52,8 @@ static inline od_frontend_status_t writebuf_enable(od_client_t *client)
 	}
 
 	int rc = mm_io_buf_enable(client->io.io,
-				  (size_t)instance->config.writebuf);
+				  (size_t)instance->config.writebuf,
+				  0 /* readahead is not wired yet */);
 	if (rc != 0) {
 		od_error(&instance->logger, client, NULL,
 			 "failed to enable write buffer: %s",

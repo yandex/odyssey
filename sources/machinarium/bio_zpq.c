@@ -57,13 +57,21 @@ static ssize_t mm_bio_zpq_writev(mm_bio_t *bio, const struct iovec *iov,
 static int mm_bio_zpq_read_pending(mm_bio_t *bio)
 {
 	/*
-	 * Count the data held by the decompressor: the next read returns it
-	 * without touching the lower layer. This keeps the backpressure
+	 * Count the data held by the decompressor: the next read returns
+	 * it without touching the lower layer. This keeps the backpressure
 	 * invariant - readahead full + inbound data available on any layer
 	 * reports ENOBUFS instead of a misleading EWOULDBLOCK.
+	 *
+	 * The deferred_rx flag ("the last read did not consult the
+	 * transport") is deliberately not counted: it does not mean the
+	 * data is servable, the transport is queried truthfully by the
+	 * layers below (FIONREAD / SSL_pending).
 	 */
-	return mm_zpq_buffered_rx(bio->state) ||
-	       mm_zpq_deferred_rx(bio->state) || mm_bio_read_pending(bio->next);
+	size_t buffered = mm_zpq_buffered_rx(bio->state);
+	if (buffered > 0) {
+		return (int)buffered;
+	}
+	return mm_bio_read_pending(bio->next);
 }
 
 static int mm_bio_zpq_write_pending(mm_bio_t *bio)
