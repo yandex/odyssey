@@ -27,6 +27,7 @@ void od_storage_endpoint_status_init(od_storage_endpoint_status_t *status)
 	status->alive = 1;
 	status->is_read_write = true;
 	status->repl_lag_sec = 0;
+	status->server_version_major = 0;
 	mm_spinlock_init(&status->values_lock);
 }
 
@@ -56,6 +57,7 @@ void od_storage_endpoint_status_get(od_storage_endpoint_status_t *status,
 	out->is_read_write = status->is_read_write;
 	out->alive = status->alive;
 	out->repl_lag_sec = status->repl_lag_sec;
+	out->server_version_major = status->server_version_major;
 
 	mm_spinlock_unlock(&status->values_lock);
 }
@@ -83,6 +85,21 @@ void od_storage_endpoint_status_set_dead(od_storage_endpoint_status_t *status)
 	endp_status.repl_lag_sec = 0;
 
 	od_storage_endpoint_status_set(status, &endp_status);
+}
+
+void od_storage_endpoint_set_server_version(od_storage_endpoint_t *endpoint,
+					    int server_version_major)
+{
+	mm_spinlock_lock(&endpoint->status.values_lock);
+	endpoint->status.server_version_major = server_version_major;
+	mm_spinlock_unlock(&endpoint->status.values_lock);
+}
+
+int od_storage_endpoint_server_version(od_storage_endpoint_t *endpoint)
+{
+	od_storage_endpoint_status_t status;
+	od_storage_endpoint_status_get(&endpoint->status, &status);
+	return status.server_version_major;
 }
 
 od_storage_watchdog_t *od_storage_watchdog_allocate(od_global_t *global)

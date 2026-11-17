@@ -36,6 +36,7 @@
 #define ODYSSEY_TARGET_SESSION_ATTRS_STR "odyssey.target_session_attrs"
 #define ODYSSEY_EXECUTE_ON_HOST_STR "odyssey.execute_on_host"
 #define ODYSSEY_PIN_BACKEND "odyssey.pin_backend"
+#define ODYSSEY_RWR_CONSISTENT "odyssey.rwr_consistent"
 #define ODYSSEY_OPPORTUNISTIC_ACQUIRE "odyssey.opportunistic_acquire"
 #define ODYSSEY_POOLING_MODE "odyssey.pooling_mode"
 #define ODYSSEY_VERSION_STR "odyssey.version"
@@ -499,6 +500,20 @@ static od_frontend_status_t process_vset(od_client_t *client,
 		}
 	}
 
+	if (strcmp(ctx->s1, ODYSSEY_RWR_CONSISTENT) == 0) {
+		if (instance->config.virtual_processing) {
+			od_frontend_status_t status =
+				build_set_generic_bool(client, ctx, portal,
+						       &client->rwr_consistent,
+						       NULL);
+			/* Reasserting "on" must preserve the last write position. */
+			if (!client->rwr_consistent) {
+				client->rwr_last_lsn_valid = false;
+			}
+			return status;
+		}
+	}
+
 	if (strcmp(ctx->s1, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
 		if (instance->config.virtual_processing) {
 			return build_set_generic_bool(
@@ -635,6 +650,13 @@ static od_frontend_status_t process_vshow(od_client_t *client,
 		}
 	}
 
+	if (strcmp(ctx->s1, ODYSSEY_RWR_CONSISTENT) == 0) {
+		if (instance->config.virtual_processing) {
+			return process_show_bool_guc(client, portal, ctx->s1,
+						     client->rwr_consistent);
+		}
+	}
+
 	if (strcmp(ctx->s1, ODYSSEY_OPPORTUNISTIC_ACQUIRE) == 0) {
 		if (instance->config.virtual_processing) {
 			return process_show_bool_guc(
@@ -683,17 +705,17 @@ static od_frontend_status_t process_vexec(od_client_t *client,
 			machine_msg_free(parse);
 			return OD_EOOM;
 		}
-		int rc = od_io_write(&server->io, sync, timeout_ms,
-				     OD_WAIT_DEPLOY_SERVER_WRITE);
+		od_frontend_status_t status =
+			od_xplan_send_query(&client->relay, sync, timeout_ms,
+					    OD_WAIT_DEPLOY_SERVER_WRITE);
 		machine_msg_free(sync);
-		if (rc != 0) {
-			return OD_ESERVER_WRITE;
+		if (status != OD_OK) {
+			return status;
 		}
 		od_server_sync_request(server, 1);
-		od_frontend_status_t status =
-			od_service_stream_server_until_rfq(
-				server, 0 /* ignore errors */, timeout_ms,
-				OD_WAIT_DEPLOY_SERVER_READ);
+		status = od_service_stream_server_until_rfq(
+			server, 0 /* ignore errors */, timeout_ms,
+			OD_WAIT_DEPLOY_SERVER_READ);
 		if (status != OD_OK) {
 			return status;
 		}
@@ -725,11 +747,11 @@ static od_frontend_status_t process_vexec(od_client_t *client,
 		return OD_EOOM;
 	}
 
-	int rc = od_io_write(&server->io, msg, timeout_ms,
-			     OD_WAIT_QUERY_SERVER_WRITE);
+	od_frontend_status_t status = od_xplan_send_query(
+		&client->relay, msg, timeout_ms, OD_WAIT_QUERY_SERVER_WRITE);
 	machine_msg_free(msg);
-	if (rc != 0) {
-		return OD_ESERVER_WRITE;
+	if (status != OD_OK) {
+		return status;
 	}
 	od_server_sync_request(server, 1);
 	return OD_REPLACED;

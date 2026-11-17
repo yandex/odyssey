@@ -60,6 +60,8 @@ void od_server_attach_client(od_server_t *server, od_client_t *client)
 	client->server = server;
 	server->key_client = client->key;
 	server->idle_time = 0;
+	server->rwr_wait_pending =
+		client->rwr_consistent && client->rwr_last_lsn_valid;
 	od_server_set_pool_state(server, OD_SERVER_ACTIVE);
 }
 

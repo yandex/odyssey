@@ -1,0 +1,87 @@
+-- Listeners have independent defaults; an omitted setting remains off.
+\connect 'postgresql://postgres@localhost:6432/postgres?options='
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ off
+(1 row)
+
+\connect 'postgresql://postgres@localhost:7433/postgres?options='
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ off
+(1 row)
+
+\connect 'postgresql://postgres@localhost:7432/postgres?options='
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ on
+(1 row)
+
+-- The listener default does not force the setting after connection startup.
+SET odyssey.rwr_consistent TO off;
+NOTICE:  processed virtually by odyssey
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ off
+(1 row)
+
+-- Startup options override both enabled and disabled listener defaults.
+\connect 'postgresql://postgres@localhost:7432/postgres?options=-c%20odyssey.rwr_consistent%3Doff'
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ off
+(1 row)
+
+\connect 'postgresql://postgres@localhost:7433/postgres?options=-c%20odyssey.rwr_consistent%3Don'
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ on
+(1 row)
+
+-- A fresh client inherits the enabled default and waits without a SET to on.
+\connect 'postgresql://postgres@localhost:7432/postgres?options='
+SHOW odyssey.rwr_consistent;
+NOTICE:  processed virtually by odyssey
+ odyssey.rwr_consistent 
+------------------------
+ on
+(1 row)
+
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+SET application_name TO 'rwr_5node';
+NOTICE:  select host tcp://localhost:5432
+CREATE TABLE rwr_test (i int);
+NOTICE:  select host tcp://localhost:5432
+\! ${PGTEST_DIR}/sql/replay.sh pause
+replica replay is paused
+INSERT INTO rwr_test VALUES (42);
+NOTICE:  select host tcp://localhost:5432
+\! ${PGTEST_DIR}/sql/replay.sh observe &
+SET odyssey.execute_on_host TO 'localhost:5434';
+NOTICE:  processed virtually by odyssey
+SELECT count(*) FROM rwr_test;
+NOTICE:  select host tcp://localhost:5434
+ count 
+-------
+     1
+(1 row)
+
+\! ${PGTEST_DIR}/sql/replay.sh check
+observed Odyssey blocked on WAIT FOR LSN before resuming replay
+SET odyssey.execute_on_host TO 'localhost:5432';
+NOTICE:  processed virtually by odyssey
+DROP TABLE rwr_test;
+NOTICE:  select host tcp://localhost:5432
