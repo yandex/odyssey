@@ -98,8 +98,9 @@ static int mm_bio_tls_read_pending(mm_bio_t *bio)
 		/* handshake is not complete yet - the layer is transparent */
 		return mm_bio_read_pending(bio->next);
 	}
-	if (mm_tls_read_pending(io)) {
-		return 1;
+	int pending = mm_tls_read_pending(io);
+	if (pending > 0) {
+		return pending;
 	}
 	return mm_bio_read_pending(bio->next);
 }
