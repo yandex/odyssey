@@ -61,17 +61,15 @@ static int mm_bio_zpq_read_pending(mm_bio_t *bio)
 	 * it without touching the lower layer. This keeps the backpressure
 	 * invariant - readahead full + inbound data available on any layer
 	 * reports ENOBUFS instead of a misleading EWOULDBLOCK.
+	 *
+	 * The deferred_rx flag ("the last read did not consult the
+	 * transport") is deliberately not counted: it does not mean the
+	 * data is servable, the transport is queried truthfully by the
+	 * layers below (FIONREAD / SSL_pending).
 	 */
 	size_t buffered = mm_zpq_buffered_rx(bio->state);
 	if (buffered > 0) {
 		return (int)buffered;
-	}
-	if (mm_zpq_deferred_rx(bio->state)) {
-		/*
-		 * received data the decompressor cannot count exactly
-		 * until it is decompressed - positive lower bound
-		 */
-		return 1;
 	}
 	return mm_bio_read_pending(bio->next);
 }
