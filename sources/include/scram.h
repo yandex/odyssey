@@ -25,6 +25,9 @@ struct od_scram_state {
 	char *server_nonce;
 	char *server_first_message;
 
+	/* gs2-cbind-flag from the client-first-message ('n', 'y' or 'p') */
+	char cbind_flag;
+
 	uint8_t *salted_password;
 	int iterations;
 	char *salt;
@@ -86,11 +89,14 @@ int od_scram_init_from_plain_password(od_scram_state_t *scram_state,
 				      char *plain_password);
 
 int od_scram_read_client_first_message(od_scram_state_t *scram_state,
-				       char *auth_data, size_t auth_data_size);
+				       char *auth_data, size_t auth_data_size,
+				       int channel_binding_in_use,
+				       int ssl_in_use);
 
 int od_scram_read_client_final_message(mm_io_t *io,
 				       od_scram_state_t *scram_state,
 				       char *auth_data, size_t auth_data_size,
+				       int channel_binding_in_use,
 				       char **final_nonce_ptr,
 				       size_t *final_nonce_size_ptr,
 				       uint8_t **proof_ptr);
