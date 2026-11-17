@@ -430,62 +430,9 @@ static od_frontend_status_t process_vdeallocate(od_client_t *client,
 static od_frontend_status_t process_vbegin(od_client_t *client,
 					   od_parser_t *parser)
 {
-	/*
-	 * do expect BEGIN; or BEGIN
-	 */
-	int rc;
-	od_token_t token;
-
-	rc = od_parser_next(parser, &token);
-	switch (rc) {
-	case OD_PARSER_SYMBOL:
-		/* BEGIN; */
-		if (token.value.num != ';') {
-			/* some other option, pg will handle it */
-			return OD_OK;
-		}
-
-		/* must meet the EOF now */
-		rc = od_parser_next(parser, &token);
-		if (rc != OD_PARSER_EOF) {
-			/* some other option, pg will handle it */
-			return OD_OK;
-		}
-
-		/* fallthrough */
-	case OD_PARSER_EOF:
-		/* BEGIN */
-		break;
-	default:
-		/* some other option, pg will handle it */
-		return OD_OK;
-	}
-
-	od_server_t *server = client->server;
-	int in_tx = (server != NULL && server->is_transaction);
-
-	if (client->pending_begin || in_tx) {
-		/* pass to pg and let it generate warning/error itself */
-		return OD_OK;
-	}
-
-	machine_msg_t *msg = kiwi_be_write_command_complete(NULL, "BEGIN");
-	if (msg == NULL) {
-		return OD_EOOM;
-	}
-
-	msg = kiwi_be_write_ready(msg, 'T');
-	if (msg == NULL) {
-		return OD_EOOM;
-	}
-
-	if (od_write(&client->io, msg) != 0) {
-		return OD_ECLIENT_WRITE;
-	}
-
-	client->pending_begin = 1;
-
-	return OD_SKIP;
+	(void)client;
+	(void)parser;
+	return OD_OK;
 }
 
 static od_frontend_status_t
