@@ -339,9 +339,9 @@ rewrite_sql_execute(od_client_t *client, const char *query, uint32_t query_len,
 			machine_msg_free(parse);
 			return OD_EOOM;
 		}
-		od_wait_event_start(OD_WAIT_DEPLOY_SERVER_WRITE);
-		int rc = od_write2(&server->io, sync, timeout_ms);
-		od_wait_event_end(OD_WAIT_DEPLOY_SERVER_WRITE);
+		int rc = od_io_write(&server->io, sync, timeout_ms,
+				     OD_WAIT_DEPLOY_SERVER_WRITE);
+		machine_msg_free(sync);
 		if (rc != 0) {
 			return OD_ESERVER_WRITE;
 		}
@@ -436,14 +436,12 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 				return OD_EOOM;
 			}
 
-			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-			rc = od_io_write(&server->io, rewritten, timeout_ms);
-			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
+			rc = od_io_write(&server->io, rewritten, timeout_ms,
+					 OD_WAIT_QUERY_SERVER_WRITE);
 			machine_msg_free(rewritten);
 		} else {
-			od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-			rc = od_io_write(&server->io, msg, timeout_ms);
-			od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
+			rc = od_io_write(&server->io, msg, timeout_ms,
+					 OD_WAIT_QUERY_SERVER_WRITE);
 		}
 		machine_msg_free_safe(execute);
 
@@ -793,9 +791,8 @@ process_fcall_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	/* no need special handling - just write call and wait for rfq */
 
-	od_wait_event_start(OD_WAIT_QUERY_SERVER_WRITE);
-	int rc = od_io_write(&server->io, msg, timeout_ms);
-	od_wait_event_end(OD_WAIT_QUERY_SERVER_WRITE);
+	int rc = od_io_write(&server->io, msg, timeout_ms,
+			     OD_WAIT_QUERY_SERVER_WRITE);
 	if (rc != 0) {
 		return OD_ESERVER_WRITE;
 	}

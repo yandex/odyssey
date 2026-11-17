@@ -1575,7 +1575,8 @@ static od_frontend_status_t run_virtual_error(od_xplan_entry_t *error,
 					      od_client_t *client,
 					      uint32_t timeout_ms)
 {
-	int rc = od_io_write(&client->io, error->vresp, timeout_ms);
+	int rc = od_io_write(&client->io, error->vresp, timeout_ms,
+			     OD_WAIT_QUERY_CLIENT_WRITE);
 	if (rc != 0) {
 		return OD_ECLIENT_WRITE;
 	}
