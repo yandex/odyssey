@@ -53,7 +53,9 @@ static void xbuf_msg_destroy(void *a)
 		od_pstmt_unref(m->pstmt);
 	}
 
-	machine_msg_free_safe(m->msg);
+	if (m->owns_msg) {
+		machine_msg_free_safe(m->msg);
+	}
 }
 
 static inline kiwi_fe_type_t xbuf_msg_fe_type(machine_msg_t *msg)
@@ -122,20 +124,28 @@ static void xbuf_destroy(od_relay_xbuf_t *xbuf)
 	mm_vector_destroy(&xbuf->msgs);
 }
 
-static int xbuf_append(od_relay_xbuf_t *xbuf, machine_msg_t *msg)
+typedef enum {
+	XBUF_COPY_MSG,
+	XBUF_BORROW_MSG,
+	XBUF_TAKE_MSG,
+} xbuf_msg_mode_t;
+
+static int xbuf_append(od_relay_xbuf_t *xbuf, machine_msg_t *msg,
+		       xbuf_msg_mode_t mode)
 {
-	machine_msg_t *copy = machine_msg_copy(msg);
-	if (copy == NULL) {
+	machine_msg_t *stored = mode == XBUF_COPY_MSG ? machine_msg_copy(msg) : msg;
+	if (stored == NULL) {
 		return -1;
 	}
 
 	od_xbuf_msg_t xmsg;
 	memset(&xmsg, 0, sizeof(od_xbuf_msg_t));
-	xmsg.msg = copy;
+	xmsg.msg = stored;
+	xmsg.owns_msg = mode != XBUF_BORROW_MSG;
 
 	int rc = mm_vector_append(&xbuf->msgs, &xmsg);
-	if (rc != 0) {
-		machine_msg_free(copy);
+	if (rc != 0 && mode == XBUF_COPY_MSG) {
+		machine_msg_free(stored);
 	}
 
 	return rc;
@@ -152,6 +162,7 @@ static int xbuf_append_deferred_begin(od_relay_xbuf_t *xbuf, const char *query)
 	od_xbuf_msg_t xmsg;
 	memset(&xmsg, 0, sizeof(od_xbuf_msg_t));
 	xmsg.msg = copy;
+	xmsg.owns_msg = true;
 	xmsg.is_deferred_begin = true;
 
 	int rc = mm_vector_append(&xbuf->msgs, &xmsg);
@@ -207,6 +218,9 @@ static od_frontend_status_t process_possible_attach(handler_t handler,
 	return status;
 }
 
+static int relay_append_query(od_relay_t *relay, machine_msg_t *msg,
+			      bool take_msg);
+
 static od_frontend_status_t
 process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 {
@@ -235,8 +249,35 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 					   &portal, timeout_ms);
 	od_linear_alloc_reset(arena, 0);
 
-	status = run_query_no_plan(msg, &portal, client, server, status,
-				   timeout_ms);
+	if (status == OD_SKIP && portal.query == NULL) {
+		status = run_query_no_plan(msg, &portal, client, server, status,
+					   timeout_ms);
+	} else if (status == OD_OK ||
+		   (status == OD_SKIP && portal.query != NULL)) {
+		if (server == NULL) {
+			virtual_portal_free(&portal);
+			return OD_ATTACH;
+		}
+
+		bool take_query = portal.query != NULL &&
+				  client->pending_begin == NULL;
+		machine_msg_t *query_msg = portal.query != NULL ? portal.query : msg;
+		if (relay_append_query(relay, query_msg, take_query) != 0) {
+			status = OD_EOOM;
+		} else {
+			if (take_query) {
+				portal.query = NULL;
+			}
+			od_wait_event_start(OD_WAIT_QUERY_PLANNING);
+			status = od_xplan_make_from_xbuf(&relay->xplan, relay);
+			od_wait_event_end(OD_WAIT_QUERY_PLANNING);
+
+			if (status == OD_OK) {
+				status = od_xplan_run(&relay->xplan, relay,
+						      timeout_ms);
+			}
+		}
+	}
 	virtual_portal_free(&portal);
 	return status;
 }
@@ -254,11 +295,43 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 		od_client_pending_begin_clear(client);
 	}
 
-	if (xbuf_append(&relay->xbuf, msg)) {
+	if (xbuf_append(&relay->xbuf, msg, XBUF_COPY_MSG)) {
 		return -1;
 	}
 
 	return 0;
+}
+
+static int relay_append_query(od_relay_t *relay, machine_msg_t *msg,
+			      bool take_msg)
+{
+	od_client_t *client = relay->client;
+	od_relay_xbuf_t *xbuf = &relay->xbuf;
+
+	if (client->pending_begin != NULL) {
+		char *query;
+		uint32_t query_len;
+		if (kiwi_be_read_query(machine_msg_data(msg), machine_msg_size(msg),
+				       &query, &query_len) != OK_RESPONSE) {
+			return -1;
+		}
+		(void)query_len;
+
+		machine_msg_t *joined = kiwi_fe_write_query_join(
+			NULL, client->pending_begin, "\n;", query, NULL);
+		if (joined == NULL) {
+			return -1;
+		}
+		if (xbuf_append(xbuf, joined, XBUF_TAKE_MSG) != 0) {
+			machine_msg_free(joined);
+			return -1;
+		}
+		od_client_pending_begin_clear(client);
+		return 0;
+	}
+
+	xbuf_msg_mode_t mode = take_msg ? XBUF_TAKE_MSG : XBUF_BORROW_MSG;
+	return xbuf_append(xbuf, msg, mode);
 }
 
 /*
@@ -557,6 +630,9 @@ od_frontend_status_t od_relay_process_query(od_relay_t *relay,
 	od_frontend_status_t status = process_possible_attach(
 		process_query_impl, relay, msg, timeout_ms);
 
+	/* Simple Query completes its xbuf independently of Flush or Sync. */
+	od_xplan_clear(&relay->xplan);
+	xbuf_clear(&relay->xbuf);
 	od_query_ctx_reset(&relay->client->query_ctx);
 
 	/*
@@ -594,8 +670,8 @@ od_frontend_status_t od_relay_process_xflush(od_relay_t *relay,
 	od_query_ctx_reset(&relay->client->query_ctx);
 
 	/* never reuse this ones */
-	xbuf_clear(&relay->xbuf);
 	od_xplan_clear(&relay->xplan);
+	xbuf_clear(&relay->xbuf);
 
 	return status;
 }
@@ -610,8 +686,8 @@ od_frontend_status_t od_relay_process_xsync(od_relay_t *relay,
 	od_query_ctx_reset(&relay->client->query_ctx);
 
 	/* never reuse this ones */
-	xbuf_clear(&relay->xbuf);
 	od_xplan_clear(&relay->xplan);
+	xbuf_clear(&relay->xbuf);
 
 	return status;
 }

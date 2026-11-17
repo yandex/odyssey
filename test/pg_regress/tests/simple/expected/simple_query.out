@@ -1,0 +1,40 @@
+\pset format unaligned
+-- One Query may contain several results and still has just one ReadyForQuery.
+SELECT 1 AS first \; SELECT 2 AS second;
+first
+1
+(1 row)
+second
+2
+(1 row)
+SELECT 3 AS before_error \; SELECT 1 / 0 \; SELECT 4 AS skipped;
+before_error
+3
+(1 row)
+ERROR:  division by zero
+SELECT 5 AS after_error;
+after_error
+5
+(1 row)
+-- An error in a real transaction must preserve the failed transaction state.
+BEGIN;
+SELECT 6 AS in_transaction;
+in_transaction
+6
+(1 row)
+SELECT 1 / 0;
+ERROR:  division by zero
+SELECT 7 AS aborted;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ROLLBACK;
+SELECT 8 AS after_rollback;
+after_rollback
+8
+(1 row)
+-- COPY may stop streaming before ReadyForQuery and resume in the relay.
+CREATE TABLE simple_query_copy (v int);
+COPY simple_query_copy FROM STDIN;
+COPY (SELECT v FROM simple_query_copy ORDER BY v) TO STDOUT;
+9
+10
+DROP TABLE simple_query_copy;

@@ -18,6 +18,8 @@
 
 typedef struct {
 	machine_msg_t *msg;
+	/* False when msg is borrowed for synchronous Simple Query processing. */
+	bool owns_msg;
 	/* Internal Query prepended to an extended-protocol batch. */
 	bool is_deferred_begin;
 

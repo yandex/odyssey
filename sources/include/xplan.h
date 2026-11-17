@@ -99,6 +99,9 @@ typedef struct {
 } od_xplan_delta_t;
 
 typedef enum {
+	/* Simple Query: proxy all results through ReadyForQuery. */
+	OD_XPLAN_QUERY,
+
 	/*
 	 * send to backend and proxy the answer to client
 	 * this is:
@@ -162,7 +165,7 @@ typedef struct {
 	 * original msg from client
 	 * can be sent to server, if it wan't rewritten to server_msg
 	 *
-	 * cannot be NULL, but is owned by xbuf
+	 * cannot be NULL; borrowed from the relay xbuf
 	 */
 	machine_msg_t *clmsg;
 
