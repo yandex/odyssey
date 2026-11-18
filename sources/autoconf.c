@@ -161,7 +161,9 @@ static int od_autoconf_read(const char *path, char **text, char *err,
 static int od_autoconf_write_file(const char *path, const char *text, char *err,
 				  size_t err_size)
 {
-	int fd = mm_file_open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	int fd = mm_file_open(path,
+			      MM_OPEN_WRONLY | MM_OPEN_CREAT | MM_OPEN_TRUNC,
+			      MM_FILE_MODE_OWNER);
 	if (fd == -1) {
 		od_snprintf(err, (int)err_size, "could not create \"%s\": %s",
 			    path, strerror(errno));
