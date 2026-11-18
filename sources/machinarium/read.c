@@ -46,7 +46,7 @@ MACHINE_API int machine_read_into(mm_io_t *io, void *dst, size_t size,
 			*processed += rc;
 			continue;
 		}
-		if (rc == 0 || !machine_errno_retryable(machine_errno())) {
+		if (rc != -1 || !machine_errno_retryable(machine_errno())) {
 			return -1;
 		}
 		if (mm_io_wait(io, time_ms) == -1) {
