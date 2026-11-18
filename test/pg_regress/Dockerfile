@@ -28,7 +28,9 @@ RUN apt-get update -o Acquire::AllowInsecureRepositories=true && apt-get install
 FROM common-builder AS pg-build
 
 RUN git clone --depth 1 --branch REL_18_STABLE https://github.com/postgres/postgres.git
-RUN cd postgres && ./configure --prefix /usr --without-icu --without-zlib && make -j install >/dev/null
+RUN cd postgres && ./configure --prefix /usr --without-icu --without-zlib --enable-injection-points && make -j install >/dev/null
+
+RUN make -C postgres/contrib/dblink install && make -C postgres/src/test/modules/injection_points install
 
 # pg_isolation_regress and isolationtester are not installed by make install.
 COPY ./test/isolation/isolationtester.patch /tmp/isolationtester.patch

@@ -9,6 +9,12 @@ schedule live in this directory. The suite runs through Odyssey as part of
 locks. Both permutations require a waiting step to complete after the other
 session commits.
 
+`pool_rollback` pauses PostgreSQL's rollback at an injection point after a client
+with an open transaction disconnects. `SHOW POOLS_EXTENDED` must keep the only
+backend active and the second client queued until rollback is released. That client then
+reuses the backend with the uncommitted row gone. It uses the `dblink` and
+`injection_points` modules installed by the regression Dockerfile.
+
 ## Lock detection through Odyssey
 
 Odyssey's `BackendKeyData` contains a virtual PID, so PostgreSQL's usual

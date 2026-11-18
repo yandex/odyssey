@@ -1,1 +1,2 @@
 test: table_lock
+test: pool_rollback
