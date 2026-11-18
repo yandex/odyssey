@@ -7,7 +7,6 @@
 
 #include <odyssey.h>
 
-#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -15,7 +14,6 @@
 
 #include <instance.h>
 #include <client.h>
-#include <dns.h>
 #include <util.h>
 #include <wait_event.h>
 
@@ -178,16 +176,7 @@ int mdb_iamproxy_authenticate_user(char *username, char *token,
 		goto free_io;
 	}
 
-	char client_ip[INET6_ADDRSTRLEN] = "";
-	struct sockaddr_storage peer;
-	int peer_len = sizeof(peer);
-	if (machine_getpeername(client->io.io, (struct sockaddr *)&peer,
-				&peer_len) == 0 &&
-	    (peer.ss_family == AF_INET || peer.ss_family == AF_INET6)) {
-		od_getsockaddrname((struct sockaddr *)&peer, client_ip,
-				   sizeof(client_ip), 1, 0);
-	}
-	if (mdb_iamproxy_io_write(io, client_ip, 0) < 0) {
+	if (mdb_iamproxy_io_write(io, client->peer_ip, 0) < 0) {
 		od_error(&instance->logger, client, NULL,
 			 "failed to send client IP to iam-auth-proxy");
 		authentication_result = MDB_IAMPROXY_CONN_ERROR;
