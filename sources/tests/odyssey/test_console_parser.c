@@ -100,6 +100,12 @@ static void test_show_pools_extended(void)
 	     0);
 }
 
+static void test_show_time_quantiles(void)
+{
+	test(strcmp(parse_ok("SHOW TIME_QUANTILES"), "(show time_quantiles)") ==
+	     0);
+}
+
 static void test_show_databases(void)
 {
 	test(strcmp(parse_ok("SHOW DATABASES"), "(show databases)") == 0);
@@ -463,6 +469,7 @@ void odyssey_test_console_parser(void)
 	test_show_help();
 	test_show_pools();
 	test_show_pools_extended();
+	test_show_time_quantiles();
 	test_show_databases();
 	test_show_servers();
 	test_show_server_prep_stmts();
