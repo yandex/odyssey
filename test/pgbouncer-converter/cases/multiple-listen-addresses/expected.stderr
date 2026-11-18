@@ -1,0 +1,1 @@
+WARNING: pgbouncer.ini:0: one explicit listen_addr is required; using loopback placeholder, routes blocked: listen_addr

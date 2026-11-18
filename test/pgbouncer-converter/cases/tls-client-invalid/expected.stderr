@@ -1,0 +1,1 @@
+WARNING: pgbouncer.ini:4: unsupported security option; routes blocked: client_tls_sslmode

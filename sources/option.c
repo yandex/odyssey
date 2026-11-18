@@ -51,6 +51,7 @@ void od_print_help(const char *program)
 	printf("      --log_to_stdout        Log to stdout\n");
 	printf("      --silent               Do not log anything\n");
 	printf("      --test                 Configuration testing\n");
+	printf("      --convert-pgbouncer    Convert pgbouncer.ini to Odyssey config on stdout\n");
 	printf("      --verbose              Log everything\n");
 	printf("  -V, --version              Print program version\n");
 	printf("  -h, --help                 Give this help list\n");
