@@ -265,6 +265,13 @@ MACHINE_API ssize_t machine_read_raw(mm_io_t *, void *, size_t);
  */
 MACHINE_API int machine_read_pending(mm_io_t *);
 
+/* Read exactly size bytes, yielding the coroutine for up to time_ms per wait.
+ * Return 0 on success or -1 on EOF or error. On every return, *processed is
+ * the number of bytes copied into dst.
+ */
+MACHINE_API int machine_read_into(mm_io_t *io, void *dst, size_t size,
+				  size_t *processed, uint32_t time_ms);
+
 MACHINE_API machine_msg_t *machine_read(mm_io_t *, size_t, uint32_t time_ms);
 
 /* write */

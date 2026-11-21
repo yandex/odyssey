@@ -60,15 +60,20 @@ static void client(void *arg)
 	rc = mm_io_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	machine_msg_t *msg;
-	msg = machine_read(client, 12, UINT32_MAX);
-	test(msg != NULL);
-	test(memcmp(machine_msg_data(msg), "hello world", 12) == 0);
-	machine_msg_free(msg);
+	char buf[8];
+	size_t processed;
+	test(machine_read_into(client, buf, 5, &processed, UINT32_MAX) == 0);
+	test(processed == 5);
+	test(memcmp(buf, "hello", 5) == 0);
 
-	msg = machine_read(client, 1, UINT32_MAX);
+	test(machine_read_into(client, buf, sizeof(buf), &processed,
+			       UINT32_MAX) == -1);
+	test(machine_errno() == 0);
+	test(processed == sizeof(" world"));
+	test(memcmp(buf, " world", processed) == 0);
+
 	/* eof */
-	test(msg == NULL);
+	test(machine_read(client, 1, UINT32_MAX) == NULL);
 
 	rc = mm_io_close(client);
 	test(rc == 0);
