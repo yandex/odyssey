@@ -318,6 +318,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	od_client_t *client = relay->client;
 	od_server_t *server = client->server;
 	od_frontend_status_t status;
+	uint64_t errors_before;
 
 	char *data = machine_msg_data(msg);
 	int size = machine_msg_size(msg);
@@ -340,7 +341,25 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	if (status == OD_SKIP) {
 		/* query must not be sent to backend */
 		return OD_OK;
-	} else if (status == OD_REPLACED) {
+	}
+
+	/* Plan the ordinary Simple Query; deferred/replaced queries stay below. */
+	if (status == OD_OK && client->pending_begin == NULL) {
+		if (server == NULL) {
+			return OD_ATTACH;
+		}
+
+		status = od_xplan_make_query(&relay->xplan, msg);
+		if (status != OD_OK) {
+			return status;
+		}
+		errors_before = server->error_responses;
+		status = od_xplan_run(&relay->xplan, relay, timeout_ms);
+		od_xplan_clear(&relay->xplan);
+		goto complete;
+	}
+
+	if (status == OD_REPLACED) {
 		/* replaced query was sent, wait rfq but no writing the query */
 	} else if (status == OD_OK) {
 		if (server == NULL) {
@@ -376,7 +395,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	}
 
 	od_stat_query_start(&server->stats_state);
-	uint64_t errors_before = server->error_responses;
+	errors_before = server->error_responses;
 
 	if (client->pending_begin) {
 		/*
@@ -394,6 +413,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	status = od_stream_server_until_rfq(server, timeout_ms,
 					    OD_WAIT_STREAM_SERVER_READ);
 
+complete:
 	if (status == OD_COPY_IN_RECEIVED) {
 		/*
 		 * server is awaiting CopyData from client - stream it
