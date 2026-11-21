@@ -67,6 +67,30 @@ int od_reset(od_server_t *server)
 	}
 
 	if (server->xproto_mode) {
+		/*
+		 * Server is left in extended-query pipeline mode.
+		 *
+		 * Sending DISCARD ALL on such backend would fail with
+		 * "DISCARD ALL cannot be executed within a pipeline",
+		 * so the backend cannot be reused. Cancel outstanding
+		 * queries to release the backend resources in pg, then
+		 * drop the connection.
+		 */
+		if (route->rule->pool->cancel) {
+			/*
+			 * if query already completed on backend
+			 * then cancel will do nothing, so it is ok to send
+			 * cancel unconditionally
+			 */
+			int rc = od_cancel(server->global,
+					   server->endpoint->storage,
+					   od_server_pool_address(server),
+					   &server->key, &server->id);
+			if (rc == NOT_OK_RESPONSE) {
+				goto error;
+			}
+		}
+
 		od_debug(
 			&instance->logger, server->client, server,
 			"server left in extended-query pipeline, closing and drop connection");
