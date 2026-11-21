@@ -332,6 +332,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	}
 
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
+	/* A query already pending here is the deferred BEGIN; a handler may append SQL. */
+	bool deferred_begin = client->pending_query != NULL;
 
 	status = try_virtual_process_query(
 		client, query, query_len - 1 /* zero included */, timeout_ms);
@@ -340,45 +342,43 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	if (status == OD_SKIP) {
 		/* query must not be sent to backend */
 		return OD_OK;
-	} else if (status == OD_REPLACED) {
-		/* replaced query was sent, wait rfq but no writing the query */
-	} else if (status == OD_OK) {
-		if (server == NULL) {
-			return OD_ATTACH;
-		}
+	}
 
-		if (client->pending_begin) {
-			/* End trailing line comments before separating statements. */
-			machine_msg_t *rewritten =
-				kiwi_fe_write_query_join(NULL,
-							 client->pending_begin,
-							 "\n;", query, NULL);
-			if (rewritten == NULL) {
-				return OD_EOOM;
-			}
-
-			rc = od_io_write(&server->io, rewritten, timeout_ms,
-					 OD_WAIT_QUERY_SERVER_WRITE);
-			machine_msg_free(rewritten);
-		} else {
-			rc = od_io_write(&server->io, msg, timeout_ms,
-					 OD_WAIT_QUERY_SERVER_WRITE);
-		}
-
-		if (rc != 0) {
-			return OD_ESERVER_WRITE;
-		}
-
-		od_server_sync_request(server, 1);
-	} else {
-		/* not skip, not replace and not ok - need handle on higher level */
+	if (status != OD_OK && status != OD_REPLACED) {
 		return status;
 	}
+	if (server == NULL) {
+		return OD_ATTACH;
+	}
+	if (status == OD_REPLACED) {
+		od_assert(client->pending_query != NULL);
+	} else if (deferred_begin &&
+		   od_client_pending_query_append(client, query) != 0) {
+		return OD_EOOM;
+	}
+
+	machine_msg_t *replaced = NULL;
+	if (client->pending_query) {
+		replaced =
+			kiwi_fe_write_query(NULL, client->pending_query,
+					    strlen(client->pending_query) + 1);
+		if (replaced == NULL) {
+			return OD_EOOM;
+		}
+		msg = replaced;
+	}
+	rc = od_io_write(&server->io, msg, timeout_ms,
+			 OD_WAIT_QUERY_SERVER_WRITE);
+	machine_msg_free_safe(replaced);
+	if (rc != 0) {
+		return OD_ESERVER_WRITE;
+	}
+	od_server_sync_request(server, 1);
 
 	od_stat_query_start(&server->stats_state);
 	uint64_t errors_before = server->error_responses;
 
-	if (client->pending_begin) {
+	if (deferred_begin) {
 		/*
 		 * need to consume CommandComplete(BEGIN)
 		 * and maybe bypass some asynchronious messages
@@ -388,8 +388,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 		if (status != OD_OK) {
 			return status;
 		}
-		od_client_pending_begin_clear(client);
 	}
+	od_client_pending_query_clear(client);
 
 	status = od_stream_server_until_rfq(server, timeout_ms,
 					    OD_WAIT_STREAM_SERVER_READ);
@@ -420,13 +420,13 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 {
 	od_client_t *client = relay->client;
 
-	if (client->pending_begin) {
+	if (client->pending_query) {
 		if (xbuf_append_deferred_begin(&relay->xbuf,
-					       client->pending_begin)) {
+					       client->pending_query)) {
 			return -1;
 		}
 
-		od_client_pending_begin_clear(client);
+		od_client_pending_query_clear(client);
 	}
 
 	if (xbuf_append(&relay->xbuf, msg)) {

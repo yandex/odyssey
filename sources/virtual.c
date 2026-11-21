@@ -58,8 +58,8 @@
  *   OD_OK       - not virtual, forward the query to the backend
  *   OD_SKIP     - the portal is composed in portal, has to be written
  *   OD_ATTACH   - attach first, then retry
- *   OD_REPLACED - the replacement query was sent to the backend,
- *                 the portal must not be written
+ *   OD_REPLACED - the replacement SQL is queued in pending_query,
+ *                 the relay sends it instead of writing the portal
  */
 void virtual_portal_init(od_virtual_portal_t *portal)
 {
@@ -239,23 +239,11 @@ static od_frontend_status_t process_set_appname(od_client_t *client,
 	od_snprintf(query, sizeof(query), "set application_name to \'%.*s\';",
 		    appname_len, appname);
 
-	machine_msg_t *msg;
-	msg = kiwi_fe_write_query(NULL, query, strlen(query) + 1);
-	if (msg == NULL) {
+	if (od_client_pending_query_append(client, query) != 0) {
 		od_gerror(client, client->server,
 			  "can't create message to send \"%s\"", query);
 		return OD_EOOM;
 	}
-
-	rc = od_write(&client->server->io, msg);
-	if (rc != 0) {
-		od_gerror(client, client->server,
-			  "can't write \"%s\", rc = %d, errno = %d", query, rc,
-			  machine_errno());
-		return OD_ESERVER_WRITE;
-	}
-
-	od_server_sync_request(client->server, 1);
 
 	return OD_REPLACED;
 
@@ -712,26 +700,11 @@ static od_frontend_status_t process_vexec(od_client_t *client,
 		return OD_EOOM;
 	}
 
-	machine_msg_t *msg;
-	if (client->pending_begin) {
-		msg = kiwi_fe_write_query_join(NULL, client->pending_begin,
-					       "\n;", rewritten, NULL);
-	} else {
-		msg = kiwi_fe_write_query(NULL, rewritten,
-					  strlen(rewritten) + 1);
-	}
+	int rc = od_client_pending_query_append(client, rewritten);
 	od_free(rewritten);
-	if (msg == NULL) {
+	if (rc != 0) {
 		return OD_EOOM;
 	}
-
-	int rc = od_io_write(&server->io, msg, timeout_ms,
-			     OD_WAIT_QUERY_SERVER_WRITE);
-	machine_msg_free(msg);
-	if (rc != 0) {
-		return OD_ESERVER_WRITE;
-	}
-	od_server_sync_request(server, 1);
 	return OD_REPLACED;
 }
 
@@ -790,7 +763,7 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
 	od_server_t *server = client->server;
 	int in_tx = (server != NULL && server->is_transaction);
 
-	if (client->pending_begin || in_tx) {
+	if (client->pending_query || in_tx) {
 		/* pass to pg and let it generate warning/error itself */
 		return OD_OK;
 	}
@@ -798,7 +771,7 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
 	if (virtual_portal_set_complete(portal, "BEGIN") != 0) {
 		return OD_EOOM;
 	}
-	if (od_client_pending_begin_set(client, query) != 0) {
+	if (od_client_pending_query_set(client, query) != 0) {
 		return OD_EOOM;
 	}
 	portal->txstatus_force = 'T';

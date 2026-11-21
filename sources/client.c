@@ -76,7 +76,7 @@ void od_client_init(od_client_t *client)
 	memset(&client->query_ctx, 0, sizeof(client->query_ctx));
 	client->parser_mode = -1;
 
-	client->pending_begin = NULL;
+	client->pending_query = NULL;
 	client->debug_log_sampled = -1;
 
 	memset(client->scram_client_key, 0, sizeof(client->scram_client_key));
@@ -92,25 +92,56 @@ void od_client_init(od_client_t *client)
 	od_address_init(&client->execute_on_host);
 }
 
-int od_client_pending_begin_set(od_client_t *client, const char *query)
+int od_client_pending_query_set(od_client_t *client, const char *query)
 {
-	od_assert(client->pending_begin == NULL);
+	od_assert(client->pending_query == NULL);
 	size_t size = strlen(query) + 1;
-	if (size <= sizeof(client->pending_begin_buf)) {
-		memcpy(client->pending_begin_buf, query, size);
-		client->pending_begin = client->pending_begin_buf;
+	if (size <= sizeof(client->pending_query_buf)) {
+		memcpy(client->pending_query_buf, query, size);
+		client->pending_query = client->pending_query_buf;
 	} else {
-		client->pending_begin = od_strdup(query);
+		client->pending_query = od_strdup(query);
 	}
-	return client->pending_begin == NULL ? -1 : 0;
+	return client->pending_query == NULL ? -1 : 0;
 }
 
-void od_client_pending_begin_clear(od_client_t *client)
+int od_client_pending_query_append(od_client_t *client, const char *query)
 {
-	if (client->pending_begin != client->pending_begin_buf) {
-		od_free(client->pending_begin);
+	if (client->pending_query == NULL) {
+		return od_client_pending_query_set(client, query);
 	}
-	client->pending_begin = NULL;
+
+	/* The newline ends a possible trailing comment in the deferred SQL. */
+	static const char separator[] = "\n;";
+	size_t prefix_len = strlen(client->pending_query);
+	size_t query_len = strlen(query);
+	size_t size = prefix_len + sizeof(separator) - 1 + query_len + 1;
+	char *combined;
+	if (size <= sizeof(client->pending_query_buf)) {
+		combined = client->pending_query_buf;
+	} else {
+		combined = od_malloc(size);
+		if (combined == NULL) {
+			return -1;
+		}
+		memcpy(combined, client->pending_query, prefix_len);
+	}
+	memcpy(combined + prefix_len, separator, sizeof(separator) - 1);
+	memcpy(combined + prefix_len + sizeof(separator) - 1, query,
+	       query_len + 1);
+	if (client->pending_query != client->pending_query_buf) {
+		od_free(client->pending_query);
+	}
+	client->pending_query = combined;
+	return 0;
+}
+
+void od_client_pending_query_clear(od_client_t *client)
+{
+	if (client->pending_query != client->pending_query_buf) {
+		od_free(client->pending_query);
+	}
+	client->pending_query = NULL;
 }
 
 void od_client_free(od_client_t *client)
@@ -129,7 +160,7 @@ void od_client_free(od_client_t *client)
 	od_relay_destroy(&client->relay);
 
 	od_query_ctx_reset(&client->query_ctx);
-	od_client_pending_begin_clear(client);
+	od_client_pending_query_clear(client);
 
 	od_io_free(&client->io);
 	/* clear password if saved any */
