@@ -659,14 +659,14 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 	case OD_SASL_ERROR_OUT_OF_MEMORY:
 		/* allocation failure is not a protocol error: drop the
 		 * connection without an error response */
-		od_error(&instance->logger, client, NULL,
+		od_error(&instance->logger, "auth", client, NULL,
 			 "frontend auth: out of memory");
 		return -1;
 
 	default:
 		/* unexpected SCRAM error code: log it and drop the
 		 * connection without an error response */
-		od_error(&instance->logger, client, NULL,
+		od_error(&instance->logger, "auth", client, NULL,
 			 "frontend auth: unexpected SASL error code %d", rc);
 		return -1;
 	}
@@ -780,7 +780,7 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 		return -1;
 
 	case OD_SASL_ERROR_OUT_OF_MEMORY:
-		od_error(&instance->logger, client, NULL,
+		od_error(&instance->logger, "auth", client, NULL,
 			 "frontend auth: out of memory");
 
 		machine_msg_free(msg);
