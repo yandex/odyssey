@@ -426,6 +426,95 @@ const mm_bio_methods_t mm_bio_buf_methods = {
 	.free = mm_bio_buf_free,
 };
 
+struct iovec mm_io_buf_peek(mm_io_t *io)
+{
+	mm_bio_t *slot = &io->bio_slots[MM_BIO_BUF];
+	if (slot->methods == NULL) {
+		struct iovec empty = { NULL, 0 };
+		return empty;
+	}
+
+	mm_bio_buf_state_t *bs = slot->state;
+	mm_bio_buf_area_t *r = &bs->r;
+
+	struct iovec vec;
+	vec.iov_base = r->base + r->head;
+	vec.iov_len = r->tail - r->head;
+	return vec;
+}
+
+void mm_io_buf_peek_commit(mm_io_t *io, size_t size)
+{
+	mm_bio_t *slot = &io->bio_slots[MM_BIO_BUF];
+	if (slot->methods == NULL) {
+		return;
+	}
+
+	mm_bio_buf_state_t *bs = slot->state;
+	mm_bio_buf_area_t *r = &bs->r;
+
+	assert(size <= r->tail - r->head);
+	area_commit(r, size);
+}
+
+ssize_t mm_io_buf_try_refill(mm_io_t *io)
+{
+	mm_bio_t *slot = &io->bio_slots[MM_BIO_BUF];
+	if (slot->methods == NULL) {
+		mm_errno_set(EINVAL);
+		return -1;
+	}
+
+	mm_bio_buf_state_t *bs = slot->state;
+	mm_bio_buf_area_t *r = &bs->r;
+
+	if (r->cap == 0) {
+		/* the read side is not buffered, nothing to pull into */
+		mm_errno_set(EAGAIN);
+		return -1;
+	}
+
+	size_t have = r->tail - r->head;
+	if (have == 0) {
+		/* fully consumed: restart from the base, same as the
+		 * underflow refill in mm_bio_buf_read */
+		r->head = 0;
+		r->tail = 0;
+	} else if (r->head > 0) {
+		/*
+		 * reclaim the consumed front space so the appended
+		 * bytes extend the contiguous run
+		 */
+		memmove(r->base, r->base + r->head, have);
+		r->head = 0;
+		r->tail = have;
+	}
+
+	size_t free_size = r->cap - r->tail;
+	if (free_size == 0) {
+		/* the buffered bytes occupy the whole area */
+		mm_errno_set(ENOBUFS);
+		return -1;
+	}
+
+	mm_errno_set(0);
+	ssize_t rc = mm_bio_read(slot->next, r->base + r->tail, free_size);
+	if (rc > 0) {
+		r->tail += (size_t)rc;
+		return rc;
+	}
+	if (rc == 0) {
+		/* eof from the lower layer */
+		return 0;
+	}
+	if (mm_errno_get() == 0) {
+		/* the layer failed without setting an errno */
+		mm_errno_set(EAGAIN);
+	}
+	/* stall or error */
+	return -1;
+}
+
 int mm_bio_buf_attach(mm_io_t *io, size_t write_size, size_t read_size)
 {
 	mm_bio_t *slot = &io->bio_slots[MM_BIO_BUF];

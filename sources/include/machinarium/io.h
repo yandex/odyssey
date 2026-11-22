@@ -131,6 +131,11 @@ int mm_io_advice_keepalive_usr_timeout(int delay, int interval, int probes);
  */
 int mm_io_buf_enable(mm_io_t *, size_t write_size, size_t read_size);
 int mm_io_buf_disable(mm_io_t *);
+
+struct iovec mm_io_buf_peek(mm_io_t *);
+void mm_io_buf_peek_commit(mm_io_t *, size_t);
+ssize_t mm_io_buf_try_refill(mm_io_t *);
+
 /*
  * A single flush attempt: return 0 when the stack is drained, -1 with
  * EAGAIN on a stall. Waiting is up to the caller.

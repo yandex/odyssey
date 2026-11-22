@@ -53,6 +53,32 @@ static void check_at(machine_msg_t *msg, size_t size, size_t offset, int phase)
 	free(expect);
 }
 
+static void check_vec(struct iovec vec, size_t offset, int phase)
+{
+	char *expect = malloc(vec.iov_len);
+	test(expect != NULL);
+	fill_at(expect, vec.iov_len, offset, phase);
+	test(memcmp(vec.iov_base, expect, vec.iov_len) == 0);
+	free(expect);
+}
+
+/*
+ * refill until data arrives: the cond wait can be woken up by a
+ * signal left from an earlier io event, while the peer has not sent
+ * anything yet
+ */
+static ssize_t refill_wait(mm_io_t *io)
+{
+	for (;;) {
+		ssize_t n = mm_io_buf_try_refill(io);
+		if (n != -1 || machine_errno() != EAGAIN) {
+			return n;
+		}
+		mm_io_set_deadline(io, UINT32_MAX);
+		test(mm_io_wait_deadline(io) != MM_COND_WAIT_FAIL);
+	}
+}
+
 static void server(void *arg)
 {
 	(void)arg;
@@ -173,6 +199,14 @@ static void server(void *arg)
 	test(machine_errno() == EINPROGRESS);
 	machine_tls_free(tls);
 
+	/* peek/refill with no read area */
+	ssize_t n;
+	struct iovec gvec = mm_io_buf_peek(guard);
+	test(gvec.iov_len == 0);
+	n = mm_io_buf_try_refill(guard);
+	test(n == -1);
+	test(machine_errno() == EAGAIN);
+
 	rc = mm_io_buf_disable(guard);
 	test(rc == 0);
 
@@ -187,8 +221,104 @@ static void server(void *arg)
 	rc = mm_io_buf_disable(guard);
 	test(rc == 0);
 
+	/* peek/refill without the buf layer */
+	gvec = mm_io_buf_peek(guard);
+	test(gvec.iov_len == 0);
+	mm_io_buf_peek_commit(guard, 0);
+	n = mm_io_buf_try_refill(guard);
+	test(n == -1);
+	test(machine_errno() == EINVAL);
+
 	/* the io was never connected - nothing to close */
 	mm_io_free(guard);
+
+	/*
+	 * peek/commit/refill: the readahead was disabled above, attach
+	 * it again and walk the next client chunk through the peeked
+	 * view; the buffered bytes always form a single contiguous run
+	 */
+	rc = mm_io_buf_enable(client, 0, RA_SIZE);
+	test(rc == 0);
+
+	struct iovec vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 0);
+
+	size_t got = 0;
+	while (got < 300) {
+		n = refill_wait(client);
+		test(n > 0);
+		vec = mm_io_buf_peek(client);
+		test(vec.iov_len == (size_t)n);
+		check_vec(vec, got, 5);
+		mm_io_buf_peek_commit(client, vec.iov_len);
+		got += vec.iov_len;
+		/* the read area itself must be empty, the kernel socket
+		 * buffer may still hold the undelivered tail */
+		vec = mm_io_buf_peek(client);
+		test(vec.iov_len == 0);
+	}
+	test(got == 300);
+
+	/* let the client proceed to the next chunk */
+	msg = machine_msg_create(0);
+	test(msg != NULL);
+	char ack_b = 'B';
+	rc = machine_msg_write(msg, &ack_b, 1);
+	test(rc == 0);
+	rc = machine_write(client, msg, UINT32_MAX);
+	test(rc == 0);
+
+	/*
+	 * a small read area: the refill fills it to capacity, further
+	 * refills report ENOBUFS, the space freed by peek_commit is
+	 * appended to the remaining bytes and the view stays contiguous
+	 */
+	rc = mm_io_buf_disable(client);
+	test(rc == 0);
+	rc = mm_io_buf_enable(client, 0, 64);
+	test(rc == 0);
+
+	/* the refill must fill the small area up to its capacity */
+	while (mm_io_buf_peek(client).iov_len < 64) {
+		n = refill_wait(client);
+		test(n > 0);
+	}
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 64);
+	check_vec(vec, 0, 6);
+
+	n = mm_io_buf_try_refill(client);
+	test(n == -1);
+	test(machine_errno() == ENOBUFS);
+
+	mm_io_buf_peek_commit(client, 32);
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 32);
+	check_vec(vec, 32, 6);
+
+	n = mm_io_buf_try_refill(client);
+	test(n == 32);
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 64);
+	check_vec(vec, 32, 6);
+	mm_io_buf_peek_commit(client, 64);
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 0);
+
+	/* the rest of the chunk goes through the same small area */
+	got = 0;
+	while (got < 304) {
+		n = refill_wait(client);
+		test(n > 0);
+		vec = mm_io_buf_peek(client);
+		test(vec.iov_len == (size_t)n);
+		check_vec(vec, 96 + got, 6);
+		mm_io_buf_peek_commit(client, vec.iov_len);
+		got += vec.iov_len;
+	}
+	test(got == 304);
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 0);
 
 	/* ack so that the client can drain and close cleanly */
 	msg = machine_msg_create(0);
@@ -197,6 +327,25 @@ static void server(void *arg)
 	rc = machine_msg_write(msg, &ack, 1);
 	test(rc == 0);
 	rc = machine_write(client, msg, UINT32_MAX);
+	test(rc == 0);
+
+	/*
+	 * eof: the peer closes, the refill reports it by returning 0
+	 * with no errno set
+	 */
+	for (;;) {
+		n = mm_io_buf_try_refill(client);
+		if (n == 0) {
+			break;
+		}
+		test(n == -1);
+		test(machine_errno() == EAGAIN);
+		mm_io_set_deadline(client, UINT32_MAX);
+		test(mm_io_wait_deadline(client) != MM_COND_WAIT_FAIL);
+	}
+	test(machine_errno() == 0);
+
+	rc = mm_io_buf_disable(client);
 	test(rc == 0);
 
 	rc = mm_io_close(client);
@@ -268,15 +417,37 @@ static void client(void *arg)
 	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
 	test(rc == (ssize_t)sizeof(buf));
 
-	/* wait for the server ack, then eof */
+	/*
+	 * extra chunks for the peek/refill section: the server acks
+	 * the first one before the second is sent, so the server side
+	 * walk through the peeked view is deterministic
+	 */
+	machine_sleep(300);
+	fill(buf, sizeof(buf), 5);
+	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
+	test(rc == (ssize_t)sizeof(buf));
+
+	machine_msg_t *ack;
+	ack = machine_read(client, 1, UINT32_MAX);
+	test(ack != NULL);
+	test(machine_msg_size(ack) == 1);
+	machine_msg_free(ack);
+
+	machine_sleep(300);
+	char extra[400];
+	fill_at(extra, sizeof(extra), 0, 6);
+	rc = machine_write_raw(client, extra, sizeof(extra), NULL);
+	test(rc == (ssize_t)sizeof(extra));
+
+	/*
+	 * wait for the server ack, then close: the server checks its
+	 * eof handling on the refill after the peer is gone
+	 */
 	machine_msg_t *msg;
 	msg = machine_read(client, 1, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_size(msg) == 1);
 	machine_msg_free(msg);
-
-	msg = machine_read(client, 1, UINT32_MAX);
-	test(msg == NULL);
 
 	rc = mm_io_close(client);
 	test(rc == 0);
