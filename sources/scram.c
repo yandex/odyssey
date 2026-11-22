@@ -643,54 +643,150 @@ od_retcode_t od_scram_verify_server_signature(od_scram_state_t *scram_state,
 }
 
 int od_scram_read_client_first_message(od_scram_state_t *scram_state,
-				       char *auth_data, size_t auth_data_size)
+				       char *auth_data, size_t auth_data_size,
+				       int channel_binding_in_use,
+				       int ssl_in_use)
 {
 	if (!auth_data_size) {
-		return -6;
+		/* PostgreSQL parity (malformed SCRAM message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L377-L381
+		 */
+		return OD_SASL_ERROR_EMPTY_MESSAGE;
 	}
+
+	char cbind_flag = *auth_data;
+
+	char *cbind_type;
+	size_t cbind_type_size;
+
 	switch (*auth_data) {
 	case 'n': /* client without channel binding */
-	case 'y': /* client with    channel binding */
+		/* PostgreSQL parity (malformed SCRAM message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L990-L994
+		 */
+		if (channel_binding_in_use) {
+			return OD_SASL_ERROR_INVALID_CBIND_FLAG;
+		}
+
 		auth_data++;
 		auth_data_size--;
 		break;
 
-	case 'p': /* todo: client requires channel binding */
-		if (read_any_attribute_buf(&auth_data, &auth_data_size, NULL,
-					   NULL, NULL) == -1) {
-			return -1;
+	case 'y': /* client thinks server does not support channel binding */
+		/* PostgreSQL parity (malformed SCRAM message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1012-L1016
+		 */
+		if (channel_binding_in_use) {
+			return OD_SASL_ERROR_INVALID_CBIND_FLAG;
 		}
 
+		/* PostgreSQL parity (SCRAM channel binding negotiation error):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1019-L1023
+		 */
+		if (ssl_in_use) {
+			return OD_SASL_ERROR_CHANNEL_BINDING_NEGOTIATION;
+		}
+
+		auth_data++;
+		auth_data_size--;
+		break;
+
+	case 'p': /* client requires channel binding */
+		/* PostgreSQL parity (malformed SCRAM message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1041-L1045
+		 */
+		if (!channel_binding_in_use) {
+			return OD_SASL_ERROR_CHANNEL_BINDING_REQUIRED;
+		}
+
+		if (read_any_attribute_buf(&auth_data, &auth_data_size, NULL,
+					   &cbind_type,
+					   &cbind_type_size) == -1) {
+			return OD_SASL_ERROR_MALFORMED;
+		}
+
+		/* rewind to the comma separating the channel binding type
+		 * from the rest of the message */
 		auth_data--;
 		auth_data_size++;
+
+		/*
+		 * PostgreSQL parity (unsupported SCRAM channel-binding
+		 * type): the only supported type is tls-server-end-point
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1050-L1056
+		 */
+		if (cbind_type_size != strlen("tls-server-end-point") ||
+		    memcmp(cbind_type, "tls-server-end-point",
+			   cbind_type_size) != 0) {
+			return OD_SASL_ERROR_INVALID_CBIND_FLAG;
+		}
 		break;
+
 	default:
-		return -2;
+		/* PostgreSQL parity (malformed SCRAM message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1059-L1063
+		 */
+		return OD_SASL_ERROR_INVALID_CBIND_FLAG;
 	}
 
+	/*
+	 * Remember the gs2-cbind-flag for the channel binding checks in the
+	 * client-final-message. The flag is stored only after the switch
+	 * validated it. PostgreSQL parity:
+	 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L975-L979
+	 */
+	scram_state->cbind_flag = cbind_flag;
+
 	if (!auth_data_size || *auth_data != ',') {
-		return -2;
+		/* PostgreSQL parity (malformed SCRAM message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L997-L1002
+		 */
+		return OD_SASL_ERROR_INVALID_CBIND_FLAG;
 	}
 
 	auth_data++;
 	auth_data_size--;
 
-	if (!auth_data_size || *auth_data == 'a' ||
-	    *auth_data != ',') { /* todo: authorization identity */
+	if (!auth_data_size) {
+		return OD_SASL_ERROR_MALFORMED;
+	}
+
+	/*
+	 * Forbid optional authzid (authorization identity).
+	 * PostgreSQL parity:
+	 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1070-L1073
+	 */
+	if (*auth_data == 'a') {
 		return OD_SASL_ERROR_AUTH_IDENTITY;
 	}
 
+	/* PostgreSQL parity (malformed SCRAM message):
+	 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1074-L1078
+	 */
+	if (*auth_data != ',') {
+		return OD_SASL_ERROR_MALFORMED;
+	}
+
 	auth_data++;
 	auth_data_size--;
 
-	if (!auth_data_size ||
-	    *auth_data == 'm') { /* todo: mandatory extensions */
+	if (!auth_data_size) {
+		return OD_SASL_ERROR_MALFORMED;
+	}
+
+	/*
+	 * Mandatory extensions are not supported. PostgreSQL parity:
+	 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1090-L1094
+	 */
+	if (*auth_data == 'm') {
 		return OD_SASL_ERROR_MANDATORY_EXT;
 	}
 
+	int rc = OD_SASL_ERROR_MALFORMED;
+
 	char *client_first_message = od_malloc(auth_data_size + 1);
 	if (client_first_message == NULL) {
-		return -1;
+		return OD_SASL_ERROR_OUT_OF_MEMORY;
 	}
 	memcpy(client_first_message, auth_data, auth_data_size);
 	client_first_message[auth_data_size] = '\0';
@@ -716,6 +812,7 @@ int od_scram_read_client_first_message(od_scram_state_t *scram_state,
 	{
 		char *t = od_malloc(client_nonce_size + 1);
 		if (t == NULL) {
+			rc = OD_SASL_ERROR_OUT_OF_MEMORY;
 			goto error;
 		}
 		memcpy(t, client_nonce, client_nonce_size);
@@ -743,38 +840,29 @@ error:
 
 	od_free(client_first_message);
 
-	return -1;
+	return rc;
 }
 
-static inline int
-od_scram_need_channel_binding_check(const char *channel_binding,
-				    size_t channel_binding_size)
+od_retcode_t od_scram_verify_channel_binding(const char *channel_binding,
+					     size_t channel_binding_size,
+					     const char *b64_message,
+					     int b64_message_len)
 {
-	/*
-		See pg's backend/libpq/auth-scram.c
-
-		We need to perform channel binding check only if
-		channel_binding is not equal to "biws" (=n,,) or "eSws" (=y,,)
-
-		TODO: this is not totaly correct, maybe its better to get channel binding
-		flag from client's first message?
-	 */
-
-	if (channel_binding_size != 4) {
-		return 1;
+	if (channel_binding_size != (size_t)b64_message_len) {
+		return NOT_OK_RESPONSE;
 	}
 
-	if (memcmp(channel_binding, "biws", channel_binding_size) == 0 ||
-	    memcmp(channel_binding, "eSws", channel_binding_size) == 0) {
-		return 0;
+	if (memcmp(channel_binding, b64_message, channel_binding_size) != 0) {
+		return NOT_OK_RESPONSE;
 	}
 
-	return 1;
+	return OK_RESPONSE;
 }
 
 int od_scram_read_client_final_message(mm_io_t *io,
 				       od_scram_state_t *scram_state,
 				       char *auth_data, size_t auth_data_size,
+				       int channel_binding_in_use,
 				       char **final_nonce_ptr,
 				       size_t *final_nonce_size_ptr,
 				       uint8_t **proof_ptr)
@@ -792,9 +880,11 @@ int od_scram_read_client_final_message(mm_io_t *io,
 	char *b64_message = NULL;
 	int b64_message_len;
 	int scram_rc;
+	int rc = OD_SASL_ERROR_MALFORMED;
 
 	char *auth_data_copy = od_strdup_from_buf(auth_data, auth_data_size);
 	if (auth_data_copy == NULL) {
+		rc = OD_SASL_ERROR_OUT_OF_MEMORY;
 		goto error;
 	}
 
@@ -805,10 +895,7 @@ int od_scram_read_client_final_message(mm_io_t *io,
 		goto error;
 	}
 
-	if (od_scram_need_channel_binding_check(channel_binding,
-						channel_binding_size)) {
-		/*channel binding check*/
-
+	if (channel_binding_in_use) {
 		/* need cert to perform check */
 		if (!mm_io_is_tls(io)) {
 			goto error;
@@ -829,6 +916,7 @@ int od_scram_read_client_final_message(mm_io_t *io,
 		cbind_input_len = cbind_header_len + cbind_data_len;
 		cbind_input = od_malloc(cbind_input_len);
 		if (cbind_input == NULL) {
+			rc = OD_SASL_ERROR_OUT_OF_MEMORY;
 			goto error;
 		}
 		snprintf(cbind_input, cbind_input_len,
@@ -840,6 +928,7 @@ int od_scram_read_client_final_message(mm_io_t *io,
 		/* don't forget the zero-terminator */
 		b64_message = od_malloc(b64_message_len + 1);
 		if (b64_message == NULL) {
+			rc = OD_SASL_ERROR_OUT_OF_MEMORY;
 			goto error;
 		}
 		b64_message_len = od_b64_encode((const uint8_t *)cbind_input,
@@ -855,12 +944,35 @@ int od_scram_read_client_final_message(mm_io_t *io,
 		 * Compare the value sent by the client with the value expected by the
 		 * server.
 		 */
-		if (strncmp(channel_binding, b64_message, b64_message_len) !=
-		    0) {
-			/*ereport(ERROR,
-				(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
-				 errmsg("SCRAM channel binding check failed")));*/
-
+		if (od_scram_verify_channel_binding(
+			    channel_binding, channel_binding_size, b64_message,
+			    b64_message_len) != OK_RESPONSE) {
+			/*
+			 * PostgreSQL parity (SCRAM channel binding check
+			 * failed):
+			 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1352-L1354
+			 */
+			rc = OD_SASL_ERROR_CHANNEL_BINDING_MISMATCH;
+			goto error;
+		}
+	} else {
+		/*
+		 * If we are not using channel binding, the binding data is
+		 * expected to always be "biws", which is "n,," base64-encoded,
+		 * or "eSws", which is "y,,". We also have to check whether the
+		 * flag is the same one that the client originally sent.
+		 * PostgreSQL parity:
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1360-L1372
+		 */
+		if (!(channel_binding_size == sizeof("biws") - 1 &&
+		      memcmp(channel_binding, "biws", channel_binding_size) ==
+			      0 &&
+		      scram_state->cbind_flag == 'n') &&
+		    !(channel_binding_size == sizeof("eSws") - 1 &&
+		      memcmp(channel_binding, "eSws", channel_binding_size) ==
+			      0 &&
+		      scram_state->cbind_flag == 'y')) {
+			rc = OD_SASL_ERROR_UNEXPECTED_CBIND_ATTR;
 			goto error;
 		}
 	}
@@ -885,6 +997,7 @@ int od_scram_read_client_final_message(mm_io_t *io,
 	int proof_size = pg_b64_dec_len(base64_proof_size);
 	proof = od_malloc(proof_size);
 	if (proof == NULL) {
+		rc = OD_SASL_ERROR_OUT_OF_MEMORY;
 		goto error;
 	}
 
@@ -901,6 +1014,7 @@ int od_scram_read_client_final_message(mm_io_t *io,
 	scram_state->client_final_message =
 		od_malloc(proof_start - input_start + 1);
 	if (!scram_state->client_final_message) {
+		rc = OD_SASL_ERROR_OUT_OF_MEMORY;
 		goto error;
 	}
 
@@ -938,7 +1052,7 @@ error:
 		od_free(auth_data_copy);
 	}
 
-	return -1;
+	return rc;
 }
 
 machine_msg_t *

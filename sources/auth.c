@@ -481,6 +481,14 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 {
 	/* separated function to ensure, that scram_state will be fried properly in caller */
 
+	/*
+	 * All errors during the SCRAM exchange terminate the connection:
+	 * in PostgreSQL any ereport(ERROR) raised during client
+	 * authentication (there is no exception handler yet) is reported
+	 * as FATAL. PostgreSQL parity:
+	 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/utils/error/elog.c#L385-L391
+	 */
+
 	od_instance_t *instance = client->global->instance;
 	char *mechanisms[2] = { "SCRAM-SHA-256", "SCRAM-SHA-256-PLUS" };
 
@@ -539,21 +547,34 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 						      &mechanism, &auth_data,
 						      &auth_data_size);
 	if (rc == -1) {
-		od_frontend_error(
-			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+		/* PostgreSQL parity (malformed SCRAM message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L377-L381
+		 */
+		od_frontend_fatal(
+			client, KIWI_PROTOCOL_VIOLATION,
 			"frontend auth: malformed SASLInitialResponse message");
 		machine_msg_free(msg);
 		return -1;
 	}
 
+	/*
+	 * PostgreSQL parity: only advertised mechanisms may be selected,
+	 * SCRAM-SHA-256-PLUS requires TLS.
+	 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L255-L265
+	 */
 	if (strcmp(mechanism, "SCRAM-SHA-256") != 0 &&
-	    strcmp(mechanism, "SCRAM-SHA-256-PLUS") != 0) {
-		od_frontend_error(
-			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
-			"frontend auth: unsupported SASL authorization mechanism");
+	    (strcmp(mechanism, "SCRAM-SHA-256-PLUS") != 0 ||
+	     !mm_io_is_tls(client->io.io))) {
+		od_frontend_fatal(
+			client, KIWI_PROTOCOL_VIOLATION,
+			"frontend auth: client selected an invalid SASL authentication mechanism");
 		machine_msg_free(msg);
 		return -1;
 	}
+
+	int channel_binding_in_use =
+		strcmp(mechanism, "SCRAM-SHA-256-PLUS") == 0 &&
+		mm_io_is_tls(client->io.io);
 
 	/* use remote or local password source */
 	kiwi_password_t query_password;
@@ -595,37 +616,78 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 
 	/* try to parse authentication data */
 	rc = od_scram_read_client_first_message(scram_state, auth_data,
-						auth_data_size);
+						auth_data_size,
+						channel_binding_in_use,
+						mm_io_is_tls(client->io.io));
 	machine_msg_free(msg);
 	switch (rc) {
 	case 0:
 		break;
 
-	case -1:
-		return -1;
-
-	case -2:
-		od_frontend_error(
-			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+	case OD_SASL_ERROR_MALFORMED:
+	case OD_SASL_ERROR_INVALID_CBIND_FLAG:
+	case OD_SASL_ERROR_EMPTY_MESSAGE:
+		/*
+		 * Malformed client-first-message: bad channel-binding flag
+		 * or attribute, unexpected character, empty message.
+		 * PostgreSQL parity:
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L377-L381
+		 */
+		od_frontend_fatal(
+			client, KIWI_PROTOCOL_VIOLATION,
 			"frontend auth: malformed SASLInitialResponse message");
 		return -1;
 
-	case -3:
-		od_frontend_error(
-			client, KIWI_FEATURE_NOT_SUPPORTED,
-			"frontend auth: doesn't support channel binding at the moment");
+	case OD_SASL_ERROR_CHANNEL_BINDING_REQUIRED:
+		/*
+		 * Client requires channel binding, but channel binding is
+		 * not in use. PostgreSQL parity:
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1041-L1045
+		 */
+		od_frontend_fatal(
+			client, KIWI_PROTOCOL_VIOLATION,
+			"frontend auth: the client selected SCRAM-SHA-256 without channel binding, but the SCRAM message includes channel binding data");
 		return -1;
 
-	case -4:
-		od_frontend_error(
+	case OD_SASL_ERROR_CHANNEL_BINDING_NEGOTIATION:
+		/* PostgreSQL parity:
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1019-L1023
+		 */
+		od_frontend_fatal(
+			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+			"frontend auth: SCRAM channel binding negotiation error");
+		return -1;
+
+	case OD_SASL_ERROR_AUTH_IDENTITY:
+		/* PostgreSQL parity:
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1070-L1073
+		 */
+		od_frontend_fatal(
 			client, KIWI_FEATURE_NOT_SUPPORTED,
-			"frontend auth: doesn't support authorization identity at the moment");
+			"frontend auth: client uses authorization identity, but it is not supported");
 		return -1;
 
 	case OD_SASL_ERROR_MANDATORY_EXT:
-		od_frontend_error(
+		/* PostgreSQL parity:
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1092-L1094
+		 */
+		od_frontend_fatal(
 			client, KIWI_FEATURE_NOT_SUPPORTED,
-			"frontend auth: doesn't support mandatory extensions at the moment");
+			"frontend auth: client requires an unsupported SCRAM extension");
+		return -1;
+
+	case OD_SASL_ERROR_OUT_OF_MEMORY:
+		/* allocation failure is not a protocol error: drop the
+		 * connection without an error response */
+		od_error(&instance->logger, client, NULL,
+			 "frontend auth: out of memory");
+		return -1;
+
+	default:
+		/* unexpected SCRAM error code: log it and drop the
+		 * connection without an error response */
+		od_error(&instance->logger, client, NULL,
+			 "frontend auth: unexpected SASL error code %d", rc);
 		return -1;
 	}
 
@@ -636,8 +698,13 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 	}
 
 	if (rc == -1) {
-		od_frontend_error(
-			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+		/*
+		 * PostgreSQL parity: authentication failure against an
+		 * invalid/absent SCRAM secret is an invalid password.
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth.c#L275-L277
+		 */
+		od_frontend_fatal(
+			client, KIWI_INVALID_PASSWORD,
 			"frontend auth: invalid user password or SCRAM secret, check your config");
 
 		return -1;
@@ -689,24 +756,65 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 					      &auth_data_size);
 
 	if (rc == -1) {
-		od_frontend_error(
-			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+		/* PostgreSQL parity (malformed SCRAM message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L377-L381
+		 */
+		od_frontend_fatal(
+			client, KIWI_PROTOCOL_VIOLATION,
 			"frontend auth: malformed client SASLResponse");
 
 		machine_msg_free(msg);
 		return -1;
 	}
 
-	char *final_nonce;
-	size_t final_nonce_size;
-	uint8_t *client_proof;
+	char *final_nonce = NULL;
+	size_t final_nonce_size = 0;
+	uint8_t *client_proof = NULL;
 	rc = od_scram_read_client_final_message(client->io.io, scram_state,
 						auth_data, auth_data_size,
+						channel_binding_in_use,
 						&final_nonce, &final_nonce_size,
 						&client_proof);
-	if (rc == -1) {
-		od_frontend_error(
+	switch (rc) {
+	case 0:
+		break;
+
+	case OD_SASL_ERROR_CHANNEL_BINDING_MISMATCH:
+		/* PostgreSQL parity (SCRAM channel binding check failed):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1352-L1354
+		 */
+		od_frontend_fatal(
 			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+			"frontend auth: SCRAM channel binding check failed");
+
+		machine_msg_free(msg);
+		return -1;
+
+	case OD_SASL_ERROR_UNEXPECTED_CBIND_ATTR:
+		/* PostgreSQL parity (unexpected SCRAM channel-binding
+		 * attribute in client-final-message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1370-L1372
+		 */
+		od_frontend_fatal(
+			client, KIWI_PROTOCOL_VIOLATION,
+			"frontend auth: unexpected SCRAM channel-binding attribute in client-final-message");
+
+		machine_msg_free(msg);
+		return -1;
+
+	case OD_SASL_ERROR_OUT_OF_MEMORY:
+		od_error(&instance->logger, client, NULL,
+			 "frontend auth: out of memory");
+
+		machine_msg_free(msg);
+		return -1;
+
+	default:
+		/* PostgreSQL parity (malformed SCRAM message):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L1388-L1391
+		 */
+		od_frontend_fatal(
+			client, KIWI_PROTOCOL_VIOLATION,
 			"frontend auth: malformed client SASLResponse");
 
 		machine_msg_free(msg);
@@ -717,8 +825,11 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 	rc = od_scram_verify_final_nonce(scram_state, final_nonce,
 					 final_nonce_size);
 	if (rc == -1) {
-		od_frontend_error(
-			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+		/* PostgreSQL parity (invalid SCRAM response):
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth-scram.c#L415-L419
+		 */
+		od_frontend_fatal(
+			client, KIWI_PROTOCOL_VIOLATION,
 			"frontend auth: malformed client SASLResponse: nonce doesn't match");
 
 		machine_msg_free(msg);
@@ -729,8 +840,13 @@ od_auth_frontend_scram_sha_256_internal(od_client_t *client,
 	rc = od_scram_verify_client_proof(scram_state, client_proof);
 	od_free(client_proof);
 	if (rc == -1) {
+		/*
+		 * PostgreSQL parity: invalid client proof is an invalid
+		 * password.
+		 * https://github.com/postgres/postgres/blob/c0f2b6dc82718f17a2190f474450885df6c06402/src/backend/libpq/auth.c#L275-L277
+		 */
 		od_frontend_fatal(
-			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+			client, KIWI_INVALID_PASSWORD,
 			"password authentication failed for user \"%s\"",
 			client->startup.user.value);
 
