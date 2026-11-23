@@ -94,6 +94,21 @@ void kiwi_test_pgoptions(void)
 		var(KIWI_VAR_SEARCH_PATH, "public"),
 		var(KIWI_VAR_STATEMENT_TIMEOUT, "1000"),
 		var(KIWI_VAR_WORK_MEM, "4MB"));
+	/* glued getopt-style form -cvar=value is accepted */
+	do_pgoptions_test("-csearch_path=test", 0 /* expected_rc */,
+			  1 /* vars count */,
+			  var(KIWI_VAR_SEARCH_PATH, "test"));
+	do_pgoptions_test("-csearch_path=public -c statement_timeout=1337",
+			  0 /* expected_rc */, 2 /* vars count */,
+			  var(KIWI_VAR_SEARCH_PATH, "public"),
+			  var(KIWI_VAR_STATEMENT_TIMEOUT, "1337"));
+	do_pgoptions_test("-cstatement_timeout=", 0 /* expected_rc */,
+			  1 /* vars count */,
+			  var(KIWI_VAR_STATEMENT_TIMEOUT, ""));
+	do_pgoptions_test("-csearch_path=my\\ schema", 0 /* expected_rc */,
+			  1 /* vars count */,
+			  var(KIWI_VAR_SEARCH_PATH, "my schema"));
+
 	do_pgoptions_test("-c search_path=my\\ schema", 0 /* expected_rc */,
 			  1 /* vars count */,
 			  var(KIWI_VAR_SEARCH_PATH, "my schema"));
@@ -149,4 +164,79 @@ void kiwi_test_pgoptions(void)
 			  0 /* vars count */);
 	do_pgoptions_test("-x search_path=public", -1 /* expected_rc */,
 			  0 /* vars count */);
+	do_pgoptions_test("-csearch_path", -1 /* expected_rc */,
+			  0 /* vars count */);
+}
+
+static void build_startup_packet(char *buf, size_t cap, size_t *out_len,
+				 const char *options_value)
+{
+	size_t pos = 0;
+
+	/* length placeholder */
+	buf[pos++] = 0;
+	buf[pos++] = 0;
+	buf[pos++] = 0;
+	buf[pos++] = 0;
+
+	/* protocol version 3.0 */
+	buf[pos++] = 0;
+	buf[pos++] = 3;
+	buf[pos++] = 0;
+	buf[pos++] = 0;
+
+	memcpy(buf + pos, "user", 5);
+	pos += 5;
+	memcpy(buf + pos, "test", 5);
+	pos += 5;
+
+	memcpy(buf + pos, "options", 8);
+	pos += 8;
+
+	size_t value_len = strlen(options_value) + 1;
+	test(cap - pos > value_len + 1);
+	memcpy(buf + pos, options_value, value_len);
+	pos += value_len;
+
+	buf[pos++] = '\0';
+
+	uint32_t len = pos;
+	buf[0] = (len >> 24) & 0xFF;
+	buf[1] = (len >> 16) & 0xFF;
+	buf[2] = (len >> 8) & 0xFF;
+	buf[3] = len & 0xFF;
+
+	*out_len = pos;
+}
+
+void kiwi_test_be_read_startup_options(void)
+{
+	char buf[1024];
+	size_t len;
+	kiwi_be_startup_t su;
+	kiwi_vars_t vars;
+
+	/* valid options are applied */
+	build_startup_packet(buf, sizeof(buf), &len, "--search_path=public");
+	kiwi_be_startup_init(&su);
+	kiwi_vars_init(&vars);
+	test(kiwi_be_read_startup(buf, len, &su, &vars) == 0);
+	kiwi_var_t *var = kiwi_vars_get(&vars, KIWI_VAR_SEARCH_PATH);
+	test(var != NULL);
+	test(var->value_len == (int)(strlen("public") + 1));
+	test(strcmp(var->value, "public") == 0);
+	kiwi_be_startup_free(&su);
+	kiwi_vars_free(&vars);
+
+	/* glued getopt-style options are applied */
+	build_startup_packet(buf, sizeof(buf), &len, "-csearch_path=test");
+	kiwi_be_startup_init(&su);
+	kiwi_vars_init(&vars);
+	test(kiwi_be_read_startup(buf, len, &su, &vars) == 0);
+	var = kiwi_vars_get(&vars, KIWI_VAR_SEARCH_PATH);
+	test(var != NULL);
+	test(var->value_len == (int)(strlen("test") + 1));
+	test(strcmp(var->value, "test") == 0);
+	kiwi_be_startup_free(&su);
+	kiwi_vars_free(&vars);
 }

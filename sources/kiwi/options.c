@@ -159,12 +159,26 @@ int kiwi_parse_options_and_update_vars(kiwi_vars_t *vars, const char *str,
 			if (rc != 0) {
 				break;
 			}
-		} else if (len == 2 && tok[0] == '-' && tok[1] == 'c') {
+		} else if (len >= 2 && tok[0] == '-' && tok[1] == 'c') {
 			/*
-			 * this is -c var=value
-			 * must read value from next token
+			 * getopt allows glued short option argument,
+			 * like -cvar=value (postgres accepts this too)
 			 */
-			next_read = 1;
+			if (len == 2) {
+				/*
+				 * this is -c var=value
+				 * must read value from next token
+				 */
+				next_read = 1;
+			} else {
+				tok += 2;
+				len -= 2;
+				rc = kiwi_parse_option_and_update_var(vars, tok,
+								      len);
+				if (rc != 0) {
+					break;
+				}
+			}
 		} else if (len > 2 && tok[0] == '-' && tok[1] == '-') {
 			/* --var=value */
 			tok += 2;
