@@ -329,8 +329,25 @@ static int od_frontend_startup(od_client_t *client)
 
 		rc = read_and_parse_startup(client, &parse_rc);
 		if (rc == -1) {
+			/*
+			 * like postgres, reply with a fatal error instead of
+			 * silently closing the connection
+			 */
 			if (parse_rc == KIWI_STARTUP_INVALID_MAJOR_ERROR) {
 				reject_unsupported_proto_version(client);
+			} else if (parse_rc ==
+				   KIWI_STARTUP_READ_OPTIONS_ERROR) {
+				od_frontend_fatal_detailed(
+					client, KIWI_SYNTAX_ERROR, "",
+					"Try \"postgres --help\" for more information.",
+					"invalid command-line argument for server process");
+			} else if (parse_rc ==
+				   KIWI_STARTUP_READ_NO_USER_ERROR) {
+				od_frontend_fatal_detailed(
+					client,
+					KIWI_INVALID_AUTHORIZATION_SPECIFICATION,
+					"", "",
+					"no PostgreSQL user name specified in startup packet");
 			}
 			goto error;
 		}

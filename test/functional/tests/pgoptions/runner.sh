@@ -59,6 +59,18 @@ if PGOPTIONS='-c search_path=public$;\ SELECT\ 1\ AS\ x$' \
     exit 1
 fi
 
+# malformed options must be reported to the client as a fatal error,
+# not closed silently
+if PGOPTIONS='-xfoo' psql -XAt -v ON_ERROR_STOP=1 -c 'SELECT 1' \
+    > /tests/pgoptions/results/invalid_options.out 2>&1; then
+    cat /tests/pgoptions/results/invalid_options.out
+    exit 1
+fi
+grep -q 'invalid command-line argument' /tests/pgoptions/results/invalid_options.out || {
+    cat /tests/pgoptions/results/invalid_options.out
+    exit 1
+}
+
 ody-stop
 
 sed 's/smart_search_path_enquoting yes/smart_search_path_enquoting no/' \

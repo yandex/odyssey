@@ -315,4 +315,68 @@ void kiwi_test_be_read_startup_options(void)
 	     KIWI_STARTUP_READ_OPTIONS_ERROR);
 	kiwi_be_startup_free(&su);
 	kiwi_vars_free(&vars);
+
+	/* missing user is reported separately (postgres replies with a
+	 * fatal error here as well) */
+	{
+		size_t pos = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 3;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		memcpy(buf + pos, "database", 9);
+		pos += 9;
+		memcpy(buf + pos, "test", 5);
+		pos += 5;
+		buf[pos++] = '\0';
+		len = pos;
+		buf[0] = (len >> 24) & 0xFF;
+		buf[1] = (len >> 16) & 0xFF;
+		buf[2] = (len >> 8) & 0xFF;
+		buf[3] = len & 0xFF;
+
+		kiwi_be_startup_init(&su);
+		kiwi_vars_init(&vars);
+		test(kiwi_be_read_startup(buf, len, &su, &vars) ==
+		     KIWI_STARTUP_READ_NO_USER_ERROR);
+		kiwi_be_startup_free(&su);
+		kiwi_vars_free(&vars);
+	}
+
+	/* unterminated options value is a malformed packet */
+	{
+		size_t pos = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		buf[pos++] = 3;
+		buf[pos++] = 0;
+		buf[pos++] = 0;
+		memcpy(buf + pos, "user", 5);
+		pos += 5;
+		memcpy(buf + pos, "test", 5);
+		pos += 5;
+		memcpy(buf + pos, "options", 8);
+		pos += 8;
+		memcpy(buf + pos, "-csearch_path=test", 18);
+		pos += 18;
+		len = pos;
+		buf[0] = (len >> 24) & 0xFF;
+		buf[1] = (len >> 16) & 0xFF;
+		buf[2] = (len >> 8) & 0xFF;
+		buf[3] = len & 0xFF;
+
+		kiwi_be_startup_init(&su);
+		kiwi_vars_init(&vars);
+		test(kiwi_be_read_startup(buf, len, &su, &vars) ==
+		     KIWI_STARTUP_READ_LEN_ERROR);
+		kiwi_be_startup_free(&su);
+		kiwi_vars_free(&vars);
+	}
 }
