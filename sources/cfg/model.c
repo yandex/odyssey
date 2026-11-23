@@ -397,6 +397,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_bool_field_free(&g->disable_nolinger);
 	od_cfg_bool_field_free(&g->log_general_stats_prom);
 	od_cfg_bool_field_free(&g->log_route_stats_prom);
+	od_cfg_bool_field_free(&g->replication_proxy);
 	od_cfg_bool_field_free(&g->replication_proxy_phys);
 	od_cfg_bool_field_free(&g->replication_proxy_logic);
 	od_cfg_bool_field_free(&g->ignore_cancel);

@@ -95,6 +95,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_BOOL(dst, src, disable_nolinger);
 	MERGE_BOOL(dst, src, log_general_stats_prom);
 	MERGE_BOOL(dst, src, log_route_stats_prom);
+	MERGE_BOOL(dst, src, replication_proxy);
 	MERGE_BOOL(dst, src, replication_proxy_phys);
 	MERGE_BOOL(dst, src, replication_proxy_logic);
 	MERGE_BOOL(dst, src, ignore_cancel);

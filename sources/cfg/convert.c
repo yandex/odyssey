@@ -505,6 +505,16 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_BOOL(cfg->disable_nolinger, config->disable_nolinger);
 	COPY_BOOL(cfg->log_general_stats_prom, config->log_general_stats_prom);
 	COPY_BOOL(cfg->log_route_stats_prom, config->log_route_stats_prom);
+	if (cfg->replication_proxy.seen.is_set) {
+		/*
+		 * 'replication_proxy' is a shorthand alias: it enables (or
+		 * disables) both proxy kinds at once.  The more specific
+		 * replication_proxy_phys/replication_proxy_logic options,
+		 * when set explicitly, override the alias below.
+		 */
+		config->replication_proxy_phys = cfg->replication_proxy.value;
+		config->replication_proxy_logic = cfg->replication_proxy.value;
+	}
 	COPY_BOOL(cfg->replication_proxy_phys, config->replication_proxy_phys);
 	COPY_BOOL(cfg->replication_proxy_logic,
 		  config->replication_proxy_logic);

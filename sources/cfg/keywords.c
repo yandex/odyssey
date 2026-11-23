@@ -39,6 +39,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "disable_nolinger", DISABLE_NOLINGER },
 	{ "log_general_stats_prom", LOG_GENERAL_STATS_PROM },
 	{ "log_route_stats_prom", LOG_ROUTE_STATS_PROM },
+	{ "replication_proxy", REPLICATION_PROXY },
 	{ "replication_proxy_phys", REPLICATION_PROXY_PHYS },
 	{ "replication_proxy_logic", REPLICATION_PROXY_LOGIC },
 	{ "pid_file", PID_FILE },
