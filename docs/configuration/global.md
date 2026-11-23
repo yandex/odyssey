@@ -113,6 +113,7 @@ megabytes) and is rejected by time-valued options.
 | `cancel_rate_limit`                        | int              | `0` (none)  | restart | Max cancels per second; 0 = unlimited                              |
 | `ignore_cancel`                            | int (bool)       | `no`        | SIGHUP  | Drop all incoming client cancel requests without forwarding them to the backend |
 | `virtual_transaction`                           | int (bool)       | `yes`       | restart  | Enable virtual transaction features    |
+| `replication_proxy`                        | int (bool)       | `no`        | SIGHUP  | Alias: sets both `replication_proxy_phys` and `replication_proxy_logic`; explicitly set specific options override it |
 | `replication_proxy_phys`                   | int (bool)       | `no`        | SIGHUP  | Forward physical replication connections as is to the first endpoint of the first remote storage, bypassing all Odyssey logic |
 | `replication_proxy_logic`                  | int (bool)       | `no`        | SIGHUP  | Forward logical replication connections as is to the first endpoint of the first remote storage, bypassing all Odyssey logic |
 | `maintain_params`                          | int (bool)       | `yes`       | restart | Global default of route-level `maintain_params`; routes that set it explicitly override this |
@@ -973,6 +974,16 @@ When `replication_proxy_logic` is enabled instead, logical replication
 (`replication=database`) connections are proxied the same way.
 
 `replication_proxy_logic yes`
+
+The `replication_proxy` option is a shorthand alias which enables (or
+disables) both kinds at once:
+
+`replication_proxy yes`
+
+is equivalent to `replication_proxy_phys yes` together with
+`replication_proxy_logic yes`.  A `replication_proxy_phys` or
+`replication_proxy_logic` option set explicitly overrides the alias for
+its own replication kind.
 
 ## **virtual\_transaction**
 *yes|no*
