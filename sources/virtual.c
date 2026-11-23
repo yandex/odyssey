@@ -47,19 +47,19 @@
 /*
  * Virtual portals.
  *
- * The query is answered by odyssey itself, without the backend. The
+ * The query is answered by odyssey itself or rewritten for the backend. The
  * builders below never touch the client io: they only compose the
  * answer into an od_virtual_portal_t (the tuples, when any, go into
- * its od_tuple_table_slot_t). The single write to the client happens
- * in try_virtual_process_query().
+ * its od_tuple_table_slot_t). The caller handles the portal's lifetime
+ * and the final write to the client or backend.
  *
  * The builders keep the regular od_frontend_status_t contracts:
  *
  *   OD_OK       - not virtual, forward the query to the backend
  *   OD_SKIP     - the portal is composed in portal, has to be written
  *   OD_ATTACH   - attach first, then retry
- *   OD_REPLACED - the replacement query was sent to the backend,
- *                 the portal must not be written
+ *   OD_REPLACED - the replacement query is composed in portal,
+ *                 has to be written to the backend
  */
 void virtual_portal_init(od_virtual_portal_t *portal)
 {
@@ -87,6 +87,10 @@ void virtual_portal_free(od_virtual_portal_t *portal)
 	if (portal->empty != NULL) {
 		machine_msg_free(portal->empty);
 		portal->empty = NULL;
+	}
+	if (portal->query != NULL) {
+		machine_msg_free(portal->query);
+		portal->query = NULL;
 	}
 }
 
@@ -206,7 +210,8 @@ static int virtual_portal_set_str_column(od_virtual_portal_t *portal,
 }
 
 static od_frontend_status_t process_set_appname(od_client_t *client,
-						const od_query_ctx_t *ctx)
+						const od_query_ctx_t *ctx,
+						od_virtual_portal_t *portal)
 {
 	int rc;
 	char original_appname[64];
@@ -247,16 +252,7 @@ static od_frontend_status_t process_set_appname(od_client_t *client,
 		return OD_EOOM;
 	}
 
-	rc = od_write(&client->server->io, msg);
-	if (rc != 0) {
-		od_gerror(client, client->server,
-			  "can't write \"%s\", rc = %d, errno = %d", query, rc,
-			  machine_errno());
-		return OD_ESERVER_WRITE;
-	}
-
-	od_server_sync_request(client->server, 1);
-
+	portal->query = msg;
 	return OD_REPLACED;
 
 error:
@@ -475,7 +471,7 @@ static od_frontend_status_t process_vset(od_client_t *client,
 
 	if (strcmp(ctx->s1, APPLICATION_NAME_STR) == 0) {
 		if (client->rule->application_name_add_host) {
-			return process_set_appname(client, ctx);
+			return process_set_appname(client, ctx, portal);
 		}
 	}
 
@@ -661,6 +657,7 @@ static od_frontend_status_t process_vshow(od_client_t *client,
 static od_frontend_status_t process_vexec(od_client_t *client,
 					  const od_query_ctx_t *ctx,
 					  const char *query, uint32_t query_len,
+					  od_virtual_portal_t *portal,
 					  uint32_t timeout_ms)
 {
 	od_pstmt_t *pstmt = od_client_get_pstmt(client, ctx->s1);
@@ -725,13 +722,7 @@ static od_frontend_status_t process_vexec(od_client_t *client,
 		return OD_EOOM;
 	}
 
-	int rc = od_io_write(&server->io, msg, timeout_ms,
-			     OD_WAIT_QUERY_SERVER_WRITE);
-	machine_msg_free(msg);
-	if (rc != 0) {
-		return OD_ESERVER_WRITE;
-	}
-	od_server_sync_request(server, 1);
+	portal->query = msg;
 	return OD_REPLACED;
 }
 
@@ -807,16 +798,36 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
 }
 
 /*
- * The single client write of the virtual query processing: composes
- * the wire answers from the od_virtual_portal_t that the builder
- * filled, and writes them to the client. Nothing below this function
- * ever touches the client io.
+ * Write the portal's replacement query to the backend, or compose
+ * its wire answer and write it to the client.
  */
-static od_frontend_status_t write_virtual_portal(od_client_t *client,
-						 od_virtual_portal_t *portal,
-						 uint32_t timeout_ms)
+od_frontend_status_t virtual_portal_write(od_client_t *client,
+					  od_virtual_portal_t *portal,
+					  uint32_t timeout_ms)
 {
+	const od_query_ctx_t *ctx = &client->query_ctx;
+	/* Preserve the write limits for backend queries and virtual replies. */
+	uint32_t write_timeout_ms = UINT32_MAX;
+	if (portal->query == NULL &&
+	    (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET) ||
+	     virtual_portal_is_error(portal))) {
+		write_timeout_ms = 1000;
+	} else if (portal->query != NULL &&
+		   !od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET)) {
+		write_timeout_ms = timeout_ms;
+	}
+
 	od_server_t *server = client->server;
+	if (portal->query != NULL) {
+		int rc = od_io_write(&server->io, portal->query,
+				     write_timeout_ms,
+				     OD_WAIT_QUERY_SERVER_WRITE);
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		od_server_sync_request(server, 1);
+		return OD_REPLACED;
+	}
 
 	uint8_t txstatus = 'I';
 	if (server != NULL) {
@@ -855,7 +866,7 @@ static od_frontend_status_t write_virtual_portal(od_client_t *client,
 	}
 
 	/* od_write2 consumes the reply; the portal keeps its own payloads. */
-	if (od_write2(&client->io, reply, timeout_ms) != 0) {
+	if (od_write2(&client->io, reply, write_timeout_ms) != 0) {
 		return OD_ECLIENT_WRITE;
 	}
 
@@ -903,6 +914,7 @@ static bool virtual_query_supported(od_client_t *client,
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
 					       const char *query,
 					       uint32_t query_len,
+					       od_virtual_portal_t *portal,
 					       uint32_t timeout_ms)
 {
 	const od_query_ctx_t *ctx = od_sql_parse_for_analysis(
@@ -912,50 +924,33 @@ od_frontend_status_t try_virtual_process_query(od_client_t *client,
 	}
 
 	od_frontend_status_t status;
-	od_virtual_portal_t portal;
 
-	virtual_portal_init(&portal);
-	status = od_sql_analyze(client, ctx, &portal.error);
-	if (status == OD_SKIP && virtual_portal_set_notice(&portal) != 0) {
+	status = od_sql_analyze(client, ctx, &portal->error);
+	if (status == OD_SKIP && virtual_portal_set_notice(portal) != 0) {
 		status = OD_EOOM;
 	}
 	if (status != OD_OK) {
-		goto reply;
+		return status;
 	}
 
 	if (!virtual_query_supported(client, ctx)) {
-		goto done;
+		return OD_OK;
 	}
 
 	if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SHOW)) {
-		status = process_vshow(client, ctx, &portal);
+		status = process_vshow(client, ctx, portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET)) {
-		status = process_vset(client, ctx, &portal);
+		status = process_vset(client, ctx, portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EMPTY)) {
-		status = process_vempty(client, &portal);
+		status = process_vempty(client, portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_BEGIN)) {
-		status = process_vbegin(client, query, &portal);
+		status = process_vbegin(client, query, portal);
 	} else if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_EXECUTE)) {
-		status = process_vexec(client, ctx, query, query_len,
+		status = process_vexec(client, ctx, query, query_len, portal,
 				       timeout_ms);
 	} else {
-		status = process_vdeallocate(client, ctx, &portal);
+		status = process_vdeallocate(client, ctx, portal);
 	}
-
-reply:
-	if (status == OD_SKIP) {
-		/* Preserve the write limit for virtual SET and error replies. */
-		uint32_t reply_timeout_ms = UINT32_MAX;
-		if (od_query_ctx_has(ctx, OD_QUERY_CTX_IS_SET) ||
-		    virtual_portal_is_error(&portal)) {
-			reply_timeout_ms = 1000;
-		}
-		status =
-			write_virtual_portal(client, &portal, reply_timeout_ms);
-	}
-
-done:
-	virtual_portal_free(&portal);
 
 	return status;
 }

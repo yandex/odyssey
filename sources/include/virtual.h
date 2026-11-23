@@ -7,9 +7,9 @@
  */
 
 /*
- * Virtual portals: the query is answered by odyssey itself, without the
- * backend (see virtual.c). Everything below try_virtual_process_query()
- * only composes the portal and never touches the client io.
+ * Virtual portals: the query is answered by odyssey itself or rewritten
+ * for the backend (see virtual.c). The caller initializes, writes and frees
+ * the portal; try_virtual_process_query() only fills it.
  */
 
 #include <odyssey.h>
@@ -40,6 +40,9 @@ typedef struct {
 	machine_msg_t *error;
 	machine_msg_t *empty;
 
+	/* replacement Query for OD_REPLACED; owned by the portal */
+	machine_msg_t *query;
+
 	/*
 	 * ReadyForQuery transaction status; when zero, it is taken from
 	 * the server the client is attached to (BEGIN forces its own)
@@ -50,7 +53,12 @@ typedef struct {
 void virtual_portal_init(od_virtual_portal_t *portal);
 void virtual_portal_free(od_virtual_portal_t *portal);
 
+od_frontend_status_t virtual_portal_write(od_client_t *client,
+					  od_virtual_portal_t *portal,
+					  uint32_t timeout_ms);
+
 od_frontend_status_t try_virtual_process_query(od_client_t *client,
 					       const char *query,
 					       uint32_t query_len,
+					       od_virtual_portal_t *portal,
 					       uint32_t timeout_ms);

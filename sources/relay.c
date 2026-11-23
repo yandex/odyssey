@@ -333,8 +333,15 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
 
-	status = try_virtual_process_query(
-		client, query, query_len - 1 /* zero included */, timeout_ms);
+	od_virtual_portal_t portal;
+	virtual_portal_init(&portal);
+	status = try_virtual_process_query(client, query,
+					   query_len - 1 /* zero included */,
+					   &portal, timeout_ms);
+	if (status == OD_SKIP || status == OD_REPLACED) {
+		status = virtual_portal_write(client, &portal, timeout_ms);
+	}
+	virtual_portal_free(&portal);
 	od_linear_alloc_reset(arena, 0);
 
 	if (status == OD_SKIP) {
