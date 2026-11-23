@@ -18,6 +18,16 @@ struct kiwi_be_startup {
 	kiwi_var_t replication;
 };
 
+enum {
+	KIWI_STARTUP_READ_OK = 0,
+	KIWI_STARTUP_READ_LEN_ERROR,
+	KIWI_STARTUP_READ_VERSION_ERROR,
+	KIWI_STARTUP_CANCEL_READ_ERROR,
+	KIWI_STARTUP_READ_OPTIONS_ERROR,
+	KIWI_STARTUP_INVALID_MAJOR_ERROR,
+	KIWI_STARTUP_READ_NO_USER_ERROR,
+};
+
 static inline void kiwi_be_startup_init(kiwi_be_startup_t *su)
 {
 	su->is_cancel = 0;
@@ -39,7 +49,8 @@ static inline int kiwi_be_read_options(kiwi_be_startup_t *su, char *pos,
 		int rc;
 		rc = kiwi_readsz(&pos, &pos_size);
 		if (kiwi_unlikely(rc == -1)) {
-			return -1;
+			/* malformed packet, postgres closes silently here */
+			return KIWI_STARTUP_READ_LEN_ERROR;
 		}
 		name_size = pos - name;
 		if (name_size == 1) {
@@ -50,7 +61,8 @@ static inline int kiwi_be_read_options(kiwi_be_startup_t *su, char *pos,
 		char *value = pos;
 		rc = kiwi_readsz(&pos, &pos_size);
 		if (kiwi_unlikely(rc == -1)) {
-			return -1;
+			/* malformed packet, postgres closes silently here */
+			return KIWI_STARTUP_READ_LEN_ERROR;
 		}
 		value_size = pos - value;
 
@@ -66,8 +78,15 @@ static inline int kiwi_be_read_options(kiwi_be_startup_t *su, char *pos,
 			kiwi_var_set(&su->replication, KIWI_VAR_UNDEF, value,
 				     value_size);
 		} else if (name_size == 8 && !memcmp(name, "options", 8)) {
-			kiwi_parse_options_and_update_vars(vars, value,
-							   value_size);
+			rc = kiwi_parse_options_and_update_vars(vars, value,
+								value_size);
+			if (kiwi_unlikely(rc == -1)) {
+				/*
+				 * malformed options, postgres replies with a
+				 * FATAL ErrorResponse before closing
+				 */
+				return KIWI_STARTUP_READ_OPTIONS_ERROR;
+			}
 		} else {
 			kiwi_vars_update(vars, name, name_size, value,
 					 value_size);
@@ -76,7 +95,11 @@ static inline int kiwi_be_read_options(kiwi_be_startup_t *su, char *pos,
 
 	/* user is mandatory */
 	if (su->user.value_len == 0) {
-		return -1;
+		/*
+		 * postgres replies with a fatal ErrorResponse here as well:
+		 * "no PostgreSQL user name specified in startup packet"
+		 */
+		return KIWI_STARTUP_READ_NO_USER_ERROR;
 	}
 
 	/* database = user, if not specified */
@@ -118,8 +141,8 @@ KIWI_API static inline int kiwi_be_read_startup(char *data, uint32_t size,
 	case PG_PROTOCOL_LATEST:
 		su->is_cancel = 0;
 		rc = kiwi_be_read_options(su, pos, pos_size, vars);
-		if (kiwi_unlikely(rc == -1)) {
-			return -1;
+		if (rc != 0) {
+			return rc;
 		}
 		break;
 	/* CancelRequest */

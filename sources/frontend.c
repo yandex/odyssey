@@ -158,6 +158,25 @@ od_frontend_error_is_too_many_connections(od_client_t *client)
 	return strcmp(error.code, KIWI_TOO_MANY_CONNECTIONS) == 0;
 }
 
+static inline void report_startup_parse_error(od_client_t *client, int rc)
+{
+	/*
+	 * like postgres, reply with a fatal error instead of silently
+	 * closing the connection
+	 */
+	if (rc == KIWI_STARTUP_READ_OPTIONS_ERROR) {
+		od_frontend_fatal_detailed(
+			client, KIWI_SYNTAX_ERROR, "",
+			"Try \"postgres --help\" for more information.",
+			"invalid command-line argument for server process");
+	} else if (rc == KIWI_STARTUP_READ_NO_USER_ERROR) {
+		od_frontend_fatal_detailed(
+			client, KIWI_INVALID_AUTHORIZATION_SPECIFICATION, "",
+			"",
+			"no PostgreSQL user name specified in startup packet");
+	}
+}
+
 static int od_frontend_startup(od_client_t *client)
 {
 	od_instance_t *instance = client->global->instance;
@@ -176,7 +195,8 @@ static int od_frontend_startup(od_client_t *client)
 					      machine_msg_size(msg),
 					      &client->startup, &client->vars);
 		machine_msg_free(msg);
-		if (rc == -1) {
+		if (rc != 0) {
+			report_startup_parse_error(client, rc);
 			goto error;
 		}
 
@@ -228,9 +248,10 @@ static int od_frontend_startup(od_client_t *client)
 	rc = kiwi_be_read_startup(machine_msg_data(msg), machine_msg_size(msg),
 				  &client->startup, &client->vars);
 	machine_msg_free(msg);
-	if (rc == -1) {
+	if (rc != 0) {
 		od_gerror("startup", client, NULL,
 			  "startup packet parse error");
+		report_startup_parse_error(client, rc);
 		goto error;
 	}
 

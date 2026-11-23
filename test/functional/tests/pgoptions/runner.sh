@@ -32,4 +32,17 @@ check_file search_path_glued '-csearch_path=public'
 check_file search_path_injection '--search-path=public;create/**/table/**/zzz()'
 check_file spqrguard '-c spqrguard.prevent_distributed_table_modify=on  -c spqrguard.prevent_reference_table_modify=off'
 
+
+# malformed options must be reported to the client as a fatal error,
+# not closed silently
+if PGOPTIONS='-xfoo' psql 'host=localhost port=6432 user=useropt dbname=postgres' \
+    -XAt -v ON_ERROR_STOP=1 -c 'SELECT 1' \
+    > /tests/pgoptions/results/invalid_options.out 2>&1; then
+    cat /tests/pgoptions/results/invalid_options.out
+    exit 1
+fi
+grep -q 'invalid command-line argument' /tests/pgoptions/results/invalid_options.out || {
+    cat /tests/pgoptions/results/invalid_options.out
+    exit 1
+}
 ody-stop
