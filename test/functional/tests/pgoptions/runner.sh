@@ -22,6 +22,7 @@ check_file() {
 }
 
 check_search_path() {
+    check_file search_path_glued '-csearch_path=public'
     check_file search_path_restore '-c search_path="odyssey\ test\ path",\ "odyssey_test_""quote",\ public'
 
     local long_path=public

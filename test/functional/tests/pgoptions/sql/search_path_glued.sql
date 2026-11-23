@@ -1,0 +1,11 @@
+\set ON_ERROR_STOP on
+\pset format unaligned
+\pset tuples_only on
+\! PGOPTIONS='-csearch_path=public' psql -XqAt -v ON_ERROR_STOP=1 -c "SELECT current_setting('search_path') = 'public'"
+\if :SHELL_ERROR
+SELECT 1/0;
+\endif
+\! PGOPTIONS='-csearch_path=public -cstatement_timeout=1337' psql -XqAt -v ON_ERROR_STOP=1 -c "SELECT current_setting('statement_timeout') = '1337ms'"
+\if :SHELL_ERROR
+SELECT 1/0;
+\endif
