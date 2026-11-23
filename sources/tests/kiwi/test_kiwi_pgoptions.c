@@ -97,6 +97,21 @@ void kiwi_test_pgoptions(void)
 		var(KIWI_VAR_SEARCH_PATH, "public"),
 		var(KIWI_VAR_STATEMENT_TIMEOUT, "1000"),
 		var(KIWI_VAR_WORK_MEM, "4MB"));
+	/* glued getopt-style form -cvar=value is accepted */
+	do_pgoptions_test("-csearch_path=test", 0 /* expected_rc */,
+			  1 /* vars count */,
+			  var(KIWI_VAR_SEARCH_PATH, "test"));
+	do_pgoptions_test("-csearch_path=public -c statement_timeout=1337",
+			  0 /* expected_rc */, 2 /* vars count */,
+			  var(KIWI_VAR_SEARCH_PATH, "public"),
+			  var(KIWI_VAR_STATEMENT_TIMEOUT, "1337"));
+	do_pgoptions_test("-cstatement_timeout=", 0 /* expected_rc */,
+			  1 /* vars count */,
+			  var(KIWI_VAR_STATEMENT_TIMEOUT, ""));
+	do_pgoptions_test("-csearch_path=my\\ schema", 0 /* expected_rc */,
+			  1 /* vars count */,
+			  var(KIWI_VAR_SEARCH_PATH, "my schema"));
+
 	do_pgoptions_test("-c search_path=my\\ schema", 0 /* expected_rc */,
 			  1 /* vars count */,
 			  var(KIWI_VAR_SEARCH_PATH, "my schema"));
@@ -155,6 +170,8 @@ void kiwi_test_pgoptions(void)
 	do_pgoptions_test("-c -c search_path", -1 /* expected_rc */,
 			  0 /* vars count */);
 	do_pgoptions_test("-x search_path=public", -1 /* expected_rc */,
+			  0 /* vars count */);
+	do_pgoptions_test("-csearch_path", -1 /* expected_rc */,
 			  0 /* vars count */);
 
 	{
@@ -242,6 +259,19 @@ void kiwi_test_be_read_startup_options(void)
 	test(var != NULL);
 	test(var->value_len == (int)(strlen("public") + 1));
 	test(strcmp(var->value, "public") == 0);
+	kiwi_be_startup_free(&su);
+	kiwi_vars_free(&vars);
+
+	/* glued getopt-style options are applied */
+	build_startup_packet(buf, sizeof(buf), &len, "-csearch_path=test");
+	kiwi_be_startup_init(&su);
+	kiwi_vars_init(&vars);
+	test(kiwi_be_read_startup(buf, len, &su, &vars) ==
+	     KIWI_STARTUP_READ_OK);
+	var = kiwi_vars_get(&vars, KIWI_VAR_SEARCH_PATH);
+	test(var != NULL);
+	test(var->value_len == (int)(strlen("test") + 1));
+	test(strcmp(var->value, "test") == 0);
 	kiwi_be_startup_free(&su);
 	kiwi_vars_free(&vars);
 
