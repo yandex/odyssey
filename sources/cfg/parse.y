@@ -273,8 +273,10 @@
 %token SOFT_OOM_LIMIT "soft_oom_limit"
 %token SOFT_OOM_PROCESS "soft_oom_process"
 %token SOFT_OOM_CHECK_INTERVAL_MS "soft_oom_check_interval_ms"
-%token SOFT_OOM_DROP_SIGNAL "soft_oom_drop_signal"
-%token SOFT_OOM_DROP_MAX_RATE "soft_oom_drop_max_rate"
+%token SOFT_OOM_PROCESS_DROP_SIGNAL "soft_oom_process_drop_signal"
+%token SOFT_OOM_PROCESS_DROP_MAX_RATE "soft_oom_process_drop_max_rate"
+%token SOFT_OOM_CLIENT_DROP_PERCENT "soft_oom_client_drop_percent"
+%token SOFT_OOM_CLIENT_DROP_MAX_COUNT "soft_oom_client_drop_max_count"
 %token LDAP_ENDPOINT "ldap_endpoint"
 %token LDAP_SERVER "ldapserver"
 %token LDAP_PORT "ldapport"
@@ -1122,23 +1124,41 @@ top_item:
 									@1,
 									"soft_oom_check_interval_ms");
 		}
-	| SOFT_OOM_DROP_SIGNAL string_value
+	| SOFT_OOM_PROCESS_DROP_SIGNAL string_value
 		{
 			od_cfg_set_string(ctx->diags,
-							  &ctx->model->soft_oom.drop.signal,
+							  &ctx->model->soft_oom.drop.process_signal,
 							  $2,
 							  @1,
-							  "soft_oom_drop_signal");
+							  "soft_oom_process_drop_signal");
 			$2 = NULL;
 		}
-	| SOFT_OOM_DROP_MAX_RATE int_value
+	| SOFT_OOM_PROCESS_DROP_MAX_RATE int_value
 		{
 			od_cfg_set_int_range_from_i64(ctx->diags,
-									&ctx->model->soft_oom.drop.max_rate,
+									&ctx->model->soft_oom.drop.process_max_rate,
 									$2,
 									0, INT_MAX,
 									@1,
-									"soft_oom_drop_max_rate");
+									"soft_oom_process_drop_max_rate");
+		}
+	| SOFT_OOM_CLIENT_DROP_PERCENT int_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+									&ctx->model->soft_oom.drop.client_percent,
+									$2,
+									0, 100,
+									@1,
+									"soft_oom_client_drop_percent");
+		}
+	| SOFT_OOM_CLIENT_DROP_MAX_COUNT int_value
+		{
+			od_cfg_set_int_range_from_i64(ctx->diags,
+									&ctx->model->soft_oom.drop.client_max_count,
+									$2,
+									0, INT_MAX,
+									@1,
+									"soft_oom_client_drop_max_count");
 		}
 	| QUERY_PARSING_MODE DISABLED
 		{

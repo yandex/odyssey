@@ -113,9 +113,11 @@ void od_config_init(od_config_t *config)
 
 	memset(&config->soft_oom, 0, sizeof(config->soft_oom));
 	config->soft_oom.check_interval_ms = 1000;
-	config->soft_oom.drop.enabled = 0;
-	config->soft_oom.drop.max_rate = 3;
-	config->soft_oom.drop.signal = SIGTERM;
+	config->soft_oom.drop.process_enabled = 0;
+	config->soft_oom.drop.process_max_rate = 3;
+	config->soft_oom.drop.process_signal = SIGTERM;
+	config->soft_oom.drop.client_percent = 10;
+	config->soft_oom.drop.client_max_count = 10;
 
 	memset(&config->query_parsing, 0, sizeof(config->query_parsing));
 	config->query_parsing.mem_limit_bytes = 5 * 1024 * 1024;
@@ -994,11 +996,17 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 		       config->soft_oom.process,
 		       config->soft_oom.check_interval_ms,
 		       config->soft_oom.limit_bytes);
-		if (config->soft_oom.drop.enabled) {
+		if (config->soft_oom.drop.process_enabled) {
 			od_log(logger, NULL, NULL,
-			       "soft_oom drop: signal %d, max_rate %d",
-			       config->soft_oom.drop.signal,
-			       config->soft_oom.drop.max_rate);
+			       "soft_oom process drop: signal %d, max_rate %d",
+			       config->soft_oom.drop.process_signal,
+			       config->soft_oom.drop.process_max_rate);
+		}
+		if (config->soft_oom.drop.client_percent > 0) {
+			od_log(logger, NULL, NULL,
+			       "soft oom client drop: percent %d, max_count %d",
+			       config->soft_oom.drop.client_percent,
+			       config->soft_oom.drop.client_max_count);
 		}
 	} else {
 		od_log(logger, NULL, NULL, "soft_oom:         DISABLED");

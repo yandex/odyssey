@@ -1345,11 +1345,11 @@ static inline void od_system(void *arg)
 		od_free(watchdog_ids);
 	}
 
+	od_soft_oom_stop_checker(&global->soft_oom);
+
 	/* now safe to free router: all watchdogs are dead, so no one
 	 * will access routes or rules after this point */
 	od_router_free(router);
-
-	od_soft_oom_stop_checker(&global->soft_oom);
 
 #ifdef LDAP_FOUND
 	od_ldap_workers_destroy();

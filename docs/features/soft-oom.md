@@ -32,8 +32,11 @@ soft_oom_limit 750MB
 # top memory consumers terminating
 soft_oom_limit 750MB
 
-soft_oom_drop_signal "SIGTERM"
-soft_oom_drop_max_rate 2
+soft_oom_process_drop_signal "SIGTERM"
+soft_oom_process_drop_max_rate 2
+
+soft_oom_client_drop_percent 5
+soft_oom_client_drop_max_count 100
 ```
 
 After that, all new connections to `db.user` will be answered by Odyssey

@@ -1555,22 +1555,28 @@ static int convert_soft_oom(convert_ctx_t *ctx, const od_cfg_soft_oom_t *cfg)
 
 	soft_oom->enabled = 1;
 
-	if (cfg->drop.signal.seen.is_set || cfg->drop.max_rate.seen.is_set) {
-		soft_oom->drop.enabled = 1;
-		COPY_INT(cfg->drop.max_rate, soft_oom->drop.max_rate);
+	if (cfg->drop.process_signal.seen.is_set ||
+	    cfg->drop.process_max_rate.seen.is_set) {
+		soft_oom->drop.process_enabled = 1;
+		COPY_INT(cfg->drop.process_max_rate,
+			 soft_oom->drop.process_max_rate);
 
-		if (cfg->drop.signal.seen.is_set) {
-			soft_oom->drop.signal =
-				parse_signal(cfg->drop.signal.value);
-			if (soft_oom->drop.signal == -1) {
+		if (cfg->drop.process_signal.seen.is_set) {
+			soft_oom->drop.process_signal =
+				parse_signal(cfg->drop.process_signal.value);
+			if (soft_oom->drop.process_signal == -1) {
 				od_cfg_diag_error(
-					diags, cfg->drop.signal.seen.location,
+					diags,
+					cfg->drop.process_signal.seen.location,
 					"can't parse signal from '%s'",
-					cfg->drop.signal.value);
+					cfg->drop.process_signal.value);
 				goto error;
 			}
 		}
 	}
+
+	COPY_INT(cfg->drop.client_percent, soft_oom->drop.client_percent);
+	COPY_INT(cfg->drop.client_max_count, soft_oom->drop.client_max_count);
 
 	if (cfg->process.seen.is_set) {
 		size_t l = strlen(cfg->process.value);

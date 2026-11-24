@@ -53,9 +53,11 @@ struct od_config_conn_drop_options {
 };
 
 struct od_config_soft_oom_drop {
-	int enabled;
-	int signal;
-	int max_rate;
+	int process_enabled;
+	int process_signal;
+	int process_max_rate;
+	int client_percent;
+	int client_max_count;
 };
 
 struct od_config_soft_oom {
