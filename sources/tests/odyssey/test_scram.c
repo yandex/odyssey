@@ -20,11 +20,9 @@ static int read_final_message_with_proof(const char *proof)
 	char *final_nonce;
 	size_t final_nonce_size;
 	uint8_t *client_proof = NULL;
-	int rc = od_scram_read_client_final_message(NULL, &state, msg, len,
-						    0 /* channel_binding_in_use */,
-						    &final_nonce,
-						    &final_nonce_size,
-						    &client_proof);
+	int rc = od_scram_read_client_final_message(
+		NULL, &state, msg, len, 0 /* channel_binding_in_use */,
+		&final_nonce, &final_nonce_size, &client_proof);
 	if (rc == 0) {
 		od_free(client_proof);
 	}
