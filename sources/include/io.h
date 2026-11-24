@@ -54,9 +54,10 @@ static inline int od_io_close(od_io_t *io)
 	if (io->io == NULL) {
 		return -1;
 	}
-	int rc = mm_io_close(io->io);
-	mm_io_free(io->io);
+	mm_io_t *io_obj = io->io;
 	io->io = NULL;
+	int rc = mm_io_close(io_obj);
+	mm_io_free(io_obj);
 	return rc;
 }
 
