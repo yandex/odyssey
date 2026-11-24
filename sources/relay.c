@@ -683,7 +683,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	return status;
 }
 
-uint8_t od_relay_deffered_begin_bytes[12] = { 'Q', 0,	0,   0,	  11,  'B',
+uint8_t od_relay_deferred_begin_bytes[12] = { 'Q', 0,	0,   0,	  11,  'B',
 					      'E', 'G', 'I', 'N', ';', 0 };
 
 static int relay_append(od_relay_t *relay, machine_msg_t *msg)
@@ -691,8 +691,8 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 	od_client_t *client = relay->client;
 
 	if (client->pending_begin) {
-		size_t len = sizeof(od_relay_deffered_begin_bytes);
-		if (xbuf_append_raw(&relay->xbuf, od_relay_deffered_begin_bytes,
+		size_t len = sizeof(od_relay_deferred_begin_bytes);
+		if (xbuf_append_raw(&relay->xbuf, od_relay_deferred_begin_bytes,
 				    len)) {
 			return -1;
 		}
