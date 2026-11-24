@@ -82,6 +82,20 @@ set(ODYSSEY_COMPILER_STRING "${ODYSSEY_COMPILER_NAME}-${ODYSSEY_COMPILER_VERSION
 set(OD_DEVEL_LVL -1)
 
 set(COMMON_CFLAGS "-pedantic -Wall -Wextra -Werror -Wstrict-aliasing -pthread -g")
+# WORDS_BIGENDIAN is expected by the code borrowed from postgres
+# (sources/common/md5.c, port/pg_bswap.h)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.20)
+    if(CMAKE_C_BYTE_ORDER STREQUAL "BIG_ENDIAN")
+        set(OD_BIG_ENDIAN TRUE)
+    endif()
+else()
+    include(TestBigEndian)
+    test_big_endian(OD_BIG_ENDIAN)
+endif()
+if(OD_BIG_ENDIAN)
+    add_definitions(-DWORDS_BIGENDIAN)
+endif()
+
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
     set(CMAKE_BUILD_TYPE "Debug")
