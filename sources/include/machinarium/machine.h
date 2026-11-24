@@ -70,6 +70,10 @@ static inline int mm_errno_get(void)
 	return mm_scheduler_current(&mm_self->scheduler)->errno_;
 }
 
+int64_t mm_machine_create(int64_t forced_id, char *name,
+			  machine_coroutine_t function, void *arg,
+			  mm_pollif_t *poll_if);
+
 void mm_machine_atexit(void (*fun)(void *), void *arg);
 
 int machine_wait_nb(uint64_t machine_id);

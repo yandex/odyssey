@@ -33,6 +33,18 @@ socket data even when no active calls are in progress, to reduce `epoll(7)` subs
 Machinarium IO contexts can be transferred between threads, which allows to develop efficient
 producer-consumer network applications.
 
+#### Testing the io_uring loop prototype (Linux)
+
+`-DBUILD_IO_URING=ON` builds the prototype with liburing >= 2.2. It does not
+switch Odyssey's socket transport or create a ring at startup. Only the
+`machinarium_test_uring` tests opt in on their own machine. From the repo root:
+
+```sh
+cmake -S . -B build/uring -DBUILD_IO_URING=ON
+cmake --build build/uring --target odyssey_test
+build/uring/sources/odyssey_test machinarium_test_uring
+```
+
 #### Full-featured SSL/TLS support
 
 Machinarium has easy-to-use Transport Layer Security (TLS) API methods.

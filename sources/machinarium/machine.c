@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <stdio.h>
 
 #include <machinarium/build.h>
 
@@ -93,7 +94,10 @@ static void *machine_main(void *arg)
 		      atomic_load(&machine->online))) {
 			break;
 		}
-		mm_loop_step(&machine->loop);
+		if (mm_loop_step(&machine->loop) == -1) {
+			perror(machine->loop.poll->iface->name);
+			break;
+		}
 	}
 
 	if (machine->global_dtor != NULL) {
@@ -117,8 +121,9 @@ static void *machine_main(void *arg)
 	return NULL;
 }
 
-static int64_t machine_create_impl(int64_t forced_id, char *name,
-				   machine_coroutine_t function, void *arg)
+int64_t mm_machine_create(int64_t forced_id, char *name,
+			  machine_coroutine_t function, void *arg,
+			  mm_pollif_t *poll_if)
 {
 	mm_machine_t *machine;
 	machine = mm_malloc(sizeof(*machine));
@@ -176,10 +181,16 @@ static int64_t machine_create_impl(int64_t forced_id, char *name,
 
 	mm_scheduler_init(&machine->scheduler);
 	int rc;
-	rc = mm_loop_init(&machine->loop);
+	rc = mm_loop_init(&machine->loop, poll_if);
 	if (rc < 0) {
+		int error = errno;
 		mm_scheduler_free(&machine->scheduler);
+		mm_wait_flag_destroy(machine->join_flag);
+		if (machine->name) {
+			mm_free(machine->name);
+		}
 		mm_free(machine);
+		errno = error;
 		return -1;
 	}
 	mm_loop_set_idle(&machine->loop, mm_idle_cb, NULL);
@@ -235,13 +246,14 @@ MACHINE_API int64_t machine_reserve_ids(int count)
 MACHINE_API int64_t machine_create_at(uint64_t machine_id, char *name,
 				      machine_coroutine_t function, void *arg)
 {
-	return machine_create_impl((int64_t)machine_id, name, function, arg);
+	return mm_machine_create((int64_t)machine_id, name, function, arg,
+				 NULL);
 }
 
 MACHINE_API int64_t machine_create(char *name, machine_coroutine_t function,
 				   void *arg)
 {
-	return machine_create_impl(-1, name, function, arg);
+	return mm_machine_create(-1, name, function, arg, NULL);
 }
 
 MACHINE_API int machine_wait(uint64_t machine_id)
