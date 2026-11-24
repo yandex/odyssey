@@ -1,3 +1,45 @@
+odyssey (1.5.3-1) unstable; urgency=medium
+
+  * Fix error code on SCRAM auth (#1865), require full-length SCRAM client proof (#1616)
+  * report startup packet errors to the client like postgres
+  * accept getopt-style glued -c arguments in startup options
+  * cancel pipeline queries in backend reset
+  * validate NUL-terminated query payloads in wire readers (#1651)
+  * drop simple Query sent while server is in extended skip state (#1830)
+  * forward incorrect bind to backend in error tx window (#1790)
+  * rewrite pstmt names in error tx window (#1842)
+  * fix UAF race in od_pstmt_unref (#1673)
+  * fix busy loop in attach wait path (#1743)
+  * fix SHOW rules lock leak on row encoding failure (#1802)
+  * do not send copy additional with io-peering
+  * do not free msg on close parsing error
+  * fix machinarium channel message loss on timeout/cancellation (#1718)
+  * wake same-machine waiters directly (#1833)
+  * fix silent unix socket path truncation (#1697)
+  * fix potential memory leak in od_query_do (#1621)
+  * fix memory leak in backend_startup_options cleanup (#1585)
+  * fix SSL_CTX cache (#1627)
+  * fix HBA matching for default database and user rules (#1587)
+  * move od_deploy into attach attempt (#1582)
+  * be more lenient for network errors in accept loop (#1508)
+  * apply runtime logging/stats settings on config reload (#1474)
+  * fix milliseconds precision for json logger (#1839)
+  * fix option.c unescape boundary check (#1617)
+  * do not forward startup notices to internal clients (#1664)
+  * optimize xplan iovecs allocations (#1727)
+  * do not obtain pool lock on route_lock for exclusive pools (#1736)
+  * mutex: skip notify on unlock if there are no waiters (#1733)
+  * optimize pool_element lookup (#1731), wait_list spinlock (#1732)
+  * fix od_pstmt_t unref assert (#1599)
+  * fix several problems with lag preserving
+  * disable deferred begin feature
+  * count actual number of hosts while iterating strtok (#1615)
+  * raise default coroutine stack size to 16 pages
+  * fix flaky wait flag unit test (#1792)
+  * test and build infra fixes
+
+ -- Yandex Database Team <mdb-admin@yandex-team.ru>  Tue, 24 Nov 2026 13:10:00 +0500
+
 odyssey (1.5.2-1) unstable; urgency=medium
 
   * SCRAM fixes
