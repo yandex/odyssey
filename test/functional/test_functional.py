@@ -27,6 +27,10 @@ def clear_log_file():
         os.remove('/var/log/odyssey.log')
     except OSError:
         pass
+    try:
+        os.remove('/asan-output.log')
+    except OSError:
+        pass
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -51,10 +55,17 @@ def test_odyssey_functional(folder):
     process = subprocess.run(['/bin/bash', runner])
     retcode = process.returncode
     if retcode != 0:
+        asan_log = ''
+        try:
+            with open('/asan-output.log') as f:
+                asan_log = f.read()
+        except OSError:
+            asan_log = '(no asan log)'
         pytest.fail(
             f"Process {runner} exited with code {retcode}\n"
             f"STDOUT:\n{process.stdout}\n"
             f"STDERR:\n{process.stderr}\n"
+            f"ASAN LOG:\n{asan_log}\n"
         )
 
 
