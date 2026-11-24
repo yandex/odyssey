@@ -72,9 +72,10 @@ void od_config_init(od_config_t *config)
 	config->client_max = 0;
 	config->client_max_routing = 0;
 	config->server_login_retry = 1;
-	config->cache_coroutine = 256;
+	config->cache_coroutine = 1024;
 	config->cache_msg_gc_size = 0;
-	config->coroutine_stack_size = 4;
+	config->cache_msg_gc_count = 1024;
+	config->coroutine_stack_size = 16;
 	config->hba_file = NULL;
 	config->max_sigterms_to_die = 3;
 	config->group_checker_interval = 7000; /* 7 seconds */

@@ -23,7 +23,6 @@ readahead 4096
 
 cache_coroutine 0
 
-coroutine_stack_size 16
 
 nodelay yes
 
