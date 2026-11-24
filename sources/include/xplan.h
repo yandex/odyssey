@@ -9,6 +9,7 @@
 #include <status.h>
 #include <types.h>
 #include <pstmt.h>
+#include <virtual.h>
 
 #include <machinarium/machinarium.h>
 #include <machinarium/ds/vector.h>
@@ -210,6 +211,12 @@ struct od_xplan {
 void od_xplan_init(od_xplan_t *xp);
 void od_xplan_destroy(od_xplan_t *xp);
 void od_xplan_clear(od_xplan_t *xp);
+
+od_frontend_status_t run_query_no_plan(machine_msg_t *msg,
+				       od_virtual_portal_t *portal,
+				       od_client_t *client, od_server_t *server,
+				       od_frontend_status_t status,
+				       uint32_t timeout_ms);
 
 od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay);
 

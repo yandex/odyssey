@@ -1759,6 +1759,187 @@ static od_frontend_status_t run_deferred_begin(od_xplan_entry_t *ps,
 	return failed ? OD_SKIP : OD_OK;
 }
 
+static void process_discard(od_client_t *client, od_server_t *server)
+{
+	od_route_t *route = client->route;
+	od_instance_t *instance = client->global->instance;
+
+	if (!route->rule->pool->reserve_prepared_statement) {
+		return;
+	}
+
+	if (od_query_ctx_has(&client->query_ctx, OD_QUERY_CTX_IS_DISCARD_ALL)) {
+		od_debug(&instance->logger, client, server,
+			 "DISCARD ALL detected, invalidate caches");
+
+		od_client_pstmts_clear(client);
+		od_client_portals_clear(client);
+		if (server != NULL) {
+			od_server_pstmts_clear(server);
+		}
+	}
+}
+
+static inline void process_unlisten(od_client_t *client, od_server_t *server)
+{
+	od_route_t *route = client->route;
+	od_instance_t *instance = client->global->instance;
+
+	if (!route->rule->pool->pin_on_listen) {
+		return;
+	}
+
+	if (od_query_ctx_has(&client->query_ctx,
+			     OD_QUERY_CTX_IS_UNLISTEN_ALL) &&
+	    client->backend_pin_listen) {
+		od_debug(&instance->logger, client, server,
+			 "UNLISTEN ALL detected, unpin client");
+
+		client->backend_pin = 0;
+		client->backend_pin_listen = 0;
+	}
+}
+
+static od_frontend_status_t proxy_until_command_complete(od_client_t *client,
+							 od_server_t *server,
+							 uint32_t timeout_ms)
+{
+	int rc;
+	int done = 0;
+	machine_msg_t *msg = NULL;
+
+	while (!done) {
+		msg = od_read(&server->io, timeout_ms, OD_READ_BE);
+		if (msg == NULL) {
+			return OD_ESERVER_READ;
+		}
+
+		char *data = machine_msg_data(msg);
+		int size = machine_msg_size(msg);
+		kiwi_be_type_t type = *data;
+		od_instance_t *instance = client->global->instance;
+
+		if (instance->config.log_debug) {
+			if (type == KIWI_BE_COMMAND_COMPLETE) {
+				const char *command_tag =
+					data + sizeof(kiwi_header_t);
+				od_debug(&instance->logger, client, server,
+					 "%s - %s",
+					 kiwi_be_type_to_string(type),
+					 command_tag);
+			} else {
+				od_debug(&instance->logger, client, server,
+					 "%s", kiwi_be_type_to_string(type));
+			}
+		}
+
+		switch (type) {
+		case KIWI_BE_COMMAND_COMPLETE:
+			done = 1;
+			machine_msg_free(msg);
+			break;
+		case KIWI_BE_ERROR_RESPONSE:
+			/* Failed BEGIN has no CommandComplete; leave RFQ to the stream. */
+			od_backend_error(server, data, size);
+			rc = od_write(&client->io, msg);
+			return rc == 0 ? OD_OK : OD_ECLIENT_WRITE;
+		case KIWI_BE_PARAMETER_STATUS:
+			rc = od_backend_update_parameter(server, data, size, 0);
+			if (rc == -1) {
+				machine_msg_free(msg);
+				od_gerror(client, server,
+					  "can't update parameter");
+				return OD_ESERVER_READ;
+			}
+			/* fallthrough */
+		default:
+			rc = od_write(&client->io, msg);
+			if (rc != 0) {
+				return OD_ECLIENT_READ;
+			}
+			break;
+		}
+	}
+
+	return OD_OK;
+}
+
+od_frontend_status_t run_query_no_plan(machine_msg_t *msg,
+				       od_virtual_portal_t *portal,
+				       od_client_t *client, od_server_t *server,
+				       od_frontend_status_t status,
+				       uint32_t timeout_ms)
+{
+	if (status == OD_SKIP || status == OD_REPLACED) {
+		status = virtual_portal_write(client, portal, timeout_ms);
+	}
+	if (status == OD_SKIP) {
+		return OD_OK;
+	}
+	if (status != OD_OK && status != OD_REPLACED) {
+		return status;
+	}
+	if (server == NULL) {
+		return OD_ATTACH;
+	}
+
+	/* virtual_portal_write already sent and counted a replacement Query. */
+	if (portal->query == NULL) {
+		int rc;
+		if (client->pending_begin != NULL) {
+			const char *query = (char *)machine_msg_data(msg) +
+					    sizeof(kiwi_header_t);
+			/* End trailing line comments before separating statements. */
+			machine_msg_t *rewritten =
+				kiwi_fe_write_query_join(NULL,
+							 client->pending_begin,
+							 "\n;", query, NULL);
+			if (rewritten == NULL) {
+				return OD_EOOM;
+			}
+			rc = od_io_write(&server->io, rewritten, timeout_ms,
+					 OD_WAIT_QUERY_SERVER_WRITE);
+			machine_msg_free(rewritten);
+		} else {
+			rc = od_io_write(&server->io, msg, timeout_ms,
+					 OD_WAIT_QUERY_SERVER_WRITE);
+		}
+		if (rc != 0) {
+			return OD_ESERVER_WRITE;
+		}
+		od_server_sync_request(server, 1);
+	}
+
+	od_stat_query_start(&server->stats_state);
+	uint64_t errors_before = server->error_responses;
+	if (client->pending_begin != NULL) {
+		/* BEGIN was acknowledged virtually; consume its real completion. */
+		status = proxy_until_command_complete(client, server,
+						      timeout_ms);
+		if (status != OD_OK) {
+			return status;
+		}
+		od_client_pending_begin_clear(client);
+	}
+
+	status = od_stream_server_until_rfq(server, timeout_ms,
+					    OD_WAIT_STREAM_SERVER_READ);
+	if (status == OD_COPY_IN_RECEIVED) {
+		machine_msg_t *add =
+			od_relay_get_copy_additional(&client->relay);
+		od_assert(add == NULL);
+		status = od_stream_copy_to_server(client, server, add,
+						  timeout_ms);
+	}
+
+	if (status == OD_OK && server->error_responses == errors_before) {
+		/* Failed DISCARD ALL or UNLISTEN * must preserve client state. */
+		process_discard(client, server);
+		process_unlisten(client, server);
+	}
+	return status;
+}
+
 static od_frontend_status_t run_parse(od_xplan_entry_t *ps, od_client_t *client,
 				      od_server_t *server, uint32_t timeout_ms)
 {
