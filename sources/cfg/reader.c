@@ -6,6 +6,9 @@
 
 #include <odyssey.h>
 
+#include <dirent.h>
+#include <sys/stat.h>
+
 #include <machinarium/file.h>
 #include <machinarium/machinarium.h>
 #include <machinarium/memory.h>
@@ -283,4 +286,97 @@ int od_cfg_parse_autoconf(const char *path, od_cfg_model_t *model,
 {
 	/* nested level, includes are forbidden */
 	return od_cfg_parse_file_depth(path, model, diags, 1, 0);
+}
+
+static int include_dir_filter(const struct dirent *entry)
+{
+	const char *ext = strrchr(entry->d_name, '.');
+	if (entry->d_name[0] == '.' || ext == NULL) {
+		return 0;
+	}
+#ifdef OD_CONFIG_YAML
+	if (strcmp(ext, ".json") == 0 || strcmp(ext, ".yaml") == 0 ||
+	    strcmp(ext, ".yml") == 0) {
+		return 1;
+	}
+#endif
+	return strcmp(ext, ".conf") == 0;
+}
+
+static int include_dir_compare(const struct dirent **a, const struct dirent **b)
+{
+	return strcmp((*a)->d_name, (*b)->d_name);
+}
+
+int od_cfg_include_dir(od_cfg_parse_ctx_t *ctx, const char *path,
+		       od_cfg_location_t location)
+{
+	if (!ctx->allow_include) {
+		od_cfg_diag_error(ctx->diags, location,
+				  "includes are forbidden in this context");
+		return -1;
+	}
+	if (!*path) {
+		od_cfg_diag_error(ctx->diags, location,
+				  "empty include_dir path");
+		return -1;
+	}
+
+	/* Keep the including file's directory prefix for a relative path. */
+	const char *slash = path[0] == '/' ? NULL : strrchr(ctx->filename, '/');
+	int prefix = slash ? (int)(slash - ctx->filename + 1) : 0;
+	char *dir;
+	if (od_asprintf(&dir, "%.*s%s", prefix, ctx->filename, path) !=
+	    OK_RESPONSE) {
+		od_cfg_diag_error(ctx->diags, location,
+				  "out of memory resolving include_dir");
+		return -1;
+	}
+
+	struct dirent **entries;
+	int count =
+		scandir(dir, &entries, include_dir_filter, include_dir_compare);
+	if (count == -1) {
+		od_cfg_diag_error(ctx->diags, location,
+				  "cannot read include_dir '%s': %s", dir,
+				  strerror(errno));
+		od_free(dir);
+		return -1;
+	}
+
+	int rc = 0;
+	for (int i = 0; i < count; i++) {
+		char *file;
+		if (od_asprintf(&file, "%s/%s", dir, entries[i]->d_name) !=
+		    OK_RESPONSE) {
+			od_cfg_diag_error(
+				ctx->diags, location,
+				"out of memory resolving include_dir entry");
+			rc = -1;
+			break;
+		}
+		struct stat st;
+		if (stat(file, &st) == -1) {
+			od_cfg_diag_error(ctx->diags, location,
+					  "cannot stat '%s': %s", file,
+					  strerror(errno));
+			rc = -1;
+		} else if (S_ISREG(st.st_mode)) {
+			rc = od_cfg_parse_file_depth(file, ctx->model,
+						     ctx->diags,
+						     ctx->include_depth + 1,
+						     ctx->allow_include);
+		}
+		od_free(file);
+		if (rc != 0) {
+			break;
+		}
+	}
+
+	for (int i = 0; i < count; i++) {
+		free(entries[i]);
+	}
+	free(entries);
+	od_free(dir);
+	return rc;
 }

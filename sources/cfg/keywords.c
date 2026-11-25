@@ -212,6 +212,7 @@ static const od_cfg_keyword_t keywords[] = {
 	{ "watchdog", WATCHDOG },
 	{ "group", GROUP },
 	{ "include", INCLUDE },
+	{ "include_dir", INCLUDE_DIR },
 	{ "az_aware", AZ_AWARE },
 	{ "virtual_transaction", VIRTUAL_TRANSACTION },
 	{ "query_parsing_mode", QUERY_PARSING_MODE },

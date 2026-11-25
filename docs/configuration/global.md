@@ -52,6 +52,7 @@ megabytes) and is rejected by time-valued options.
 | Parameter                                  | Type             | Default     | Reload  | Notes                                                 |
 | ------------------------------------------ | ---------------- | ----------- | ------- | ----------------------------------------------------- |
 | `include`                                  | string/list      | unset       | SIGHUP  | Include external config files (parsed, not in struct) |
+| `include_dir`                              | string           | unset       | SIGHUP  | Read configuration fragments from a directory in filename order. |
 | `daemonize`                                | int (bool)       | `no`        | restart | Prefer systemd over daemonize                         |
 | `sequential_routing`                       | int (bool)       | `no`        | SIGHUP  | Match routes strictly in config order                 |
 | `priority`                                 | int              | 0           | restart | Process priority (nice value)                         |
@@ -141,6 +142,29 @@ Include one or more configuration files. Include files can
 include other files.
 
 `include "path"`
+
+## **include_dir**
+
+Use `include_dir` at the top level to load configuration files from a directory.
+A relative directory path is resolved against the file containing the directive.
+In `/etc/odyssey/odyssey.conf`, the following line loads fragments from
+`/etc/odyssey/conf.d/`.
+
+```conf
+include_dir "conf.d"
+```
+
+Odyssey reads regular files in bytewise filename order at the position of the
+directive, for example `10-listen.conf`, `20-storages.conf`, then
+`30-billing.conf`. Symlinks to regular files are supported. Hidden entries
+and subdirectories are skipped. The default build selects `.conf` files.
+Builds with YAML/JSON support also select `.yaml`, `.yml`, and `.json`.
+
+The directory must exist and may be empty. Each reload scans it again, so a
+deployment can add or remove a route by adding or removing its file and
+reloading Odyssey. Fragments follow the same duplicate-definition rules as
+explicit `include` files. An invalid fragment aborts the reload and the
+previous configuration stays active.
 
 ## **daemonize**
 *yes|no*

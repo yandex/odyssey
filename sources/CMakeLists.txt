@@ -570,6 +570,7 @@ set(od_test_src
     tests/odyssey/test_tdigest.c
     tests/odyssey/test_util.c
     tests/odyssey/test_hba_parse.c
+    tests/odyssey/test_include_dir.c
     tests/odyssey/test_address.c
     tests/odyssey/test_affinity.c
     tests/odyssey/test_pstmt.c
