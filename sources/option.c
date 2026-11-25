@@ -45,8 +45,10 @@ int od_format_version_string(char *buf, size_t size)
 
 void od_print_help(const char *program)
 {
-	printf("Usage: %s [OPTION...] /path/to/odyssey.conf\n", program);
+	printf("Usage: %s [OPTION...] (CONFIG_FILE | --config-dir DIR)\n",
+	       program);
 	printf("Odyssey - scalable postgresql connection pooler\n\n");
+	printf("      --config-dir DIR       Read configuration fragments from DIR\n");
 	printf("      --console              Do not fork on startup\n");
 	printf("      --log_to_stdout        Log to stdout\n");
 	printf("      --silent               Do not log anything\n");

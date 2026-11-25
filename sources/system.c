@@ -811,8 +811,7 @@ static int od_system_alter_system_check(const char *autoconf_path, void *arg)
 {
 	od_global_t *global = arg;
 	od_instance_t *instance = global->instance;
-	return od_cfg_check(&instance->logger, instance->config_file,
-			    autoconf_path);
+	return od_cfg_check(instance, autoconf_path);
 }
 
 typedef struct {
@@ -833,9 +832,10 @@ static void od_system_alter_system_task(void *arg)
 	/* Each command has its own machine, but shares the autoconf file. */
 	pthread_mutex_lock(&mutex);
 	task->result =
-		od_autoconf_update(instance->config_file, task->key, task->line,
-				   od_system_alter_system_check, task->global,
-				   task->err, task->err_size);
+		od_autoconf_update(instance->config_path,
+				   instance->config_is_dir, task->key,
+				   task->line, od_system_alter_system_check,
+				   task->global, task->err, task->err_size);
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -879,7 +879,7 @@ void od_system_config_reload(od_system_t *system)
 	od_list_t *i;
 
 	od_log(&instance->logger, NULL, NULL, "importing changes from '%s'",
-	       instance->config_file);
+	       instance->config_path);
 
 	/*
 	 * No lock here: stop_checkers self-synchronizes with the group
@@ -898,8 +898,8 @@ void od_system_config_reload(od_system_t *system)
 	od_hba_rules_init(&hba_rules);
 
 	int rc;
-	rc = od_cfg_import(&instance->logger, &config, &rules, system->global,
-			   &hba_rules, instance->config_file);
+	rc = od_cfg_import(instance, &config, &rules, system->global,
+			   &hba_rules, NULL);
 	if (rc == -1) {
 		goto error;
 	}
@@ -1100,7 +1100,7 @@ error:
 
 	od_error(&instance->logger, NULL, NULL,
 		 "failed to load '%s', keeping the running configuration",
-		 instance->config_file);
+		 instance->config_path);
 }
 
 static inline void od_system(void *arg)

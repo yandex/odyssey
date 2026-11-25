@@ -154,17 +154,31 @@ In `/etc/odyssey/odyssey.conf`, the following line loads fragments from
 include_dir "conf.d"
 ```
 
-Odyssey reads regular files in bytewise filename order at the position of the
-directive, for example `10-listen.conf`, `20-storages.conf`, then
-`30-billing.conf`. Symlinks to regular files are supported. Hidden entries
+If the directory holds the entire configuration, pass it directly to Odyssey.
+A relative CLI path is resolved from the working directory.
+
+```sh
+odyssey --test --config-dir /etc/odyssey/conf.d
+odyssey --config-dir /etc/odyssey/conf.d
+```
+
+Both forms read regular files in bytewise filename order, for example
+`10-listen.conf`, `20-storages.conf`, then `30-billing.conf`. Inside a
+configuration file, Odyssey reads the fragments at the position of the
+`include_dir` directive. Symlinks to regular files are supported. Hidden entries
 and subdirectories are skipped. The default build selects `.conf` files.
 Builds with YAML/JSON support also select `.yaml`, `.yml`, and `.json`.
 
-The directory must exist and may be empty. Each reload scans it again, so a
+The directory must exist. An empty directory is valid for an `include_dir`
+directive. With `--config-dir`, the fragments together must form a complete
+configuration. Each reload scans the directory again, so a
 deployment can add or remove a route by adding or removing its file and
 reloading Odyssey. Fragments follow the same duplicate-definition rules as
 explicit `include` files. An invalid fragment aborts the reload and the
 previous configuration stays active.
+
+With `--config-dir DIR`, `ALTER SYSTEM` writes overrides to
+`DIR/odyssey.autoconf`. Odyssey reads this file after all fragments.
 
 ## **daemonize**
 *yes|no*

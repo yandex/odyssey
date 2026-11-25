@@ -17,6 +17,7 @@
 #include <types.h>
 #include <od_memory.h>
 #include <util.h>
+#include <autoconf.h>
 
 #include <cfg/scan.h>
 #include <cfg/model.h>
@@ -250,18 +251,30 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 	return 0;
 }
 
-int od_cfg_parse_file_with_autoconf(const char *path, const char *autoconf_path,
-				    od_cfg_model_t *model,
-				    od_cfg_diag_list_t *diags)
+static int parse_dir(const char *dir, od_cfg_model_t *model,
+		     od_cfg_diag_list_t *diags, int depth,
+		     od_cfg_location_t location);
+
+int od_cfg_parse_with_autoconf(const char *path, bool is_dir,
+			       const char *autoconf_path, od_cfg_model_t *model,
+			       od_cfg_diag_list_t *diags)
 {
-	if (od_cfg_parse_file_depth(path, model, diags, 0, 1) != 0) {
+	int rc;
+	if (is_dir) {
+		od_cfg_location_t loc = od_cfg_location_empty(path);
+		model->location = od_cfg_location_copy(loc);
+		rc = parse_dir(path, model, diags, 1, loc);
+	} else {
+		rc = od_cfg_parse_file_depth(path, model, diags, 0, 1);
+	}
+	if (rc != 0) {
 		return -1;
 	}
 
 	char *default_path = NULL;
 	if (autoconf_path == NULL) {
-		if (od_asprintf(&default_path, "%s%s", path,
-				OD_CFG_AUTOCONF_SUFFIX) != OK_RESPONSE) {
+		default_path = od_autoconf_path(path, is_dir);
+		if (default_path == NULL) {
 			od_cfg_diag_error(
 				diags, od_cfg_location_empty(path),
 				"out of memory while building autoconf path");
@@ -271,7 +284,7 @@ int od_cfg_parse_file_with_autoconf(const char *path, const char *autoconf_path,
 	}
 
 	/* include autoconf, override all previous options */
-	int rc = od_cfg_try_autoconf(autoconf_path, model, diags);
+	rc = od_cfg_try_autoconf(autoconf_path, model, diags);
 	od_free(default_path);
 	if (rc != 0) {
 		return -1;
@@ -279,6 +292,14 @@ int od_cfg_parse_file_with_autoconf(const char *path, const char *autoconf_path,
 
 	/* validate only at top level, not for each included file */
 	return od_cfg_validate_model(model, diags);
+}
+
+int od_cfg_parse_file_with_autoconf(const char *path, const char *autoconf_path,
+				    od_cfg_model_t *model,
+				    od_cfg_diag_list_t *diags)
+{
+	return od_cfg_parse_with_autoconf(path, false, autoconf_path, model,
+					  diags);
 }
 
 int od_cfg_parse_autoconf(const char *path, od_cfg_model_t *model,
@@ -333,14 +354,24 @@ int od_cfg_include_dir(od_cfg_parse_ctx_t *ctx, const char *path,
 		return -1;
 	}
 
+	int rc = parse_dir(dir, ctx->model, ctx->diags, ctx->include_depth + 1,
+			   location);
+	od_free(dir);
+	return rc;
+}
+
+static int parse_dir(const char *dir, od_cfg_model_t *model,
+		     od_cfg_diag_list_t *diags, int depth,
+		     od_cfg_location_t location)
+{
 	struct dirent **entries;
 	int count =
 		scandir(dir, &entries, include_dir_filter, include_dir_compare);
 	if (count == -1) {
-		od_cfg_diag_error(ctx->diags, location,
-				  "cannot read include_dir '%s': %s", dir,
-				  strerror(errno));
-		od_free(dir);
+		od_cfg_diag_error(
+			diags, location,
+			"cannot read configuration directory '%s': %s", dir,
+			strerror(errno));
 		return -1;
 	}
 
@@ -350,22 +381,20 @@ int od_cfg_include_dir(od_cfg_parse_ctx_t *ctx, const char *path,
 		if (od_asprintf(&file, "%s/%s", dir, entries[i]->d_name) !=
 		    OK_RESPONSE) {
 			od_cfg_diag_error(
-				ctx->diags, location,
-				"out of memory resolving include_dir entry");
+				diags, location,
+				"out of memory resolving configuration directory entry");
 			rc = -1;
 			break;
 		}
 		struct stat st;
 		if (stat(file, &st) == -1) {
-			od_cfg_diag_error(ctx->diags, location,
+			od_cfg_diag_error(diags, location,
 					  "cannot stat '%s': %s", file,
 					  strerror(errno));
 			rc = -1;
 		} else if (S_ISREG(st.st_mode)) {
-			rc = od_cfg_parse_file_depth(file, ctx->model,
-						     ctx->diags,
-						     ctx->include_depth + 1,
-						     ctx->allow_include);
+			rc = od_cfg_parse_file_depth(file, model, diags, depth,
+						     1);
 		}
 		od_free(file);
 		if (rc != 0) {
@@ -377,6 +406,5 @@ int od_cfg_include_dir(od_cfg_parse_ctx_t *ctx, const char *path,
 		free(entries[i]);
 	}
 	free(entries);
-	od_free(dir);
 	return rc;
 }

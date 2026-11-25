@@ -15,6 +15,7 @@
 # 7. Odyssey restarts with the resulting autoconf file and applies it.
 # 8. Concurrent changes are all preserved in the autoconf history.
 # 9. Oversized files and write errors leave the autoconf file intact.
+# 10. Directory mode reads fragments and persists changes in odyssey.autoconf.
 
 set -uex
 
@@ -226,6 +227,22 @@ mv "$WORK.saved" "$WORK"
 console 'alter system set log_debug = yes'
 expect_line 'log_debug yes'
 
+ody-stop
+
+# Start with the directory itself and ignore the previous file-mode autoconf.
+mv "$CONF" "$WORK/10-base.conf"
+AUTOCONF=$WORK/odyssey.autoconf
+/usr/bin/odyssey --test --config-dir "$WORK"
+if /usr/bin/odyssey --test --config-dir "$WORK" "$WORK/10-base.conf"; then
+	fail "expected the positional config and --config-dir together to fail"
+fi
+/usr/bin/odyssey --config-dir "$WORK"
+sleep 1
+expect_value log_debug no
+console 'alter system set log_debug = yes'
+expect_line 'log_debug yes'
+console 'reload'
+expect_value log_debug yes
 ody-stop
 
 rm -rf "$WORK"
