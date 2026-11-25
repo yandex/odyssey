@@ -77,6 +77,8 @@ MACHINE_API void machinarium_set_msg_cache_gc_count(int count);
 
 MACHINE_API void machinarium_set_dns_ttl_ms(int ttl_ms);
 
+MACHINE_API void machinarium_set_file_pool_size(int size);
+
 /* main */
 
 MACHINE_API int machinarium_init(void);
