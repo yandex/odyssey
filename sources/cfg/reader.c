@@ -19,6 +19,9 @@
 #include <cfg/model.h>
 #include <cfg/ctx.h>
 #include <cfg/reader.h>
+#ifdef OD_CONFIG_YAML
+#include <cfg/structured.h>
+#endif
 
 #include <unistd.h>
 
@@ -213,6 +216,22 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 	ctx.include_depth = depth;
 	ctx.allow_include = allow_include;
 
+	/* ALTER SYSTEM writes native syntax, including its temporary files. */
+	const char *ext = allow_include ? strrchr(path, '.') : NULL;
+	bool json = ext && strcmp(ext, ".json") == 0;
+	if (ext &&
+	    (json || strcmp(ext, ".yaml") == 0 || strcmp(ext, ".yml") == 0)) {
+#ifdef OD_CONFIG_YAML
+		rc = od_cfg_parse_structured(&ctx, json);
+#else
+		od_cfg_diag_error(
+			diags, od_cfg_location_empty(path),
+			"YAML/JSON configuration requires a build with BUILD_CONFIG_YAML=ON");
+		rc = -1;
+#endif
+		goto done;
+	}
+
 	yyscan_t scanner;
 	if (yylex_init_extra(&ctx, &scanner) != 0) {
 		od_cfg_diag_error(diags, od_cfg_location_empty(path),
@@ -232,15 +251,16 @@ int od_cfg_parse_file_depth(const char *path, od_cfg_model_t *model,
 		return -1;
 	}
 
-	int parse_rc = yyparse(scanner, &ctx);
+	rc = yyparse(scanner, &ctx);
 
 	yy_delete_buffer(buffer, scanner);
 	yylex_destroy(scanner);
 
+done:
 	od_cfg_parse_ctx_free(&ctx);
 	mm_free(buf);
 
-	if (parse_rc != 0 || od_cfg_diag_has_errors(diags)) {
+	if (rc != 0 || od_cfg_diag_has_errors(diags)) {
 		return -1;
 	}
 

@@ -248,12 +248,30 @@ endif()
 set(CONFIG_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/cfg)
 file(MAKE_DIRECTORY ${CONFIG_GEN_DIR})
 
+option(BUILD_CONFIG_YAML "Read YAML and JSON configuration files using libfyaml" OFF)
+set(CONFIG_BISON_FLAGS "-Werror -Wall")
+if (BUILD_CONFIG_YAML)
+    find_package(BISON 3.8 REQUIRED)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FYAML REQUIRED IMPORTED_TARGET libfyaml>=0.8)
+    list(APPEND od_src cfg/structured.c cfg/structured_map.c)
+    list(APPEND od_libraries PkgConfig::FYAML)
+    add_definitions(-DOD_CONFIG_YAML)
+    string(APPEND CONFIG_BISON_FLAGS " -Dapi.push-pull=both")
+endif()
+message(STATUS "YAML/JSON configuration: ${BUILD_CONFIG_YAML}")
+
 BISON_TARGET(cfg_parser
     cfg/parse.y
     ${CONFIG_GEN_DIR}/parse.tab.c
     DEFINES_FILE ${CONFIG_GEN_DIR}/parse.tab.h
-    COMPILE_FLAGS "-Werror -Wall"
+    COMPILE_FLAGS "${CONFIG_BISON_FLAGS}"
 )
+# Makefile generators need a file dependency to regenerate the parser when
+# the build switches between pull-only and push/pull modes.
+file(GENERATE OUTPUT ${CONFIG_GEN_DIR}/bison-flags CONTENT "${CONFIG_BISON_FLAGS}\n")
+add_custom_command(OUTPUT ${CONFIG_GEN_DIR}/parse.tab.c APPEND
+    DEPENDS ${CONFIG_GEN_DIR}/bison-flags)
 FLEX_TARGET(cfg_scanner
     cfg/scan.l
     ${CONFIG_GEN_DIR}/scan.c
@@ -584,6 +602,7 @@ set(od_test_src
     tests/odyssey/test_sql_full_parser.c
     tests/odyssey/test_console_parser.c
     tests/odyssey/test_config_field.c
+    tests/odyssey/test_config_formats.c
     tests/odyssey/test_autoconf.c
     tests/odyssey/test_soft_oom.c
     tests/odyssey/test_wait_event.c)

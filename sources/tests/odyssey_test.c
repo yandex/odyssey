@@ -156,6 +156,7 @@ extern void odyssey_test_sql_minimal_parser(void);
 extern void odyssey_test_sql_full_parser(void);
 extern void odyssey_test_console_parser(void);
 extern void odyssey_test_config_field(void);
+extern void odyssey_test_config_formats(void);
 extern void odyssey_test_autoconf(void);
 extern void odyssey_test_soft_oom(void);
 extern void odyssey_test_wait_event(void);
@@ -309,6 +310,7 @@ int main(int argc, char *argv[])
 	odyssey_test(odyssey_test_sql_full_parser);
 	odyssey_test(odyssey_test_console_parser);
 	odyssey_test(odyssey_test_config_field);
+	odyssey_test(odyssey_test_config_formats);
 	odyssey_test(odyssey_test_autoconf);
 	odyssey_test(odyssey_test_soft_oom);
 	odyssey_test(odyssey_test_wait_event);
