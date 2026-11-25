@@ -3581,43 +3581,26 @@ static void od_frontend_cancel_close(od_client_t *client)
 static void od_frontend_cache_peer(od_client_t *client)
 {
 	struct sockaddr_storage peer;
+	struct sockaddr *address = (struct sockaddr *)&peer;
 	int peer_len = sizeof(peer);
-	if (machine_getpeername(client->io.io, (struct sockaddr *)&peer,
-				&peer_len) != 0) {
+	if (machine_getpeername(client->io.io, address, &peer_len) != 0) {
 		return;
 	}
 
-	const void *address;
-	int port;
-	switch (peer.ss_family) {
-	case AF_INET: {
-		const struct sockaddr_in *addr = (struct sockaddr_in *)&peer;
-		address = &addr->sin_addr;
-		port = ntohs(addr->sin_port);
-		break;
-	}
-	case AF_INET6: {
-		const struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&peer;
-		address = &addr->sin6_addr;
-		port = ntohs(addr->sin6_port);
-		break;
-	}
-	case AF_UNIX:
-		od_snprintf(client->peer, sizeof(client->peer),
-			    "<unix socket>");
-		return;
-	default:
+	od_getsockaddrname(address, client->peer, sizeof(client->peer), 1, 1);
+	if (peer.ss_family == AF_INET) {
+		const struct sockaddr_in *ipv4 =
+			(const struct sockaddr_in *)address;
+		client->peer_port = ntohs(ipv4->sin_port);
+	} else if (peer.ss_family == AF_INET6) {
+		const struct sockaddr_in6 *ipv6 =
+			(const struct sockaddr_in6 *)address;
+		client->peer_port = ntohs(ipv6->sin6_port);
+	} else {
 		return;
 	}
-
-	if (inet_ntop(peer.ss_family, address, client->peer_ip,
-		      sizeof(client->peer_ip)) == NULL) {
-		return;
-	}
-	client->peer_port = port;
-	od_snprintf(client->peer, sizeof(client->peer),
-		    peer.ss_family == AF_INET6 ? "[%s]:%d" : "%s:%d",
-		    client->peer_ip, client->peer_port);
+	od_getsockaddrname(address, client->peer_ip, sizeof(client->peer_ip), 1,
+			   0);
 }
 
 void od_frontend(void *arg)
