@@ -7,7 +7,6 @@
 
 #include <odyssey.h>
 
-#include <arpa/inet.h>
 #include <sys/socket.h>
 
 #include <openssl/rand.h>
@@ -3578,31 +3577,6 @@ static void od_frontend_cancel_close(od_client_t *client)
 	od_frontend_close(client);
 }
 
-static void od_frontend_cache_peer(od_client_t *client)
-{
-	struct sockaddr_storage peer;
-	struct sockaddr *address = (struct sockaddr *)&peer;
-	int peer_len = sizeof(peer);
-	if (machine_getpeername(client->io.io, address, &peer_len) != 0) {
-		return;
-	}
-
-	od_getsockaddrname(address, client->peer, sizeof(client->peer), 1, 1);
-	if (peer.ss_family == AF_INET) {
-		const struct sockaddr_in *ipv4 =
-			(const struct sockaddr_in *)address;
-		client->peer_port = ntohs(ipv4->sin_port);
-	} else if (peer.ss_family == AF_INET6) {
-		const struct sockaddr_in6 *ipv6 =
-			(const struct sockaddr_in6 *)address;
-		client->peer_port = ntohs(ipv6->sin6_port);
-	} else {
-		return;
-	}
-	od_getsockaddrname(address, client->peer_ip, sizeof(client->peer_ip), 1,
-			   0);
-}
-
 void od_frontend(void *arg)
 {
 	od_client_t *client = arg;
@@ -3612,7 +3586,17 @@ void od_frontend(void *arg)
 	od_extension_t *extensions = global->extensions;
 	od_module_t *modules = extensions->modules;
 
-	od_frontend_cache_peer(client);
+	struct sockaddr_storage peer;
+	struct sockaddr *peer_addr = (struct sockaddr *)&peer;
+	int peer_len = sizeof(peer);
+	if (machine_getpeername(client->io.io, peer_addr, &peer_len) == 0) {
+		od_getsockaddrname(peer_addr, client->peer,
+				   sizeof(client->peer), 1, 1);
+		if (peer.ss_family == AF_INET || peer.ss_family == AF_INET6) {
+			od_getsockaddrname(peer_addr, client->peer_ip,
+					   sizeof(client->peer_ip), 1, 0);
+		}
+	}
 
 	/* log client connection */
 	if (instance->config.log_session && instance->config.log_debug) {

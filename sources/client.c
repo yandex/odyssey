@@ -73,7 +73,6 @@ void od_client_init(od_client_t *client)
 
 	memset(client->peer, 0, sizeof(client->peer));
 	memset(client->peer_ip, 0, sizeof(client->peer_ip));
-	client->peer_port = -1;
 
 	memset(&client->query_ctx, 0, sizeof(client->query_ctx));
 	client->parser_mode = -1;

@@ -140,7 +140,6 @@ struct od_client {
 	int parser_mode;
 
 	char peer_ip[INET6_ADDRSTRLEN];
-	int peer_port; /* -1 when the peer has no TCP port. */
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)
