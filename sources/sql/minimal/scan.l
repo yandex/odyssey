@@ -59,17 +59,6 @@
     yylloc->end = yylloc->start + (int)yyleng; \
 } while (0)
 
-static void tail_touch(od_sql_minimal_parse_ctx_t *ctx, int start, int end,
-                      int has_token)
-{
-    if (ctx->tail_location.start < 0) ctx->tail_location.start = start;
-    ctx->tail_location.end = end;
-    ctx->tail_has_token |= has_token;
-}
-
-#define TAIL_TOUCH(token) \
-    tail_touch(yyextra, yylloc->start, yylloc->end, token)
-
 void *od_sql_minimal_yyalloc(yy_size_t bytes, yyscan_t yyscanner);
 void *od_sql_minimal_yyrealloc(void *ptr, yy_size_t bytes, yyscan_t yyscanner);
 void  od_sql_minimal_yyfree(void *ptr, yyscan_t yyscanner);
@@ -86,11 +75,174 @@ INTEGER     -?{DIGIT}+
 
 [ \t\r\n]+   { SET_YYLLOC(); /* skip */ }
 "--".*       { SET_YYLLOC(); /* skip line comment */ }
-<TAIL>[ \t\r\n\f]+ { SET_YYLLOC(); }
-<TAIL>"--"[^\n]* {
-    SET_YYLLOC();
-    TAIL_TOUCH(0);
+<TAIL>(.|\n) {
+    /*
+     * The tail between "EXECUTE x(" / "PREPARE x(..) AS" and the
+     * terminator is opaque: no tokens are produced from it, only one
+     * RAW_SQL span. Scan it with a raw byte loop directly over the
+     * scan buffer, staying aware of comments, quoting and nested
+     * parentheses, and stop at the first statement/argument
+     * terminator. Keeping the tail in a single flex rule keeps the
+     * -CF scanner tables (and thus the fast path of every other
+     * query) small.
+     */
+    const char *b = yyextra->scanbuf;
+    size_t n = yyextra->scanbuflen;
+    size_t first = (size_t)(yytext - b);
+    size_t i = first;
+    int span_start = -1, span_end = -1;
+    int has_token = 0;
+    int paren_depth = 0;
+    size_t term = n;
+
+#define TAIL_SPAN_TOUCH(s, e, tok) do { \
+    if (span_start < 0) span_start = (int)(s); \
+    span_end = (int)(e); \
+    has_token |= (tok); \
+} while (0)
+
+    while (i < n) {
+        size_t elem = i;
+        char c = b[i];
+        switch (c) {
+        case ' ': case '\t': case '\r': case '\n': case '\f':
+            i++;
+            continue;
+        case '-':
+            if (i + 1 < n && b[i + 1] == '-') {
+                /* line comment */
+                i += 2;
+                while (i < n && b[i] != '\n') i++;
+                TAIL_SPAN_TOUCH(elem, i, 0);
+                continue;
+            }
+            i++;
+            TAIL_SPAN_TOUCH(elem, i, 1);
+            continue;
+        case '/':
+            if (i + 1 < n && b[i + 1] == '*') {
+                /* nested block comment */
+                i += 2;
+                int prev = 0, depth = 1;
+                while (depth > 0 && i < n) {
+                    char cc = b[i++];
+                    if (prev == '/' && cc == '*') { depth++; prev = 0; }
+                    else if (prev == '*' && cc == '/') { depth--; prev = 0; }
+                    else prev = cc;
+                }
+                if (depth > 0) return ERROR_TOKEN;
+                TAIL_SPAN_TOUCH(elem, i, 0);
+                continue;
+            }
+            i++;
+            TAIL_SPAN_TOUCH(elem, i, 1);
+            continue;
+        case '\'':
+        case '"': {
+            char q = c;
+            i++;
+            while (i < n) {
+                if (b[i] == q) {
+                    if (i + 1 < n && b[i + 1] == q) { i += 2; continue; }
+                    i++;
+                    goto quoted_closed;
+                }
+                i++;
+            }
+            /* unterminated quote: no special treatment from here on */
+            i = elem + 1;
+            TAIL_SPAN_TOUCH(elem, i, 1);
+            continue;
+        quoted_closed:
+            TAIL_SPAN_TOUCH(elem, i, 1);
+            continue;
+        }
+        case '$': {
+            /* dollar quote: $tag$ ... $tag$ */
+            size_t j = i + 1;
+            if (j < n && b[j] != '$') {
+                char cj = b[j];
+                if (!((cj >= 'A' && cj <= 'Z') ||
+                      (cj >= 'a' && cj <= 'z') ||
+                      cj == '_' || (unsigned char)cj >= 0200)) {
+                    /* not a dollar quote */
+                    i++;
+                    TAIL_SPAN_TOUCH(elem, i, 1);
+                    continue;
+                }
+                j++;
+                while (j < n) {
+                    cj = b[j];
+                    if (cj == '$') break;
+                    if (!((cj >= '0' && cj <= '9') ||
+                          (cj >= 'A' && cj <= 'Z') ||
+                          (cj >= 'a' && cj <= 'z') ||
+                          cj == '_' || (unsigned char)cj >= 0200))
+                        break;
+                    j++;
+                }
+            }
+            if (j >= n || b[j] != '$') {
+                /* no closing $: not a dollar quote */
+                i++;
+                TAIL_SPAN_TOUCH(elem, i, 1);
+                continue;
+            }
+            size_t dlen = j - i + 1;
+            size_t m = 0;
+            size_t k = j + 1;
+            while (k < n) {
+                if ((unsigned char)b[k] == (unsigned char)b[i + m]) m++;
+                else m = (b[k] == '$') ? 1 : 0;
+                if (m == dlen) { k++; break; }
+                k++;
+            }
+            if (m != dlen) return ERROR_TOKEN;
+            i = k;
+            TAIL_SPAN_TOUCH(elem, i, 1);
+            continue;
+        }
+        case '(':
+            paren_depth++;
+            i++;
+            TAIL_SPAN_TOUCH(elem, i, 1);
+            continue;
+        case ')':
+            if (paren_depth == 0) { term = i; goto tail_done; }
+            paren_depth--;
+            i++;
+            TAIL_SPAN_TOUCH(elem, i, 1);
+            continue;
+        case ';':
+            if (paren_depth == 0) { term = i; goto tail_done; }
+            i++;
+            TAIL_SPAN_TOUCH(elem, i, 1);
+            continue;
+        default:
+            i++;
+            TAIL_SPAN_TOUCH(elem, i, 1);
+            continue;
+        }
+    }
+    term = n;
+
+tail_done:
+#undef TAIL_SPAN_TOUCH
+    yyless((int)(term - first));
+    BEGIN(INITIAL);
+    if (has_token) {
+        yylloc->start = span_start;
+        yylloc->end = span_end;
+        return RAW_SQL;
+    }
+    /*
+     * Nothing but comments/whitespace in the tail: do not emit
+     * RAW_SQL, rescan delivers the terminator to the grammar as
+     * usual (which reports the syntax error).
+     */
 }
+
+
 "/*"         { SET_YYLLOC();
                int depth = 1, previous = 0, c;
                while (depth && (c = input(yyscanner)) != 0) {
@@ -101,84 +253,6 @@ INTEGER     -?{DIGIT}+
                if (depth) return ERROR_TOKEN;
                /* skip block comment */
              }
-
-<TAIL>"/*" {
-    SET_YYLLOC();
-    int depth = 1, previous = 0, c;
-    while (depth && (c = input(yyscanner)) != 0) {
-        yylloc->end++;
-        if (previous == '/' && c == '*') { depth++; previous = 0; }
-        else if (previous == '*' && c == '/') { depth--; previous = 0; }
-        else previous = c;
-    }
-    if (depth) return ERROR_TOKEN;
-    TAIL_TOUCH(0);
-}
-
-<TAIL>[eE]\'([^\'\\]|\\.|\'\')*\' {
-    SET_YYLLOC(); TAIL_TOUCH(1);
-}
-<TAIL>\'([^\']|\'\')*\' {
-    SET_YYLLOC(); TAIL_TOUCH(1);
-}
-<TAIL>\"([^\"]|\"\")*\" {
-    SET_YYLLOC(); TAIL_TOUCH(1);
-}
-<TAIL>\$({IDENT_START}[A-Za-z0-9_\200-\377]*)?\$ {
-    SET_YYLLOC();
-    size_t length = (size_t)yyleng;
-    char *delimiter = od_linear_alloc_alloc(yyextra->arena, length, 0);
-    if (delimiter == NULL) return ERROR_TOKEN;
-    memcpy(delimiter, yytext, length);
-    size_t matched = 0;
-    int c;
-    while ((c = input(yyscanner)) != 0) {
-        yylloc->end++;
-        if ((unsigned char)c == (unsigned char)delimiter[matched]) matched++;
-        else matched = c == '$' ? 1 : 0;
-        if (matched == length) break;
-    }
-    if (matched != length) return ERROR_TOKEN;
-    TAIL_TOUCH(1);
-}
-<TAIL>"(" {
-    SET_YYLLOC(); yyextra->tail_depth++; TAIL_TOUCH(1);
-}
-<TAIL>")" {
-    SET_YYLLOC();
-    if (yyextra->tail_depth == 0) {
-        yyless(0); BEGIN(INITIAL);
-        if (yyextra->tail_has_token) {
-            *yylloc = yyextra->tail_location;
-            return RAW_SQL;
-        }
-    } else {
-        yyextra->tail_depth--; TAIL_TOUCH(1);
-    }
-}
-<TAIL>";" {
-    SET_YYLLOC();
-    if (yyextra->tail_depth == 0) {
-        yyless(0); BEGIN(INITIAL);
-        if (yyextra->tail_has_token) {
-            *yylloc = yyextra->tail_location;
-            return RAW_SQL;
-        }
-    } else TAIL_TOUCH(1);
-}
-<TAIL><<EOF>> {
-    BEGIN(INITIAL);
-    if (yyextra->tail_has_token) {
-        *yylloc = yyextra->tail_location;
-        return RAW_SQL;
-    }
-    return 0;
-}
-<TAIL>{IDENT_START}[A-Za-z0-9_$\200-\377]* {
-    SET_YYLLOC(); TAIL_TOUCH(1);
-}
-<TAIL>[^ \t\r\n\f'"();$/A-Za-z0-9_\200-\377-]+ { SET_YYLLOC(); TAIL_TOUCH(1); }
-<TAIL>. { SET_YYLLOC(); TAIL_TOUCH(1); }
 
 ";"          { SET_YYLLOC(); return ';'; }
 "="          { SET_YYLLOC(); return '='; }
