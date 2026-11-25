@@ -149,6 +149,23 @@ otherwise the configuration is rejected.
 
 `auto_route_ro_on_standby yes`
 
+## **enable_rwr_consistent**
+*yes|no*
+
+Set the initial value of `odyssey.rwr_consistent` for clients accepted on this
+listen endpoint. Defaults to `no`.
+
+With `yes`, Odyssey captures the client's LSN when releasing a primary backend
+and waits for that LSN before sending subsequent commands to a PostgreSQL 19+
+replica. This works independently of SQL query parsing.
+
+Clients can override the default with startup `options` such as
+`-c odyssey.rwr_consistent=off`, or later with `SET odyssey.rwr_consistent TO off`.
+These overrides require `virtual_processing yes`; SQL `SET` also requires
+query parsing to be enabled.
+
+`enable_rwr_consistent yes`
+
 ## **balancing**
 
 Optional sub-section that overrides the load-balancing behaviour for this

@@ -98,6 +98,7 @@ void od_config_init(od_config_t *config)
 	od_list_init(&config->listen);
 
 	config->backend_connect_timeout_ms = 30U * 1000U; /* 30 seconds */
+	config->rwr_wait_timeout_ms = 60U * 1000U; /* 60 seconds */
 	config->cancel_timeout_ms = 1U * 1000U; /* 1 seconds */
 	config->cancel_queue_timeout_ms = -1;
 	config->cancel_max_inflight = -1;
@@ -149,6 +150,7 @@ void od_config_reload(od_config_t *current_config, od_config_t *new_config)
 		new_config->server_login_retry_ms;
 	current_config->backend_connect_timeout_ms =
 		new_config->backend_connect_timeout_ms;
+	current_config->rwr_wait_timeout_ms = new_config->rwr_wait_timeout_ms;
 	current_config->cancel_timeout_ms = new_config->cancel_timeout_ms;
 	current_config->ignore_cancel = new_config->ignore_cancel;
 	current_config->smart_search_path_enquoting =
@@ -253,6 +255,7 @@ od_config_listen_t *od_config_listen_add(od_config_t *config)
 	listen->reserved_clients = -1; /* disabled */
 	listen->target_session_attrs = OD_TARGET_SESSION_ATTRS_UNDEF;
 	listen->auto_route_ro_on_standby = 0;
+	listen->enable_rwr_consistent = 0;
 	listen->balancing_override_set = 0;
 	od_storage_balancing_init(&listen->balancing_override);
 
@@ -575,6 +578,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, auth_query_timeout_ms), 1 },
 	{ "backend_connect_timeout_ms", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, backend_connect_timeout_ms), 1 },
+	{ "rwr_wait_timeout", OD_CONFIG_FIELD_DURATION_U64,
+	  offsetof(od_config_t, rwr_wait_timeout_ms), 1 },
 	{ "cancel_timeout_ms", OD_CONFIG_FIELD_DURATION_U64,
 	  offsetof(od_config_t, cancel_timeout_ms), 1 },
 	{ "cancel_queue_timeout_ms", OD_CONFIG_FIELD_DURATION_I64,
@@ -914,6 +919,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->resolvers);
 	od_log(logger, NULL, NULL, "backend_connect_timeout_ms %" PRIu64,
 	       config->backend_connect_timeout_ms);
+	od_log(logger, NULL, NULL, "rwr_wait_timeout       %" PRIu64,
+	       config->rwr_wait_timeout_ms);
 	od_log(logger, NULL, NULL, "cancel_timeout_ms         %" PRIu64,
 	       config->cancel_timeout_ms);
 	od_log(logger, NULL, NULL, "cancel_queue_timeout_ms   %" PRId64,
@@ -1023,6 +1030,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 			       listen->target_session_attrs));
 		od_log(logger, NULL, NULL, "  auto_route_ro_on_standby %s",
 		       listen->auto_route_ro_on_standby ? "yes" : "no");
+		od_log(logger, NULL, NULL, "  enable_rwr_consistent %s",
+		       listen->enable_rwr_consistent ? "yes" : "no");
 		if (listen->balancing_override_set) {
 			od_log(logger, NULL, NULL,
 			       "  balancing override: method %s, az_aware %d",
