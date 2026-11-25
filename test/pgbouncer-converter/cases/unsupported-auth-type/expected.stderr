@@ -1,0 +1,2 @@
+WARNING: pgbouncer.ini:0: no auth_file; user credentials must be configured manually, routes blocked: auth_file
+WARNING: pgbouncer.ini:0: unsupported auth_type; routes blocked: hba

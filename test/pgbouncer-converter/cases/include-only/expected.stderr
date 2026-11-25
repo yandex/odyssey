@@ -1,0 +1,2 @@
+WARNING: pgbouncer.ini:4: unsupported include directive; expand manually, routes blocked: %include
+WARNING: pgbouncer.ini:0: no databases were converted; default route blocked: [databases]

@@ -1,0 +1,2 @@
+WARNING: pgbouncer.ini:0: database wildcard needs manual routing; default route blocked: *
+WARNING: pgbouncer.ini:0: unsupported database pool_mode; routes blocked: *
