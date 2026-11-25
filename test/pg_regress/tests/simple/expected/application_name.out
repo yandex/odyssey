@@ -18,3 +18,37 @@ SHOW application_name;
  This-is-long-application-name-that-must-be-cut-to-add-hos - ::1
 (1 row)
 
+-- SET immediately after a virtual BEGIN must stay inside the transaction.
+\pset format unaligned
+SET application_name = 'before_tx';
+BEGIN;
+SET application_name = 'xx';
+SHOW application_name;
+application_name
+xx - ::1
+(1 row)
+ROLLBACK;
+SHOW application_name;
+application_name
+before_tx - ::1
+(1 row)
+-- Rewritten SET and EXECUTE share the pending query and clear it after sending.
+SELECT current_setting('application_name') AS application_name \parse appname_stmt
+BEGIN;
+EXECUTE appname_stmt;
+application_name
+before_tx - ::1
+(1 row)
+ROLLBACK;
+BEGIN;
+SET application_name = 'exec_tx';
+EXECUTE appname_stmt;
+application_name
+exec_tx - ::1
+(1 row)
+ROLLBACK;
+EXECUTE appname_stmt;
+application_name
+before_tx - ::1
+(1 row)
+\close_prepared appname_stmt

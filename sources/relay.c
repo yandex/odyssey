@@ -227,6 +227,8 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	}
 
 	od_linear_alloc_t *arena = od_worker_get_local_linear_alloc();
+	/* A query already pending here is the deferred BEGIN; a handler may append SQL. */
+	bool deferred_begin = client->pending_query != NULL;
 
 	od_virtual_portal_t portal;
 	virtual_portal_init(&portal);
@@ -236,7 +238,7 @@ process_query_impl(od_relay_t *relay, machine_msg_t *msg, uint32_t timeout_ms)
 	od_linear_alloc_reset(arena, 0);
 
 	status = run_query_no_plan(msg, &portal, client, server, status,
-				   timeout_ms);
+				   deferred_begin, timeout_ms);
 	virtual_portal_free(&portal);
 	return status;
 }
@@ -245,13 +247,13 @@ static int relay_append(od_relay_t *relay, machine_msg_t *msg)
 {
 	od_client_t *client = relay->client;
 
-	if (client->pending_begin) {
+	if (client->pending_query) {
 		if (xbuf_append_deferred_begin(&relay->xbuf,
-					       client->pending_begin)) {
+					       client->pending_query)) {
 			return -1;
 		}
 
-		od_client_pending_begin_clear(client);
+		od_client_pending_query_clear(client);
 	}
 
 	if (xbuf_append(&relay->xbuf, msg)) {

@@ -216,6 +216,7 @@ od_frontend_status_t run_query_no_plan(machine_msg_t *msg,
 				       od_virtual_portal_t *portal,
 				       od_client_t *client, od_server_t *server,
 				       od_frontend_status_t status,
+				       bool deferred_begin,
 				       uint32_t timeout_ms);
 
 od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay);

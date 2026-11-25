@@ -1868,8 +1868,28 @@ od_frontend_status_t run_query_no_plan(machine_msg_t *msg,
 				       od_virtual_portal_t *portal,
 				       od_client_t *client, od_server_t *server,
 				       od_frontend_status_t status,
-				       uint32_t timeout_ms)
+				       bool deferred_begin, uint32_t timeout_ms)
 {
+	if ((status == OD_OK || status == OD_REPLACED) && server == NULL) {
+		return OD_ATTACH;
+	}
+	if (status == OD_OK && deferred_begin) {
+		const char *query =
+			(char *)machine_msg_data(msg) + sizeof(kiwi_header_t);
+		if (od_client_pending_query_append(client, query) != 0) {
+			return OD_EOOM;
+		}
+	}
+	if (status == OD_REPLACED || (status == OD_OK && deferred_begin)) {
+		od_assert(client->pending_query != NULL);
+		portal->query =
+			kiwi_fe_write_query(NULL, client->pending_query,
+					    strlen(client->pending_query) + 1);
+		if (portal->query == NULL) {
+			return OD_EOOM;
+		}
+		msg = portal->query;
+	}
 	if (status == OD_SKIP || status == OD_REPLACED) {
 		status = virtual_portal_write(client, portal, timeout_ms);
 	}
@@ -1879,31 +1899,10 @@ od_frontend_status_t run_query_no_plan(machine_msg_t *msg,
 	if (status != OD_OK && status != OD_REPLACED) {
 		return status;
 	}
-	if (server == NULL) {
-		return OD_ATTACH;
-	}
-
 	/* virtual_portal_write already sent and counted a replacement Query. */
-	if (portal->query == NULL) {
-		int rc;
-		if (client->pending_begin != NULL) {
-			const char *query = (char *)machine_msg_data(msg) +
-					    sizeof(kiwi_header_t);
-			/* End trailing line comments before separating statements. */
-			machine_msg_t *rewritten =
-				kiwi_fe_write_query_join(NULL,
-							 client->pending_begin,
-							 "\n;", query, NULL);
-			if (rewritten == NULL) {
-				return OD_EOOM;
-			}
-			rc = od_io_write(&server->io, rewritten, timeout_ms,
-					 OD_WAIT_QUERY_SERVER_WRITE);
-			machine_msg_free(rewritten);
-		} else {
-			rc = od_io_write(&server->io, msg, timeout_ms,
-					 OD_WAIT_QUERY_SERVER_WRITE);
-		}
+	if (status == OD_OK) {
+		int rc = od_io_write(&server->io, msg, timeout_ms,
+				     OD_WAIT_QUERY_SERVER_WRITE);
 		if (rc != 0) {
 			return OD_ESERVER_WRITE;
 		}
@@ -1912,15 +1911,15 @@ od_frontend_status_t run_query_no_plan(machine_msg_t *msg,
 
 	od_stat_query_start(&server->stats_state);
 	uint64_t errors_before = server->error_responses;
-	if (client->pending_begin != NULL) {
+	if (deferred_begin) {
 		/* BEGIN was acknowledged virtually; consume its real completion. */
 		status = proxy_until_command_complete(client, server,
 						      timeout_ms);
 		if (status != OD_OK) {
 			return status;
 		}
-		od_client_pending_begin_clear(client);
 	}
+	od_client_pending_query_clear(client);
 
 	status = od_stream_server_until_rfq(server, timeout_ms,
 					    OD_WAIT_STREAM_SERVER_READ);
