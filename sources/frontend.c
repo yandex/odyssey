@@ -3075,8 +3075,23 @@ static od_frontend_status_t process_server_async_msg(od_client_t *client,
 	return OD_OK;
 }
 
+static bool client_has_buffered_query(od_client_t *client)
+{
+	struct iovec buf = od_readahead_read_begin(&client->io.readahead);
+	const kiwi_header_t *header = buf.iov_base;
+	if (buf.iov_len < sizeof(*header) || header->type != KIWI_FE_QUERY) {
+		return false;
+	}
+
+	uint32_t size;
+	return kiwi_validate_fe_header(buf.iov_base, sizeof(*header), &size) ==
+		       0 &&
+	       size <= buf.iov_len - sizeof(header->type);
+}
+
 static od_frontend_status_t process_server_async(od_client_t *client,
-						 od_server_t *server)
+						 od_server_t *server,
+						 uint64_t *last_deferred_reply)
 {
 	/*
 	 * https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-ASYNC
@@ -3089,6 +3104,15 @@ static od_frontend_status_t process_server_async(od_client_t *client,
 		if (status != OD_OK) {
 			return status;
 		}
+	}
+
+	/* A buffered Query can forward notifications while reading its reply.
+	 * A locally answered Query gets no ReadyForQuery from the backend, so
+	 * probe again on the next turn even if more queries are buffered. */
+	if (server->sync_reply != *last_deferred_reply &&
+	    od_io_connected(&server->io) && client_has_buffered_query(client)) {
+		*last_deferred_reply = server->sync_reply;
+		return OD_OK;
 	}
 
 	int rc = od_io_try_read_some(&server->io);
@@ -3121,6 +3145,7 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 	}
 
 	od_instance_t *instance = client->global->instance;
+	uint64_t last_deferred_reply = 0;
 
 	while (1) {
 		od_frontend_status_t status =
@@ -3147,7 +3172,8 @@ static od_frontend_status_t od_frontend_remote(od_client_t *client)
 		od_server_t *server = client->server;
 		if (server != NULL) {
 			/* try to handle possible server's event */
-			status = process_server_async(client, server);
+			status = process_server_async(client, server,
+						      &last_deferred_reply);
 			if (status != OD_OK) {
 				return status;
 			}
