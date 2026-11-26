@@ -1450,9 +1450,12 @@ void od_logger_write(od_logger_t *logger, od_logger_level_t level,
 	}
 	va_end(args);
 
+	if (od_unlikely(len < 0)) {
+		len = 0;
+	}
+
 	if (async_slot) {
 		async_slot->len = (size_t)len;
-		async_slot->text[len] = '\0';
 		async_slot->level = level;
 
 		size_t sz =
