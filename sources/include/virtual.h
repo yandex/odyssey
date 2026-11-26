@@ -40,7 +40,7 @@ typedef struct {
 	machine_msg_t *error;
 	machine_msg_t *empty;
 
-	/* replacement Query for OD_REPLACED; owned by the portal */
+	/* replacement Query owned by the portal */
 	machine_msg_t *query;
 
 	/*

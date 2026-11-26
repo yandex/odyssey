@@ -56,10 +56,8 @@
  * The builders keep the regular od_frontend_status_t contracts:
  *
  *   OD_OK       - not virtual, forward the query to the backend
- *   OD_SKIP     - the portal is composed in portal, has to be written
+ *   OD_SKIP     - write the portal's reply or replacement query
  *   OD_ATTACH   - attach first, then retry
- *   OD_REPLACED - the replacement query is composed in portal,
- *                 has to be written to the backend
  */
 void virtual_portal_init(od_virtual_portal_t *portal)
 {
@@ -253,7 +251,7 @@ static od_frontend_status_t process_set_appname(od_client_t *client,
 	}
 
 	portal->query = msg;
-	return OD_REPLACED;
+	return OD_SKIP;
 
 error:
 	/* can't handle, let pg do plain version of the query */
@@ -723,7 +721,7 @@ static od_frontend_status_t process_vexec(od_client_t *client,
 	}
 
 	portal->query = msg;
-	return OD_REPLACED;
+	return OD_SKIP;
 }
 
 static od_frontend_status_t process_vdeallocate(od_client_t *client,
@@ -798,8 +796,8 @@ static od_frontend_status_t process_vbegin(od_client_t *client,
 }
 
 /*
- * Write the portal's replacement query to the backend, or compose
- * its wire answer and write it to the client.
+ * Return OD_OK after sending a replacement query so the caller reads the
+ * backend response. Return OD_SKIP after replying directly to the client.
  */
 od_frontend_status_t virtual_portal_write(od_client_t *client,
 					  od_virtual_portal_t *portal,
@@ -826,7 +824,7 @@ od_frontend_status_t virtual_portal_write(od_client_t *client,
 			return OD_ESERVER_WRITE;
 		}
 		od_server_sync_request(server, 1);
-		return OD_REPLACED;
+		return OD_OK;
 	}
 
 	uint8_t txstatus = 'I';

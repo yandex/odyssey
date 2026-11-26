@@ -1870,13 +1870,13 @@ od_frontend_status_t run_query_no_plan(machine_msg_t *msg,
 				       od_frontend_status_t status,
 				       uint32_t timeout_ms)
 {
-	if (status == OD_SKIP || status == OD_REPLACED) {
-		status = virtual_portal_write(client, portal, timeout_ms);
-	}
 	if (status == OD_SKIP) {
-		return OD_OK;
+		status = virtual_portal_write(client, portal, timeout_ms);
+		if (status == OD_SKIP) {
+			return OD_OK;
+		}
 	}
-	if (status != OD_OK && status != OD_REPLACED) {
+	if (status != OD_OK) {
 		return status;
 	}
 	if (server == NULL) {
