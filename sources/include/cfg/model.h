@@ -238,8 +238,10 @@ typedef struct od_cfg_shared_pool {
 } od_cfg_shared_pool_t;
 
 typedef struct od_cfg_soft_oom_drop {
-	od_cfg_string_field_t signal;
-	od_cfg_int_field_t max_rate;
+	od_cfg_string_field_t process_signal;
+	od_cfg_int_field_t process_max_rate;
+	od_cfg_int_field_t client_percent;
+	od_cfg_int_field_t client_max_count;
 } od_cfg_soft_oom_drop_t;
 
 typedef struct od_cfg_soft_oom {

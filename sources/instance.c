@@ -633,6 +633,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	return rc;
 
 error:
+	if (global != NULL && global->soft_oom.machine_id != -1) {
+		od_soft_oom_stop_checker(&global->soft_oom);
+	}
 	if (cron_initialized) {
 		od_cron_free(&cron);
 	}

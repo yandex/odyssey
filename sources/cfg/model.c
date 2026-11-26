@@ -471,8 +471,10 @@ void od_cfg_model_free(od_cfg_model_t *model)
 	od_cfg_u64_field_free(&model->soft_oom.limit);
 	od_cfg_string_field_free(&model->soft_oom.process);
 	od_cfg_u64_field_free(&model->soft_oom.check_interval_ms);
-	od_cfg_string_field_free(&model->soft_oom.drop.signal);
-	od_cfg_int_field_free(&model->soft_oom.drop.max_rate);
+	od_cfg_string_field_free(&model->soft_oom.drop.process_signal);
+	od_cfg_int_field_free(&model->soft_oom.drop.process_max_rate);
+	od_cfg_int_field_free(&model->soft_oom.drop.client_percent);
+	od_cfg_int_field_free(&model->soft_oom.drop.client_max_count);
 
 	od_cfg_query_parsing_mode_free(&model->query_parsing.mode);
 	od_cfg_u64_field_free(&model->query_parsing.mem_limit);
@@ -1198,7 +1200,10 @@ static int od_cfg_validate_soft_oom(od_cfg_model_t *model,
 
 	int any = so->process.seen.is_set ||
 		  so->check_interval_ms.seen.is_set ||
-		  so->drop.signal.seen.is_set || so->drop.max_rate.seen.is_set;
+		  so->drop.process_signal.seen.is_set ||
+		  so->drop.process_max_rate.seen.is_set ||
+		  so->drop.client_percent.seen.is_set ||
+		  so->drop.client_max_count.seen.is_set;
 
 	if (!so->limit.seen.is_set) {
 		if (any) {
@@ -1208,9 +1213,13 @@ static int od_cfg_validate_soft_oom(od_cfg_model_t *model,
 					so->process.seen.location :
 				so->check_interval_ms.seen.is_set ?
 					so->check_interval_ms.seen.location :
-				so->drop.signal.seen.is_set ?
-					so->drop.signal.seen.location :
-					so->drop.max_rate.seen.location,
+				so->drop.process_signal.seen.is_set ?
+					so->drop.process_signal.seen.location :
+				so->drop.process_max_rate.seen.is_set ?
+					so->drop.process_max_rate.seen.location :
+				so->drop.client_percent.seen.is_set ?
+					so->drop.client_percent.seen.location :
+					so->drop.client_max_count.seen.location,
 				"soft_oom_limit is not set for soft_oom");
 			return -1;
 		}

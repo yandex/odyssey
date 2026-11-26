@@ -20,6 +20,9 @@
 #include <od_memory.h>
 #include <util.h>
 #include <injection.h>
+#include <router.h>
+#include <global.h>
+#include <instance.h>
 
 #define SOFT_OOM_LOG_CONTEXT "soft-oom"
 #define PROC_DIR_PATH "/proc"
@@ -358,7 +361,7 @@ static inline void od_soft_oom_signal_postgres(od_soft_oom_checker_t *checker)
 	od_config_soft_oom_t *config = checker->config;
 	od_config_soft_oom_drop_t *drop = &checker->config->drop;
 
-	if (!drop->enabled) {
+	if (!drop->process_enabled) {
 		return;
 	}
 
@@ -370,7 +373,8 @@ static inline void od_soft_oom_signal_postgres(od_soft_oom_checker_t *checker)
 	od_glog(NULL, NULL,
 		"used memory (%" PRIu64 ") >= limit (%" PRIu64
 		"), need to signal %d to top %d pss consumers",
-		used_bytes, config->limit_bytes, drop->signal, drop->max_rate);
+		used_bytes, config->limit_bytes, drop->process_signal,
+		drop->process_max_rate);
 
 	list_procs_arg_t arg;
 	list_procs_arg_init(&arg);
@@ -386,18 +390,95 @@ static inline void od_soft_oom_signal_postgres(od_soft_oom_checker_t *checker)
 	qsort(arg.infos, arg.count, sizeof(proc_pss_info_t),
 	      proc_pss_info_desc_cmp);
 
-	for (size_t i = 0; i < arg.count && i < (size_t)drop->max_rate; ++i) {
+	for (size_t i = 0; i < arg.count && i < (size_t)drop->process_max_rate;
+	     ++i) {
 		proc_pss_info_t *info = &arg.infos[i];
 
 		od_glog(NULL, NULL, "sending %d signal to %d (%s)...",
-			drop->signal, info->pid, info->comm);
-		if (kill(info->pid, drop->signal) == -1) {
+			drop->process_signal, info->pid, info->comm);
+		if (kill(info->pid, drop->process_signal) == -1) {
 			od_gerror(NULL, NULL, "can't send signal to %d: %s",
 				  info->pid, strerror(errno));
 		}
 	}
 
 	list_procs_arg_destroy(&arg);
+}
+
+static inline int od_soft_oom_probabilistic_kill_client_cb(od_client_t *client,
+							   void **argv)
+{
+	if (atomic_load(&client->killed) != 0) {
+		return 0;
+	}
+
+	od_config_soft_oom_drop_t *drop = argv[0];
+	int *killed_count = argv[1];
+
+	if (*killed_count >= drop->client_max_count) {
+		return 0;
+	}
+
+	int rand_value = (int)(machine_lrand48() % 100) + 1;
+	if (rand_value > drop->client_percent) {
+		return 0;
+	}
+
+	/* temp message */
+	od_gdebug(client, NULL,
+		  "mark client for disconnection due to soft OOM");
+
+	od_client_kill(client);
+	(*killed_count)++;
+
+	return 0;
+}
+
+static inline int od_soft_oom_client_drop_cb(od_route_t *route, void **argv)
+{
+	if (route->rule->storage->storage_type == OD_RULE_STORAGE_LOCAL) {
+		return 0;
+	}
+
+	od_route_lock(route);
+
+	od_client_pool_foreach(&route->client_pool, OD_CLIENT_ACTIVE,
+			       od_soft_oom_probabilistic_kill_client_cb, argv);
+	od_client_pool_foreach(&route->client_pool, OD_CLIENT_PENDING,
+			       od_soft_oom_probabilistic_kill_client_cb, argv);
+	od_client_pool_foreach(&route->client_pool, OD_CLIENT_QUEUE,
+			       od_soft_oom_probabilistic_kill_client_cb, argv);
+
+	od_route_unlock(route);
+
+	return 0;
+}
+
+static inline void od_soft_oom_client_drop(od_soft_oom_checker_t *checker)
+{
+	od_config_soft_oom_t *config = checker->config;
+	od_config_soft_oom_drop_t *drop = &config->drop;
+
+	if (drop->client_percent == 0 || drop->client_max_count == 0) {
+		return;
+	}
+
+	uint64_t used_bytes = 0;
+	if (!od_soft_oom_is_in_soft_oom(checker, &used_bytes)) {
+		return;
+	}
+
+	od_glog(NULL, NULL,
+		"used memory (%" PRIu64 ") >= limit (%" PRIu64
+		"), need to drop %d%% clients (but no more %d clients)",
+		used_bytes, config->limit_bytes, drop->client_percent,
+		drop->client_max_count);
+
+	od_router_t *router = od_global_get()->router;
+
+	int killed_count = 0;
+	void *argv[] = { drop, &killed_count };
+	od_router_foreach(router, od_soft_oom_client_drop_cb, argv);
 }
 
 static inline void od_soft_oom_checker(void *arg)
@@ -431,6 +512,7 @@ static inline void od_soft_oom_checker(void *arg)
 		atomic_store(&checker->current_memory_usage, used_mem);
 
 		od_soft_oom_signal_postgres(checker);
+		od_soft_oom_client_drop(checker);
 	}
 }
 
