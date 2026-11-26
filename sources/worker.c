@@ -154,24 +154,10 @@ static inline void od_worker(void *arg)
 			client->global = worker->global;
 
 			/*
-			 * Allocate readahead buffer from this worker's
-			 * thread-local vrb cache. od_io_prepare() was not
-			 * called in od_system (only io->io was assigned),
-			 * so the buffer is obtained here, in the worker
-			 * thread that owns it.
+			 * the readahead is not enabled here: the buf
+			 * layer must be attached after the tls setup,
+			 * it happens in the frontend
 			 */
-			rc = od_readahead_prepare(&client->io.readahead);
-			if (rc == -1) {
-				od_error(
-					&instance->logger, client, NULL,
-					"failed to allocate readahead buffer, errno = %d (%s)",
-					machine_errno(),
-					strerror(machine_errno()));
-				od_io_close(&client->io);
-				od_client_free(client);
-				od_routing_slot_release(worker->global);
-				break;
-			}
 
 			/* for NULL-terminator and prefix, just in case */
 			char coro_name[10 + OD_ID_LEN];

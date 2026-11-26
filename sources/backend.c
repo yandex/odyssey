@@ -814,6 +814,21 @@ int od_backend_connect_to(od_server_t *server, const od_address_t *address,
 		}
 	}
 
+	rc = od_readahead_enable(&server->io,
+				 0 /* no writebuf for server connection */,
+				 instance->config.readahead);
+	if (rc == -1) {
+		od_error(&instance->logger, NULL, server,
+			 "failed to enable server readahead, errno = %d (%s)",
+			 machine_errno(), strerror(machine_errno()));
+		/*
+		 * the io is left for the caller: od_io_prepare() has
+		 * already published it as server->io.io, the caller
+		 * closes it via od_io_close()
+		 */
+		return -1;
+	}
+
 	uint64_t time_connect = 0;
 	if (log_session) {
 		time_connect = machine_time_us() - time_connect_start;

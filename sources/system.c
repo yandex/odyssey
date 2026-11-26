@@ -421,10 +421,9 @@ static inline void od_system_server(void *arg)
 		}
 		od_id_generate(&client->id, "c");
 		/*
-		 * Only assign the io handle here; defer readahead buffer
-		 * allocation to the worker thread so it comes from the
-		 * worker's thread-local vrb cache (avoids cross-thread
-		 * cache ownership).
+		 * Only assign the io handle here; the readahead is
+		 * enabled later in the frontend, after the tls setup
+		 * (the buf layer must stay on top of the stack)
 		 */
 		client->io.io = client_io;
 		client->rule = NULL;

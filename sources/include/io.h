@@ -37,14 +37,14 @@ static inline char *od_io_error(od_io_t *io)
 	return mm_io_error(io->io);
 }
 
+/*
+ * Must be called after the tls/compression
+ */
+int od_readahead_enable(od_io_t *io, int write_size, int readahead);
+
 static inline int od_io_prepare(od_io_t *io, mm_io_t *io_obj)
 {
-	int rc;
-	rc = od_readahead_prepare(&io->readahead);
-	if (rc == -1) {
-		return -1;
-	}
-
+	io->readahead.io = io_obj;
 	io->io = io_obj;
 
 	return 0;
@@ -57,6 +57,7 @@ static inline int od_io_close(od_io_t *io)
 	}
 	mm_io_t *io_obj = io->io;
 	io->io = NULL;
+	io->readahead.io = NULL;
 	int rc = mm_io_close(io_obj);
 	mm_io_free(io_obj);
 	return rc;
@@ -90,50 +91,53 @@ static inline void od_io_remove_peer(od_io_t *io, od_io_t *peer)
 static inline int od_io_read(od_io_t *io, char *dest, int size,
 			     uint32_t time_ms)
 {
-	int pos = 0;
-	int rc;
-	for (;;) {
-		int nread = (int)od_readahead_read(&io->readahead, dest + pos,
-						   (size_t)size);
-		size -= nread;
-		pos += nread;
-
-		if (size == 0) {
-			break;
-		}
-
-		for (;;) {
-			struct iovec vec =
-				od_readahead_write_begin(&io->readahead);
-
-			rc = machine_read_raw(io->io, vec.iov_base,
-					      vec.iov_len);
-			if (rc <= 0) {
-				/* retry using read condition wait */
-				int errno_ = machine_errno();
-				if (machine_errno_retryable(errno_)) {
-					rc = mm_io_wait((mm_io_t *)io->io,
-							time_ms);
-					if (rc == MM_COND_WAIT_FAIL) {
-						/* io wait will set errno to ETIMEDOUT or ECANCELLED */
-						return -1;
-					}
-					if (rc == MM_COND_WAIT_OK_PROPAGATED) {
-						mm_errno_set(EAGAIN);
-						return -1;
-					}
-					continue;
-				}
-				/* error or unexpected eof */
-				return -1;
-			}
-
-			od_readahead_write_commit(&io->readahead, (size_t)rc);
-			break;
-		}
+	if (size <= 0) {
+		return 0;
 	}
 
-	return 0;
+	int pos = 0;
+	for (;;) {
+		int nread = (int)machine_read_raw(io->io, dest + pos,
+						  (size_t)(size - pos));
+		if (nread > 0) {
+			pos += nread;
+			if (pos == size) {
+				return 0;
+			}
+			continue;
+		}
+
+		/* retry using read condition wait */
+		int errno_ = machine_errno();
+		if (machine_errno_retryable(errno_)) {
+			/*
+			 * the deadline is per wait, like the previous
+			 * readahead-based loop did: a partially read
+			 * message gets a full timeout to continue, a
+			 * timeout edge must not desync the message
+			 * framing
+			 */
+			mm_io_set_deadline(io->io, time_ms);
+			int rc = mm_io_wait_deadline(io->io);
+			if (rc == MM_COND_WAIT_FAIL) {
+				/* io wait will set errno to ETIMEDOUT or ECANCELLED */
+				return -1;
+			}
+			if (rc == MM_COND_WAIT_OK_PROPAGATED) {
+				mm_errno_set(EAGAIN);
+				return -1;
+			}
+			continue;
+		}
+		/* error or unexpected eof */
+		return -1;
+	}
+}
+
+static inline int od_io_has_instant_data(od_io_t *io)
+{
+	char probe[64];
+	return machine_read_raw(io->io, probe, sizeof(probe)) > 0;
 }
 
 static inline machine_msg_t *od_read_startup(od_io_t *io, uint32_t time_ms)

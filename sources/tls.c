@@ -154,6 +154,19 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 	if (msg == NULL) {
 		return -1;
 	}
+
+	/*
+	 * check for the data pipelined together with the ssl request
+	 * before replying: a legitimate client sends nothing until
+	 * the reply arrives, so anything read here arrived with the
+	 * request (CVE-2021-23214-like protection)
+	 */
+	if (od_io_has_instant_data(&client->io)) {
+		od_error(logger, client, NULL, "extraneous data from client");
+		machine_msg_free(msg);
+		return -1;
+	}
+
 	uint8_t *type = machine_msg_data(msg);
 	*type = 'S';
 	rc = od_write(&client->io, msg);
@@ -161,11 +174,6 @@ int od_tls_frontend_accept(od_client_t *client, od_logger_t *logger,
 		od_error(logger, client, NULL, "write error: %s",
 			 od_io_error(&client->io));
 		return -1;
-	}
-
-	if (od_readahead_unread(&client->io.readahead) > 0) {
-		od_error(logger, client, NULL, "extraneous data from client");
-		return -1; /* prevent possible buffer, protecting against CVE-2021-23214-like attacks */
 	}
 
 	od_wait_event_start(OD_WAIT_CONNECT_CLIENT_TLS);
@@ -262,10 +270,15 @@ int od_tls_backend_connect(od_server_t *server, od_logger_t *logger,
 	case 'S':
 		/* supported */
 		od_debug(logger, NULL, server, "supported");
-		if (od_readahead_unread(&server->io.readahead) > 0) {
+		/*
+		 * the server sends nothing until the handshake is
+		 * started, so anything read here arrived pipelined
+		 * with the reply (CVE-2021-23222-like protection)
+		 */
+		if (od_io_has_instant_data(&server->io)) {
 			od_error(logger, NULL, server,
 				 "extraneous data from server");
-			return -1; /* prevent possible buffer, protecting against CVE-2021-23222-like attacks */
+			return -1;
 		}
 
 		rc = mm_io_set_tls(server->io.io, server->tls, UINT32_MAX);

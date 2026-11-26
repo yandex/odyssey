@@ -6,54 +6,42 @@
  * Scalable PostgreSQL connection pooler.
  */
 
-#include <machinarium/ds/vrb.h>
+#include <machinarium/io.h>
 
 typedef struct od_readahead od_readahead_t;
 
 struct od_readahead {
-	mm_virtual_rbuf_t *buf;
+	mm_io_t *io;
+	size_t size;
 };
 
 static inline void od_readahead_init(od_readahead_t *readahead)
 {
-	readahead->buf = NULL;
+	readahead->io = NULL;
+	readahead->size = 0;
 }
 
 void od_readahead_free(od_readahead_t *readahead);
 
-int od_readahead_prepare(od_readahead_t *readahead);
-
 static inline int od_readahead_unread(od_readahead_t *readahead)
 {
-	return mm_virtual_rbuf_size(readahead->buf);
+	return (int)mm_io_buf_peek(readahead->io).iov_len;
 }
 
 static inline struct iovec od_readahead_read_begin(od_readahead_t *readahead)
 {
-	return mm_virtual_rbuf_read_begin(readahead->buf);
+	return mm_io_buf_peek(readahead->io);
 }
 
 static inline void od_readahead_read_commit(od_readahead_t *readahead,
 					    size_t count)
 {
-	mm_virtual_rbuf_read_commit(readahead->buf, count);
+	mm_io_buf_peek_commit(readahead->io, count);
 }
 
-static inline size_t od_readahead_read(od_readahead_t *readahead, char *dest,
-				       size_t max)
+static inline ssize_t od_readahead_fill(od_readahead_t *readahead)
 {
-	return mm_virtual_rbuf_read(readahead->buf, dest, max);
-}
-
-static inline struct iovec od_readahead_write_begin(od_readahead_t *readahead)
-{
-	return mm_virtual_rbuf_write_begin(readahead->buf);
-}
-
-static inline void od_readahead_write_commit(od_readahead_t *readahead,
-					     size_t count)
-{
-	mm_virtual_rbuf_write_commit(readahead->buf, count);
+	return mm_io_buf_try_refill(readahead->io);
 }
 
 void od_readahead_describe(od_readahead_t *readahead, char *buf,

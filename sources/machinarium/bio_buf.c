@@ -296,7 +296,17 @@ static ssize_t mm_bio_buf_read(mm_bio_t *bio, void *buf, size_t size)
 			}
 			r->head = 0;
 			r->tail = (size_t)rc;
-			continue;
+			/*
+			 * a short refill means the transport has no
+			 * more data readily available: serve the
+			 * request and return instead of probing the
+			 * transport again
+			 */
+			size_t n = (size_t)rc < left ? (size_t)rc : left;
+			memcpy(s + consumed, base, n);
+			r->head += n;
+			consumed += n;
+			return (ssize_t)consumed;
 		}
 
 		/*
@@ -304,7 +314,7 @@ static ssize_t mm_bio_buf_read(mm_bio_t *bio, void *buf, size_t size)
 		 * a full buffer: read the block-aligned bulk directly
 		 * into the user buffer to avoid an extra copy (glibc
 		 * _IO_file_xsgetn), the unaligned tail is captured by
-		 * the refill on the next iteration
+		 * the caller's next read
 		 */
 		size_t bulk = left - (left % r->cap);
 		ssize_t rc = mm_bio_read(bio->next, s + consumed, bulk);
@@ -312,7 +322,13 @@ static ssize_t mm_bio_buf_read(mm_bio_t *bio, void *buf, size_t size)
 			/* stalled (eagain), eof or error */
 			return consumed > 0 ? (ssize_t)consumed : rc;
 		}
+		/*
+		 * a short read means the transport has no more data
+		 * readily available: return what we got instead of
+		 * probing the transport again
+		 */
 		consumed += (size_t)rc;
+		return (ssize_t)consumed;
 	}
 
 	return (ssize_t)consumed;
@@ -513,6 +529,20 @@ ssize_t mm_io_buf_try_refill(mm_io_t *io)
 	}
 	/* stall or error */
 	return -1;
+}
+
+/*
+ * Read pending of the stack below the buf layer: the bytes the
+ * transport already holds (the kernel socket buffer, the pending
+ * TLS records), as opposed to the bytes buffered in the read area.
+ */
+int mm_io_buf_below_pending(mm_io_t *io)
+{
+	mm_bio_t *slot = &io->bio_slots[MM_BIO_BUF];
+	if (slot->methods == NULL) {
+		return mm_bio_read_pending(io->bio);
+	}
+	return mm_bio_read_pending(slot->next);
 }
 
 int mm_bio_buf_attach(mm_io_t *io, size_t write_size, size_t read_size)

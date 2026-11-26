@@ -79,6 +79,22 @@ static ssize_t refill_wait(mm_io_t *io)
 	}
 }
 
+static void send_ack(mm_io_t *io, char ack)
+{
+	machine_msg_t *msg = machine_msg_create(0);
+	test(msg != NULL);
+	test(machine_msg_write(msg, &ack, 1) == 0);
+	test(machine_write(io, msg, UINT32_MAX) == 0);
+}
+
+static void recv_ack(mm_io_t *io)
+{
+	machine_msg_t *ack = machine_read(io, 1, UINT32_MAX);
+	test(ack != NULL);
+	test(machine_msg_size(ack) == 1);
+	machine_msg_free(ack);
+}
+
 static void server(void *arg)
 {
 	(void)arg;
@@ -320,14 +336,70 @@ static void server(void *arg)
 	vec = mm_io_buf_peek(client);
 	test(vec.iov_len == 0);
 
-	/* ack so that the client can drain and close cleanly */
-	msg = machine_msg_create(0);
-	test(msg != NULL);
-	char ack = 'A';
-	rc = machine_msg_write(msg, &ack, 1);
-	test(rc == 0);
-	rc = machine_write(client, msg, UINT32_MAX);
-	test(rc == 0);
+	/* ack so that the client can proceed to the next sections */
+	send_ack(client, 'A');
+
+	/*
+	 * refill on a drained area restarts from the base even when
+	 * its positions sit at the end
+	 */
+	n = refill_wait(client);
+	test(n == 32);
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 32);
+	check_vec(vec, 0, 7);
+	mm_io_buf_peek_commit(client, 32);
+
+	send_ack(client, 'C');
+
+	n = refill_wait(client);
+	test(n == 32);
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 32);
+	check_vec(vec, 32, 7);
+	mm_io_buf_peek_commit(client, 32);
+
+	/*
+	 * refill into a full area reports ENOBUFS; the space freed
+	 * by peek_commit makes the next refill read the rest of the
+	 * chunk
+	 */
+	send_ack(client, 'D');
+
+	n = refill_wait(client);
+	test(n == 64);
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 64);
+	check_vec(vec, 0, 8);
+
+	n = mm_io_buf_try_refill(client);
+	test(n == -1);
+	test(machine_errno() == ENOBUFS);
+
+	mm_io_buf_peek_commit(client, 64);
+	n = refill_wait(client);
+	test(n == 64);
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 64);
+	check_vec(vec, 64, 8);
+	mm_io_buf_peek_commit(client, 64);
+
+	got = 0;
+	while (got < 172) {
+		n = refill_wait(client);
+		test(n > 0);
+		vec = mm_io_buf_peek(client);
+		test(vec.iov_len == (size_t)n);
+		check_vec(vec, 128 + got, 8);
+		mm_io_buf_peek_commit(client, vec.iov_len);
+		got += vec.iov_len;
+	}
+	test(got == 172);
+	vec = mm_io_buf_peek(client);
+	test(vec.iov_len == 0);
+
+	/* final ack: the client closes, the refill reports eof */
+	send_ack(client, 'A');
 
 	/*
 	 * eof: the peer closes, the refill reports it by returning 0
@@ -427,11 +499,7 @@ static void client(void *arg)
 	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
 	test(rc == (ssize_t)sizeof(buf));
 
-	machine_msg_t *ack;
-	ack = machine_read(client, 1, UINT32_MAX);
-	test(ack != NULL);
-	test(machine_msg_size(ack) == 1);
-	machine_msg_free(ack);
+	recv_ack(client);
 
 	machine_sleep(300);
 	char extra[400];
@@ -440,14 +508,31 @@ static void client(void *arg)
 	test(rc == (ssize_t)sizeof(extra));
 
 	/*
-	 * wait for the server ack, then close: the server checks its
-	 * eof handling on the refill after the peer is gone
+	 * the server acks each phase before the next is sent, so its
+	 * walk through the peeked view is deterministic; the final
+	 * ack releases the close, the server checks its eof handling
+	 * on the refill after the peer is gone
 	 */
-	machine_msg_t *msg;
-	msg = machine_read(client, 1, UINT32_MAX);
-	test(msg != NULL);
-	test(machine_msg_size(msg) == 1);
-	machine_msg_free(msg);
+	recv_ack(client);
+
+	char chunk[32];
+	fill_at(chunk, sizeof(chunk), 0, 7);
+	rc = machine_write_raw(client, chunk, sizeof(chunk), NULL);
+	test(rc == (ssize_t)sizeof(chunk));
+
+	recv_ack(client);
+
+	fill_at(chunk, sizeof(chunk), 32, 7);
+	rc = machine_write_raw(client, chunk, sizeof(chunk), NULL);
+	test(rc == (ssize_t)sizeof(chunk));
+
+	recv_ack(client);
+
+	fill(buf, sizeof(buf), 8);
+	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
+	test(rc == (ssize_t)sizeof(buf));
+
+	recv_ack(client);
 
 	rc = mm_io_close(client);
 	test(rc == 0);

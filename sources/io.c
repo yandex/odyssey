@@ -181,18 +181,22 @@ int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 	return 0;
 }
 
+/*
+ * Block until at least one more byte arrives into the readahead,
+ * including over the unread tail.  When the readahead is full the
+ * refill reports ENOBUFS and the call returns immediately with it -
+ * the caller must drain the buffered bytes first.  Must be called
+ * only after od_readahead_enable() on this io.
+ */
 int od_io_read_some(od_io_t *io, uint32_t timeout_ms)
 {
+	od_readahead_t *readahead = &io->readahead;
+	od_assert(readahead->size > 0);
+
 	mm_io_set_deadline(io->io, timeout_ms);
 	while (1) {
-		struct iovec vec = od_readahead_write_begin(&io->readahead);
-		if (vec.iov_len == 0) {
-			return -1;
-		}
-
-		int rc = machine_read_raw(io->io, vec.iov_base, vec.iov_len);
+		ssize_t rc = od_readahead_fill(readahead);
 		if (rc > 0) {
-			od_readahead_write_commit(&io->readahead, (size_t)rc);
 			return 0;
 		}
 
@@ -213,29 +217,45 @@ int od_io_read_some(od_io_t *io, uint32_t timeout_ms)
 		/* error or unexpected eof */
 		return -1;
 	}
-
-	abort();
 }
 
+/*
+ * A single attempt to have some data available in the readahead
+ * without waiting.  Must be called only after od_readahead_enable()
+ * on this io.
+ */
 int od_io_try_read_some(od_io_t *io)
 {
-	struct iovec vec = od_readahead_write_begin(&io->readahead);
-	if (vec.iov_len == 0) {
-		if (mm_io_read_pending(io->io)) {
-			mm_errno_set(ENOBUFS);
-		} else {
-			mm_errno_set(EWOULDBLOCK);
-		}
-		return -1;
-	}
+	od_readahead_t *readahead = &io->readahead;
+	od_assert(readahead->size > 0);
 
-	int rc = machine_read_raw(io->io, vec.iov_base, vec.iov_len);
+	/*
+	 * the compacting refill is safe here: the duplex step runs on
+	 * the io being written to, while a held peeked view (if any)
+	 * sits on the peer io being read from; the refill reclaims
+	 * the drained front space and captures the pending bytes, the
+	 * same capture the old vrb ring did
+	 */
+	ssize_t rc = od_readahead_fill(readahead);
 	if (rc > 0) {
-		od_readahead_write_commit(&io->readahead, (size_t)rc);
 		return 0;
 	}
 
 	int errno_ = machine_errno();
+	if (errno_ == ENOBUFS) {
+		/*
+		 * the compacting refill reports ENOBUFS only when the
+		 * buffered bytes occupy the whole area: the readahead
+		 * is full (unread == size) and the transport holds
+		 * more data - that is the duplex-deadlock condition;
+		 * otherwise the write path must keep waiting, the
+		 * caller drains the captured data
+		 */
+		if (mm_io_buf_below_pending(io->io) == 0) {
+			mm_errno_set(EWOULDBLOCK);
+		}
+		return -1;
+	}
 	if (machine_errno_retryable(errno_)) {
 		mm_errno_set(EWOULDBLOCK);
 		return -1;
