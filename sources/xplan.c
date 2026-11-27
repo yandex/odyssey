@@ -39,6 +39,8 @@ static inline kiwi_fe_type_t msg_fe_type(machine_msg_t *msg)
 static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 {
 	switch (type) {
+	case OD_XPLAN_QUERY:
+		return "OD_XPLAN_QUERY";
 	case OD_XPLAN_FORWARD:
 		return "OD_XPLAN_FORWARD";
 	case OD_XPLAN_PARSE:
@@ -63,6 +65,7 @@ static const char *plan_entry_type_str(od_xplan_entry_type_t type)
 static machine_msg_t *plan_entry_backend_msg(od_xplan_entry_t *entry)
 {
 	switch (entry->type) {
+	case OD_XPLAN_QUERY:
 	case OD_XPLAN_FORWARD:
 		if (entry->srvmsg != NULL) {
 			return entry->srvmsg;
@@ -175,7 +178,7 @@ static void plan_entry_destroy(void *a)
 {
 	od_xplan_entry_t *entry = a;
 
-	/* entry->clmsg is owned by xbuf, no free */
+	/* entry->clmsg is borrowed from the caller, no free */
 
 	machine_msg_free_safe(entry->srvmsg);
 	machine_msg_free_safe(entry->vresp);
@@ -1408,6 +1411,28 @@ static od_frontend_status_t plan_with_pstmt_support(od_xplan_t *xp,
 	return status;
 }
 
+static od_frontend_status_t od_xplan_make_query(od_xplan_t *xp,
+						od_relay_t *relay)
+{
+	od_assert(mm_vector_empty(&xp->entries));
+	od_relay_xbuf_t *xbuf = &relay->xbuf;
+	size_t count = mm_vector_size(&xbuf->msgs);
+	if (count != 1) {
+		return OD_ECLIENT_PROTOCOL_ERROR;
+	}
+
+	od_xbuf_msg_t *query = mm_vector_get(&xbuf->msgs, 0);
+	if (msg_fe_type(query->msg) != KIWI_FE_QUERY ||
+	    query->is_deferred_begin) {
+		return OD_ECLIENT_PROTOCOL_ERROR;
+	}
+
+	od_xplan_entry_t entry;
+	entry_init_internal(&entry, OD_XPLAN_QUERY, query->msg, NULL, NULL,
+			    OD_XPLAN_DELTA_NONE, NULL, NULL, NULL);
+	return xplan_append(xp, &entry) == 0 ? OD_OK : OD_EOOM;
+}
+
 od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay)
 {
 	od_client_t *client = relay->client;
@@ -1429,6 +1454,12 @@ od_frontend_status_t od_xplan_make_from_xbuf(od_xplan_t *xp, od_relay_t *relay)
 			  msg_fe_type(last->msg) == KIWI_FE_SYNC);
 
 		return xplan_append_fwd_no_delta(xp, last->msg, NULL);
+	}
+
+	od_xbuf_msg_t *last = mm_vector_back(&xbuf->msgs);
+	if (msg_fe_type(last->msg) == KIWI_FE_QUERY &&
+	    !last->is_deferred_begin) {
+		return od_xplan_make_query(xp, relay);
 	}
 
 	od_route_t *route = client->route;
@@ -1999,6 +2030,7 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 
 	/*
 	 * almost most of plan entries leads to exactly one 'response':
+	 * Query	-> DataRow* + ErrorResponse | CommandComplete | ReadyForQuery
 	 * Parse	-> ErrorResponse | ParseComplete
 	 * Bind		-> ErrorResponse | BindComplete
 	 * Close	-> ErrorResponse | CloseComplete (responded virtually)
@@ -2013,6 +2045,29 @@ static od_frontend_status_t run_plan_impl(od_xplan_t *xp, od_relay_t *relay,
 	 */
 
 	od_stat_query_start(&server->stats_state);
+
+	od_xplan_entry_t *first = mm_vector_get(&xp->entries, 0);
+	if (first->type == OD_XPLAN_QUERY) {
+		/* A Query ends at RFQ and does not enter extended protocol mode. */
+		od_assert(mm_vector_size(&xp->entries) == 1);
+		od_server_sync_request(server, 1);
+		uint64_t errors_before = server->error_responses;
+		status = od_stream_server_until_rfq(server, timeout_ms,
+						   OD_WAIT_STREAM_SERVER_READ);
+		if (status == OD_COPY_IN_RECEIVED) {
+			machine_msg_t *add = od_relay_get_copy_additional(relay);
+			od_assert(add == NULL);
+			status = od_stream_copy_to_server(client, server, add,
+						  timeout_ms);
+		}
+
+		if (status == OD_OK &&
+		    server->error_responses == errors_before) {
+			process_discard(client, server);
+			process_unlisten(client, server);
+		}
+		return status;
+	}
 
 	if (!server->xproto_mode) {
 		/* this is first run of xproto buf after last sync */
@@ -2269,7 +2324,9 @@ od_frontend_status_t od_xplan_run(od_xplan_t *xp, od_relay_t *relay,
 	size_t written = prepare_send_iovecs(xp, iovecs);
 
 	if (instance->config.log_debug || rule->log_debug) {
-		log_xbuf(instance, client, &relay->xbuf);
+		if (!mm_vector_empty(&relay->xbuf.msgs)) {
+			log_xbuf(instance, client, &relay->xbuf);
+		}
 		log_plan_debug(instance, xp, client);
 		log_srv_send_buf(instance, client, iovecs, written);
 	}
