@@ -13,6 +13,16 @@
 #include <assert.h>
 #include <stdint.h>
 
+/* Native poll backend. */
+#if defined(__linux__)
+#define MM_HAVE_EPOLL 1
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || \
+	defined(__OpenBSD__) || defined(__DragonFly__)
+#define MM_HAVE_KQUEUE 1
+#else
+#error "machinarium: unsupported platform, no poll backend available"
+#endif
+
 /*
  * Index of the least significant set bit, undefined for zero input.
  */

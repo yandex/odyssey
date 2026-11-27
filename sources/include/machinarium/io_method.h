@@ -9,12 +9,11 @@
 #include <string.h>
 
 #include <machinarium/build.h>
+#include <machinarium/port.h>
 
-/* Native poll backend selected by Machinarium on each platform. */
-#if defined(__linux__)
+#if defined(MM_HAVE_EPOLL)
 #define MM_DEFAULT_IO_METHOD "epoll"
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || \
-	defined(__OpenBSD__) || defined(__DragonFly__)
+#elif defined(MM_HAVE_KQUEUE)
 #define MM_DEFAULT_IO_METHOD "kqueue"
 #endif
 
