@@ -84,14 +84,6 @@ typedef struct {
 	size_t standby_function_names_count;
 } od_config_query_parsing_t;
 
-/* Native poll backend selected by Machinarium on each platform. */
-#if defined(__linux__)
-#define OD_DEFAULT_IO_METHOD "epoll"
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || \
-	defined(__OpenBSD__) || defined(__DragonFly__)
-#define OD_DEFAULT_IO_METHOD "kqueue"
-#endif
-
 struct od_config {
 	int daemonize;
 	int priority;

@@ -8,7 +8,7 @@
 
 #include <regex.h>
 
-#include <machinarium/build.h>
+#include <machinarium/io_method.h>
 #include <machinarium/file.h>
 #include <machinarium/io.h>
 #include <machinarium/memory.h>
@@ -639,17 +639,11 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 
 	if (cfg->io_method.seen.is_set) {
 		const char *method = cfg->io_method.value;
-		bool supported = strcmp(method, OD_DEFAULT_IO_METHOD) == 0;
-		const char *available = OD_DEFAULT_IO_METHOD;
-#ifdef HAVE_IO_URING
-		supported = supported || strcmp(method, "io_uring") == 0;
-		available = OD_DEFAULT_IO_METHOD ", io_uring";
-#endif
-		if (!supported) {
+		if (mm_io_method_parse(method) == NULL) {
 			od_cfg_diag_error(
 				diags, cfg->io_method.seen.location,
 				"invalid io_method '%s' (available: %s)",
-				method, available);
+				method, MM_AVAILABLE_IO_METHODS);
 			return -1;
 		}
 		strcpy(config->io_method, method);

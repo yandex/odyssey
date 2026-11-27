@@ -417,8 +417,9 @@ your server experience a big number of connecting clients.
 *string*
 
 Defaults to `"epoll"` on Linux and `"kqueue"` on supported BSD systems and macOS.
-Linux builds with `BUILD_IO_URING=ON` also accept `"io_uring"`. Odyssey checks
-and stores the value at startup. The transport still uses the platform default.
+Linux builds with `BUILD_IO_URING=ON` also accept `"io_uring"`. Odyssey passes
+the configured method to Machinarium at startup. The transport still uses the
+platform default.
 
 `io_method "io_uring"`
 

@@ -12,6 +12,7 @@
 #include <sys/un.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/io_method.h>
 
 #include <status.h>
 #include <types.h>
@@ -63,7 +64,7 @@ void od_config_init(od_config_t *config)
 	config->log_syslog_ident = NULL;
 	config->log_syslog_facility = NULL;
 
-	strcpy(config->io_method, OD_DEFAULT_IO_METHOD);
+	strcpy(config->io_method, MM_DEFAULT_IO_METHOD);
 	config->readahead = BUFFER_DEFAULT;
 	config->writebuf = BUFFER_DEFAULT;
 	config->nodelay = 1;

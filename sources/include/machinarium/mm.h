@@ -17,6 +17,7 @@ struct mm_config {
 	int stack_size;
 	int system_stack_size;
 	int pool_size;
+	const char *io_method;
 	int coroutine_cache_size;
 	int msg_cache_gc_size;
 	int msg_cache_gc_count;
