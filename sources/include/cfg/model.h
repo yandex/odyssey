@@ -89,6 +89,7 @@ typedef struct od_cfg_global {
 	od_cfg_string_field_t unix_socket_mode;
 	od_cfg_string_field_t locks_dir;
 	od_cfg_string_field_t external_auth_socket_path;
+	od_cfg_string_field_t io_method;
 	od_cfg_string_field_t availability_zone;
 	od_cfg_string_field_t log_file;
 	od_cfg_string_field_t log_format;

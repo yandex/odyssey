@@ -408,6 +408,7 @@ void od_cfg_global_free(od_cfg_global_t *g)
 	od_cfg_string_field_free(&g->unix_socket_mode);
 	od_cfg_string_field_free(&g->locks_dir);
 	od_cfg_string_field_free(&g->external_auth_socket_path);
+	od_cfg_string_field_free(&g->io_method);
 	od_cfg_string_field_free(&g->availability_zone);
 	od_cfg_string_field_free(&g->log_file);
 	od_cfg_string_field_free(&g->log_format);

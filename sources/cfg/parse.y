@@ -208,6 +208,7 @@
 %token CLIENT_MAX_ROUTING "client_max_routing"
 %token ACCEPT_RATE_LIMIT "accept_rate_limit"
 %token SERVER_LOGIN_RETRY "server_login_retry"
+%token IO_METHOD "io_method"
 %token READAHEAD "readahead"
 %token WRITEBUF "writebuf"
 %token KEEPALIVE "keepalive"
@@ -802,6 +803,12 @@ top_item:
 						&$2, 1, 0, INT_MAX,
 						@1,
 						"server_login_retry");
+		}
+	| IO_METHOD string_value
+		{
+			od_cfg_set_string(ctx->diags, &ctx->model->global.io_method,
+					  $2, @1, "io_method");
+			$2 = NULL;
 		}
 	| READAHEAD size_value
 		{
