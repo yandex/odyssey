@@ -18,6 +18,7 @@
 #include <machinarium/mm.h>
 #include <machinarium/memory.h>
 #include <machinarium/io.h>
+#include <machinarium/bio.h>
 #include <machinarium/iov.h>
 #include <machinarium/machine.h>
 #include <machinarium/util.h>
@@ -27,7 +28,68 @@
 #include <unistd.h>
 #endif
 
+/* OpenSSL before 1.1 exposes BIO fields directly. */
 #if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#define BIO_get_data(bio) ((bio)->ptr)
+#define BIO_set_data(bio, data) ((bio)->ptr = (data))
+#define BIO_set_init(bio, value) ((bio)->init = (value))
+#endif
+
+static int mm_tls_bio_read(BIO *bio, char *buf, int size)
+{
+	mm_bio_t *transport = BIO_get_data(bio);
+	BIO_clear_retry_flags(bio);
+	if (size == 0) {
+		return 0;
+	}
+	int rc = mm_bio_read(transport, buf, size);
+	transport->io->tls_read_eof = rc == 0;
+	errno = rc < 0 ? mm_errno_get() : 0;
+	if (rc < 0 && machine_errno_retryable(errno)) {
+		BIO_set_retry_read(bio);
+	}
+	return rc;
+}
+
+static int mm_tls_bio_write(BIO *bio, const char *buf, int size)
+{
+	mm_bio_t *transport = BIO_get_data(bio);
+	BIO_clear_retry_flags(bio);
+	int rc = mm_bio_write(transport, buf, size, NULL);
+	errno = rc < 0 ? mm_errno_get() : 0;
+	if (rc < 0 && machine_errno_retryable(errno)) {
+		BIO_set_retry_write(bio);
+	}
+	return rc;
+}
+
+static long mm_tls_bio_ctrl(BIO *bio, int cmd, long num, void *ptr)
+{
+	(void)num;
+	(void)ptr;
+	switch (cmd) {
+	case BIO_CTRL_FLUSH:
+		/* The socket transport holds no buffered ciphertext. */
+		return 1;
+	case BIO_CTRL_EOF: {
+		mm_bio_t *transport = BIO_get_data(bio);
+		return transport->io->tls_read_eof;
+	}
+	default:
+		return 0;
+	}
+}
+
+#if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
+
+static BIO_METHOD mm_tls_bio_legacy = {
+	.type = BIO_TYPE_NONE,
+	.name = "Machinarium transport",
+	.bread = mm_tls_bio_read,
+	.bwrite = mm_tls_bio_write,
+	.ctrl = mm_tls_bio_ctrl,
+};
+static BIO_METHOD *mm_tls_bio_method = &mm_tls_bio_legacy;
 
 static pthread_mutex_t *mm_tls_locks = NULL;
 
@@ -73,9 +135,13 @@ static void mm_tls_lock_free(void)
 	OPENSSL_free(mm_tls_locks);
 }
 
+#else
+
+static BIO_METHOD *mm_tls_bio_method;
+
 #endif
 
-void mm_tls_engine_init(void)
+int mm_tls_engine_init(void)
 {
 #ifdef MM_MEM_PROF
 	CRYPTO_set_mem_functions(mm_malloc_crypto, mm_realloc_crypto,
@@ -85,7 +151,17 @@ void mm_tls_engine_init(void)
 	SSL_load_error_strings();
 #if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	mm_tls_lock_init();
+#else
+	mm_tls_bio_method =
+		BIO_meth_new(BIO_TYPE_NONE, "Machinarium transport");
+	if (!mm_tls_bio_method ||
+	    !BIO_meth_set_read(mm_tls_bio_method, mm_tls_bio_read) ||
+	    !BIO_meth_set_write(mm_tls_bio_method, mm_tls_bio_write) ||
+	    !BIO_meth_set_ctrl(mm_tls_bio_method, mm_tls_bio_ctrl)) {
+		return -1;
+	}
 #endif
+	return 0;
 }
 
 void mm_tls_engine_free(void)
@@ -93,6 +169,9 @@ void mm_tls_engine_free(void)
 #if !USE_BORINGSSL && (OPENSSL_VERSION_NUMBER < 0x10100000L)
 	mm_tls_lock_free();
 	ERR_remove_state(getpid());
+#else
+	BIO_meth_free(mm_tls_bio_method);
+	mm_tls_bio_method = NULL;
 #endif
 	/*
 	SSL_COMP_free_compression_methods();
@@ -510,17 +589,16 @@ static int mm_tls_prepare(mm_io_t *io, int is_client)
 		}
 	}
 
-	/* set socket */
-	rc = SSL_set_rfd(ssl, io->fd);
-	if (rc == -1) {
-		mm_tls_error(io, 0, "SSL_set_rfd()");
+	/* SSL owns one shared BIO. It borrows the layer immediately below TLS;
+	 * the Machinarium IO retains ownership of the socket. */
+	BIO *bio = BIO_new(mm_tls_bio_method);
+	if (bio == NULL) {
+		mm_errno_set(ENOMEM);
 		goto error;
 	}
-	rc = SSL_set_wfd(ssl, io->fd);
-	if (rc == -1) {
-		mm_tls_error(io, 0, "SSL_set_wfd()");
-		goto error;
-	}
+	BIO_set_data(bio, io->bio_slots[MM_BIO_TLS].next);
+	BIO_set_init(bio, 1);
+	SSL_set_bio(ssl, bio, bio);
 
 	io->tls_ssl = ssl;
 	return 0;

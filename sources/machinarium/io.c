@@ -232,11 +232,7 @@ int mm_io_set_tls(mm_io_t *io, machine_tls_t *tls, uint32_t timeout)
 		return -1;
 	}
 	if (io->bio == &io->bio_slots[MM_BIO_ZPQ]) {
-		/*
-		 * after the handshake SSL_write/SSL_read bypass the
-		 * stack below the TLS layer, the compression would
-		 * be silently skipped
-		 */
+		/* Compression must process plaintext above TLS. */
 		mm_errno_set(EINPROGRESS);
 		return -1;
 	}

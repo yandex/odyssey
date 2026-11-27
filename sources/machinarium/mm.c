@@ -91,8 +91,11 @@ MACHINE_API int machinarium_init(void)
 	machinarium.config.msg_cache_gc_count = machinarium_msg_cache_gc_count;
 	machinarium.config.dns_ttl_ms = machinarium_dns_ttl_ms;
 
+	if (mm_tls_engine_init() == -1) {
+		mm_tls_engine_free();
+		return -1;
+	}
 	mm_machinemgr_init(&machinarium.machine_mgr);
-	mm_tls_engine_init();
 	mm_taskmgr_init(&machinarium.task_mgr);
 	mm_taskmgr_start(&machinarium.task_mgr, machinarium.config.pool_size,
 			 machinarium.config.dns_ttl_ms);

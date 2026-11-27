@@ -15,7 +15,7 @@
 
 #include <machinarium/io.h>
 
-void mm_tls_engine_init(void);
+int mm_tls_engine_init(void);
 void mm_tls_engine_free(void);
 
 int mm_tls_is_active(mm_io_t *io);
