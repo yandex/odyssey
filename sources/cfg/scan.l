@@ -122,38 +122,11 @@ REAL         [-+]?({DIGIT}+[.]{DIGIT}*|[.]{DIGIT}+)([Ee][-+]?{DIGIT}+)?
 "}"             return '}';
 
 {NUMBER_SIGNED}{SIZE_SUFFIX} {
-					errno = 0;
-					char *suffix = NULL;
-					/* decimal or 0x-hexadecimal; no octal */
-					int base = 10;
-					{
-						const char *d = yytext;
-						if (*d == '+' || *d == '-') {
-							d++;
-						}
-						if (d[0] == '0' &&
-						    (d[1] == 'x' ||
-						     d[1] == 'X')) {
-							base = 16;
-						}
-					}
-					int64_t v = strtoll(yytext, &suffix, base);
-					if (errno == ERANGE) {
-						od_cfg_diag_error(yyextra->diags, *yylloc,
-										  "number is out of range");
+					const char *error = od_cfg_parse_size(yytext, &yylval->num);
+					if (error != NULL) {
+						od_cfg_diag_error(yyextra->diags, *yylloc, "%s", error);
 						return ERROR_TOKEN;
 					}
-
-					int64_t mult = 1;
-					switch (*suffix) {
-					case 'k': case 'K': mult = 1024LL; break;
-					case 'm': case 'M': mult = 1024LL * 1024; break;
-					case 'g': case 'G': mult = 1024LL * 1024 * 1024; break;
-					case 'b': case 'B': mult = 1; break;
-					default: break;
-					}
-
-					yylval->num = v * mult;
 					return SIZE_NUMBER;
 				}
 
@@ -200,21 +173,7 @@ REAL         [-+]?({DIGIT}+[.]{DIGIT}*|[.]{DIGIT}+)([Ee][-+]?{DIGIT}+)?
 				}
 
 {NUMBER_SIGNED}  {
-					errno = 0;
-					/* decimal or 0x-hexadecimal; no octal */
-					int base = 10;
-					{
-						const char *d = yytext;
-						if (*d == '+' || *d == '-') {
-							d++;
-						}
-						if (d[0] == '0' &&
-						    (d[1] == 'x' ||
-						     d[1] == 'X')) {
-							base = 16;
-						}
-					}
-					int64_t v = strtoll(yytext, NULL, base);
+					int64_t v = od_cfg_read_integer(yytext, NULL);
 					if (errno == ERANGE) {
 						od_cfg_diag_error(yyextra->diags, *yylloc,
 								  "number is out of range");

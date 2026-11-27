@@ -54,3 +54,7 @@ void od_cfg_parse_ctx_init(od_cfg_parse_ctx_t *ctx, const char *filename,
 			   od_cfg_model_t *model, od_cfg_diag_list_t *diags);
 
 void od_cfg_parse_ctx_free(od_cfg_parse_ctx_t *ctx);
+
+/* Decimal and 0x-prefixed integers use the same base in every format. */
+int64_t od_cfg_read_integer(const char *text, char **end);
+const char *od_cfg_parse_size(const char *text, int64_t *out);
