@@ -7,6 +7,8 @@
 
 #include <odyssey.h>
 
+#include <sys/socket.h>
+
 #include <openssl/rand.h>
 
 #include <machinarium/machinarium.h>
@@ -3641,8 +3643,17 @@ void od_frontend(void *arg)
 	od_extension_t *extensions = global->extensions;
 	od_module_t *modules = extensions->modules;
 
-	od_getpeername(client->io.io, client->peer, OD_CLIENT_MAX_PEERLEN, 1,
-		       1);
+	struct sockaddr_storage peer;
+	struct sockaddr *peer_addr = (struct sockaddr *)&peer;
+	int peer_len = sizeof(peer);
+	if (machine_getpeername(client->io.io, peer_addr, &peer_len) == 0) {
+		od_getsockaddrname(peer_addr, client->peer,
+				   sizeof(client->peer), 1, 1);
+		if (peer.ss_family == AF_INET || peer.ss_family == AF_INET6) {
+			od_getsockaddrname(peer_addr, client->peer_ip,
+					   sizeof(client->peer_ip), 1, 0);
+		}
+	}
 
 	/* log client connection */
 	if (instance->config.log_session && instance->config.log_debug) {
@@ -3886,8 +3897,8 @@ void od_frontend(void *arg)
 	/* HBA check */
 	rc = od_hba_process(client);
 
-	char client_ip[64];
-	od_getpeername(client->io.io, client_ip, sizeof(client_ip), 1, 0);
+	const char *client_ip =
+		client->peer_ip[0] == '\0' ? client->peer : client->peer_ip;
 
 	/* client authentication */
 	if (rc == OK_RESPONSE) {

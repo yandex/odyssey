@@ -72,6 +72,7 @@ void od_client_init(od_client_t *client)
 	od_relay_init(&client->relay, client);
 
 	memset(client->peer, 0, sizeof(client->peer));
+	memset(client->peer_ip, 0, sizeof(client->peer_ip));
 
 	memset(&client->query_ctx, 0, sizeof(client->query_ctx));
 	client->parser_mode = -1;

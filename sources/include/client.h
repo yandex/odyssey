@@ -6,6 +6,8 @@
  * Scalable PostgreSQL connection pooler.
  */
 
+#include <arpa/inet.h>
+
 #include <machinarium/machinarium.h>
 #include <machinarium/ds/hm.h>
 
@@ -136,6 +138,8 @@ struct od_client {
 	od_query_ctx_t query_ctx;
 	/* -1 inherits the configured mode. */
 	int parser_mode;
+
+	char peer_ip[INET6_ADDRSTRLEN];
 };
 
 static inline od_retcode_t od_client_init_hm(od_client_t *client)
