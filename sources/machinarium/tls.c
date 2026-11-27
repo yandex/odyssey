@@ -676,7 +676,7 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 	while (1) {
 		if (io->accepted) {
 			rc = SSL_accept(io->tls_ssl);
-		} else if (io->connected) {
+		} else {
 			rc = SSL_connect(io->tls_ssl);
 		}
 
@@ -695,7 +695,7 @@ int mm_tls_handshake(mm_io_t *io, uint32_t timeout)
 			continue;
 		}
 
-		if (io->connected) {
+		if (is_client) {
 			mm_tls_error(io, rc, "SSL_connect()");
 		} else {
 			mm_tls_error(io, rc, "SSL_accept()");
