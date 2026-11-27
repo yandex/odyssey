@@ -61,7 +61,10 @@ static int mm_connect(mm_io_t *io, struct sockaddr *sa, uint32_t time_ms)
 	 */
 	rc = mm_io_wait(io, time_ms);
 	if (rc == -1) {
-		mm_io_detach((mm_io_t *)io);
+		/* A failed asynchronous registration has already been detached. */
+		if (io->handle.mask) {
+			mm_io_detach(io);
+		}
 		goto error;
 	}
 

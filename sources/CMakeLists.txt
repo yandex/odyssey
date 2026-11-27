@@ -599,6 +599,9 @@ file(COPY tests/machinarium/client.key DESTINATION machinarium)
 file(COPY tests/machinarium/server.crt DESTINATION machinarium)
 file(COPY tests/machinarium/server.key DESTINATION machinarium)
 
+if (HAVE_IO_URING)
+    list(APPEND od_test_src tests/machinarium/test_uring_batch.c)
+endif()
 add_executable(${od_test_binary} ${od_test_src} ${od_src})
 add_dependencies(${od_test_binary} build_libs)
 

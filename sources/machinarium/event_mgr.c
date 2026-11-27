@@ -20,8 +20,13 @@ static void mm_eventmgr_on_read(mm_fd_t *handle)
 	uint64_t id;
 	int rc;
 #if defined(__linux__)
-	rc = read(mgr->fd.fd, &id, sizeof(id));
-	(void)rc;
+	do {
+		rc = read(mgr->fd.fd, &id, sizeof(id));
+	} while (rc < 0 && errno == EINTR);
+	/* A previous readiness CQE may have drained the same counter. */
+	if (rc < 0 && errno == EAGAIN) {
+		return;
+	}
 	assert(rc == sizeof(id));
 #else
 	/* drain pipe completely */

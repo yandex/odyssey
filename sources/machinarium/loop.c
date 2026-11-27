@@ -29,9 +29,12 @@
 #error "machinarium: unsupported platform, no poll backend available"
 #endif
 
-int mm_loop_init(mm_loop_t *loop)
+int mm_loop_init(mm_loop_t *loop, mm_pollif_t *iface)
 {
-	loop->poll = MM_POLL_IF.create();
+	if (iface == NULL) {
+		iface = &MM_POLL_IF;
+	}
+	loop->poll = iface->create();
 	if (loop->poll == NULL) {
 		return -1;
 	}

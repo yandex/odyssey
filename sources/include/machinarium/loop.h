@@ -18,7 +18,8 @@ struct mm_loop {
 	mm_poll_t *poll;
 };
 
-int mm_loop_init(mm_loop_t *);
+/* NULL selects the native platform poller. */
+int mm_loop_init(mm_loop_t *, mm_pollif_t *);
 int mm_loop_shutdown(mm_loop_t *);
 int mm_loop_step(mm_loop_t *);
 
@@ -35,9 +36,13 @@ static inline int mm_loop_add(mm_loop_t *loop, mm_fd_t *fd,
 			      mm_fd_callback_t on_err, void *on_err_arg,
 			      mm_fd_callback_t on_close, void *on_close_arg)
 {
-	return loop->poll->iface->add(loop->poll, fd, on_read, on_read_arg,
-				      on_write, on_write_arg, on_err,
-				      on_err_arg, on_close, on_close_arg);
+	int rc = loop->poll->iface->add(loop->poll, fd, on_read, on_read_arg,
+					on_write, on_write_arg, on_err,
+					on_err_arg, on_close, on_close_arg);
+	if (rc == 0) {
+		fd->poll_error = 0;
+	}
+	return rc;
 }
 
 static inline int mm_loop_add_ro(mm_loop_t *loop, mm_fd_t *fd,

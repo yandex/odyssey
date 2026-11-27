@@ -14,6 +14,7 @@
 #include <inttypes.h>
 
 #include <kiwi/kiwi.h>
+#include <machinarium/build.h>
 #include <machinarium/machinarium.h>
 #include <tests/odyssey_test.h>
 
@@ -33,6 +34,10 @@ extern void kiwi_test_msg_size_limits(void);
 
 /* MACHINARIUM */
 extern void machinarium_test_init(void);
+#ifdef HAVE_IO_URING
+extern void machinarium_test_uring_batch(void);
+extern void machinarium_test_uring_poll(void);
+#endif
 extern void machinarium_test_create0(void);
 extern void machinarium_test_create1(void);
 extern void machinarium_test_config(void);
@@ -189,6 +194,10 @@ int main(int argc, char *argv[])
 	odyssey_test(kiwi_test_cancel_write);
 	odyssey_test(kiwi_test_msg_size_limits);
 	odyssey_test(machinarium_test_init);
+#ifdef HAVE_IO_URING
+	odyssey_test(machinarium_test_uring_batch);
+	odyssey_test(machinarium_test_uring_poll);
+#endif
 	odyssey_test(machinarium_test_create0);
 	odyssey_test(machinarium_test_create1);
 	odyssey_test(machinarium_test_config);

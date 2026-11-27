@@ -30,14 +30,15 @@ static void mm_io_on_write_cb(mm_fd_t *handle)
 
 static void mm_io_on_err_cb(mm_fd_t *handle)
 {
-	mm_io_t *io = handle->on_write_arg;
+	mm_io_t *io = handle->on_err_arg;
 
 	mm_cond_signal(&io->cond);
 
 	io->errored = 1;
 	/* SO_ERROR is cleared when read. Repeated error notifications must not
 	 * erase the error already consumed by an earlier callback. */
-	int error = mm_socket_error(handle->fd);
+	int error = handle->poll_error ? handle->poll_error :
+					 mm_socket_error(handle->fd);
 	if (error != 0) {
 		io->error = error;
 	}
@@ -606,7 +607,15 @@ int mm_io_wait(mm_io_t *io, uint32_t timeout_ms)
 		abort();
 	}
 
-	return mm_cond_wait(&io->cond, timeout_ms);
+	int rc = MM_COND_WAIT_FAIL;
+	if (!io->handle.poll_error) {
+		rc = mm_cond_wait(&io->cond, timeout_ms);
+	}
+	if (io->handle.poll_error) {
+		mm_errno_set(io->handle.poll_error);
+		return MM_COND_WAIT_FAIL;
+	}
+	return rc;
 }
 
 void mm_io_set_peer(mm_io_t *io, mm_io_t *peer)

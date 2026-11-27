@@ -51,6 +51,34 @@ jobs:
       if: failure()
       uses: ./.github/actions/test-logs
 
+  unit-io-uring:
+    name: unit (io_uring)
+    # Run on the VM itself: Docker's default seccomp profile blocks io_uring.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        submodules: recursive
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bison flex libssl-dev liburing-dev pkg-config
+    - name: Build unit tests with io_uring
+      run: |
+        cmake -S . -B build/ci-uring -DBUILD_IO_URING=ON
+        cmake --build build/ci-uring --target odyssey_test --parallel 4
+    - name: Run io_uring batch and poll tests
+      shell: bash
+      run: |
+        build/ci-uring/sources/odyssey_test machinarium_test_uring 2>&1 | tee test-run.log
+        # The test runner also exits successfully when its filter matches nothing.
+        grep -q '^machinarium_test_uring_batch: ok' test-run.log
+        grep -q '^machinarium_test_uring_poll: ok' test-run.log
+    - name: Save logs on failure
+      if: failure()
+      uses: ./.github/actions/test-logs
+
   unit-compression:
     name: unit (compression)
     runs-on: ubuntu-latest
