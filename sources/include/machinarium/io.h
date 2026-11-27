@@ -74,6 +74,7 @@ struct mm_io {
 	/* tls */
 	mm_tls_t *tls;
 	SSL *tls_ssl;
+	int tls_read_eof;
 	int tls_error;
 	char tls_error_msg[128];
 	/* connect */

@@ -549,6 +549,7 @@ set(od_test_src
     tests/machinarium/test_readahead_zpq.c
     tests/machinarium/test_ring_buffer.c
     tests/machinarium/test_tls0.c
+    tests/machinarium/test_tls_socket_bio.c
     tests/machinarium/test_tls_verify_error.c
     tests/machinarium/test_tls_cache.c
     tests/machinarium/test_tls_unix_socket.c
