@@ -12,16 +12,10 @@
 #include <rules.h>
 #include <global.h>
 
-int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
-		  od_global_t *global, od_hba_rules_t *hba_rules,
-		  const char *config_file);
-
-/* autoconf_file is read in place of <config_file>.autoconf, NULL is default */
-int od_cfg_import_with_autoconf(od_logger_t *logger, od_config_t *config,
-				od_rules_t *rules, od_global_t *global,
-				od_hba_rules_t *hba_rules,
-				const char *config_file,
-				const char *autoconf_file);
+/* Pass an autoconf file to check a candidate ALTER SYSTEM change. */
+int od_cfg_import(od_instance_t *instance, od_config_t *config,
+		  od_rules_t *rules, od_global_t *global,
+		  od_hba_rules_t *hba_rules, const char *autoconf_file);
 
 /*
  * Loads the configuration the way RELOAD does into temporary structures
@@ -29,5 +23,4 @@ int od_cfg_import_with_autoconf(od_logger_t *logger, od_config_t *config,
  * odyssey --test and by ALTER SYSTEM for a candidate autoconf file.
  * Returns 0 if RELOAD would accept the configuration.
  */
-int od_cfg_check(od_logger_t *logger, const char *config_file,
-		 const char *autoconf_file);
+int od_cfg_check(od_instance_t *instance, const char *autoconf_file);

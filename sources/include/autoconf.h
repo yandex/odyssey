@@ -8,6 +8,11 @@
  * Editing of the ALTER SYSTEM autoconf file text.
  */
 
+#include <stdbool.h>
+
+/* Caller owns the path to the ALTER SYSTEM file for this configuration. */
+char *od_autoconf_path(const char *config_path, bool is_dir);
+
 /*
  * Applies one ALTER SYSTEM change to the text of the autoconf file.
  *
@@ -35,7 +40,7 @@ char *od_autoconf_apply(const char *old_text, const char *key,
 typedef int (*od_autoconf_check_cb)(const char *autoconf_path, void *arg);
 
 /*
- * Applies one change to <config_path>.autoconf on disk: reads the file
+ * Applies one change to the autoconf file on disk: reads the file
  * (a missing file counts as empty), applies od_autoconf_apply(), checks
  * the result with the configuration parser and then with check, unless it
  * is NULL, and atomically replaces the file. On any error the old file
@@ -46,6 +51,6 @@ typedef int (*od_autoconf_check_cb)(const char *autoconf_path, void *arg);
  *
  * Returns 0 on success, -1 on error with a message in err.
  */
-int od_autoconf_update(const char *config_path, const char *key,
+int od_autoconf_update(const char *config_path, bool is_dir, const char *key,
 		       const char *line, od_autoconf_check_cb check,
 		       void *check_arg, char *err, size_t err_size);

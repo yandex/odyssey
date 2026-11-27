@@ -8,6 +8,7 @@
 
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 
 #include <types.h>
 #include <config.h>
@@ -34,7 +35,8 @@ typedef enum {
 struct od_instance {
 	od_pid_t pid;
 	od_logger_t logger;
-	char *config_file;
+	char *config_path;
+	bool config_is_dir;
 	char *exec_path;
 	od_config_t config;
 	char *orig_argv_ptr;

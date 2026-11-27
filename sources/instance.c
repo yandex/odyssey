@@ -34,34 +34,27 @@
 #include <cfg_import.h>
 #include <injection.h>
 
-int od_cfg_import(od_logger_t *logger, od_config_t *config, od_rules_t *rules,
-		  od_global_t *global, od_hba_rules_t *hba_rules,
-		  const char *config_file)
+int od_cfg_import(od_instance_t *instance, od_config_t *config,
+		  od_rules_t *rules, od_global_t *global,
+		  od_hba_rules_t *hba_rules, const char *autoconf_file)
 {
-	return od_cfg_import_with_autoconf(logger, config, rules, global,
-					   hba_rules, config_file, NULL);
-}
-
-int od_cfg_import_with_autoconf(od_logger_t *logger, od_config_t *config,
-				od_rules_t *rules, od_global_t *global,
-				od_hba_rules_t *hba_rules,
-				const char *config_file,
-				const char *autoconf_file)
-{
+	od_logger_t *logger = &instance->logger;
+	const char *config_path = instance->config_path;
 	od_cfg_model_t model;
 	od_cfg_diag_list_t diags;
 
 	od_cfg_model_init(&model);
 	od_cfg_diag_list_init(&diags);
 
-	int rc = od_cfg_parse_file_with_autoconf(config_file, autoconf_file,
-						 &model, &diags);
+	int rc =
+		od_cfg_parse_with_autoconf(config_path, instance->config_is_dir,
+					   autoconf_file, &model, &diags);
 
 	for (size_t i = 0; i < diags.count; i++) {
 		od_cfg_diag_t *d = &diags.items[i];
 		const char *fname = d->location.filename ?
 					    d->location.filename :
-					    config_file;
+					    config_path;
 		if (d->level == OD_CFG_DIAG_WARNING) {
 			od_log(logger, NULL, NULL, "%s:%d:%d: warning: %s",
 			       fname, d->location.first_line,
@@ -92,7 +85,7 @@ int od_cfg_import_with_autoconf(od_logger_t *logger, od_config_t *config,
 		od_cfg_diag_t *d = &diags.items[i];
 		const char *fname = d->location.filename ?
 					    d->location.filename :
-					    config_file;
+					    config_path;
 		if (d->level == OD_CFG_DIAG_WARNING) {
 			od_log(logger, NULL, NULL, "%s:%d:%d: warning: %s",
 			       fname, d->location.first_line,
@@ -179,7 +172,8 @@ od_instance_t *od_instance_create(void)
 	od_logger_init(&instance->logger, &instance->pid);
 	od_config_init(&instance->config);
 
-	instance->config_file = NULL;
+	instance->config_path = NULL;
+	instance->config_is_dir = false;
 
 	instance->pstmts = NULL;
 
@@ -221,7 +215,7 @@ void od_instance_free(od_instance_t *instance)
 	od_injection_free();
 
 	/* as mallocd on start */
-	od_free(instance->config_file);
+	od_free(instance->config_path);
 	od_free(instance->exec_path);
 	od_logger_close(&instance->logger);
 	machinarium_free();
@@ -233,11 +227,11 @@ void od_usage(od_instance_t *instance, char *path)
 {
 	od_log(&instance->logger, NULL, NULL, "%s %s", ODYSSEY_NAME,
 	       ODYSSEY_VERSION_FULL);
-	od_log(&instance->logger, NULL, NULL, "usage: %s <config_file>", path);
+	od_log(&instance->logger, NULL, NULL,
+	       "usage: %s [OPTION...] (CONFIG_FILE | --config-dir DIR)", path);
 }
 
-int od_cfg_check(od_logger_t *logger, const char *config_file,
-		 const char *autoconf_file)
+int od_cfg_check(od_instance_t *instance, const char *autoconf_file)
 {
 	/* Validation must not access or update running services. */
 	od_global_t global = { 0 };
@@ -252,14 +246,13 @@ int od_cfg_check(od_logger_t *logger, const char *config_file,
 	od_hba_rules_init(&hba_rules);
 
 	/* the same checks as od_system_config_reload(), nothing is applied */
-	int rc = od_cfg_import_with_autoconf(logger, &config, &rules, &global,
-					     &hba_rules, config_file,
-					     autoconf_file);
+	int rc = od_cfg_import(instance, &config, &rules, &global, &hba_rules,
+			       autoconf_file);
 	if (rc == 0) {
-		rc = od_config_validate(&config, logger);
+		rc = od_config_validate(&config, &instance->logger);
 	}
 	if (rc == 0) {
-		rc = od_rules_validate(&rules, &config, logger);
+		rc = od_rules_validate(&rules, &config, &instance->logger);
 	}
 
 	od_hba_rules_free(&hba_rules);
@@ -272,7 +265,7 @@ int od_cfg_check(od_logger_t *logger, const char *config_file,
 
 int od_config_testing(od_instance_t *instance)
 {
-	if (od_cfg_check(&instance->logger, instance->config_file, NULL) != 0) {
+	if (od_cfg_check(instance, NULL) != 0) {
 		return 1;
 	}
 
@@ -363,7 +356,6 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	od_arguments_t args;
 	memset(&args, 0, sizeof(args));
 
-	/* odyssey accept only ONE positional arg - to path config */
 	if (od_args_init(&args, instance) != OK_RESPONSE) {
 		return NOT_OK_RESPONSE;
 	}
@@ -426,10 +418,10 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 
 	router.global = global;
 
-	/* read config file */
+	/* read configuration */
 	int rc;
-	rc = od_cfg_import(&instance->logger, &instance->config, &router.rules,
-			   global, &hba.rules, instance->config_file);
+	rc = od_cfg_import(instance, &instance->config, &router.rules, global,
+			   &hba.rules, NULL);
 	if (rc == -1) {
 		goto error;
 	}
@@ -542,8 +534,9 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 #endif
 
 	/* print configuration */
-	od_log(&instance->logger, NULL, NULL, "using configuration file '%s'",
-	       instance->config_file);
+	od_log(&instance->logger, NULL, NULL, "using configuration %s '%s'",
+	       instance->config_is_dir ? "directory" : "file",
+	       instance->config_path);
 
 	if (instance->config.log_config) {
 		od_config_print(&instance->config, &instance->logger);

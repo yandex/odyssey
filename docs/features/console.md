@@ -67,7 +67,8 @@ alter system reset all
 
 Odyssey writes changes to `<config>.autoconf` next to the main
 configuration file. For `/etc/odyssey/odyssey.conf`, this is
-`/etc/odyssey/odyssey.conf.autoconf`. At startup and on `reload`, Odyssey
+`/etc/odyssey/odyssey.conf.autoconf`. With `--config-dir DIR`, the path is
+`DIR/odyssey.autoconf`. At startup and on `reload`, Odyssey
 reads the autoconf file after the main configuration, so its values
 take precedence.
 

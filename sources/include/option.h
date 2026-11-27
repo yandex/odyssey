@@ -32,6 +32,7 @@ typedef enum {
 	OD_OPT_TEST,
 	OD_OPT_VERSION,
 	OD_OPT_USAGE,
+	OD_OPT_CONFIG_DIR,
 } od_cli_options;
 
 static const char *short_opts = "Vh?";
@@ -42,6 +43,7 @@ static struct option long_opts[] = {
 	{ "console", no_argument, NULL, OD_OPT_CONSOLE },
 	{ "log_to_stdout", no_argument, NULL, OD_OPT_LOG_STDOUT },
 	{ "test", no_argument, NULL, OD_OPT_TEST },
+	{ "config-dir", required_argument, NULL, OD_OPT_CONFIG_DIR },
 	{ "version", no_argument, NULL, OD_OPT_VERSION },
 	{ "help", no_argument, NULL, 'h' },
 	{ "usage", no_argument, NULL, OD_OPT_USAGE },
@@ -51,6 +53,7 @@ static struct option long_opts[] = {
 static inline void od_parse_args(int argc, char **argv, od_arguments_t *args)
 {
 	od_instance_t *instance = args->instance;
+	const char *config_dir = NULL;
 
 	for (;;) {
 		int opt_idx = 0;
@@ -77,7 +80,7 @@ static inline void od_parse_args(int argc, char **argv, od_arguments_t *args)
 		case OD_OPT_USAGE:
 			printf("Usage: %s [-?V] [--console] [--log_to_stdout] "
 			       "[--silent] [--test] [--verbose] [--help] "
-			       "[--usage] [--version] /path/to/odyssey.conf\n",
+			       "[--usage] [--version] (CONFIG_FILE | --config-dir DIR)\n",
 			       argv[0]);
 			exit(0);
 		case OD_OPT_CONSOLE:
@@ -88,6 +91,14 @@ static inline void od_parse_args(int argc, char **argv, od_arguments_t *args)
 			break;
 		case OD_OPT_TEST:
 			args->test = 1;
+			break;
+		case OD_OPT_CONFIG_DIR:
+			if (config_dir != NULL || optarg[0] == '\0') {
+				fprintf(stderr,
+					"--config-dir requires a single non-empty directory path\n");
+				exit(1);
+			}
+			config_dir = optarg;
 			break;
 		case '?':
 			if (optopt == 0 && optind > 0 &&
@@ -106,19 +117,18 @@ static inline void od_parse_args(int argc, char **argv, od_arguments_t *args)
 		}
 	}
 
-	if (argc - optind > 1) {
-		/* Too many arguments. */
+	if (argc - optind != (config_dir ? 0 : 1)) {
 		od_usage(instance, instance->exec_path);
 		exit(1);
 	}
 
-	if (argc - optind < 1) {
-		/* Not enough arguments. */
-		od_usage(instance, instance->exec_path);
+	instance->config_is_dir = config_dir != NULL;
+	instance->config_path =
+		od_strdup(config_dir ? config_dir : argv[optind]);
+	if (instance->config_path == NULL) {
+		fprintf(stderr, "out of memory copying configuration path\n");
 		exit(1);
 	}
-
-	instance->config_file = od_strdup(argv[optind]);
 
 	if (args->test == 1) {
 		exit(od_config_testing(instance));

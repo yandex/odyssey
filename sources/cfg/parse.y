@@ -355,6 +355,7 @@
 %token GROUP_QUERY_DB "group_query_db"
 %token GROUP "group"
 %token INCLUDE "include"
+%token INCLUDE_DIR "include_dir"
 %token AZ_AWARE "az_aware"
 %token VIRTUAL_TRANSACTION "virtual_transaction"
 %token QUERY_PARSING_MODE "query_parsing_mode"
@@ -1212,6 +1213,14 @@ top_item:
 			int rc = od_cfg_parse_file_depth($2, ctx->model,
 							 ctx->diags,
 							 ctx->include_depth + 1, ctx->allow_include);
+			od_free($2);
+			if (rc != 0) {
+				YYABORT;
+			}
+		}
+	| INCLUDE_DIR STRING
+		{
+			int rc = od_cfg_include_dir(ctx, $2, @2);
 			od_free($2);
 			if (rc != 0) {
 				YYABORT;

@@ -255,20 +255,34 @@ static int od_autoconf_validate(const char *path, char *err, size_t err_size)
 	return rc;
 }
 
-int od_autoconf_update(const char *config_path, const char *key,
+char *od_autoconf_path(const char *config_path, bool is_dir)
+{
+	const char *basename = "";
+	if (is_dir) {
+		size_t len = strlen(config_path);
+		basename = len && config_path[len - 1] == '/' ? "odyssey" :
+								"/odyssey";
+	}
+	char *path;
+	if (od_asprintf(&path, "%s%s%s", config_path, basename,
+			OD_CFG_AUTOCONF_SUFFIX) != OK_RESPONSE) {
+		return NULL;
+	}
+	return path;
+}
+
+int od_autoconf_update(const char *config_path, bool is_dir, const char *key,
 		       const char *line, od_autoconf_check_cb check,
 		       void *check_arg, char *err, size_t err_size)
 {
-	char *path = NULL;
+	char *path = od_autoconf_path(config_path, is_dir);
 	char *tmp = NULL;
 	char *old_text = NULL;
 	char *new_text = NULL;
 	int tmp_created = 0;
 	int rc = -1;
 
-	if (od_asprintf(&path, "%s%s", config_path, OD_CFG_AUTOCONF_SUFFIX) !=
-		    OK_RESPONSE ||
-	    od_asprintf(&tmp, "%s.tmp", path) != OK_RESPONSE) {
+	if (path == NULL || od_asprintf(&tmp, "%s.tmp", path) != OK_RESPONSE) {
 		od_snprintf(err, (int)err_size, "out of memory");
 		goto cleanup;
 	}
