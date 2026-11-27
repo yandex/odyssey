@@ -2,7 +2,7 @@
 #include <tests/odyssey_test.h>
 
 #include <cfg/convert.h>
-#include <cfg/reader.h>
+#include <cfg/scan.h>
 #include <global.h>
 #include <machinarium/build.h>
 #include <rules.h>
@@ -21,27 +21,42 @@
 #define AVAILABLE_METHODS NATIVE_METHOD
 #endif
 
+static int parse_io_method(const char *method, od_cfg_model_t *model,
+			   od_cfg_diag_list_t *diags)
+{
+	char input[256] = "listen { host \"localhost\" port 6432 }\n"
+			  "storage \"console\" { type \"local\" }\n";
+	size_t len = strlen(input);
+	if (method != NULL) {
+		int n = snprintf(input + len, sizeof(input) - len,
+				 "io_method \"%s\"\n", method);
+		test(n >= 0 && (size_t)n < sizeof(input) - len);
+		len += n;
+	}
+
+	od_cfg_parse_ctx_t ctx;
+	od_cfg_parse_ctx_init(&ctx, "<test>", input, len, model, diags);
+	yyscan_t scanner;
+	test(yylex_init_extra(&ctx, &scanner) == 0);
+	YY_BUFFER_STATE buffer = yy_scan_bytes(input, (int)len, scanner);
+	test(buffer != NULL);
+	int rc = yyparse(scanner, &ctx);
+	yy_delete_buffer(buffer, scanner);
+	yylex_destroy(scanner);
+	od_cfg_parse_ctx_free(&ctx);
+	if (rc != 0 || od_cfg_diag_has_errors(diags)) {
+		return -1;
+	}
+	return od_cfg_validate_model(model, diags);
+}
+
 static void check_io_method(const char *method, const char *expected)
 {
-	char path[] = "/tmp/odyssey_io_method_XXXXXX";
-	int fd = mkstemp(path);
-	test(fd != -1);
-	FILE *file = fdopen(fd, "w");
-	test(file != NULL);
-	fputs("listen { host \"localhost\" port 6432 }\n"
-	      "storage \"console\" { type \"local\" }\n",
-	      file);
-	if (method != NULL) {
-		fprintf(file, "io_method \"%s\"\n", method);
-	}
-	test(fclose(file) == 0);
-
 	od_cfg_model_t model;
 	od_cfg_diag_list_t diags;
 	od_cfg_model_init(&model);
 	od_cfg_diag_list_init(&diags);
-	int rc = od_cfg_parse_file_with_autoconf(path, NULL, &model, &diags);
-	test(unlink(path) == 0);
+	int rc = parse_io_method(method, &model, &diags);
 
 	od_config_t config;
 	od_rules_t rules;
