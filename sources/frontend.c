@@ -44,19 +44,16 @@
 #include <log_sampling.h>
 #include <server.h>
 
-static inline od_frontend_status_t writebuf_enable(od_client_t *client)
+static inline od_frontend_status_t buf_enable(od_client_t *client,
+					      int write_size)
 {
 	od_instance_t *instance = client->global->instance;
-	if (instance->config.writebuf <= 0) {
-		return OD_OK;
-	}
 
-	int rc = mm_io_buf_enable(client->io.io,
-				  (size_t)instance->config.writebuf,
-				  0 /* readahead is not wired yet */);
+	int rc = od_readahead_enable(&client->io, write_size,
+				     instance->config.readahead);
 	if (rc != 0) {
 		od_error(&instance->logger, client, NULL,
-			 "failed to enable write buffer: %s",
+			 "failed to enable the connection buffers: %s",
 			 strerror(machine_errno()));
 		return machine_errno() == ENOMEM ? OD_EOOM : OD_ECLIENT_WRITE;
 	}
@@ -73,9 +70,28 @@ static inline void od_frontend_close(od_client_t *client)
 	if (client->source != NULL) {
 		atomic_fetch_sub(&client->source->clients, 1);
 	}
+	/*
+	 * mm_io_close() flushes the buffered layers best-effort: bytes
+	 * that reached the kernel socket buffer are delivered by tcp
+	 * after the close, the write area tail is discarded on a
+	 * stall - a stalled peer must not hold the coroutine until
+	 * the tcp teardown
+	 */
 	od_io_close(&client->io);
 	od_client_free(client);
 }
+
+/*
+ * the final messages written right before the connection is closed
+ * (FATAL on a graceful shutdown, an idle timeout drop, protocol
+ * errors, etc.) and the flush before a blocking read get a bounded
+ * write window: a client that stopped reading does not take them
+ * anyway and the coroutine must not hang on the write.  The write
+ * area tail is flushed best-effort by mm_io_close() on the close,
+ * the bytes that reached the kernel socket buffer are delivered by
+ * tcp after it
+ */
+#define OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS 1000
 
 int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 {
@@ -87,7 +103,7 @@ int od_frontend_error(od_client_t *client, char *code, char *fmt, ...)
 	if (msg == NULL) {
 		return -1;
 	}
-	return od_write(&client->io, msg);
+	return od_write2(&client->io, msg, OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS);
 }
 
 int od_frontend_fatal_no_startup(mm_io_t *io, char *code, char *fmt, ...)
@@ -101,7 +117,7 @@ int od_frontend_fatal_no_startup(mm_io_t *io, char *code, char *fmt, ...)
 		return -1;
 	}
 
-	return machine_write(io, msg, UINT32_MAX);
+	return machine_write(io, msg, OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS);
 }
 
 int od_frontend_fatal(od_client_t *client, char *code, char *fmt, ...)
@@ -114,7 +130,7 @@ int od_frontend_fatal(od_client_t *client, char *code, char *fmt, ...)
 	if (msg == NULL) {
 		return -1;
 	}
-	return od_write(&client->io, msg);
+	return od_write2(&client->io, msg, OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS);
 }
 
 int od_frontend_fatal_detailed(od_client_t *client, const char *code,
@@ -130,7 +146,7 @@ int od_frontend_fatal_detailed(od_client_t *client, const char *code,
 	if (msg == NULL) {
 		return -1;
 	}
-	return od_write(&client->io, msg);
+	return od_write2(&client->io, msg, OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS);
 }
 
 static inline int od_frontend_error_fwd(od_client_t *client)
@@ -162,7 +178,7 @@ static inline int od_frontend_error_fwd(od_client_t *client)
 	if (msg == NULL) {
 		return -1;
 	}
-	return od_write(&client->io, msg);
+	return od_write2(&client->io, msg, OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS);
 }
 
 static inline bool
@@ -293,7 +309,7 @@ static int send_negotiate(od_client_t *client)
 		return -1;
 	}
 
-	return od_write(&client->io, msg);
+	return od_write2(&client->io, msg, OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS);
 }
 
 static int reject_unsupported_request(od_client_t *client)
@@ -307,7 +323,8 @@ static int reject_unsupported_request(od_client_t *client)
 
 	*(uint8_t *)machine_msg_data(msg) = 'N';
 
-	if (od_write(&client->io, msg) == -1) {
+	if (od_write2(&client->io, msg, OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS) ==
+	    -1) {
 		od_error(&instance->logger, client, NULL, "write error: %s",
 			 od_io_error(&client->io));
 		return -1;
@@ -1298,6 +1315,14 @@ static inline od_frontend_status_t od_frontend_setup(od_client_t *client)
 
 static inline od_frontend_status_t od_frontend_local_setup(od_client_t *client)
 {
+	od_instance_t *instance = client->global->instance;
+
+	od_frontend_status_t buf_status =
+		buf_enable(client, instance->config.writebuf);
+	if (buf_status != OD_OK) {
+		return buf_status;
+	}
+
 	machine_msg_t *stream;
 	stream = machine_msg_create(0);
 
@@ -1628,6 +1653,19 @@ static od_frontend_status_t od_frontend_local(od_client_t *client)
 	od_frontend_status_t status;
 
 	for (;;) {
+		/*
+		 * Main flush point: the previous iteration's response
+		 * (and the setup greeting on the first iteration) is
+		 * pushed out here, before blocking on the next read,
+		 * same as in od_frontend_remote.  The flush window is
+		 * bounded: a console client that stopped reading must
+		 * not hold the coroutine
+		 */
+		if (od_io_flush(&client->io,
+				OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS) == -1) {
+			return OD_ECLIENT_WRITE;
+		}
+
 		machine_msg_t *msg = NULL;
 		for (;;) {
 			/* local server is always null */
@@ -3111,16 +3149,18 @@ static od_frontend_status_t process_server_async(od_client_t *client,
 
 static od_frontend_status_t od_frontend_remote(od_client_t *client)
 {
-	if (client->logical_rep || client->physical_rep) {
+	od_instance_t *instance = client->global->instance;
+	int repl = client->logical_rep || client->physical_rep;
+
+	int write_size = repl ? 0 : instance->config.writebuf;
+	od_frontend_status_t buf_status = buf_enable(client, write_size);
+	if (buf_status != OD_OK) {
+		return buf_status;
+	}
+
+	if (repl) {
 		return od_frontend_remote_replication(client);
 	}
-
-	od_frontend_status_t wb_status = writebuf_enable(client);
-	if (wb_status != OD_OK) {
-		return wb_status;
-	}
-
-	od_instance_t *instance = client->global->instance;
 
 	while (1) {
 		od_frontend_status_t status =

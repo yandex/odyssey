@@ -76,7 +76,7 @@ megabytes) and is rejected by time-valued options.
 | `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging; duration suffixes (`60s`, `1min`) are supported |
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
-| `readahead`                                | int (bytes)      | one page    | SIGHUP  | Per-connection read buffer                            |
+| `readahead`                                | int (bytes)      | 8192        | SIGHUP  | Per-connection read buffer                            |
 | `writebuf`                                 | int (bytes)      | 8192         | restart | Per-connection write buffer for client connections; 0 = off; size suffixes (`8K`, `1M`) are supported |
 | `cache_coroutine`                          | int              | `1024`      | restart | Coroutines cache size                                  |
 | `nodelay`                                  | int (bool)       | `yes`       | SIGHUP  | Enable TCP\_NODELAY                                   |
@@ -87,7 +87,7 @@ megabytes) and is rejected by time-valued options.
 | `keepalive_usr_timeout`                    | int (ms)         | `0`         | SIGHUP  | 0 = use system default (`TCP_USER_TIMEOUT`); negative = pick automatically |
 | `backend_connect_timeout_ms`               | int (ms)         | `30000`     | SIGHUP  | Backend connection timeout                            |
 | `coroutine_stack_size`                     | int (pages)      | `16`        | restart | Coroutine stack size (client/worker coroutines); values below 16 are not recommended |
-| `system_coroutine_stack_size`              | int (pages)      | `32`        | restart | Coroutine stack size for internal system coroutines   |
+| `system_coroutine_stack_size`              | int (pages)      | `64`        | restart | Coroutine stack size for internal system coroutines   |
 | `client_max`                               | int              | `0`         | SIGHUP  | Max client connections (0/unset = no global limit); per-listen reserve via `reserved_clients` |
 | `client_max_routing`                       | int              | `0`         | SIGHUP  | 0/unset → auto (typically `64 * workers`)             |
 | `server_login_retry`                       | int (ms)         | `1`         | SIGHUP  | Retry delay on "Too many clients"; duration suffixes supported |
@@ -416,7 +416,7 @@ your server experience a big number of connecting clients.
 *integer*
 
 Set size of per-connection buffer used for io readahead operations.
-Rounded up to whole page numbers.
+Rounded up to whole page numbers. Defaults to 8192. It cannot be set to zero.
 
 `readahead 8192`
 
@@ -430,8 +430,8 @@ is complete), instead of one syscall per message. Bare values are
 bytes; size suffixes (`8K`, `1M`, `1G`) are supported.
 
 `0` disables buffering: every write goes to the socket
-directly. Replication connections and the local (console) loop are
-never buffered regardless of this option.
+directly. Replication connections are never buffered regardless of
+this option.
 Default: 8192
 
 `writebuf 8192`
@@ -546,7 +546,11 @@ Actual stack is allocated as `(system_coroutine_stack_size + 1_guard_page) * pag
 The guard page is purely virtual (`mmap(MAP_ANONYMOUS)` + `mprotect(PROT_NONE)`) and
 contributes nothing to RSS.
 
-`system_coroutine_stack_size 32`
+`system_coroutine_stack_size 64`
+
+The default is sized so that the config reload parsing fits the
+system coroutine stack under AddressSanitizer builds, where the
+parser frames are inflated several-fold.
 
 ## **client\_max**
 *integer*

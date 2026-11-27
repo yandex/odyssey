@@ -135,6 +135,8 @@ int mm_io_buf_disable(mm_io_t *);
 struct iovec mm_io_buf_peek(mm_io_t *);
 void mm_io_buf_peek_commit(mm_io_t *, size_t);
 ssize_t mm_io_buf_try_refill(mm_io_t *);
+/* read pending of the stack below the buf layer */
+int mm_io_buf_below_pending(mm_io_t *);
 
 /*
  * A single flush attempt: return 0 when the stack is drained, -1 with

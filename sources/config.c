@@ -22,6 +22,8 @@
 #include <util.h>
 #include <duration.h>
 
+#define BUFFER_DEFAULT 8192
+
 void od_config_init(od_config_t *config)
 {
 	config->daemonize = 0;
@@ -61,8 +63,8 @@ void od_config_init(od_config_t *config)
 	config->log_syslog_ident = NULL;
 	config->log_syslog_facility = NULL;
 
-	config->readahead = sysconf(_SC_PAGESIZE);
-	config->writebuf = 8192;
+	config->readahead = BUFFER_DEFAULT;
+	config->writebuf = BUFFER_DEFAULT;
 	config->nodelay = 1;
 	config->disable_nolinger = 0;
 
@@ -85,7 +87,7 @@ void od_config_init(od_config_t *config)
 	config->cache_msg_gc_size = 0;
 	config->cache_msg_gc_count = 1024;
 	config->coroutine_stack_size = 16;
-	config->system_coroutine_stack_size = 32;
+	config->system_coroutine_stack_size = 64;
 	config->hba_file = NULL;
 	config->max_sigterms_to_die = 3;
 	config->group_checker_interval_ms = 7000; /* 7 seconds */
@@ -296,6 +298,12 @@ int od_config_validate(od_config_t *config, od_logger_t *logger)
 
 	if (config->coroutine_stack_size < 4) {
 		od_error(logger, NULL, NULL, "bad coroutine_stack_size number");
+		return -1;
+	}
+
+	if (config->readahead < 0) {
+		od_error(logger, NULL, NULL,
+			 "bad readahead number, zero means one system page");
 		return -1;
 	}
 
