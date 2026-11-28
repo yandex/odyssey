@@ -570,6 +570,12 @@ int od_instance_main(od_instance_t *instance, int argc, char **argv,
 	machinarium_set_system_stack_size(
 		instance->config.system_coroutine_stack_size);
 	machinarium_set_pool_size(instance->config.resolvers);
+	if (machinarium_set_io_method(instance->config.io_method) == -1) {
+		od_error(&instance->logger, NULL, NULL,
+			 "unsupported io_method '%s'",
+			 instance->config.io_method);
+		goto error;
+	}
 	machinarium_set_coroutine_cache_size(instance->config.cache_coroutine);
 	machinarium_set_msg_cache_gc_size(instance->config.cache_msg_gc_size);
 	machinarium_set_msg_cache_gc_count(instance->config.cache_msg_gc_count);

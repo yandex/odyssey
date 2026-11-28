@@ -105,6 +105,7 @@ static void od_cfg_global_merge(od_cfg_global_t *dst, od_cfg_global_t *src)
 	MERGE_STR(dst, src, unix_socket_mode);
 	MERGE_STR(dst, src, locks_dir);
 	MERGE_STR(dst, src, external_auth_socket_path);
+	MERGE_STR(dst, src, io_method);
 	MERGE_STR(dst, src, availability_zone);
 	MERGE_STR(dst, src, log_file);
 	MERGE_STR(dst, src, log_format);

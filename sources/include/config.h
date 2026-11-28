@@ -125,6 +125,7 @@ struct od_config {
 	od_config_conn_drop_options_t conn_drop_options;
 	int bindwith_reuseport;
 	/*                         */
+	char io_method[sizeof("io_uring")];
 	int readahead;
 	int writebuf;
 	int nodelay;

@@ -12,6 +12,7 @@
 #include <sys/un.h>
 
 #include <machinarium/machinarium.h>
+#include <machinarium/io_method.h>
 
 #include <status.h>
 #include <types.h>
@@ -63,6 +64,7 @@ void od_config_init(od_config_t *config)
 	config->log_syslog_ident = NULL;
 	config->log_syslog_facility = NULL;
 
+	strcpy(config->io_method, MM_DEFAULT_IO_METHOD);
 	config->readahead = BUFFER_DEFAULT;
 	config->writebuf = BUFFER_DEFAULT;
 	config->nodelay = 1;
@@ -530,6 +532,8 @@ static const od_config_field_t od_config_fields[] = {
 	  offsetof(od_config_t, enable_online_restart_feature), 0 },
 	{ "bindwith_reuseport", OD_CONFIG_FIELD_BOOL,
 	  offsetof(od_config_t, bindwith_reuseport), 0 },
+	{ "io_method", OD_CONFIG_FIELD_STRING_INLINE,
+	  offsetof(od_config_t, io_method), 0 },
 	{ "readahead", OD_CONFIG_FIELD_INT, offsetof(od_config_t, readahead),
 	  0 },
 	{ "writebuf", OD_CONFIG_FIELD_INT, offsetof(od_config_t, writebuf), 0 },
@@ -882,6 +886,8 @@ void od_config_print(od_config_t *config, od_logger_t *logger)
 	       config->log_queue_depth);
 	od_log(logger, NULL, NULL, "stats_interval          %d",
 	       config->stats_interval);
+	od_log(logger, NULL, NULL, "io_method               %s",
+	       config->io_method);
 	od_log(logger, NULL, NULL, "readahead               %d",
 	       config->readahead);
 	od_log(logger, NULL, NULL, "writebuf                %d",

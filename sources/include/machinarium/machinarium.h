@@ -69,6 +69,9 @@ MACHINE_API void machinarium_set_system_stack_size(int size);
 
 MACHINE_API void machinarium_set_pool_size(int size);
 
+/* Configure the next machinarium_init(). Return -1 for an unsupported name. */
+MACHINE_API int machinarium_set_io_method(const char *name);
+
 MACHINE_API void machinarium_set_coroutine_cache_size(int size);
 
 MACHINE_API void machinarium_set_msg_cache_gc_size(int size);

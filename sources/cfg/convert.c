@@ -8,6 +8,7 @@
 
 #include <regex.h>
 
+#include <machinarium/io_method.h>
 #include <machinarium/file.h>
 #include <machinarium/io.h>
 #include <machinarium/memory.h>
@@ -635,6 +636,18 @@ int convert_global(const od_cfg_global_t *cfg, od_config_t *config,
 	COPY_STR(cfg->log_format, config->log_format, diags);
 	COPY_STR(cfg->log_syslog_ident, config->log_syslog_ident, diags);
 	COPY_STR(cfg->log_syslog_facility, config->log_syslog_facility, diags);
+
+	if (cfg->io_method.seen.is_set) {
+		const char *method = cfg->io_method.value;
+		if (mm_io_method_parse(method) == NULL) {
+			od_cfg_diag_error(
+				diags, cfg->io_method.seen.location,
+				"invalid io_method '%s' (available: %s)",
+				method, MM_AVAILABLE_IO_METHODS);
+			return -1;
+		}
+		strcpy(config->io_method, method);
+	}
 
 	if (cfg->availability_zone.seen.is_set) {
 		const char *val = cfg->availability_zone.value;

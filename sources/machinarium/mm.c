@@ -7,11 +7,13 @@
 
 #include <machinarium/machinarium.h>
 #include <machinarium/mm.h>
+#include <machinarium/io_method.h>
 #include <machinarium/tls.h>
 
 static int machinarium_stack_size = 0;
 static int machinarium_system_stack_size = 0;
 static int machinarium_pool_size = 0;
+static const char *machinarium_io_method = MM_DEFAULT_IO_METHOD;
 static int machinarium_coroutine_cache_size = 0;
 static int machinarium_msg_cache_gc_size = 0;
 static int machinarium_msg_cache_gc_count = 0;
@@ -37,6 +39,16 @@ MACHINE_API void machinarium_set_system_stack_size(int size)
 MACHINE_API void machinarium_set_pool_size(int size)
 {
 	machinarium_pool_size = size;
+}
+
+MACHINE_API int machinarium_set_io_method(const char *name)
+{
+	const char *method = mm_io_method_parse(name);
+	if (method == NULL) {
+		return -1;
+	}
+	machinarium_io_method = method;
+	return 0;
 }
 
 MACHINE_API void machinarium_set_coroutine_cache_size(int size)
@@ -85,6 +97,7 @@ MACHINE_API int machinarium_init(void)
 	machinarium.config.stack_size = machinarium_stack_size;
 	machinarium.config.system_stack_size = machinarium_system_stack_size;
 	machinarium.config.pool_size = machinarium_pool_size;
+	machinarium.config.io_method = machinarium_io_method;
 	machinarium.config.coroutine_cache_size =
 		machinarium_coroutine_cache_size;
 	machinarium.config.msg_cache_gc_size = machinarium_msg_cache_gc_size;

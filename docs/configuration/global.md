@@ -76,6 +76,7 @@ megabytes) and is rejected by time-valued options.
 | `stats_interval`                           | int (sec)        | `3`         | SIGHUP  | Interval for stats logging; duration suffixes (`60s`, `1min`) are supported |
 | `workers`                                  | int              | `1`         | restart | Worker threads for clients                            |
 | `resolvers`                                | int              | `1`         | restart | DNS resolver threads                                  |
+| `io_method`                                | string           | platform    | restart | Configured I/O method                                 |
 | `readahead`                                | int (bytes)      | 8192        | SIGHUP  | Per-connection read buffer                            |
 | `writebuf`                                 | int (bytes)      | 8192         | restart | Per-connection write buffer for client connections; 0 = off; size suffixes (`8K`, `1M`) are supported |
 | `cache_coroutine`                          | int              | `1024`      | restart | Coroutines cache size                                  |
@@ -411,6 +412,16 @@ Number of threads used for DNS resolving. This value can be increased, if
 your server experience a big number of connecting clients.
 
 `resolvers 1`
+
+## **io_method**
+*string*
+
+Defaults to `"epoll"` on Linux and `"kqueue"` on supported BSD systems and macOS.
+Linux builds with `BUILD_IO_URING=ON` also accept `"io_uring"`. Odyssey passes
+the configured method to Machinarium at startup. The transport still uses the
+platform default.
+
+`io_method "io_uring"`
 
 ## **readahead**
 *integer*

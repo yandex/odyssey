@@ -9,6 +9,7 @@
 
 #include <machinarium/machinarium.h>
 #include <machinarium/loop.h>
+#include <machinarium/port.h>
 
 /*
  * Do not sleep longer than one second even if the next timer is far away.
@@ -18,15 +19,12 @@
  */
 #define MM_LOOP_MAX_SLEEP_MS 1000
 
-#if defined(__linux__)
+#if defined(MM_HAVE_EPOLL)
 #include <machinarium/epoll.h>
 #define MM_POLL_IF mm_epoll_if
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || \
-	defined(__OpenBSD__) || defined(__DragonFly__)
+#elif defined(MM_HAVE_KQUEUE)
 #include <machinarium/kqueue.h>
 #define MM_POLL_IF mm_kqueue_if
-#else
-#error "machinarium: unsupported platform, no poll backend available"
 #endif
 
 int mm_loop_init(mm_loop_t *loop)
