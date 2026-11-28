@@ -97,8 +97,8 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 
 	int pos = 0;
 	for (;;) {
-		int nread = (int)machine_read_raw(io->io, dest + pos,
-						  (size_t)(size - pos));
+		int nread = (int)mm_io_read(io->io, dest + pos,
+					    (size_t)(size - pos));
 		if (nread > 0) {
 			pos += nread;
 			if (pos == size) {
@@ -137,7 +137,7 @@ static inline int od_io_read(od_io_t *io, char *dest, int size,
 static inline int od_io_has_instant_data(od_io_t *io)
 {
 	char probe[64];
-	return machine_read_raw(io->io, probe, sizeof(probe)) > 0;
+	return mm_io_read(io->io, probe, sizeof(probe)) > 0;
 }
 
 static inline machine_msg_t *od_read_startup(od_io_t *io, uint32_t time_ms)

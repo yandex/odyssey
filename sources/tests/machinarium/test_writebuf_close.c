@@ -117,13 +117,13 @@ static void client(void *arg)
 
 	char buf[300];
 	fill(buf, sizeof(buf), 1);
-	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
+	rc = mm_io_write(client, buf, sizeof(buf), NULL);
 	test(rc == (ssize_t)sizeof(buf));
 	test_flush(client);
 
 	/* buffered but never flushed explicitly */
 	fill(buf, sizeof(buf), 2);
-	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
+	rc = mm_io_write(client, buf, sizeof(buf), NULL);
 	test(rc == (ssize_t)sizeof(buf));
 	test(mm_io_write_pending(client) == 300);
 

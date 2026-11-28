@@ -177,7 +177,7 @@ static void client(void *arg)
 
 	char buf[300];
 	fill(buf, sizeof(buf), 1);
-	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
+	rc = mm_io_write(client, buf, sizeof(buf), NULL);
 	test(rc == (ssize_t)sizeof(buf));
 
 	/* give the server time to consume the phase */
@@ -188,8 +188,8 @@ static void client(void *arg)
 	fill(big, 64 * 1024 + 500, 2);
 	size_t off = 0;
 	while (off < 64 * 1024 + 500) {
-		rc = machine_write_raw(client, big + off, 64 * 1024 + 500 - off,
-				       NULL);
+		rc = mm_io_write(client, big + off, 64 * 1024 + 500 - off,
+				 NULL);
 		test(rc > 0);
 		off += (size_t)rc;
 	}

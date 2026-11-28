@@ -258,22 +258,9 @@ MACHINE_API int machine_getpeername(mm_io_t *, struct sockaddr *, int *);
 
 /* read */
 
-MACHINE_API ssize_t machine_read_raw(mm_io_t *, void *, size_t);
-
-/*
- * Returns 1 if there are some bytes in io, that are ready to be read.
- */
-MACHINE_API int machine_read_pending(mm_io_t *);
-
 MACHINE_API machine_msg_t *machine_read(mm_io_t *, size_t, uint32_t time_ms);
 
 /* write */
-
-MACHINE_API ssize_t machine_write_raw(mm_io_t *, const void *, size_t,
-				      size_t *);
-
-MACHINE_API ssize_t machine_writev_raw(mm_io_t *, const struct iovec *iov,
-				       int iovcnt, size_t *processed);
 
 MACHINE_API int machine_write(mm_io_t *, machine_msg_t *, uint32_t time_ms);
 

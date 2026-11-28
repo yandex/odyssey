@@ -151,11 +151,11 @@ static void client(void *arg)
 
 	char buf[300];
 	fill(buf, sizeof(buf), 1);
-	rc = machine_write_raw(client, buf, 100, NULL);
+	rc = mm_io_write(client, buf, 100, NULL);
 	test(rc == 100);
-	rc = machine_write_raw(client, buf + 100, 100, NULL);
+	rc = mm_io_write(client, buf + 100, 100, NULL);
 	test(rc == 100);
-	rc = machine_write_raw(client, buf + 200, 100, NULL);
+	rc = mm_io_write(client, buf + 200, 100, NULL);
 	test(rc == 100);
 	test(mm_io_write_pending(client) == 300);
 
@@ -168,8 +168,8 @@ static void client(void *arg)
 	fill(big, 64 * 1024 + 500, 2);
 	size_t off = 0;
 	while (off < 64 * 1024 + 500) {
-		rc = machine_write_raw(client, big + off, 64 * 1024 + 500 - off,
-				       NULL);
+		rc = mm_io_write(client, big + off, 64 * 1024 + 500 - off,
+				 NULL);
 		test(rc > 0);
 		off += (size_t)rc;
 	}
@@ -184,7 +184,7 @@ static void client(void *arg)
 	fill(small, total, 3);
 	size_t done = 0;
 	while (done < (size_t)total) {
-		rc = machine_write_raw(client, small + done, 1024, NULL);
+		rc = mm_io_write(client, small + done, 1024, NULL);
 		test(rc > 0);
 		done += (size_t)rc;
 	}
@@ -206,7 +206,7 @@ static void client(void *arg)
 	iov[1].iov_len = sizeof(part1);
 	iov[2].iov_base = part2;
 	iov[2].iov_len = sizeof(part2);
-	rc = machine_writev_raw(client, iov, 3, NULL);
+	rc = mm_io_writev(client, iov, 3, NULL);
 	test(rc == (ssize_t)(sizeof(part0) + sizeof(part1) + sizeof(part2)));
 	test(mm_io_write_pending(client) == 600);
 	test_flush(client);
@@ -223,7 +223,7 @@ static void client(void *arg)
 	wv[0].iov_len = 16 * 1024;
 	wv[1].iov_base = wv1;
 	wv[1].iov_len = 16 * 1024;
-	rc = machine_writev_raw(client, wv, 2, NULL);
+	rc = mm_io_writev(client, wv, 2, NULL);
 	test(rc == (ssize_t)(32 * 1024));
 	test_flush(client);
 	test(mm_io_write_pending(client) == 0);
@@ -238,7 +238,7 @@ static void client(void *arg)
 	/* disable and check that writes go through directly */
 	rc = mm_io_buf_disable(client);
 	test(rc == 0);
-	rc = machine_write_raw(client, buf, 100, NULL);
+	rc = mm_io_write(client, buf, 100, NULL);
 	test(rc == 100);
 	test(mm_io_write_pending(client) == 0);
 

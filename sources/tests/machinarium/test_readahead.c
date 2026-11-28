@@ -449,7 +449,7 @@ static void client(void *arg)
 
 	char buf[300];
 	fill(buf, sizeof(buf), 1);
-	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
+	rc = mm_io_write(client, buf, sizeof(buf), NULL);
 	test(rc == (ssize_t)sizeof(buf));
 
 	/* give the server time to consume the phase */
@@ -464,7 +464,7 @@ static void client(void *arg)
 		if (off + chunk > 40 * 1024) {
 			chunk = 40 * 1024 - off;
 		}
-		rc = machine_write_raw(client, small + off, chunk, NULL);
+		rc = mm_io_write(client, small + off, chunk, NULL);
 		test(rc > 0);
 		off += (size_t)rc;
 	}
@@ -477,8 +477,8 @@ static void client(void *arg)
 	fill(big, 64 * 1024 + 500, 3);
 	off = 0;
 	while (off < 64 * 1024 + 500) {
-		rc = machine_write_raw(client, big + off, 64 * 1024 + 500 - off,
-				       NULL);
+		rc = mm_io_write(client, big + off, 64 * 1024 + 500 - off,
+				 NULL);
 		test(rc > 0);
 		off += (size_t)rc;
 	}
@@ -486,7 +486,7 @@ static void client(void *arg)
 	machine_sleep(300);
 
 	fill(buf, sizeof(buf), 4);
-	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
+	rc = mm_io_write(client, buf, sizeof(buf), NULL);
 	test(rc == (ssize_t)sizeof(buf));
 
 	/*
@@ -496,7 +496,7 @@ static void client(void *arg)
 	 */
 	machine_sleep(300);
 	fill(buf, sizeof(buf), 5);
-	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
+	rc = mm_io_write(client, buf, sizeof(buf), NULL);
 	test(rc == (ssize_t)sizeof(buf));
 
 	recv_ack(client);
@@ -504,7 +504,7 @@ static void client(void *arg)
 	machine_sleep(300);
 	char extra[400];
 	fill_at(extra, sizeof(extra), 0, 6);
-	rc = machine_write_raw(client, extra, sizeof(extra), NULL);
+	rc = mm_io_write(client, extra, sizeof(extra), NULL);
 	test(rc == (ssize_t)sizeof(extra));
 
 	/*
@@ -517,19 +517,19 @@ static void client(void *arg)
 
 	char chunk[32];
 	fill_at(chunk, sizeof(chunk), 0, 7);
-	rc = machine_write_raw(client, chunk, sizeof(chunk), NULL);
+	rc = mm_io_write(client, chunk, sizeof(chunk), NULL);
 	test(rc == (ssize_t)sizeof(chunk));
 
 	recv_ack(client);
 
 	fill_at(chunk, sizeof(chunk), 32, 7);
-	rc = machine_write_raw(client, chunk, sizeof(chunk), NULL);
+	rc = mm_io_write(client, chunk, sizeof(chunk), NULL);
 	test(rc == (ssize_t)sizeof(chunk));
 
 	recv_ack(client);
 
 	fill(buf, sizeof(buf), 8);
-	rc = machine_write_raw(client, buf, sizeof(buf), NULL);
+	rc = mm_io_write(client, buf, sizeof(buf), NULL);
 	test(rc == (ssize_t)sizeof(buf));
 
 	recv_ack(client);

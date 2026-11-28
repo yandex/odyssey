@@ -14,17 +14,6 @@
 #include <machinarium/fd.h>
 #include <machinarium/tls.h>
 
-MACHINE_API ssize_t machine_read_raw(mm_io_t *obj, void *buf, size_t size)
-{
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
-	return mm_io_read(io, buf, size);
-}
-
-MACHINE_API int machine_read_pending(mm_io_t *io)
-{
-	return mm_io_read_pending(io);
-}
-
 static inline int machine_read_to(mm_io_t *io, machine_msg_t *msg, size_t size,
 				  uint32_t time_ms)
 {
@@ -45,7 +34,7 @@ static inline int machine_read_to(mm_io_t *io, machine_msg_t *msg, size_t size,
 	char *dest = (char *)machine_msg_data(msg) + offset;
 	size_t total = 0;
 	while (total != size) {
-		int rc = machine_read_raw(io, dest + total, size - total);
+		int rc = mm_io_read(io, dest + total, size - total);
 		if (rc > 0) {
 			total += rc;
 			continue;
