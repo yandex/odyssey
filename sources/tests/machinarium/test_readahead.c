@@ -84,12 +84,12 @@ static void send_ack(mm_io_t *io, char ack)
 	machine_msg_t *msg = machine_msg_create(0);
 	test(msg != NULL);
 	test(machine_msg_write(msg, &ack, 1) == 0);
-	test(machine_write(io, msg, UINT32_MAX) == 0);
+	test(mm_io_write_msg(io, msg, UINT32_MAX) == 0);
 }
 
 static void recv_ack(mm_io_t *io)
 {
-	machine_msg_t *ack = machine_read(io, 1, UINT32_MAX);
+	machine_msg_t *ack = mm_io_read_msg(io, 1, UINT32_MAX);
 	test(ack != NULL);
 	test(machine_msg_size(ack) == 1);
 	machine_msg_free(ack);
@@ -122,23 +122,23 @@ static void server(void *arg)
 
 	/* no data yet - the read times out */
 	machine_msg_t *msg;
-	msg = machine_read(client, 300, 100);
+	msg = mm_io_read_msg(client, 300, 100);
 	test(msg == NULL);
 
 	/* a small read pulls the whole write into the readahead,
 	 * the excess is served by the following reads */
-	msg = machine_read(client, 100, UINT32_MAX);
+	msg = mm_io_read_msg(client, 100, UINT32_MAX);
 	test(msg != NULL);
 	check_at(msg, 100, 0, 1);
 	test(mm_io_read_pending(client) == 200);
 	test(mm_io_read_pending(client) != 0);
 
-	msg = machine_read(client, 100, UINT32_MAX);
+	msg = mm_io_read_msg(client, 100, UINT32_MAX);
 	test(msg != NULL);
 	check_at(msg, 100, 100, 1);
 	test(mm_io_read_pending(client) == 100);
 
-	msg = machine_read(client, 100, UINT32_MAX);
+	msg = mm_io_read_msg(client, 100, UINT32_MAX);
 	test(msg != NULL);
 	check_at(msg, 100, 200, 1);
 	test(mm_io_read_pending(client) == 0);
@@ -152,7 +152,7 @@ static void server(void *arg)
 		if (done + chunk > (size_t)total) {
 			chunk = (size_t)total - done;
 		}
-		msg = machine_read(client, chunk, UINT32_MAX);
+		msg = mm_io_read_msg(client, chunk, UINT32_MAX);
 		test(msg != NULL);
 		check_at(msg, chunk, done, 2);
 		done += chunk;
@@ -160,14 +160,14 @@ static void server(void *arg)
 	test(mm_io_read_pending(client) == 0);
 
 	/* large read: the block-aligned part bypasses the buffer */
-	msg = machine_read(client, 64 * 1024 + 500, UINT32_MAX);
+	msg = mm_io_read_msg(client, 64 * 1024 + 500, UINT32_MAX);
 	test(msg != NULL);
 	check(msg, 64 * 1024 + 500, 3);
 	test(mm_io_read_pending(client) == 0);
 
 	/* the layer cannot be disabled while the readahead holds
 	 * unread data */
-	msg = machine_read(client, 100, UINT32_MAX);
+	msg = mm_io_read_msg(client, 100, UINT32_MAX);
 	test(msg != NULL);
 	check_at(msg, 100, 0, 4);
 	test(mm_io_read_pending(client) == 200);
@@ -176,7 +176,7 @@ static void server(void *arg)
 	test(rc == -1);
 	test(machine_errno() == EINPROGRESS);
 
-	msg = machine_read(client, 200, UINT32_MAX);
+	msg = mm_io_read_msg(client, 200, UINT32_MAX);
 	test(msg != NULL);
 	check_at(msg, 200, 100, 4);
 	test(mm_io_read_pending(client) == 0);
@@ -281,7 +281,7 @@ static void server(void *arg)
 	char ack_b = 'B';
 	rc = machine_msg_write(msg, &ack_b, 1);
 	test(rc == 0);
-	rc = machine_write(client, msg, UINT32_MAX);
+	rc = mm_io_write_msg(client, msg, UINT32_MAX);
 	test(rc == 0);
 
 	/*

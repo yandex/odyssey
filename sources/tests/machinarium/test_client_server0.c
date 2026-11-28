@@ -34,7 +34,7 @@ static void server(void *arg)
 	rc = machine_msg_write(msg, text, sizeof(text));
 	test(rc == 0);
 
-	rc = machine_write(client, msg, UINT32_MAX);
+	rc = mm_io_write_msg(client, msg, UINT32_MAX);
 	test(rc == 0);
 
 	rc = mm_io_close(client);
@@ -61,12 +61,12 @@ static void client(void *arg)
 	test(rc == 0);
 
 	machine_msg_t *msg;
-	msg = machine_read(client, 12, UINT32_MAX);
+	msg = mm_io_read_msg(client, 12, UINT32_MAX);
 	test(msg != NULL);
 	test(memcmp(machine_msg_data(msg), "hello world", 12) == 0);
 	machine_msg_free(msg);
 
-	msg = machine_read(client, 1, UINT32_MAX);
+	msg = mm_io_read_msg(client, 1, UINT32_MAX);
 	/* eof */
 	test(msg == NULL);
 

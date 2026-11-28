@@ -550,6 +550,116 @@ int mm_io_read_pending(mm_io_t *io)
 	return mm_bio_read_pending(io->bio);
 }
 
+static inline int read_msg_to(mm_io_t *io, machine_msg_t *msg, size_t size,
+			      uint32_t time_ms)
+{
+	mm_errno_set(0);
+
+	if (!io->attached) {
+		mm_errno_set(ENOTCONN);
+		return -1;
+	}
+
+	int rc;
+	int offset = machine_msg_size(msg);
+	rc = machine_msg_write(msg, NULL, size);
+	if (rc == -1) {
+		return -1;
+	}
+
+	char *dest = (char *)machine_msg_data(msg) + offset;
+	size_t total = 0;
+	while (total != size) {
+		int rc = mm_io_read(io, dest + total, size - total);
+		if (rc > 0) {
+			total += rc;
+			continue;
+		}
+
+		/* error or eof */
+		if (rc == -1) {
+			int errno_ = machine_errno();
+			if (machine_errno_retryable(errno_)) {
+				rc = mm_io_wait(io, time_ms);
+				if (rc == -1) {
+					return -1;
+				}
+				continue;
+			}
+		}
+
+		return -1;
+	}
+
+	return 0;
+}
+
+machine_msg_t *mm_io_read_msg(mm_io_t *io, size_t size, uint32_t time_ms)
+{
+	mm_errno_set(0);
+	machine_msg_t *msg = machine_msg_create(0);
+	if (msg == NULL) {
+		return NULL;
+	}
+	int rc = read_msg_to(io, msg, size, time_ms);
+	if (rc == -1) {
+		machine_msg_free(msg);
+		return NULL;
+	}
+	return msg;
+}
+
+int mm_io_write_msg_no_free(mm_io_t *io, machine_msg_t *msg, uint32_t time_ms)
+{
+	mm_errno_set(0);
+
+	if (!io->attached) {
+		mm_errno_set(ENOTCONN);
+		goto error;
+	}
+
+	int total = 0;
+	char *src = machine_msg_data(msg);
+	int size = machine_msg_size(msg);
+	while (total != size) {
+		/* when using compression, some data may be processed
+		 * despite the non-positive return code */
+		size_t processed = 0;
+		int rc = mm_io_write(io, src + total, size - total, &processed);
+		total += processed;
+
+		if (rc > 0) {
+			total += rc;
+			continue;
+		}
+
+		/* error or eof */
+		if (rc == -1) {
+			int errno_ = machine_errno();
+			if (machine_errno_retryable(errno_)) {
+				rc = mm_io_wait(io, time_ms);
+				if (rc == -1) {
+					goto error;
+				}
+				continue;
+			}
+		}
+
+		goto error;
+	}
+
+	return 0;
+error:
+	return -1;
+}
+
+int mm_io_write_msg(mm_io_t *io, machine_msg_t *msg, uint32_t time_ms)
+{
+	int rc = mm_io_write_msg_no_free(io, msg, time_ms);
+	machine_msg_free(msg);
+	return rc;
+}
+
 static inline int format_inet_socket_addr(struct sockaddr *sa, socklen_t sa_len,
 					  char *buf, size_t buflen)
 {

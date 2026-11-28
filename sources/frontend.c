@@ -117,7 +117,7 @@ int od_frontend_fatal_no_startup(mm_io_t *io, char *code, char *fmt, ...)
 		return -1;
 	}
 
-	return machine_write(io, msg, OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS);
+	return mm_io_write_msg(io, msg, OD_FRONTEND_FINAL_WRITE_TIMEOUT_MS);
 }
 
 int od_frontend_fatal(od_client_t *client, char *code, char *fmt, ...)

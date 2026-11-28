@@ -54,7 +54,7 @@ static void client(void *arg)
 		io->handle.on_err(&io->handle);
 		test(io->error == ECONNRESET);
 	}
-	machine_msg_t *msg = machine_read(io, 1, 500);
+	machine_msg_t *msg = mm_io_read_msg(io, 1, 500);
 	test(msg == NULL);
 	test(machine_errno() == (reset ? ECONNRESET : 0));
 	test(mm_io_close(io) == 0);

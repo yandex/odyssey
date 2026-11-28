@@ -129,20 +129,20 @@ static void test_exchange(void *arg)
 	     sizeof(payload));
 	test(transport.bytes_written > sizeof(payload));
 
-	machine_msg_t *msg = machine_read(server, sizeof(payload), 5000);
+	machine_msg_t *msg = mm_io_read_msg(server, sizeof(payload), 5000);
 	test(msg != NULL);
 	test(memcmp(machine_msg_data(msg), payload, sizeof(payload)) == 0);
 	char received[sizeof(payload)];
 	test(mm_io_read(server, received, 1) == -1);
 	test(machine_errno() == EAGAIN);
-	test(machine_write(server, msg, 5000) == 0);
+	test(mm_io_write_msg(server, msg, 5000) == 0);
 
 	transport.retry_read = 1;
 	transport.bytes_read = 0;
 	test(mm_io_read(client, received, sizeof(received)) == -1);
 	test(machine_errno() == EAGAIN);
 	test(mm_io_want_read(client));
-	msg = machine_read(client, sizeof(payload), 5000);
+	msg = mm_io_read_msg(client, sizeof(payload), 5000);
 	test(msg != NULL);
 	test(memcmp(machine_msg_data(msg), payload, sizeof(payload)) == 0);
 	machine_msg_free(msg);

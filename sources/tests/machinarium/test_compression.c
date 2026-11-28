@@ -36,7 +36,7 @@ static struct iovec iov_advance(struct iovec *iov, int cnt, size_t size)
 /*
  * machinarium-level user of the new write contract: loop the
  * single-attempt flush, delivery is not guaranteed by
- * machine_write() anymore
+ * mm_io_write_msg() anymore
  */
 static void test_flush(mm_io_t *io)
 {
@@ -75,12 +75,12 @@ static void server(void *arg)
 	}
 
 	machine_msg_t *msg;
-	msg = machine_read(client, sizeof("ping"), UINT32_MAX);
+	msg = mm_io_read_msg(client, sizeof("ping"), UINT32_MAX);
 	test(msg != NULL);
 	test(memcmp(machine_msg_data(msg), "ping", sizeof("ping")) == 0);
 	machine_msg_free(msg);
 
-	msg = machine_read(client, COMPRESSION_PAYLOAD_SIZE, UINT32_MAX);
+	msg = mm_io_read_msg(client, COMPRESSION_PAYLOAD_SIZE, UINT32_MAX);
 	test(msg != NULL);
 	test(memcmp(machine_msg_data(msg), compression_payload,
 		    COMPRESSION_PAYLOAD_SIZE) == 0);
@@ -159,7 +159,7 @@ static void client(void *arg)
 	test(msg != NULL);
 	rc = machine_msg_write(msg, "ping", sizeof("ping"));
 	test(rc == 0);
-	rc = machine_write(client, msg, UINT32_MAX);
+	rc = mm_io_write_msg(client, msg, UINT32_MAX);
 	test_flush(client);
 
 	msg = machine_msg_create(0);
@@ -167,16 +167,16 @@ static void client(void *arg)
 	rc = machine_msg_write(msg, compression_payload,
 			       COMPRESSION_PAYLOAD_SIZE);
 	test(rc == 0);
-	rc = machine_write(client, msg, UINT32_MAX);
+	rc = mm_io_write_msg(client, msg, UINT32_MAX);
 	test_flush(client);
 
-	msg = machine_read(client, COMPRESSION_PAYLOAD_SIZE, UINT32_MAX);
+	msg = mm_io_read_msg(client, COMPRESSION_PAYLOAD_SIZE, UINT32_MAX);
 	test(msg != NULL);
 	test(memcmp(machine_msg_data(msg), compression_reply,
 		    COMPRESSION_PAYLOAD_SIZE) == 0);
 	machine_msg_free(msg);
 
-	msg = machine_read(client, 1, UINT32_MAX);
+	msg = mm_io_read_msg(client, 1, UINT32_MAX);
 	/* eof */
 	test(msg == NULL);
 

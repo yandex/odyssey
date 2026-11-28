@@ -105,6 +105,20 @@ int mm_io_socket(mm_io_t *, struct sockaddr *);
 ssize_t mm_io_write(mm_io_t *, const void *, size_t, size_t *processed);
 ssize_t mm_io_writev(mm_io_t *, const struct iovec *, int, size_t *processed);
 ssize_t mm_io_read(mm_io_t *, void *, size_t);
+
+/*
+ * Message-level operations: raw reads/writes wrapped into a
+ * retry-and-wait loop with a timeout.
+ *
+ * mm_io_read_msg reads exactly size bytes into a freshly allocated
+ * message and returns it, or NULL on error/timeout/eof.
+ *
+ * mm_io_write_msg writes the whole message and frees it.
+ * mm_io_write_msg_no_free leaves the message intact.
+ */
+machine_msg_t *mm_io_read_msg(mm_io_t *, size_t, uint32_t time_ms);
+int mm_io_write_msg(mm_io_t *, machine_msg_t *, uint32_t time_ms);
+int mm_io_write_msg_no_free(mm_io_t *, machine_msg_t *, uint32_t time_ms);
 int mm_io_format_socket_addr(mm_io_t *, char *, size_t);
 int mm_io_read_pending(mm_io_t *);
 int mm_io_write_pending(mm_io_t *);

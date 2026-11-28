@@ -30,7 +30,7 @@ static void server(void *arg)
 	int i = 0;
 	for (;;) {
 		machine_msg_t *msg;
-		msg = machine_read(client, sizeof(i), UINT32_MAX);
+		msg = mm_io_read_msg(client, sizeof(i), UINT32_MAX);
 		test(msg != NULL);
 		i = *(int *)machine_msg_data(msg);
 		machine_msg_free(msg);
@@ -42,7 +42,7 @@ static void server(void *arg)
 		rc = machine_msg_write(msg, (void *)&i, sizeof(i));
 		test(rc == 0);
 
-		rc = machine_write(client, msg, UINT32_MAX);
+		rc = mm_io_write_msg(client, msg, UINT32_MAX);
 		test(rc == 0);
 
 		if (i == 1000) {
@@ -80,10 +80,10 @@ static void client(void *arg)
 		test(msg != NULL);
 		rc = machine_msg_write(msg, (void *)&i, sizeof(i));
 		test(rc == 0);
-		rc = machine_write(client, msg, UINT32_MAX);
+		rc = mm_io_write_msg(client, msg, UINT32_MAX);
 		test(rc == 0);
 
-		msg = machine_read(client, sizeof(i), UINT32_MAX);
+		msg = mm_io_read_msg(client, sizeof(i), UINT32_MAX);
 		test(msg != NULL);
 
 		i = *(int *)machine_msg_data(msg);
@@ -96,7 +96,7 @@ static void client(void *arg)
 
 	/* eof */
 	machine_msg_t *msg;
-	msg = machine_read(client, sizeof(i), UINT32_MAX);
+	msg = mm_io_read_msg(client, sizeof(i), UINT32_MAX);
 	test(msg == NULL);
 
 	rc = mm_io_close(client);

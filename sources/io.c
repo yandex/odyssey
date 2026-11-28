@@ -133,8 +133,8 @@ int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 		 * compression, *processed is additionally set by the compressor
 		 * on partial-progress errors (rc <= 0) and holds the bytes
 		 * already accepted; those must not be resent on retry. This
-		 * additive accounting mirrors machine_write_no_free() which
-		 * uses mm_io_write() the same way.
+		 * additive accounting mirrors mm_io_write_msg_no_free()
+		 * which uses mm_io_write() the same way.
 		 */
 		size_t consumed = processed + (rc > 0 ? (size_t)rc : 0);
 		if (consumed > 0) {

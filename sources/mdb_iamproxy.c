@@ -64,8 +64,8 @@ machine_msg_t *mdb_iamproxy_io_read(mm_io_t *io)
 
 	/* RECEIVE HEADER */
 	od_wait_event_start(OD_WAIT_AUTH_EXTERNAL);
-	header = machine_read(io, MDB_IAMPROXY_DEFAULT_HEADER_SIZE,
-			      MDB_IAMPROXY_DEFAULT_RECEIVING_HEADER_TIMEOUT);
+	header = mm_io_read_msg(io, MDB_IAMPROXY_DEFAULT_HEADER_SIZE,
+				MDB_IAMPROXY_DEFAULT_RECEIVING_HEADER_TIMEOUT);
 	if (header == NULL) {
 		od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 		return NULL;
@@ -77,8 +77,8 @@ machine_msg_t *mdb_iamproxy_io_read(mm_io_t *io)
 		od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 		return NULL;
 	}
-	msg = machine_read(io, body_size,
-			   MDB_IAMPROXY_DEFAULT_RECEIVING_BODY_TIMEOUT);
+	msg = mm_io_read_msg(io, body_size,
+			     MDB_IAMPROXY_DEFAULT_RECEIVING_BODY_TIMEOUT);
 	od_wait_event_end(OD_WAIT_AUTH_EXTERNAL);
 	if (msg == NULL) {
 		return NULL;
@@ -104,14 +104,15 @@ int mdb_iamproxy_io_write(mm_io_t *io, machine_msg_t *msg)
 	put_header((char *)machine_msg_data(header), body_size);
 
 	/*SEND HEADER TO SOCKET*/
-	if (machine_write(io, header, MDB_IAMPROXY_DEFAULT_SENDING_TIMEOUT) <
+	if (mm_io_write_msg(io, header, MDB_IAMPROXY_DEFAULT_SENDING_TIMEOUT) <
 	    0) {
 		send_result = MDB_IAMPROXY_RES_ERROR;
 		goto free_msg;
 	}
 
 	/*SEND MSG TO SOCKET*/
-	if (machine_write(io, msg, MDB_IAMPROXY_DEFAULT_SENDING_TIMEOUT) < 0) {
+	if (mm_io_write_msg(io, msg, MDB_IAMPROXY_DEFAULT_SENDING_TIMEOUT) <
+	    0) {
 		send_result = MDB_IAMPROXY_RES_ERROR;
 		goto free_end;
 	}
