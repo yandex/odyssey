@@ -74,8 +74,3 @@ MACHINE_API machine_msg_t *machine_channel_read_back(machine_channel_t *obj,
 	msg = mm_channel_read_back(channel, time_ms);
 	return (machine_msg_t *)msg;
 }
-
-MACHINE_API size_t machine_channel_get_size(machine_channel_t *chan)
-{
-	return mm_channel_get_size(mm_cast(mm_channel_t *, chan));
-}

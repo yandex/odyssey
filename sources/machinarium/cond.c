@@ -22,19 +22,6 @@ MACHINE_API machine_cond_t *machine_cond_create(void)
 	return (machine_cond_t *)cond;
 }
 
-MACHINE_API void machine_cond_free(machine_cond_t *obj)
-{
-	mm_free(obj);
-}
-
-MACHINE_API void machine_cond_propagate(machine_cond_t *obj,
-					machine_cond_t *prop)
-{
-	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
-	mm_cond_t *propagate = mm_cast(mm_cond_t *, prop);
-	cond->propagate = propagate;
-}
-
 MACHINE_API void machine_cond_signal(machine_cond_t *obj)
 {
 	mm_cond_t *cond = mm_cast(mm_cond_t *, obj);
