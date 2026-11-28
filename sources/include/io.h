@@ -233,13 +233,13 @@ static inline machine_msg_t *od_read(od_io_t *io, uint32_t time_ms,
 
 static inline int od_write(od_io_t *io, machine_msg_t *msg)
 {
-	return machine_write(io->io, msg, UINT32_MAX);
+	return mm_io_write_msg(io->io, msg, UINT32_MAX);
 }
 
 static inline int od_write2(od_io_t *io, machine_msg_t *msg,
 			    uint32_t timeout_ms)
 {
-	return machine_write(io->io, msg, timeout_ms);
+	return mm_io_write_msg(io->io, msg, timeout_ms);
 }
 
 int od_io_read_some(od_io_t *io, uint32_t timeout_ms);
@@ -253,7 +253,7 @@ static inline int od_io_write(od_io_t *io, machine_msg_t *msg,
 			      uint32_t timeout_ms, od_wait_event_t write_event)
 {
 	od_wait_event_start(write_event);
-	int rc = machine_write_no_free(io->io, msg, timeout_ms);
+	int rc = mm_io_write_msg_no_free(io->io, msg, timeout_ms);
 	od_wait_event_end(write_event);
 	return rc;
 }

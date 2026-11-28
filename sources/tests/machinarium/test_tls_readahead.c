@@ -96,28 +96,28 @@ static void server(void *arg)
 
 	/* no data yet - the read times out */
 	machine_msg_t *msg;
-	msg = machine_read(client, 300, 100);
+	msg = mm_io_read_msg(client, 300, 100);
 	test(msg == NULL);
 
 	/* a small read pulls the whole record into the readahead,
 	 * the excess is served by the following reads */
-	msg = machine_read(client, 100, UINT32_MAX);
+	msg = mm_io_read_msg(client, 100, UINT32_MAX);
 	test(msg != NULL);
 	check_at(msg, 100, 0, 1);
 	test(mm_io_read_pending(client) == 200);
 
-	msg = machine_read(client, 100, UINT32_MAX);
+	msg = mm_io_read_msg(client, 100, UINT32_MAX);
 	test(msg != NULL);
 	check_at(msg, 100, 100, 1);
 	test(mm_io_read_pending(client) == 100);
 
-	msg = machine_read(client, 100, UINT32_MAX);
+	msg = mm_io_read_msg(client, 100, UINT32_MAX);
 	test(msg != NULL);
 	check_at(msg, 100, 200, 1);
 	test(mm_io_read_pending(client) == 0);
 
 	/* large read: the block-aligned part bypasses the buffer */
-	msg = machine_read(client, 64 * 1024 + 500, UINT32_MAX);
+	msg = mm_io_read_msg(client, 64 * 1024 + 500, UINT32_MAX);
 	test(msg != NULL);
 	check(msg, 64 * 1024 + 500, 2);
 	test(mm_io_read_pending(client) == 0);
@@ -128,7 +128,7 @@ static void server(void *arg)
 	char ack = 'A';
 	rc = machine_msg_write(msg, &ack, 1);
 	test(rc == 0);
-	rc = machine_write(client, msg, UINT32_MAX);
+	rc = mm_io_write_msg(client, msg, UINT32_MAX);
 	test(rc == 0);
 
 	rc = mm_io_close(client);
@@ -197,12 +197,12 @@ static void client(void *arg)
 
 	/* wait for the server ack, then eof */
 	machine_msg_t *msg;
-	msg = machine_read(client, 1, UINT32_MAX);
+	msg = mm_io_read_msg(client, 1, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_size(msg) == 1);
 	machine_msg_free(msg);
 
-	msg = machine_read(client, 1, UINT32_MAX);
+	msg = mm_io_read_msg(client, 1, UINT32_MAX);
 	test(msg == NULL);
 
 	rc = mm_io_close(client);

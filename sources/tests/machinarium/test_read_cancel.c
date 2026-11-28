@@ -57,7 +57,7 @@ static void client(void *arg)
 	test(rc == 0);
 
 	machine_msg_t *msg;
-	msg = machine_read(client, 12, UINT32_MAX);
+	msg = mm_io_read_msg(client, 12, UINT32_MAX);
 	test(msg == NULL);
 	test(!machine_timedout());
 	test(machine_cancelled());

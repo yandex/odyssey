@@ -53,13 +53,13 @@ static void server(void *arg)
 		rc = machine_msg_write(msg, NULL, chunk_size);
 		test(rc == 0);
 		memset(machine_msg_data(msg), 'x', chunk_size);
-		rc = machine_write(client, msg, UINT32_MAX);
+		rc = mm_io_write_msg(client, msg, UINT32_MAX);
 		test(rc == 0);
 		pos += chunk_size;
 	}
 
 	/* wait for disconnection */
-	machine_msg_t *msg = machine_read(client, 1, UINT32_MAX);
+	machine_msg_t *msg = mm_io_read_msg(client, 1, UINT32_MAX);
 	test(msg == NULL);
 
 	rc = mm_io_close(client);
@@ -106,7 +106,7 @@ static void client(void *arg)
 	int pos = 0;
 	while (pos < 10 * 1024 * 1024) {
 		machine_msg_t *msg;
-		msg = machine_read(client, 1024, UINT32_MAX);
+		msg = mm_io_read_msg(client, 1024, UINT32_MAX);
 		if (msg == NULL) {
 			break;
 		}

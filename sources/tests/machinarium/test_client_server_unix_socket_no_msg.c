@@ -22,7 +22,7 @@ static void client(void *arg)
 	rc = mm_io_connect(client, (struct sockaddr *)&sa, UINT32_MAX);
 	test(rc == 0);
 
-	machine_msg_t *msg = machine_read(client, 1, UINT32_MAX);
+	machine_msg_t *msg = mm_io_read_msg(client, 1, UINT32_MAX);
 	/* eof */
 	test(msg == NULL);
 

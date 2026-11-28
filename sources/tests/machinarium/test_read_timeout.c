@@ -53,7 +53,7 @@ static void client(void *arg)
 	test(rc == 0);
 
 	machine_msg_t *msg;
-	msg = machine_read(client, 12, 500);
+	msg = mm_io_read_msg(client, 12, 500);
 	test(msg == NULL);
 	test(machine_timedout());
 

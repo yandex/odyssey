@@ -1170,7 +1170,7 @@ int od_backend_connect_cancel(od_server_t *server, od_rule_storage_t *storage,
 	 * A timeout/reset cannot prove PostgreSQL processed the packet
 	 */
 	machine_msg_t *response =
-		machine_read(server->io.io, 1, cancel_timeout);
+		mm_io_read_msg(server->io.io, 1, cancel_timeout);
 	if (response != NULL) {
 		machine_msg_free(response);
 		return NOT_OK_RESPONSE;

@@ -37,11 +37,11 @@ static void server(void *arg)
 		rc = machine_msg_write(msg, NULL, chunk_pos);
 		test(rc == 0);
 		memset(machine_msg_data(msg), 'x', chunk_pos);
-		rc = machine_write(client, msg, UINT32_MAX);
+		rc = mm_io_write_msg(client, msg, UINT32_MAX);
 		test(rc == 0);
 
 		/* ack */
-		msg = machine_read(client, sizeof(uint32_t), UINT32_MAX);
+		msg = mm_io_read_msg(client, sizeof(uint32_t), UINT32_MAX);
 		test(msg != NULL);
 		machine_msg_free(msg);
 
@@ -81,7 +81,7 @@ static void client(void *arg)
 	int chunk_pos = 90 * 1024;
 	while (chunk_pos < chunk_size) {
 		machine_msg_t *msg;
-		msg = machine_read(client, chunk_pos, UINT32_MAX);
+		msg = mm_io_read_msg(client, chunk_pos, UINT32_MAX);
 		test(msg != NULL);
 		test(memcmp(machine_msg_data(msg), chunk_cmp, chunk_pos) == 0);
 		machine_msg_free(msg);
@@ -90,7 +90,7 @@ static void client(void *arg)
 		uint32_t ack = 1;
 		rc = machine_msg_write(msg, (void *)&ack, sizeof(ack));
 		test(rc == 0);
-		rc = machine_write(client, msg, UINT32_MAX);
+		rc = mm_io_write_msg(client, msg, UINT32_MAX);
 		test(rc == 0);
 
 		chunk_pos++;

@@ -34,7 +34,7 @@ static void server(void *arg)
 	test(rc == 0);
 	memset(machine_msg_data(msg), 'x', 10 * 1024 * 1024);
 
-	rc = machine_write(client, msg, UINT32_MAX);
+	rc = mm_io_write_msg(client, msg, UINT32_MAX);
 	test(rc == 0);
 
 	rc = mm_io_close(client);
@@ -61,7 +61,7 @@ static void client(void *arg)
 	test(rc == 0);
 
 	machine_msg_t *msg;
-	msg = machine_read(client, 10 * 1024 * 1024, UINT32_MAX);
+	msg = mm_io_read_msg(client, 10 * 1024 * 1024, UINT32_MAX);
 	test(msg != NULL);
 
 	char *buf_cmp = malloc(10 * 1024 * 1024);

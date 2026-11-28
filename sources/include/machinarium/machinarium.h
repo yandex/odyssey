@@ -256,17 +256,6 @@ MACHINE_API int machine_getsockname(mm_io_t *, struct sockaddr *, int *);
 
 MACHINE_API int machine_getpeername(mm_io_t *, struct sockaddr *, int *);
 
-/* read */
-
-MACHINE_API machine_msg_t *machine_read(mm_io_t *, size_t, uint32_t time_ms);
-
-/* write */
-
-MACHINE_API int machine_write(mm_io_t *, machine_msg_t *, uint32_t time_ms);
-
-MACHINE_API int machine_write_no_free(mm_io_t *, machine_msg_t *,
-				      uint32_t time_ms);
-
 /* lrand48 */
 MACHINE_API void machine_lrand48_seed(void);
 MACHINE_API long int machine_lrand48(void);

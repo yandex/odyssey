@@ -71,7 +71,7 @@ static void server(void *arg)
 
 	/* first batch: flushed explicitly by the client */
 	machine_msg_t *msg;
-	msg = machine_read(client, 300, UINT32_MAX);
+	msg = mm_io_read_msg(client, 300, UINT32_MAX);
 	test(msg != NULL);
 	check(msg, 300, 1);
 
@@ -79,12 +79,12 @@ static void server(void *arg)
 	 * second batch: written into the buffer and sent by
 	 * mm_io_close() without an explicit flush
 	 */
-	msg = machine_read(client, 300, UINT32_MAX);
+	msg = mm_io_read_msg(client, 300, UINT32_MAX);
 	test(msg != NULL);
 	check(msg, 300, 2);
 
 	/* and then eof */
-	msg = machine_read(client, 300, UINT32_MAX);
+	msg = mm_io_read_msg(client, 300, UINT32_MAX);
 	test(msg == NULL);
 
 	rc = mm_io_close(client);

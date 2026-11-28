@@ -73,30 +73,30 @@ static void server(void *arg)
 
 	/* small writes must be buffered until an explicit flush */
 	machine_msg_t *msg;
-	msg = machine_read(client, 300, 100);
+	msg = mm_io_read_msg(client, 300, 100);
 	test(msg == NULL);
 
-	msg = machine_read(client, 300, UINT32_MAX);
+	msg = mm_io_read_msg(client, 300, UINT32_MAX);
 	test(msg != NULL);
 	check(msg, 300, 1);
 
 	/* large write: block-aligned part bypasses the buffer */
-	msg = machine_read(client, 64 * 1024 + 500, UINT32_MAX);
+	msg = mm_io_read_msg(client, 64 * 1024 + 500, UINT32_MAX);
 	test(msg != NULL);
 	check(msg, 64 * 1024 + 500, 2);
 
 	/* many small writes overflowing the buffer */
-	msg = machine_read(client, 40 * 1024, UINT32_MAX);
+	msg = mm_io_read_msg(client, 40 * 1024, UINT32_MAX);
 	test(msg != NULL);
 	check(msg, 40 * 1024, 3);
 
 	/* writev */
-	msg = machine_read(client, 600, UINT32_MAX);
+	msg = mm_io_read_msg(client, 600, UINT32_MAX);
 	test(msg != NULL);
 	check(msg, 600, 4);
 
 	/* big writev: passthrough (the buffer is empty) */
-	msg = machine_read(client, 32 * 1024, UINT32_MAX);
+	msg = mm_io_read_msg(client, 32 * 1024, UINT32_MAX);
 	test(msg != NULL);
 	char *expect = malloc(32 * 1024);
 	test(expect != NULL);
@@ -108,7 +108,7 @@ static void server(void *arg)
 	/* the client disabled the buf layer and wrote the next 100
 	 * bytes directly - read them, otherwise the close() below
 	 * would reset the connection and discard the ack */
-	msg = machine_read(client, 100, UINT32_MAX);
+	msg = mm_io_read_msg(client, 100, UINT32_MAX);
 	test(msg != NULL);
 	check(msg, 100, 1);
 
@@ -118,7 +118,7 @@ static void server(void *arg)
 	char ack = 'A';
 	rc = machine_msg_write(msg, &ack, 1);
 	test(rc == 0);
-	rc = machine_write(client, msg, UINT32_MAX);
+	rc = mm_io_write_msg(client, msg, UINT32_MAX);
 	test(rc == 0);
 
 	rc = mm_io_close(client);
@@ -275,12 +275,12 @@ static void client(void *arg)
 
 	/* wait for the server ack, then eof */
 	machine_msg_t *msg;
-	msg = machine_read(client, 1, UINT32_MAX);
+	msg = mm_io_read_msg(client, 1, UINT32_MAX);
 	test(msg != NULL);
 	test(machine_msg_size(msg) == 1);
 	machine_msg_free(msg);
 
-	msg = machine_read(client, 1, UINT32_MAX);
+	msg = mm_io_read_msg(client, 1, UINT32_MAX);
 	test(msg == NULL);
 
 	rc = mm_io_close(client);

@@ -61,8 +61,6 @@ set(od_src
     machinarium/bind.c
     machinarium/backtrace.c
     machinarium/cond.c
-    machinarium/read.c
-    machinarium/write.c
     machinarium/accept.c
     machinarium/ring_buffer.c
     machinarium/dns.c
