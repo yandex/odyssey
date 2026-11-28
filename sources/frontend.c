@@ -2817,7 +2817,7 @@ static void od_frontend_replication_proxy_pipe(void *arg_)
 			break;
 		}
 
-		ssize_t rc = machine_read_raw(src, buf, sizeof(buf));
+		ssize_t rc = mm_io_read(src, buf, sizeof(buf));
 		if (rc == 0) {
 			/* eof */
 			status = is_client_to_server ? OD_ECLIENT_READ :
@@ -2846,7 +2846,7 @@ static void od_frontend_replication_proxy_pipe(void *arg_)
 		size_t left = (size_t)rc;
 		char *pos = buf;
 		while (left > 0) {
-			rc = machine_write_raw(dst, pos, left, NULL);
+			rc = mm_io_write(dst, pos, left, NULL);
 			if (rc > 0) {
 				pos += rc;
 				left -= (size_t)rc;

@@ -47,8 +47,8 @@ int od_io_write_raw(od_io_t *io, const void *buf, size_t size,
 
 	mm_io_set_deadline(io->io, timeout_ms);
 	while (total < size) {
-		int rc = machine_write_raw(io->io, pos, size - total,
-					   NULL /* TODO: processed */);
+		int rc = mm_io_write(io->io, pos, size - total,
+				     NULL /* TODO: processed */);
 		if (rc > 0) {
 			total += (size_t)rc;
 			*processed = total;
@@ -124,8 +124,7 @@ int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 	mm_io_set_deadline(io->io, timeout_ms);
 	while (iovcnt > 0) {
 		size_t processed = 0;
-		ssize_t rc =
-			machine_writev_raw(io->io, iov, iovcnt, &processed);
+		ssize_t rc = mm_io_writev(io->io, iov, iovcnt, &processed);
 
 		/*
 		 * Advance the scatter-gather vector by the number of consumed
@@ -135,7 +134,7 @@ int od_io_writev(od_io_t *io, struct iovec *iov, int iovcnt,
 		 * on partial-progress errors (rc <= 0) and holds the bytes
 		 * already accepted; those must not be resent on retry. This
 		 * additive accounting mirrors machine_write_no_free() which
-		 * uses machine_write_raw() the same way.
+		 * uses mm_io_write() the same way.
 		 */
 		size_t consumed = processed + (rc > 0 ? (size_t)rc : 0);
 		if (consumed > 0) {

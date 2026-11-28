@@ -134,11 +134,11 @@ static void client(void *arg)
 
 	char buf[300];
 	fill(buf, sizeof(buf), 1);
-	rc = machine_write_raw(client, buf, 100, NULL);
+	rc = mm_io_write(client, buf, 100, NULL);
 	test(rc == 100);
-	rc = machine_write_raw(client, buf + 100, 100, NULL);
+	rc = mm_io_write(client, buf + 100, 100, NULL);
 	test(rc == 100);
-	rc = machine_write_raw(client, buf + 200, 100, NULL);
+	rc = mm_io_write(client, buf + 200, 100, NULL);
 	test(rc == 100);
 
 	/* give the server time to hit the timed read above */
@@ -150,8 +150,8 @@ static void client(void *arg)
 	fill(big, 64 * 1024 + 500, 2);
 	size_t off = 0;
 	while (off < 64 * 1024 + 500) {
-		rc = machine_write_raw(client, big + off, 64 * 1024 + 500 - off,
-				       NULL);
+		rc = mm_io_write(client, big + off, 64 * 1024 + 500 - off,
+				 NULL);
 		test(rc > 0);
 		off += (size_t)rc;
 	}
@@ -170,7 +170,7 @@ static void client(void *arg)
 	iov[0].iov_len = 16 * 1024;
 	iov[1].iov_base = part1;
 	iov[1].iov_len = 16 * 1024;
-	rc = machine_writev_raw(client, iov, 2, NULL);
+	rc = mm_io_writev(client, iov, 2, NULL);
 	test(rc == (ssize_t)(32 * 1024));
 	test_flush(client);
 	free(part0);

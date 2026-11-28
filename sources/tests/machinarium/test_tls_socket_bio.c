@@ -121,11 +121,11 @@ static void test_exchange(void *arg)
 	}
 	transport.bytes_written = 0;
 	transport.short_write = 1;
-	test(machine_write_raw(client, payload, sizeof(payload), NULL) == -1);
+	test(mm_io_write(client, payload, sizeof(payload), NULL) == -1);
 	test(machine_errno() == EAGAIN);
 	test(mm_io_want_write(client));
 	test(transport.bytes_written == 7);
-	test(machine_write_raw(client, payload, sizeof(payload), NULL) ==
+	test(mm_io_write(client, payload, sizeof(payload), NULL) ==
 	     sizeof(payload));
 	test(transport.bytes_written > sizeof(payload));
 
@@ -133,13 +133,13 @@ static void test_exchange(void *arg)
 	test(msg != NULL);
 	test(memcmp(machine_msg_data(msg), payload, sizeof(payload)) == 0);
 	char received[sizeof(payload)];
-	test(machine_read_raw(server, received, 1) == -1);
+	test(mm_io_read(server, received, 1) == -1);
 	test(machine_errno() == EAGAIN);
 	test(machine_write(server, msg, 5000) == 0);
 
 	transport.retry_read = 1;
 	transport.bytes_read = 0;
-	test(machine_read_raw(client, received, sizeof(received)) == -1);
+	test(mm_io_read(client, received, sizeof(received)) == -1);
 	test(machine_errno() == EAGAIN);
 	test(mm_io_want_read(client));
 	msg = machine_read(client, sizeof(payload), 5000);
@@ -147,7 +147,7 @@ static void test_exchange(void *arg)
 	test(memcmp(machine_msg_data(msg), payload, sizeof(payload)) == 0);
 	machine_msg_free(msg);
 	test(transport.bytes_read > sizeof(payload));
-	test(machine_read_raw(client, received, 1) == -1);
+	test(mm_io_read(client, received, 1) == -1);
 	test(machine_errno() == EAGAIN);
 
 	/* An empty socket, a cached transport error, and peer EOF in turn. */

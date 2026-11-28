@@ -15,19 +15,6 @@
 #include <machinarium/socket.h>
 #include <machinarium/tls.h>
 
-MACHINE_API ssize_t machine_write_raw(mm_io_t *obj, const void *buf,
-				      size_t size, size_t *processed)
-{
-	mm_io_t *io = mm_cast(mm_io_t *, obj);
-	return mm_io_write(io, buf, size, processed);
-}
-
-MACHINE_API ssize_t machine_writev_raw(mm_io_t *io, const struct iovec *iov,
-				       int iovcnt, size_t *processed)
-{
-	return mm_io_writev(io, iov, iovcnt, processed);
-}
-
 MACHINE_API int machine_write_no_free(mm_io_t *destination, machine_msg_t *msg,
 				      uint32_t time_ms)
 {
@@ -46,8 +33,8 @@ MACHINE_API int machine_write_no_free(mm_io_t *destination, machine_msg_t *msg,
 		/* when using compression, some data may be processed
 		 * despite the non-positive return code */
 		size_t processed = 0;
-		int rc = machine_write_raw(destination, src + total,
-					   size - total, &processed);
+		int rc = mm_io_write(destination, src + total, size - total,
+				     &processed);
 		total += processed;
 
 		if (rc > 0) {

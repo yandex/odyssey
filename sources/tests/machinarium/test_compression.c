@@ -102,8 +102,7 @@ static void server(void *arg)
 	size_t total = 0;
 	while (iovcnt > 0) {
 		size_t processed = 0;
-		ssize_t rc =
-			machine_writev_raw(client, iov, iovcnt, &processed);
+		ssize_t rc = mm_io_writev(client, iov, iovcnt, &processed);
 		size_t consumed = processed + (rc > 0 ? (size_t)rc : 0);
 		total += consumed;
 		if (consumed > 0) {
