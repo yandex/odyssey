@@ -112,54 +112,6 @@ MACHINE_API int machine_tls_set_verify(machine_tls_t *obj, char *mode)
 	return 0;
 }
 
-MACHINE_API int machine_tls_set_server(machine_tls_t *obj, char *name)
-{
-	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
-	mm_errno_set(0);
-	char *string = mm_strdup(name);
-	if (string == NULL) {
-		mm_errno_set(ENOMEM);
-		return -1;
-	}
-	if (tls->server) {
-		mm_free(tls->server);
-	}
-	tls->server = string;
-	return 0;
-}
-
-MACHINE_API int machine_tls_set_protocols(machine_tls_t *obj, char *protocols)
-{
-	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
-	mm_errno_set(0);
-	char *string = mm_strdup(protocols);
-	if (string == NULL) {
-		mm_errno_set(ENOMEM);
-		return -1;
-	}
-	if (tls->protocols) {
-		mm_free(tls->protocols);
-	}
-	tls->protocols = string;
-	return 0;
-}
-
-MACHINE_API int machine_tls_set_ca_path(machine_tls_t *obj, char *path)
-{
-	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);
-	mm_errno_set(0);
-	char *string = mm_strdup(path);
-	if (string == NULL) {
-		mm_errno_set(ENOMEM);
-		return -1;
-	}
-	if (tls->ca_path) {
-		mm_free(tls->ca_path);
-	}
-	tls->ca_path = string;
-	return 0;
-}
-
 MACHINE_API int machine_tls_set_ca_file(machine_tls_t *obj, char *path)
 {
 	mm_tls_t *tls = mm_cast(mm_tls_t *, obj);

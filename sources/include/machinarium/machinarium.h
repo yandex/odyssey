@@ -104,13 +104,9 @@ MACHINE_API void machine_stop_current(void);
 
 MACHINE_API int machine_active(void);
 
-MACHINE_API uint64_t machine_self(void);
-
 MACHINE_API void **machine_thread_private(void);
 
 MACHINE_API int machine_wait(uint64_t machine_id);
-
-MACHINE_API int machine_stop(uint64_t machine_id);
 
 MACHINE_API int machinarium_check_stack_depth(void);
 
@@ -164,10 +160,6 @@ MACHINE_API const char *machine_coroutine_get_name(uint64_t coroutine_id);
 /* condition */
 
 MACHINE_API machine_cond_t *machine_cond_create(void);
-
-MACHINE_API void machine_cond_free(machine_cond_t *);
-
-MACHINE_API void machine_cond_propagate(machine_cond_t *, machine_cond_t *);
 
 MACHINE_API void machine_cond_signal(machine_cond_t *);
 
@@ -226,8 +218,6 @@ MACHINE_API machine_msg_t *machine_channel_read(machine_channel_t *,
 MACHINE_API machine_msg_t *machine_channel_read_back(machine_channel_t *,
 						     uint32_t time_ms);
 
-MACHINE_API size_t machine_channel_get_size(machine_channel_t *chan);
-
 /* tls */
 
 MACHINE_API machine_tls_t *machine_tls_create(void);
@@ -235,12 +225,6 @@ MACHINE_API machine_tls_t *machine_tls_create(void);
 MACHINE_API void machine_tls_free(machine_tls_t *);
 
 MACHINE_API int machine_tls_set_verify(machine_tls_t *, char *);
-
-MACHINE_API int machine_tls_set_server(machine_tls_t *, char *);
-
-MACHINE_API int machine_tls_set_protocols(machine_tls_t *, char *);
-
-MACHINE_API int machine_tls_set_ca_path(machine_tls_t *, char *);
 
 MACHINE_API int machine_tls_set_ca_file(machine_tls_t *, char *);
 
@@ -261,14 +245,6 @@ MACHINE_API void machine_lrand48_seed(void);
 MACHINE_API long int machine_lrand48(void);
 MACHINE_API double machine_erand48(unsigned short xseed[3]);
 
-/* stat/debug */
-
-MACHINE_API int machine_io_sysfd(mm_io_t *);
-
-MACHINE_API int machine_io_mask(mm_io_t *);
-
-MACHINE_API int machine_io_mm_fd(mm_io_t *);
-
 /* tls cert hash */
 
 MACHINE_API ssize_t machine_tls_cert_hash(
@@ -278,15 +254,6 @@ MACHINE_API ssize_t machine_tls_cert_hash(
 /* compression */
 MACHINE_API char
 machine_compression_choose_alg(char *client_compression_algorithms);
-
-/* debug tools */
-
-/*
- * note: backtrace functions are currently slow
- * if you want bt collection to be fast, impl should be rewritten
- */
-MACHINE_API const char *machine_get_backtrace_string(void);
-MACHINE_API int machine_get_backtrace(void **entries, int max);
 
 /* wait group */
 
@@ -349,7 +316,6 @@ MACHINE_API size_t
 machine_ring_buffer_capacity(const machine_ring_buffer_t *rbuf);
 MACHINE_API size_t
 machine_ring_buffer_available(const machine_ring_buffer_t *rbuf);
-MACHINE_API int machine_ring_buffer_is_full(const machine_ring_buffer_t *rbuf);
 
 #ifdef __cplusplus
 }

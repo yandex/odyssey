@@ -283,26 +283,9 @@ int machine_wait_nb(uint64_t machine_id)
 	return rc;
 }
 
-MACHINE_API int machine_stop(uint64_t machine_id)
-{
-	mm_machine_t *machine;
-	machine = mm_machinemgr_delete_by_id(&machinarium.machine_mgr,
-					     machine_id);
-	if (machine == NULL) {
-		return -1;
-	}
-	atomic_store(&machine->online, 0);
-	return 0;
-}
-
 MACHINE_API int machine_active(void)
 {
 	return atomic_load(&mm_self->online);
-}
-
-MACHINE_API uint64_t machine_self(void)
-{
-	return mm_self->id;
 }
 
 MACHINE_API void **machine_thread_private(void)

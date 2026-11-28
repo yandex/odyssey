@@ -190,11 +190,6 @@ void mm_ring_buffer_clear(mm_ring_buffer_t *rbuf)
 	rbuf->rpos = 0;
 }
 
-int mm_ring_buffer_is_full(const mm_ring_buffer_t *rbuf)
-{
-	return rbuf->capacity == rbuf->size;
-}
-
 MACHINE_API machine_ring_buffer_t *machine_ring_buffer_create(size_t capacity)
 {
 	mm_ring_buffer_t *rbuf = mm_ring_buffer_create(capacity);
@@ -250,10 +245,4 @@ machine_ring_buffer_available(const machine_ring_buffer_t *rbuf)
 {
 	const mm_ring_buffer_t *rb = mm_cast(const mm_ring_buffer_t *, rbuf);
 	return mm_ring_buffer_available(rb);
-}
-
-MACHINE_API int machine_ring_buffer_is_full(const machine_ring_buffer_t *rbuf)
-{
-	const mm_ring_buffer_t *rb = mm_cast(const mm_ring_buffer_t *, rbuf);
-	return mm_ring_buffer_is_full(rb);
 }

@@ -29,7 +29,6 @@ set(od_src
     machinarium/clock.c
     machinarium/socket.c
     machinarium/file.c
-    machinarium/stat.c
     machinarium/context_stack.c
     machinarium/context.c
     machinarium/coroutine.c
@@ -59,7 +58,6 @@ set(od_src
     machinarium/close.c
     machinarium/connect.c
     machinarium/bind.c
-    machinarium/backtrace.c
     machinarium/cond.c
     machinarium/accept.c
     machinarium/ring_buffer.c
