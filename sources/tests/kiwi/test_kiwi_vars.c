@@ -277,3 +277,50 @@ void kiwi_test_vars_cas(void)
 	kiwi_vars_free(&client);
 	kiwi_vars_free(&server);
 }
+
+void kiwi_test_vars_cas_encoding(void)
+{
+	kiwi_vars_t client, server;
+	char buf[128];
+	kiwi_vars_init(&client);
+	kiwi_vars_init(&server);
+
+	/* nothing to deploy */
+	test(kiwi_vars_cas_encoding(&client, &server, buf, sizeof(buf)) == 0);
+
+	/* ASCII only values: one Query is enough */
+	test(kiwi_vars_set(&client, KIWI_VAR_CLIENT_ENCODING, "LATIN1",
+			   sizeof("LATIN1")) == 0);
+	test(kiwi_vars_set(&server, KIWI_VAR_CLIENT_ENCODING, "UTF8",
+			   sizeof("UTF8")) == 0);
+	test(kiwi_vars_set(&client, KIWI_VAR_SEARCH_PATH, "public",
+			   sizeof("public")) == 0);
+	test(kiwi_vars_cas_encoding(&client, &server, buf, sizeof(buf)) == 0);
+
+	/* non-ASCII value and a different backend encoding: switch first */
+	const char *latin1_path = "\"caf\xe9\", public";
+	test(kiwi_vars_set(&client, KIWI_VAR_SEARCH_PATH, latin1_path,
+			   strlen(latin1_path) + 1) == 0);
+	const char *expected = "SET client_encoding=E'LATIN1';";
+	test(kiwi_vars_cas_encoding(&client, &server, buf, sizeof(buf)) ==
+	     (int)strlen(expected));
+	test(strcmp(buf, expected) == 0);
+
+	/* buffer too small */
+	test(kiwi_vars_cas_encoding(&client, &server, buf, 10) == -1);
+
+	/* backend already in the client's encoding */
+	test(kiwi_vars_set(&server, KIWI_VAR_CLIENT_ENCODING, "LATIN1",
+			   sizeof("LATIN1")) == 0);
+	test(kiwi_vars_cas_encoding(&client, &server, buf, sizeof(buf)) == 0);
+
+	/* non-ASCII value the backend already has: nothing to deploy */
+	test(kiwi_vars_set(&server, KIWI_VAR_CLIENT_ENCODING, "UTF8",
+			   sizeof("UTF8")) == 0);
+	test(kiwi_vars_set(&server, KIWI_VAR_SEARCH_PATH, latin1_path,
+			   strlen(latin1_path) + 1) == 0);
+	test(kiwi_vars_cas_encoding(&client, &server, buf, sizeof(buf)) == 0);
+
+	kiwi_vars_free(&client);
+	kiwi_vars_free(&server);
+}
